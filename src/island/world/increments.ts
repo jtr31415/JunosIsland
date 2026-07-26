@@ -88,6 +88,9 @@ const PIECES: Record<TileType, readonly string[]> = {
   ],
 }
 
+/** How solid a freshly sited plot looks. It firms up as the build advances. */
+const GHOST_OPACITY = 0.45
+
 /** Scale each piece is placed at, matching how props.ts plants them. */
 const scaleFor = (name: string): number => (/^[A-Z]/.test(name) ? 0.5 : 0.62)
 
@@ -139,10 +142,26 @@ export function createGrowingPlot(
     if (slot.shown) { object.visible = true; object.scale.setScalar(0.001); slot.ease = 0 }
   }
 
-  /* Increment 1: the hex itself. The real geometry and the real material. */
+  /*
+   * Increment 1: the hex itself — spec §2's GHOST hex.
+   *
+   * The real geometry, but a cloned material so it can be translucent: at
+   * full opacity a sited plot is indistinguishable from finished land, and
+   * the child cannot tell what she owns from what she is still building. It
+   * solidifies as the build advances, so the tile becoming real is something
+   * she watches rather than something she is told.
+   *
+   * The material MUST be a clone. TileModels' material is shared by every hex
+   * on the island, so making that one transparent would ghost the whole world.
+   */
+  const tileMaterial = (deps.models.material as THREE.MeshStandardMaterial).clone()
+  tileMaterial.transparent = true
+  tileMaterial.opacity = GHOST_OPACITY
+  tileMaterial.depthWrite = false
+
   const tile = new THREE.Mesh(
     deps.models.geometry[type === 'water' ? 'water' : 'grass'],
-    deps.models.material,
+    tileMaterial,
   )
   install(0, tile)
 
@@ -199,6 +218,11 @@ export function createGrowingPlot(
         }
       }
       // Nothing here ever hides a piece already shown: growth is one-way.
+
+      // ...and the hex firms up from ghost to solid as the plot fills in.
+      const solid = show / INCREMENTS.length
+      tileMaterial.opacity = GHOST_OPACITY + (1 - GHOST_OPACITY) * solid
+      tileMaterial.depthWrite = tileMaterial.opacity > 0.98
     },
 
     update(dt) {
@@ -228,6 +252,7 @@ export function createGrowingPlot(
        * constant. Dropping the references is enough; nothing here is uniquely
        * owned except the sparks.
        */
+      tileMaterial.dispose()          // ours alone: cloned, not shared
       flourish.traverse(o => {
         const m = o as THREE.Mesh
         if (!m.isMesh) return
