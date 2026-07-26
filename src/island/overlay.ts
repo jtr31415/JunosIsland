@@ -66,6 +66,19 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
    *
    * Leaving costs nothing — challengeFailed takes no tile and no pet.
    */
+  /**
+   * Say it again.
+   *
+   * The single most-needed control in a listen-then-tap game: a child who
+   * missed the word has no way forward without it, and guessing is not
+   * reading. It repeats the prompt WITHOUT restarting the round — found words
+   * and placed tiles stay exactly where she left them.
+   */
+  const again = document.createElement('button')
+  again.className = 'chunk chunk-button overlay-again'
+  again.textContent = '\u{1F50A} say it again'
+  again.setAttribute('aria-label', 'say it again')
+
   const back = document.createElement('button')
   back.className = 'chunk chunk-button overlay-back'
   back.textContent = '← back to the island'
@@ -73,7 +86,12 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
 
   const panel = document.createElement('div')
   panel.id = 'words'          // the ported renderers style themselves from this
-  shell.append(panel, back)
+
+  const controls = document.createElement('div')
+  controls.className = 'overlay-controls'
+  controls.append(again, back)
+
+  shell.append(panel, controls)
   layer.append(shell)
 
   const sayEl = document.createElement('div')
@@ -185,6 +203,8 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
     host.onPassed()
   }
 
+  again.onclick = () => { handle?.sayAgain() }
+
   back.onclick = () => {
     const wasOpen = !layer.classList.contains('hide')
     if (!wasOpen) return
@@ -201,6 +221,7 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
     openWordFind(picks) {
       teardown()
       earned = false
+      again.classList.remove('hide')
       layer.classList.remove('hide')
       handle = mountWordFind(picks, deps())
     },
@@ -208,6 +229,7 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
     openBuild(item) {
       teardown()
       earned = false
+      again.classList.remove('hide')
       layer.classList.remove('hide')
       handle = mountBuild(item, deps())
     },
@@ -215,6 +237,9 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
     openSum(item) {
       teardown()
       earned = false
+      // A sum is on screen to be read, so there is no prompt to repeat — and
+      // a button that does nothing is worse than no button.
+      again.classList.add('hide')
       layer.classList.remove('hide')
       handle = mountSum(item, deps())
     },

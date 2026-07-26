@@ -135,20 +135,38 @@ describe('mountBuild', () => {
     expect(d.onAdvance).toHaveBeenCalledTimes(1)
   })
 
-  it('three wrong tiles summon Fred, who sounds the word out', () => {
-    // v0:1295-1300 — the rescue is help, never shame (brief section 18)
+  it('three wrong tiles summon help: the word again, slowly', () => {
+    /*
+     * v0:1295-1300 locked input and had Fred sound out each grapheme. The
+     * grapheme audio is retired — through a synthesiser "buh"/"tuh" is
+     * genuinely unpleasant — so the rescue is now the whole word at 0.6 rate
+     * with the next slot highlighted. Still help, never shame (brief §18),
+     * and the input lock is unchanged.
+     */
     const { d } = makeDeps(el)
     mountBuild(ITEM, d)
     tap(tile(el, 'p')); tap(tile(el, 'm')); tap(tile(el, 'd'))
     expect(d.holds.inputLock()).toBeGreaterThan(Date.now())
-    vi.advanceTimersByTime(400)
-    // v0:1219 maps each grapheme through FRED_SOUNDS: sh -> 'shh'
-    expect(d.speech.speak).toHaveBeenCalledWith('shh', 0.9, expect.any(Function))
+    expect(d.speech.speak).toHaveBeenCalledWith('ship', 0.6)
     expect(el.querySelectorAll('.fredhl')).toHaveLength(1)
   })
 
-  it('Fred sounds each grapheme in order, waiting for each to finish', () => {
-    // v0:1222-1232 — each sound plays to completion; no beheading
+  it('the rescue never speaks a lone grapheme', () => {
+    const { d } = makeDeps(el)
+    mountBuild(ITEM, d)
+    tap(tile(el, 'p')); tap(tile(el, 'm')); tap(tile(el, 'd'))
+    vi.advanceTimersByTime(1200)
+    const spoken = (d.speech.speak as ReturnType<typeof vi.fn>).mock.calls.map(c => c[0])
+    for (const s of spoken) expect(['shh', 'ih', 'puh']).not.toContain(s)
+  })
+
+  it('fredTalk still sequences correctly if a caller ever wants it', () => {
+    /*
+     * Nothing triggers this automatically any more, but the sequencing is
+     * sound and a real recorded voice would make it excellent — so it stays
+     * exported and stays tested rather than rotting quietly.
+     * v0:1222-1232 — each sound plays to completion; no beheading.
+     */
     const { d } = makeDeps(el)
     const spoken: string[] = []
     ;(d.speech.speak as ReturnType<typeof vi.fn>).mockImplementation(
@@ -157,10 +175,9 @@ describe('mountBuild', () => {
         if (onend) setTimeout(onend, 10)
         return true
       })
-    mountBuild(ITEM, d)
-    tap(tile(el, 'p')); tap(tile(el, 'm')); tap(tile(el, 'd'))
+    const h = mountBuild(ITEM, d)
+    h.fred!()
     vi.advanceTimersByTime(3000)
-    // 'sh' -> shh, 'i' -> ih, 'p' -> puh, then the whole word (v0:1226)
     expect(spoken).toContain('shh')
     expect(spoken).toContain('ih')
     expect(spoken).toContain('puh')

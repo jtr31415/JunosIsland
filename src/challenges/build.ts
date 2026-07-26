@@ -2,11 +2,19 @@
  * Grapheme-tile word building, with Fred sounding the word out.
  * Ported from v0/junos-words.html:1181-1308.
  *
- * The mash rescue here is Fred talking, not a toast: three wrongs and he
- * sounds the word out one grapheme at a time, pacing the highlight to the
- * speech. Each sound plays to completion before the next begins — no
- * beheading — which is what the speech onend chain and its 2.5s fallback are
- * for.
+ * THE MASH RESCUE NO LONGER SOUNDS OUT GRAPHEMES. The 2D game had Fred say
+ * each grapheme in turn ("buh", "tuh", "shh"), which works when a human says
+ * it and is genuinely unpleasant through a speech synthesiser — stop
+ * consonants come out as a schwa-laden bark. Product owner's call, and the
+ * right one.
+ *
+ * The rescue it replaces it with does the same job: the whole word again,
+ * slowly, with the next tile the child needs gently highlighted. Help, not
+ * shame (brief §18), and no worse audio than the prompt she already heard.
+ *
+ * fredTalk and FRED_SOUNDS are kept and still exported — the sequencing is
+ * sound and a real recorded voice would make it excellent — but nothing calls
+ * fredTalk automatically any more.
  */
 import type { BuildItem } from '../core/generators/build'
 import type { ChallengeDeps, ChallengeHandle } from './mount'
@@ -79,6 +87,20 @@ export function mountBuild(item: BuildItem, deps: ChallengeDeps): ChallengeHandl
     setTimeout(stepFred, 350)
   }
 
+  /**
+   * The gentle rescue: say the word slowly, and show which tile comes next by
+   * pulsing its slot. No grapheme-by-grapheme synthesis.
+   */
+  const rescue = (): void => {
+    if (torn || !deps.isActive()) return
+    deps.speech.speak(item.w, 0.6)
+    const slot = slots[pos]
+    if (slot) {
+      slot.classList.add('fredhl')
+      setTimeout(() => slot.classList.remove('fredhl'), 1600)
+    }
+  }
+
   const tray = document.createElement('div')
   tray.className = 'tray'
   let pos = 0, doneB = false, wrongsB = 0
@@ -126,10 +148,11 @@ export function mountBuild(item: BuildItem, deps: ChallengeDeps): ChallengeHandl
         deps.sfx.play('bump')
         deps.onWrong()
         if (++wrongsB >= 3) {
-          /* button-mashing detected: Fred to the rescue */
+          /* Three stumbles summon help: the word again, slowly, and a nudge
+             toward the tile she needs next. Never a scolding. */
           wrongsB = 0
           deps.holds.lockInput(Date.now() + 1800)
-          fredTalk()
+          rescue()
         }
       }
     })
@@ -143,6 +166,7 @@ export function mountBuild(item: BuildItem, deps: ChallengeDeps): ChallengeHandl
     /* btnSay (v0:2086) and btnFred (v0:2087): help WITHOUT wiping the tiles
        the child has already placed. */
     sayAgain: () => { if (roundTimer) clearTimeout(roundTimer); speakBuildWord() },
+    /* Still available if a button wants it; nothing triggers it automatically. */
     fred: () => fredTalk(),
     teardown: () => {
       torn = true

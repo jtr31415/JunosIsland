@@ -181,10 +181,30 @@
 .tile:active { transform: translateY(.22rem); box-shadow: none; }
 .tile.used { opacity: .3; pointer-events: none; }
 
-/* The way out of a challenge. Quiet, but always reachable. */
+/* The controls under every challenge: hear it again, or leave. */
+.overlay-controls {
+  display: flex;
+  gap: .8rem;
+  justify-content: center;
+  align-items: center;
+  margin-top: 1.2rem;
+  flex-wrap: wrap;
+}
+
+/*
+ * "Say it again" is the one a struggling child reaches for, so it is the
+ * bigger and warmer of the two. Leaving is always available but never the
+ * more inviting option.
+ */
+.overlay-again {
+  background: var(--sky);
+  color: #10384d;
+  border-radius: 999px;
+  padding: .6rem 1.4rem;
+  font-size: clamp(.95rem, 2.6vmin, 1.25rem);
+}
+
 .overlay-back {
-  display: block;
-  margin: 1.2rem auto 0;
   background: var(--paper);
   border-radius: 999px;
   padding: .5rem 1.2rem;
