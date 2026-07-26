@@ -1,0 +1,132 @@
+/**
+ * The chunky UI language, in CSS rather than bitmaps.
+ *
+ * The look is KayKit/Kenney: flat saturated fill, generously rounded corners,
+ * and a HARD offset shadow in a darker shade of the fill — the underside of a
+ * plastic block — rather than a soft blur. No gradients, thick borders.
+ *
+ * Built in CSS on purpose (spec section 7): it stays crisp at any DPI, reflows
+ * around long decodable pet names and UK spellings, and keeps the learning
+ * text as real text, which is what Andika and the accessibility story need.
+ */
+
+:root {
+  --ink: #23404f;
+  --paper: #fffdf6;
+
+  --sky: #8fd6ff;
+  --grass: #6fc04a;
+  --sand: #ffd98a;
+  --coral: #ff8a7a;
+  --berry: #c86cff;
+
+  --chunk-radius: 1.4rem;
+  --chunk-lift: 0.42rem;
+  --chunk-border: 0.22rem;
+
+  --ease-pop: cubic-bezier(.2, 1.4, .5, 1);
+}
+
+/* A chunky block: flat fill, hard underside, no blur. */
+.chunk {
+  background: var(--paper);
+  color: var(--ink);
+  border: var(--chunk-border) solid rgba(35, 64, 79, .18);
+  border-radius: var(--chunk-radius);
+  box-shadow: 0 var(--chunk-lift) 0 rgba(35, 64, 79, .22);
+  padding: 1rem 1.3rem;
+}
+
+.chunk-button {
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform .09s var(--ease-pop), box-shadow .09s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Pressing pushes the block down onto its own shadow. */
+.chunk-button:active {
+  transform: translateY(var(--chunk-lift));
+  box-shadow: 0 0 0 rgba(35, 64, 79, .22);
+}
+
+.chunk-grass { background: var(--grass); color: #16340a; }
+.chunk-water { background: var(--sky); color: #10384d; }
+.chunk-sand { background: var(--sand); color: #4a3406; }
+
+/* The learning overlay sits above the 3D view, but never fills it entirely —
+   the island should still be visible behind, so the world does not vanish. */
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 2vh 2vw;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.overlay > * { pointer-events: auto; }
+
+.overlay-panel {
+  width: min(96vw, 60rem);
+  max-height: 88vh;
+  overflow-y: auto;
+  background: rgba(255, 253, 246, .96);
+  backdrop-filter: blur(2px);
+}
+
+/* While a challenge is open the say card would collide with it. */
+body:has(.overlay:not(.hide)) .say { display: none; }
+
+/* A speech line from Fred: big, friendly, tappable to advance. */
+.say {
+  position: fixed;
+  left: 50%;
+  bottom: 6vh;
+  transform: translateX(-50%);
+  width: min(92vw, 46rem);
+  text-align: center;
+  font-size: clamp(1.2rem, 3.4vmin, 2rem);
+  font-weight: 800;
+  line-height: 1.35;
+  z-index: 12;
+}
+
+/* The pick-of-three tile offer. */
+.offer {
+  display: flex;
+  gap: 1.1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.offer-tile {
+  width: clamp(5.5rem, 17vmin, 9rem);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  font-size: clamp(2rem, 6vmin, 3.4rem);
+}
+
+/* The big name card at a hatch — the emotional peak, so it gets the space. */
+.hatch-name {
+  position: fixed;
+  left: 50%;
+  top: 38%;
+  transform: translate(-50%, -50%);
+  font-size: clamp(2.4rem, 9vmin, 5.5rem);
+  font-weight: 900;
+  letter-spacing: .02em;
+  z-index: 14;
+  animation: hatch-pop .5s var(--ease-pop) both;
+}
+
+@keyframes hatch-pop {
+  from { transform: translate(-50%, -50%) scale(.4); opacity: 0 }
+  to { transform: translate(-50%, -50%) scale(1); opacity: 1 }
+}
+
+.hide { display: none !important; }
