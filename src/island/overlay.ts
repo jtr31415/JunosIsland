@@ -31,6 +31,12 @@ export interface OverlayHost {
 }
 
 export interface Overlay {
+  /**
+   * True while a page is being swapped for the next one in the same sitting.
+   * The host sets this so the panel does not blink back to the island between
+   * pages — the child stays in the work until the reward lands.
+   */
+  setContinuing(v: boolean): void
   openWordFind(picks: ReadPick[]): void
   /** A build page: assemble one word from grapheme tiles (slice-1 spec §3). */
   openBuild(item: BuildItem): void
@@ -98,6 +104,12 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
    * after earning therefore COLLECTS rather than dismisses.
    */
   let earned = false
+  /**
+   * While true, finishing a page swaps in the next one instead of returning to
+   * the island. Reading five pages should feel like one sitting, not five
+   * trips out to the world and back.
+   */
+  let continuing = false
 
   /**
    * Shared timing gates. The island has no spectacles yet, so reward and quiet
@@ -162,7 +174,8 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
 
   function teardown(): void {
     if (handle) { handle.teardown(); handle = null }
-    layer.classList.add('hide')
+    // Keep the panel on screen when the next page is already coming.
+    if (!continuing) layer.classList.add('hide')
     targetCard.classList.add('hide')
   }
 
@@ -183,6 +196,8 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
   }
 
   return {
+    setContinuing(v) { continuing = v },
+
     openWordFind(picks) {
       teardown()
       earned = false

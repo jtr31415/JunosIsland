@@ -129,39 +129,61 @@ async function boot(): Promise<void> {
 
   /**
    * The egg sits ON the shore — an owned tile at the island's edge — never in
-   * open water. It washed ashore; it is not floating out at sea waiting to be
-   * fetched, and a child should never have to tap the ocean to reach it.
+   * open water, and never inside a tree.
    *
-   * Preference order: a coastal grass tile (one with an empty neighbour), then
-   * any grass tile, then the home rock.
+   * The scenery pass made that second condition real: once most tiles grew a
+   * clump, an egg placed at a fixed offset simply disappeared into one, and an
+   * invisible egg is an unplayable game. So the spot is chosen CLEAR of the
+   * obstacles the prop field reports, trying several positions around the tile
+   * before settling.
+   *
+   * Preference: a coastal grass tile, then any grass tile, then the home rock.
    */
   function placeEgg(): void {
     const open = new Set(sockets(flow.island).map(key))
-    let best: Axial | null = null
-    let bestIsCoastal = false
+    const blocks = props.obstacles()
+    const size = world.models.size
 
+    const candidates: Axial[] = []
     for (const [k, type] of flow.island.tiles) {
       if (type !== 'grass') continue
       const parts = k.split(',').map(Number)
       const a: Axial = { q: parts[0] as number, r: parts[1] as number }
+      if (a.q === 0 && a.r === 0 && flow.island.tiles.size > 1) continue
       const coastal = neighbours(a).some(n => open.has(key(n)))
-      // Keep off the home rock unless it is all we have: Fred stands there.
-      const isHome = a.q === 0 && a.r === 0
-      if (isHome && flow.island.tiles.size > 1) continue
-      if (!best || (coastal && !bestIsCoastal)) { best = a; bestIsCoastal = coastal }
-      if (coastal) break
+      if (coastal) candidates.unshift(a) 
+      else candidates.push(a)
+    }
+    if (!candidates.length) candidates.push({ q: 0, r: 0 })
+
+    const clearOf = (x: number, z: number): boolean =>
+      blocks.every(o => Math.hypot(x - o.x, z - o.z) > o.r + size * 0.18)
+
+    // Try each tile, and several spots around each, until one is in the open.
+    for (const a of candidates) {
+      const w = toWorld(a, size)
+      for (let i = 0; i < 8; i++) {
+        const ang = (i / 8) * Math.PI * 2
+        const x = w.x + Math.cos(ang) * size * 0.42
+        const z = w.z + Math.sin(ang) * size * 0.42
+        if (clearOf(x, z)) { egg.setPosition(x, z); return }
+      }
+      if (clearOf(w.x, w.z)) { egg.setPosition(w.x, w.z); return }
     }
 
-    const at = best ?? { q: 0, r: 0 }
-    const w = toWorld(at, world.models.size)
-    // Nudged toward the tile's edge so it reads as washed up, not placed.
-    egg.setPosition(w.x + world.models.size * 0.3, w.z + world.models.size * 0.3)
+    // Nowhere clear: put it on the home rock, which props always leave empty.
+    const home = toWorld({ q: 0, r: 0 }, size)
+    egg.setPosition(home.x + size * 0.32, home.z + size * 0.32)
   }
 
   function refresh(): void {
     world.setIsland(flow.island)
-    void props.sync(flow.island, world.models.size)
-      .then(() => pets.setObstacles(props.obstacles()))
+    void props.sync(flow.island, world.models.size).then(() => {
+      pets.setObstacles(props.obstacles())
+      // Re-site the egg now the scenery is known: obstacles() is empty until
+      // the props have loaded, so the first placement cannot see the trees.
+      if (flow.phase !== 'placing') placeEgg()
+    })
     // Fred sits on the home rock, a little off centre so the egg and any pet
     // have room. Slightly larger than a collectible pet, never tile-sized.
     const home = world.worldOf({ q: 0, r: 0 })
@@ -299,6 +321,7 @@ async function boot(): Promise<void> {
       const hatched = flow.pets.length > petsBefore
 
       if (hatched) {
+        overlay.setContinuing(false)
         await egg.hatch()
         overlay.showName(name)
         const line = HATCH_LINES[flow.pets.length % HATCH_LINES.length] as string
@@ -314,6 +337,26 @@ async function boot(): Promise<void> {
       }
 
       refresh()
+
+      if (!hatched && openingResumeAt < 0) {
+        /*
+         * Stay in the work. Reading five pages should feel like one sitting,
+         * not five trips out to the island and back — the world only returns
+         * when the friend arrives, or when she taps back.
+         *
+         * The pause is long enough to see the shell crack a little further,
+         * which is the whole reason the progress is on the egg.
+         */
+        overlay.setContinuing(true)
+        setTimeout(() => {
+          flow = tapEgg({ ...flow, phase: 'free' })
+          openRead()
+          overlay.setContinuing(false)
+        }, 900)
+        return
+      }
+
+      overlay.setContinuing(false)
       if (openingResumeAt >= 0) {
         const at = openingResumeAt
         openingResumeAt = -1
@@ -326,13 +369,25 @@ async function boot(): Promise<void> {
       const earned = flow.bankedTiles > bankedBefore
 
       if (earned) {
+        overlay.setContinuing(false)
         speech.speak('You counted us up some land!')
         fred.talk(2.2)
         world.lighting.celebrationBump()
-      } else {
-        sfx.play('up')
+        refresh()
+        return
       }
+
+      sfx.play('up')
       refresh()
+
+      // Same rule for land: keep counting until the plot is finished. Each sum
+      // grows the plot a little more, and refresh() has just shown that.
+      overlay.setContinuing(true)
+      setTimeout(() => {
+        flow = tapSum({ ...flow, phase: 'free' })
+        openSum()
+        overlay.setContinuing(false)
+      }, 900)
     }
   }
 

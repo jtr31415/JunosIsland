@@ -31,6 +31,8 @@ interface Live {
   phase: number
   /** Set on tap; drives a squash-stretch bounce. */
   bounce: number
+  /** Seconds left to stand still before wandering again. */
+  restFor: number
 }
 
 export interface Obstacle { x: number; z: number; r: number }
@@ -70,17 +72,35 @@ export function createPetField(base = ''): PetField {
     return root.clone(true)
   }
 
-  /** A random owned tile for a pet to head towards. */
+  /**
+   * Somewhere for a pet to go: a random owned tile, on ground it can actually
+   * stand on.
+   *
+   * Candidates inside a tree or rock are REJECTED rather than corrected. The
+   * first version let a pet aim anywhere, including into scenery, so the
+   * obstacle push shoved it out and it immediately walked back in — and
+   * several pets oscillating around the same clear pocket looked, accurately,
+   * like a group dance. Picking a reachable goal is the fix; pushing harder
+   * would only have made the dance more energetic.
+   */
   function randomSpot(island: Island, hexSize: number): THREE.Vector3 {
     const keys = [...island.tiles.keys()]
-    const k = keys[Math.floor(Math.random() * keys.length)] as string
-    const parts = k.split(',').map(Number)
-    const w = toWorld({ q: parts[0] as number, r: parts[1] as number }, hexSize)
-    // Not dead centre, so two pets on one tile do not overlap exactly.
-    return new THREE.Vector3(
-      w.x + (Math.random() - 0.5) * hexSize * 0.7, 0,
-      w.z + (Math.random() - 0.5) * hexSize * 0.7,
-    )
+    const spot = new THREE.Vector3()
+
+    for (let attempt = 0; attempt < 12; attempt++) {
+      const k = keys[Math.floor(Math.random() * keys.length)] as string
+      const parts = k.split(',').map(Number)
+      const w = toWorld({ q: parts[0] as number, r: parts[1] as number }, hexSize)
+      spot.set(
+        w.x + (Math.random() - 0.5) * hexSize * 0.8, 0,
+        w.z + (Math.random() - 0.5) * hexSize * 0.8,
+      )
+      const blocked = obstacles.some(o =>
+        Math.hypot(spot.x - o.x, spot.z - o.z) < o.r * 1.15)
+      if (!blocked) return spot.clone()
+    }
+    // Every attempt blocked: stay put rather than aim somewhere unreachable.
+    return spot.clone()
   }
 
   return {
@@ -110,6 +130,7 @@ export function createPetField(base = ''): PetField {
           goal: randomSpot(island, hexSize),
           phase: Math.random() * Math.PI * 2,
           bounce: 0,
+          restFor: 2 + Math.random() * 6,
         })
       }
     },
@@ -119,7 +140,16 @@ export function createPetField(base = ''): PetField {
       if (l) l.bounce = 1
     },
 
-    setObstacles(list) { obstacles = list },
+    setObstacles(list) {
+      obstacles = list
+      // A tile that has just grown a tree may now contain someone's goal.
+      // Send those pets somewhere else rather than letting them push at it.
+      for (const l of live.values()) {
+        const blocked = obstacles.some(o =>
+          Math.hypot(l.goal.x - o.x, l.goal.z - o.z) < o.r * 1.15)
+        if (blocked) l.restFor = 0
+      }
+    },
 
     update(dt, t, island, hexSize) {
       const others = [...live.values()]
@@ -130,8 +160,17 @@ export function createPetField(base = ''): PetField {
         const dist = to.length()
 
         if (dist < 0.12) {
-          // Arrived: pause a moment, then pick somewhere new.
-          if (Math.random() < dt * 0.5) l.goal = randomSpot(island, hexSize)
+          /*
+           * Arrived. REST, properly — a countdown rather than a per-frame dice
+           * roll, so a pet that has just walked somewhere stays there long
+           * enough to look settled. Constant re-seeking is what made the
+           * island look busy and anxious rather than calm.
+           */
+          l.restFor -= dt
+          if (l.restFor <= 0) {
+            l.goal = randomSpot(island, hexSize)
+            l.restFor = 4 + Math.random() * 8
+          }
         } else {
           to.normalize()
           pos.addScaledVector(to, Math.min(dist, dt * 0.9))
@@ -156,12 +195,18 @@ export function createPetField(base = ''): PetField {
             pos.z += (dz / d) * push
           }
         }
+        /*
+         * Obstacles nudge, they do not shove. This is now only a safety net
+         * for a pet that started inside scenery — goals are already chosen on
+         * clear ground — so a strong push would just reintroduce the
+         * oscillation it used to cause.
+         */
         for (const ob of obstacles) {
           const dx = pos.x - ob.x
           const dz = pos.z - ob.z
           const d = Math.hypot(dx, dz)
           if (d > 0.0001 && d < ob.r) {
-            const push = (ob.r - d) / ob.r * dt * 3.0
+            const push = (ob.r - d) / ob.r * dt * 1.1
             pos.x += (dx / d) * push
             pos.z += (dz / d) * push
           }

@@ -45,13 +45,15 @@ export function createEgg(): Egg {
   const mat = (c: number): THREE.MeshStandardMaterial =>
     new THREE.MeshStandardMaterial({ color: c, metalness: 0, roughness: 1 })
 
-  const shell = new THREE.Mesh(new THREE.SphereGeometry(0.30, 18, 14), mat(0xfff4dc))
+  // Warm and bright: it must never be mistaken for the grey rocks it now
+  // shares a tile with.
+  const shell = new THREE.Mesh(new THREE.SphereGeometry(0.30, 18, 14), mat(0xfff8e0))
   shell.scale.set(1, 1.28, 1)
   shell.position.y = 0.38
 
   const spots = new THREE.Group()
   for (let i = 0; i < 5; i++) {
-    const s = new THREE.Mesh(new THREE.SphereGeometry(0.075, 10, 8), mat(0x8fd6ff))
+    const s = new THREE.Mesh(new THREE.SphereGeometry(0.075, 10, 8), mat(0x63c4f5))
     const a = (i / 5) * Math.PI * 2
     s.position.set(Math.cos(a) * 0.24, 0.38 + Math.sin(a * 1.7) * 0.16, Math.sin(a) * 0.24)
     s.scale.set(1, 0.6, 1)
@@ -95,13 +97,32 @@ export function createEgg(): Egg {
   glow.position.y = 0.38
   group.add(glow)
 
+  /*
+   * A soft ring on the ground beneath, always gently pulsing.
+   *
+   * The egg is THE thing to tap, and once the island grew scenery it sat
+   * among rocks of a similar size and colour and simply read as another
+   * stone. The ring is the island asking (brief §13) — an invitation that
+   * survives whatever grows up around it, without making the egg garish.
+   */
+  const ring = new THREE.Mesh(
+    new THREE.RingGeometry(0.42, 0.6, 24),
+    new THREE.MeshBasicMaterial({
+      color: 0xfff0b8, transparent: true, opacity: 0.5,
+      side: THREE.DoubleSide, depthWrite: false,
+    }),
+  )
+  ring.rotation.x = -Math.PI / 2
+  ring.position.y = 0.02
+  group.add(ring)
+
   group.add(shell, spots, createBlobShadow(0.28))
   /*
-   * Sized against the pets, not the tile. An egg should look like something a
-   * creature comes out of — a little bigger than the pet it holds, never a
-   * boulder sitting on the grass.
+   * Sized against the pets: bigger than the friend it holds, so it reads as
+   * something a creature comes out of — but never a boulder. Raised from 0.42
+   * because at that size it disappeared among the rocks.
    */
-  group.scale.setScalar(0.42)
+  group.scale.setScalar(0.62)
   group.userData.pick = { kind: 'egg' }
 
   let shudder = false
@@ -142,6 +163,9 @@ export function createEgg(): Egg {
       glow.material.opacity = stage === 'wobble'
         ? 0.18 + Math.sin(t * 3.2) * 0.12
         : 0
+      // The invitation breathes, a little more insistently near hatching.
+      const ringMat = ring.material as THREE.MeshBasicMaterial
+      ringMat.opacity = 0.34 + Math.sin(t * 2.1) * 0.16 + eager * 0.12
     },
 
     hatch() {
@@ -151,7 +175,7 @@ export function createEgg(): Egg {
         const step = (): void => {
           const p = Math.min(1, (performance.now() - start) / 700)
           group.rotation.z = Math.sin(p * Math.PI * 9) * 0.34 * (1 - p)
-          group.scale.setScalar(0.42 * (1 + Math.sin(p * Math.PI) * 0.18))
+          group.scale.setScalar(0.62 * (1 + Math.sin(p * Math.PI) * 0.18))
           glow.material.opacity = Math.sin(p * Math.PI) * 0.5
           if (p < 1) { requestAnimationFrame(step); return }
           group.visible = false
@@ -164,7 +188,7 @@ export function createEgg(): Egg {
 
     reset() {
       group.visible = true
-      group.scale.setScalar(0.42)
+      group.scale.setScalar(0.62)
       group.rotation.z = 0
       glow.material.opacity = 0
       stage = 'intact'
