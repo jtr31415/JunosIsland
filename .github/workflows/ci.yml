@@ -54,6 +54,12 @@ jobs:
       - name: Boot smoke test
         run: npm run smoke
 
+      # Boots the frozen original AND the rebuild under one seed and diffs the
+      # rendered play area at every step. This is the machine half of "plays
+      # identically"; a human still has to judge feel, sound and animation.
+      - name: Parity against the frozen original
+        run: npm run parity
+
       - name: Assemble Pages site
         run: |
           mkdir -p _site
