@@ -20,6 +20,7 @@ import { resolve } from 'node:path'
 import { GREEN, RED, CONFUSABLE, groupOf } from '../../src/core/wordlists'
 import { GRAPHS } from '../../src/core/segmentation'
 import { buildPool, buildNeighbours } from '../../src/core/neighbours'
+import { AL_ONSETS, AL_VOWELS, AL_CODAS_SHORT, AL_CODAS_LONG, REAL_BLOCK } from '../../src/core/alien'
 
 const src = readFileSync(resolve(__dirname, '../../v0/junos-words.html'), 'utf8').split(/\r?\n/)
 
@@ -53,5 +54,21 @@ describe('core data matches the frozen original verbatim', () => {
       code.map(([a, b]) => src.slice(a - 1, b).join('\n')).join('\n') + '; return NEIGH;',
     )() as Record<string, unknown>
     expect(buildNeighbours(buildPool())).toEqual(o)
+  })
+
+  it('alien pools and the REAL_BLOCK set (v0:463-489)', () => {
+    // REAL_BLOCK is 200+ hand-listed words; this is the only realistic way to
+    // know ours matches. AL_VOWELS repeats the short vowels deliberately, so
+    // compare sequences rather than sets.
+    const code = [[368, 395], [398, 428], [463, 489]] as const
+    const o = new Function(
+      code.map(([a, b]) => src.slice(a - 1, b).join('\n')).join('\n') +
+      '; return {AL_ONSETS, AL_VOWELS, AL_CODAS_SHORT, AL_CODAS_LONG, REAL_BLOCK};',
+    )() as Record<string, unknown>
+    expect(AL_ONSETS).toEqual(o.AL_ONSETS)
+    expect(AL_VOWELS).toEqual(o.AL_VOWELS)
+    expect(AL_CODAS_SHORT).toEqual(o.AL_CODAS_SHORT)
+    expect(AL_CODAS_LONG).toEqual(o.AL_CODAS_LONG)
+    expect([...REAL_BLOCK].sort()).toEqual([...(o.REAL_BLOCK as Set<string>)].sort())
   })
 })
