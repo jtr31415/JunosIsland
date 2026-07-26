@@ -12,11 +12,13 @@
 import '../ui/tokens.css'
 import '../ui/challenges.css'
 import { mountWordFind } from '../challenges/wordFind'
+import { mountBuild } from '../challenges/build'
 import { mountSum } from '../challenges/sum'
 import type { ChallengeDeps, ChallengeHandle, Holds } from '../challenges/mount'
 import type { Speaker } from '../platform/speech'
 import type { Sfx } from '../platform/audio'
 import type { ReadPick } from '../core/generators/read'
+import type { BuildItem } from '../core/generators/build'
 import type { SumItem } from '../core/generators/sums'
 
 export interface OverlayHost {
@@ -30,6 +32,8 @@ export interface OverlayHost {
 
 export interface Overlay {
   openWordFind(picks: ReadPick[]): void
+  /** A build page: assemble one word from grapheme tiles (slice-1 spec §3). */
+  openBuild(item: BuildItem): void
   openSum(item: SumItem): void
   close(): void
   say(text: string, onTap?: () => void): void
@@ -184,6 +188,13 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
       earned = false
       layer.classList.remove('hide')
       handle = mountWordFind(picks, deps())
+    },
+
+    openBuild(item) {
+      teardown()
+      earned = false
+      layer.classList.remove('hide')
+      handle = mountBuild(item, deps())
     },
 
     openSum(item) {

@@ -16,6 +16,8 @@ import { createFred } from './fred'
 import { createPropField } from './world/props'
 import { createAlbum } from './album'
 import { hatchProgress, landProgress } from './flow'
+import { pageKind } from './balance'
+import { landPaused, eggsPaused, activeGovernor, GOVERNOR_LINE } from './governors'
 import { OPENING, HATCH_LINES, fill } from './script'
 import { loadIsland, saveIsland } from './save'
 import { createLocalStore } from '../platform/storage'
@@ -38,6 +40,8 @@ import { GREEN, RED } from '../core/wordlists'
 import { buildPool, buildNeighbours } from '../core/neighbours'
 import { generateRead } from '../core/generators/read'
 import type { ReadState, ReadPick } from '../core/generators/read'
+import { generateBuild } from '../core/generators/build'
+import type { BuildState, BuildItem } from '../core/generators/build'
 import { generateAdd } from '../core/generators/sums'
 import type { SumState, SumItem } from '../core/generators/sums'
 import { petName } from '../core/names'
@@ -54,6 +58,7 @@ async function boot(): Promise<void> {
   const drawRed = makeDeck(defaultRng, RED)
   const neigh = buildNeighbours(buildPool())
   const readStore: ReadState = { history: [], idx: -1 }
+  const buildStore: BuildState = { history: [], idx: -1 }
   const sumStore: SumState = { history: [], idx: -1 }
 
   let flow: Flow = createFlow()   // replaced by the save below
@@ -140,6 +145,7 @@ async function boot(): Promise<void> {
     world.showSockets(flow.phase === 'placing')
     void pets.sync(flow.pets, flow.island, world.models.size)
     if (flow.phase !== 'placing') placeEgg()
+    egg.setProgress(hatchProgress(flow))
     renderOffer()
     renderProgress()
     persist()
@@ -186,10 +192,23 @@ async function boot(): Promise<void> {
    * nothing for real work. Asserting the phase here turns that entire class of
    * mistake into a visible nothing instead of a swallowed something.
    */
+  /**
+   * A reading page. Pages alternate find and build (slice-1 spec §3), so
+   * practice is never all one shape — finding a heard word and building it
+   * from graphemes are different skills, and the 2D game teaches both.
+   *
+   * Which kind comes next is derived from how many pages this egg has already
+   * taken, so it is stable across a reload rather than random.
+   */
   function openRead(state: Flow = flow): void {
     if (state.phase !== 'challenge' || state.challenge !== 'read') return
-    generateRead(readStore, { rng: defaultRng, drawGreen, drawRed, neigh, level: 1 })
     overlay.clearSay()
+    if (pageKind(state.readProgress) === 'build') {
+      generateBuild(buildStore, { rng: defaultRng, drawGreen, level: 1 })
+      overlay.openBuild(buildStore.history[buildStore.idx] as BuildItem)
+      return
+    }
+    generateRead(readStore, { rng: defaultRng, drawGreen, drawRed, neigh, level: 1 })
     overlay.openWordFind(readStore.history[readStore.idx] as ReadPick[])
   }
 
@@ -341,11 +360,30 @@ async function boot(): Promise<void> {
    * but supply ports and re-render — all the decisions live in
    * interactions.ts, where they can be asserted.
    */
+  /**
+   * A governor never blocks a tap — it answers it with Fred asking for the
+   * other half of the loop instead (slice-1 spec §5). The child can ignore
+   * him and tap again; nothing is greyed out and nothing is refused twice.
+   */
+  function invite(which: Exclude<ReturnType<typeof activeGovernor>, 'none'>): void {
+    const line = GOVERNOR_LINE[which]
+    overlay.say(line)
+    speech.speak(line)
+    fred.talk(2.6)
+    fred.hop()
+  }
+
   const ports: InteractionPorts = {
     challengeOpen: () => overlay.isOpen(),
     storyPlaying: () => inOpening,
-    openRead,
-    openSum,
+    openRead: state => {
+      if (eggsPaused(state)) { invite('nursery-queue'); return }
+      openRead(state)
+    },
+    openSum: state => {
+      if (landPaused(state)) { invite('space-surplus'); return }
+      openSum(state)
+    },
     replayStory: () => { void runOpening() },
     bouncePet: id => pets.bounce(id),
     say: text => overlay.say(text),
