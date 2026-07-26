@@ -188,8 +188,8 @@ describe('mountWordFind', () => {
 
   it('teardown clears the element and cancels pending timers', () => {
     const d = makeDeps(el)
-    const stop = mountWordFind(ITEM, d)
-    stop()
+    const h = mountWordFind(ITEM, d)
+    h.teardown()
     expect(el.children).toHaveLength(0)
     expect(d.speech.cancel).toHaveBeenCalled()
     vi.advanceTimersByTime(10_000)
@@ -210,5 +210,27 @@ describe('mountWordFind', () => {
     vi.advanceTimersByTime(6000)
     expect(d.speech.speak).toHaveBeenCalled()
     el2.remove()
+  })
+})
+
+describe('sayAgain (btnSay, v0:2086)', () => {
+  it('repeats the target without wiping found words or reshuffling', () => {
+    // The regression this guards: re-mounting instead would clear .found and
+    // draw a fresh shuffle, punishing a child for asking for help.
+    const d = makeDeps(el)
+    const h = mountWordFind(ITEM, d)
+    vi.advanceTimersByTime(SPEAK_DELAY + 50)
+    const first = (d.speech.speak as ReturnType<typeof vi.fn>).mock.calls[0]![0]
+    const right = [...el.querySelectorAll<HTMLElement>('.word')]
+      .find(w => w.textContent === first)!
+    tap(right)
+    expect(right.classList.contains('found')).toBe(true)
+
+    h.sayAgain()
+    expect(el.querySelectorAll('.word.found')).toHaveLength(1)
+    expect(el.querySelectorAll('.word')).toHaveLength(3)
+    // and it speaks the NEXT target, not a re-shuffled one
+    const after = (d.speech.speak as ReturnType<typeof vi.fn>).mock.calls.at(-1)![0]
+    expect(after).not.toBe(first)
   })
 })

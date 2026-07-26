@@ -8,9 +8,9 @@
  */
 import { defaultRng } from '../core/rng'
 import type { SumItem } from '../core/generators/sums'
-import type { ChallengeDeps, Teardown } from './mount'
+import type { ChallengeDeps, ChallengeHandle } from './mount'
 
-export function mountSum(p: SumItem, deps: ChallengeDeps): Teardown {
+export function mountSum(p: SumItem, deps: ChallengeDeps): ChallengeHandle {
   let roundTimer: ReturnType<typeof setTimeout> | null = null
   let torn = false
 
@@ -156,11 +156,15 @@ export function mountSum(p: SumItem, deps: ChallengeDeps): Teardown {
   pad.append(zrow, tgrid)
   box.appendChild(pad)
 
-  return () => {
-    torn = true
-    if (roundTimer) { clearTimeout(roundTimer); roundTimer = null }
-    deps.speech.cancel()
-    deps.hideTarget()
-    box.innerHTML = ''
+  return {
+    /* btnSay is hidden in maths modes (v0:2045), so there is nothing to repeat. */
+    sayAgain: () => {},
+    teardown: () => {
+      torn = true
+      if (roundTimer) { clearTimeout(roundTimer); roundTimer = null }
+      deps.speech.cancel()
+      deps.hideTarget()
+      box.innerHTML = ''
+    },
   }
 }

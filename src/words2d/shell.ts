@@ -936,21 +936,23 @@ function celebrate() {
 
 /* ===== challenge mounting ===== */
 
-let teardown = null
+let handle = null
 /* The host owns its own timers now that celebrate and the sum advance live
    here. Both must be cancelled on mode or profile switch, or a stale advance
    fires into the wrong mode — a bug the original could not have, because one
    shared roundTimer meant clearRound cancelled everything. */
 let hostTimer = null
 
-function deps() {
+function deps(mountedMode) {
   return {
     el: $('words'),
     speech, sfx, holds,
-    isActive: () => true,
+    /* The renderers' ported mode guards must actually guard: a mount is only
+       active while its own mode is selected (v0:913, 1119, 1280). */
+    isActive: () => mode === mountedMode,
     flyToScore: flyStar,
     onWrong: () => {},          /* words2d has no use for it; the island will */
-    onAdvance: () => { advance() },
+    onAdvance: () => { advance(mountedMode) },
     showTarget: html => {
       const card = $('targetCard')
       card.innerHTML = html
@@ -966,23 +968,32 @@ function deps() {
 
 function clearHost() {
   if (hostTimer) { clearTimeout(hostTimer); hostTimer = null }
-  if (teardown) { teardown(); teardown = null }
+  if (handle) { handle.teardown(); handle = null }
 }
 
 function renderCurrent() {
   clearHost()
   const item = store[mode].history[store[mode].idx]
-  const d = deps()
-  if (mode === 'read') teardown = mountWordFind(item, d)
-  else if (mode === 'build') teardown = mountBuild(item, d)
-  else teardown = mountSum(item, d)
+  const m = mode
+  const d = deps(m)
+  if (m === 'read') handle = mountWordFind(item, d)
+  else if (m === 'build') handle = mountBuild(item, d)
+  else handle = mountSum(item, d)
 }
 
-/** What a challenge's onAdvance does: next item, or generate a new one. */
-function advance() {
-  const s = store[mode]
-  if (s.idx < s.history.length - 1) s.idx++
-  else GEN[mode]()
+/**
+ * What a challenge's onAdvance does.
+ *
+ * Build and the sums differ in the original and must keep differing:
+ * renderBuild's nextB ALWAYS generates a fresh word (v0:1285-1286), while
+ * renderSum's adv replays forward through history first (v0:1124-1126).
+ * Collapsing them would make build replay an old word after back-navigation.
+ */
+function advance(m) {
+  const s = store[m]
+  if (m === 'build') GEN.build()
+  else if (s.idx < s.history.length - 1) s.idx++
+  else GEN[m]()
   renderCurrent()
 }
 
@@ -1057,33 +1068,45 @@ for (const k in THEMES) $(THEMES[k].btn).addEventListener('click', () => setThem
 for (const k in MODEBTN) $(MODEBTN[k]).addEventListener('click', () => setMode(k))
 ;[1, 2, 3].forEach(l => $('btnL' + l).addEventListener('click', () => setLevel(l)))
 
-/* Say-it-again and Fred re-mount the current challenge, which restarts its
-   own speech — the renderers own their audio now. */
-$('btnSay').addEventListener('click', () => renderCurrent())
-$('btnFred').addEventListener('click', () => renderCurrent())
+/* v0:2086-2087. These are the buttons a struggling child reaches for, so they
+   must NOT restart the round: re-mounting would wipe found words, reshuffle
+   the target order, and clear tiles the child had already placed. */
+$('btnSay').addEventListener('click', () => handle && handle.sayAgain())
+$('btnFred').addEventListener('click', () => handle && handle.fred && handle.fred())
 
+const NEWLINE = String.fromCharCode(10)   /* newline in prompt copy */
 $('btnGear').addEventListener('click', () => {
   const d = new Date()
   const pin = String(d.getDate()).padStart(2, '0') + String(d.getMonth() + 1).padStart(2, '0')
   const entry = prompt('Grown-ups only — PIN please:')
-  if (entry !== pin) { if (entry !== null) toast('Not quite!'); return }
-  const choice = prompt('1 — add a player\n2 — delete a player\n3 — nothing')
-  if (choice === '1') { openPicker(); addPlayer() }
-  else if (choice === '2') {
-    const names = profs.list.map((p, i) => (i + 1) + ' — ' + p.name).join('\n')
-    const pick = prompt('Delete which player?\n' + names)
-    if (!pick) return
-    const idx = parseInt(pick.trim(), 10) - 1
-    const victim = profs.list[idx]
-    if (!victim) return
-    if (!confirm('Really delete ' + victim.name + '? This cannot be undone.')) return
-    localStorage.removeItem(SAVE_ROOT + '.' + victim.id)
-    profs.list.splice(idx, 1)
-    if (profs.current === victim.id) profs.current = profs.list[0] ? profs.list[0].id : null
-    saveProfiles()
-    location.reload()
+  if(entry === null) return;
+  if(entry.trim() !== pin){ toast('Wrong PIN'); return; }
+  /* Verbatim from v0:2095-2122, with ONLY the retired battery item removed and
+     the two survivors renumbered. */
+  const choice = prompt(
+    'Grown-up menu:' + NEWLINE + '1 — Reset THIS player (wipes their stickers and score)' + NEWLINE + '2 — Delete a player', '1');
+  if(choice === null) return;
+  if(choice.trim() === '1'){
+    if(!confirm('Really wipe ALL of ' + CHILD_NAME + "'s progress, including the sticker book?")) return;
+    try{ localStorage.removeItem(saveKey()); }catch(e){}
+    location.reload();
+  } else if(choice.trim() === '2'){
+    const names = profs.list.map((p, i) => (i + 1) + ' — ' + p.name).join(NEWLINE);
+    const pick = prompt('Delete which player?' + NEWLINE + names);
+    if(pick === null) return;
+    const idx = parseInt(pick.trim(), 10) - 1;
+    const victim = profs.list[idx];
+    if(!victim){ toast('No such player'); return; }
+    if(!confirm('Delete ' + victim.name + ' and ALL their progress forever?')) return;
+    try{ localStorage.removeItem(SAVE_ROOT + '.' + victim.id); }catch(e){}
+    profs.list.splice(idx, 1);
+    if(!profs.list.length || profs.current === victim.id){
+      profs.current = profs.list.length ? profs.list[0].id : null;
+    }
+    saveProfiles();
+    location.reload();
   }
-})
+});
 
 $('whoBtn').addEventListener('click', openPicker)
 

@@ -9,9 +9,9 @@
 import { plainWord, parseMark, markDigraphs } from '../core/segmentation'
 import { defaultRng, shuffle } from '../core/rng'
 import type { ReadPick } from '../core/generators/read'
-import type { ChallengeDeps, Teardown } from './mount'
+import type { ChallengeDeps, ChallengeHandle } from './mount'
 
-export function mountWordFind(picks: ReadPick[], deps: ChallengeDeps): Teardown {
+export function mountWordFind(picks: ReadPick[], deps: ChallengeDeps): ChallengeHandle {
   // Renderer-owned state (v0:840-842). fredToken has no role here, but the
   // teardown must still cancel this mount's pending timer and speech.
   let round = {
@@ -115,11 +115,15 @@ export function mountWordFind(picks: ReadPick[], deps: ChallengeDeps): Teardown 
 
   roundTimer = setTimeout(() => speakTarget(), 900 + picks.length * 60)
 
-  return () => {
-    torn = true
-    if (roundTimer) { clearTimeout(roundTimer); roundTimer = null }
-    deps.speech.cancel()
-    deps.hideTarget()
-    box.innerHTML = ''
+  return {
+    /* btnSay (v0:2086): repeat the target, leaving found words untouched. */
+    sayAgain: () => { if (roundTimer) clearTimeout(roundTimer); speakTarget() },
+    teardown: () => {
+      torn = true
+      if (roundTimer) { clearTimeout(roundTimer); roundTimer = null }
+      deps.speech.cancel()
+      deps.hideTarget()
+      box.innerHTML = ''
+    },
   }
 }

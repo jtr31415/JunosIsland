@@ -66,8 +66,24 @@ export interface ChallengeDeps {
 }
 
 /**
- * Cancels pending timers and speech. Does the job of clearRound (v0:844-849);
- * the host MUST call it before mounting the next challenge, or a pending
- * Fred sequence or auto-advance from the previous one keeps running.
+ * What a mounted challenge hands back to its host.
+ *
+ * `sayAgain` and `fred` exist because the help buttons must NOT restart the
+ * round. In the original, btnSay repeats the audio only (v0:2086) and btnFred
+ * sounds the word out grapheme by grapheme (v0:2087) — both leaving found
+ * words and placed tiles exactly where the child left them. Re-mounting
+ * instead would wipe their progress and reshuffle the target order, which
+ * punishes the child for asking for help.
  */
-export type Teardown = () => void
+export interface ChallengeHandle {
+  /**
+   * Cancels pending timers and speech. Does the job of clearRound
+   * (v0:844-849); the host MUST call it before mounting the next challenge,
+   * or a pending Fred sequence or auto-advance keeps running.
+   */
+  teardown(): void
+  /** Repeat the prompt without disturbing progress (btnSay, v0:2086). */
+  sayAgain(): void
+  /** Sound it out grapheme by grapheme (btnFred, v0:2087). Build mode only. */
+  fred?(): void
+}

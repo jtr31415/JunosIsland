@@ -24,9 +24,14 @@ const here = dirname(fileURLToPath(import.meta.url))
 const artifact = resolve(here, '../../dist/words/junos-words.html')
 
 const raw = readFileSync(artifact, 'utf8')
+// Must be type="module": that is what makes the inlined script deferred, and
+// therefore what makes it safe for the build to place it in <head>. A classic
+// inline script there would run before the DOM exists and crash on $('fx') in
+// a real browser, while this harness — which evals post-parse — would still
+// pass. Assert the property rather than assume it.
 const match = raw.match(/<script type="module"[^>]*>([\s\S]*?)<\/script>/)
 if (!match) {
-  console.error('FAIL: no inlined module script in the build')
+  console.error('FAIL: no inlined <script type="module"> in the build')
   process.exit(1)
 }
 
@@ -57,13 +62,57 @@ try {
   errors.push('eval: ' + e.message)
 }
 
+/**
+ * Walk the wiring paths the unit tests cannot reach, because shell.ts is a
+ * single @ts-nocheck module with no unit tests of its own. Two regressions
+ * (the help buttons, the gear menu) hid in exactly this gap.
+ */
+function click(d, id) {
+  const el = d.getElementById(id)
+  if (!el) throw new Error('missing element: ' + id)
+  el.dispatchEvent(new dom.window.Event('click', { bubbles: true }))
+}
+
 setTimeout(() => {
   const d = dom.window.document
+
+  // Drive forward two rounds before asserting anything about red words.
+  // Round 1 is n=3, reds=1, but the neighbour substitution can replace the
+  // sole red with a green-classed twin (v0:822-828) — the frozen original's
+  // own first round under the golden seed is has/him/his, all green. By round
+  // 3 (n=5, reds=2) at least one red always survives.
+  const scene = d.getElementById('scene')
+  const fwd = () => scene.dispatchEvent(new dom.window.MouseEvent('pointerdown',
+    { bubbles: true, clientX: dom.window.innerWidth - 5, clientY: 300 }))
+  fwd(); fwd()
+
+  // Capture BEFORE the wiring walk: it ends with btnReset, which wipes history
+  // and returns the game to round 1, where a red word is not guaranteed.
+  const trickyByRound3 = d.querySelectorAll('#words .tk').length
+  const wordsInRound3 = d.querySelectorAll('#words .word').length
+
+  const wiringErrors = []
+  const tryIt = (name, fn) => { try { fn() } catch (e) { wiringErrors.push(name + ': ' + e.message) } }
+  tryIt('mode build', () => click(d, 'btnBuild'))
+  tryIt('mode add', () => click(d, 'btnAdd'))
+  tryIt('mode sub', () => click(d, 'btnSub'))
+  tryIt('level 3', () => click(d, 'btnL3'))
+  tryIt('level 1', () => click(d, 'btnL1'))
+  tryIt('mode read', () => click(d, 'btnRead'))
+  tryIt('say again', () => click(d, 'btnSay'))
+  tryIt('theme space', () => click(d, 'btnSpace'))
+  tryIt('theme ocean', () => click(d, 'btnOcean'))
+  tryIt('sound toggle', () => { click(d, 'btnSound'); click(d, 'btnSound') })
+  tryIt('book open', () => click(d, 'btnBook'))
+  tryIt('book close', () => click(d, 'bkClose'))
+  tryIt('reset', () => click(d, 'btnReset'))
+
   const checks = [
     ['no runtime errors on boot', errors.length === 0, errors.join(' | ')],
-    ['renders the first reading round', d.querySelectorAll('#words .word').length === 3,
-     `got ${d.querySelectorAll('#words .word').length} words, expected MIN=3`],
-    ['marks the tricky bit of a red word', d.querySelectorAll('#words .tk').length >= 1, 'no .tk span'],
+    ['renders a growing reading round', wordsInRound3 === 5, `round 3 had ${wordsInRound3} words, expected 5`],
+    ['marks the tricky bit of a red word by round 3', trickyByRound3 >= 1,
+     'no .tk span after two forward taps'],
+    ['every wiring path runs without throwing', wiringErrors.length === 0, wiringErrors.join(' | ')],
     ['builds the ambience layer', (d.getElementById('ambience')?.children.length ?? 0) > 0, 'ambience empty'],
     ['battery is retired', d.getElementById('battery') === null, 'battery element still present'],
     ['reading mode is active', d.getElementById('btnRead')?.classList.contains('on'), 'read button not on'],

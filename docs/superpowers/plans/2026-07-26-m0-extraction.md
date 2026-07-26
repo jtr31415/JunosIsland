@@ -33,6 +33,45 @@
 
 ## Revision log
 
+**rev 4 — Phase 3 executed; three deviations recorded, three blockers fixed.**
+
+Deviations from this plan made during execution, all deliberate:
+
+1. **`inputLock` is shell-level state in `Holds`, not per-mount closure state**
+   (change 9 said closure). It is module-level in the original (v0:842) and
+   *written* by all three renderers, so a mash-rescue lock set in maths still
+   applies if the child switches straight to reading. Closure state would have
+   silently dropped that. The gate review confirmed this reading against source.
+2. **The shell is ONE `@ts-nocheck` module, not the eight in Task 19.** Its
+   functions share a dense web of module-level state; splitting means rewriting
+   the wiring. Its bodies are spliced verbatim; annotating means editing
+   field-tested code. Accepted at the gate *on condition* the boot smoke test
+   walks the wiring paths — which it now does, because this unchecked,
+   untested layer is exactly where two regressions hid.
+3. **The shell keeps the original's verbatim localStorage save code** rather
+   than moving to the async `SaveStore` (Task 19 Step 3, spec §6). Rewriting
+   working save logic for no M0 benefit is the risk this project forbids
+   everywhere else; the island owns `SaveStore` and the two games share no
+   saves.
+
+Blockers found at the Phase 3 gate and fixed:
+
+- **`btnSay`/`btnFred` had regressed into round-resets.** I wired both to
+  `renderCurrent()`, which wiped found words, reshuffled the target order and
+  cleared placed tiles — and meant Fred never actually spoke. These are the
+  buttons a struggling child reaches for. The mounts now return a
+  `ChallengeHandle` with `sayAgain()` and `fred()`.
+- **The gear menu had been rewritten from memory rather than ported**, losing
+  "Reset THIS player" (a parent feature), the `entry.trim()`, the
+  "No such player" toast, and the verbatim copy. Restored from v0:2089-2122
+  with only the battery item removed.
+- **The boot smoke test asserted something the repo's own golden data
+  disproves** — that round 1 contains a red word. `golden.read[0]` is
+  `has/him/his`, all green: the neighbour substitution can replace the sole red
+  with a green-classed twin (v0:822-828). It passed once by luck of the
+  unseeded RNG and was a coin-flip CI failure. It now drives forward two rounds
+  first, and captures state before the wiring walk resets the game.
+
 **rev 3 — after Fable 5 re-review (FAIL on rev 2, narrowly).** The re-review confirmed
 the nine-dataset golden sequence is sound end to end — it verified the level-flip
 ordering, the readL2 saturation mirroring, the shared `drawGreen` carry, and the
@@ -3310,6 +3349,14 @@ Open `v0/junos-words.html` and `dist/words/junos-words.html` in two browser wind
 - [ ] Theme switching changes palette, ambience and sounds
 - [ ] Profile switching works; the PIN gear opens with today's DDMM
 - [ ] TTS speaks in an en-GB voice
+- [ ] **btnSay repeats the prompt without clearing found words or placed tiles,
+      and without reshuffling the target order**
+- [ ] **btnFred sounds the word out grapheme by grapheme, leaving already-placed
+      tiles where they are**
+- [ ] **The gear menu offers "Reset THIS player" and "Delete a player", takes a
+      PIN with surrounding whitespace, and says "Wrong PIN" / "No such player"**
+- [ ] Back-navigating in build mode then completing a word deals a NEW word
+      rather than replaying (v0:1285-1286)
 - [ ] **Battery retired:** no battery UI anywhere, and sums advance freely with no charge gate and no empty-battery nudge. This is the one intended difference from `v0/`
 - [ ] Auto-advance waits out a spectacle rather than cutting through it (the `rewardUntil` hold)
 - [ ] TTS stays quiet during a celebration, then resumes (the `quietUntil` hold)

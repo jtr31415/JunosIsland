@@ -181,11 +181,11 @@ describe('mountBuild', () => {
     const { d } = makeDeps(el)
     ;(d.speech.speak as ReturnType<typeof vi.fn>).mockImplementation(
       (_t: string, _r?: number, onend?: () => void) => { if (onend) setTimeout(onend, 10); return true })
-    const stop = mountBuild(ITEM, d)
+    const h = mountBuild(ITEM, d)
     tap(tile(el, 'p')); tap(tile(el, 'm')); tap(tile(el, 'd'))
     vi.advanceTimersByTime(400)
     const before = (d.speech.speak as ReturnType<typeof vi.fn>).mock.calls.length
-    stop()
+    h.teardown()
     vi.advanceTimersByTime(5000)
     expect((d.speech.speak as ReturnType<typeof vi.fn>).mock.calls.length).toBe(before)
   })
@@ -199,5 +199,30 @@ describe('FRED_SOUNDS', () => {
     expect(FRED_SOUNDS['b']).toBe('buh')
     expect(FRED_SOUNDS['sh']).toBe('shh')
     expect(FRED_SOUNDS['ng']).toBe('ing')
+  })
+})
+
+describe('help buttons (v0:2086-2087)', () => {
+  it('sayAgain repeats the word without clearing placed tiles', () => {
+    const { d } = makeDeps(el)
+    const h = mountBuild(ITEM, d)
+    tap(tile(el, 'sh'))
+    expect(el.querySelectorAll('.slot.filled')).toHaveLength(1)
+    h.sayAgain()
+    expect(el.querySelectorAll('.slot.filled')).toHaveLength(1)
+    expect(d.speech.speak).toHaveBeenCalledWith('ship')
+  })
+
+  it('fred sounds it out without clearing placed tiles', () => {
+    // The regression this guards: btnFred used to re-mount, which both wiped
+    // the child's tiles AND meant Fred never actually spoke.
+    const { d } = makeDeps(el)
+    const h = mountBuild(ITEM, d)
+    tap(tile(el, 'sh'))
+    ;(d.speech.speak as ReturnType<typeof vi.fn>).mockClear()
+    h.fred!()
+    vi.advanceTimersByTime(400)
+    expect(el.querySelectorAll('.slot.filled')).toHaveLength(1)
+    expect(d.speech.speak).toHaveBeenCalledWith('shh', 0.9, expect.any(Function))
   })
 })

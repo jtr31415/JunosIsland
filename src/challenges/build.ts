@@ -9,7 +9,7 @@
  * for.
  */
 import type { BuildItem } from '../core/generators/build'
-import type { ChallengeDeps, Teardown } from './mount'
+import type { ChallengeDeps, ChallengeHandle } from './mount'
 
 /**
  * Best-effort sound map (v0:1204-1211). Continuants (sss, mmm, shh) come out
@@ -25,7 +25,7 @@ export const FRED_SOUNDS: Record<string, string> = {
   ll: 'lll', ss: 'sss', ff: 'fff', ee: 'ee', oo: 'oo', or: 'or',
 }
 
-export function mountBuild(item: BuildItem, deps: ChallengeDeps): Teardown {
+export function mountBuild(item: BuildItem, deps: ChallengeDeps): ChallengeHandle {
   let roundTimer: ReturnType<typeof setTimeout> | null = null
   let fredToken = 0
   let torn = false
@@ -139,12 +139,18 @@ export function mountBuild(item: BuildItem, deps: ChallengeDeps): Teardown {
   box.append(slotRow, tray)
   roundTimer = setTimeout(() => speakBuildWord(), 900)
 
-  return () => {
-    torn = true
-    fredToken++            /* cancels any in-flight Fred sequence (v0:845) */
-    if (roundTimer) { clearTimeout(roundTimer); roundTimer = null }
-    deps.speech.cancel()
-    deps.hideTarget()
-    box.innerHTML = ''
+  return {
+    /* btnSay (v0:2086) and btnFred (v0:2087): help WITHOUT wiping the tiles
+       the child has already placed. */
+    sayAgain: () => { if (roundTimer) clearTimeout(roundTimer); speakBuildWord() },
+    fred: () => fredTalk(),
+    teardown: () => {
+      torn = true
+      fredToken++          /* cancels any in-flight Fred sequence (v0:845) */
+      if (roundTimer) { clearTimeout(roundTimer); roundTimer = null }
+      deps.speech.cancel()
+      deps.hideTarget()
+      box.innerHTML = ''
+    },
   }
 }

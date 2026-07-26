@@ -173,9 +173,9 @@ describe('mountSum', () => {
 
   it('teardown cancels the pending advance', () => {
     const { d } = makeDeps(el)
-    const stop = mountSum(ADD, d)
+    const h = mountSum(ADD, d)
     tap(chip(el, 12))
-    stop()
+    h.teardown()
     vi.advanceTimersByTime(10_000)
     expect(d.onAdvance).not.toHaveBeenCalled()
     expect(el.children).toHaveLength(0)
