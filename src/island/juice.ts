@@ -20,13 +20,17 @@ export const SEA_LEVEL = -0.21
 export function createSea(): THREE.Mesh {
   const geo = new THREE.PlaneGeometry(400, 400, 1, 1)
   /*
-   * The SAME blue as the atlas water swatch (#2473b4, sampled from the water
-   * hex's own UVs), because the open sea and a placed pond are one body of
-   * water and must look like it. The old lighter blue was fine while the
-   * island had no shoreline; the moment coast tiles arrived, their sand ramps
-   * ran down to meet a sea of visibly the wrong colour.
+   * Bright and friendly, NOT the atlas water swatch.
+   *
+   * Matching the swatch (#2473b4) was tried and looked wrong for an obvious
+   * reason in hindsight: on the tiles that colour is a pond, a few hexes of
+   * deep water ringed by land. Stretched across the whole horizon under a
+   * bright sky it turns the world navy and gloomy, which brief §1.2 rules out
+   * in as many words — bright, never scary. The shoreline mismatch that
+   * prompted the experiment was really the coast tiles' own water slabs, and
+   * the waterless models fixed that instead.
    */
-  const mat = new THREE.MeshStandardMaterial({ color: 0x2473b4, metalness: 0, roughness: 1 })
+  const mat = new THREE.MeshStandardMaterial({ color: 0x4fb8e8, metalness: 0, roughness: 1 })
   const sea = new THREE.Mesh(geo, mat)
   sea.rotation.x = -Math.PI / 2
   /*
