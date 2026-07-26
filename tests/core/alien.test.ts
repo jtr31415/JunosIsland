@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { alienWord, REAL_BLOCK, AL_ONSETS, AL_VOWELS } from '../../src/core/alien'
+import {
+  alienWord, REAL_BLOCK, AL_ONSETS, AL_VOWELS, AL_CODAS_SHORT, AL_CODAS_LONG,
+} from '../../src/core/alien'
 import { mulberry32 } from '../../src/core/rng'
-import { markDigraphs } from '../../src/core/segmentation'
 
 describe('alienWord', () => {
   it('never produces a real word', () => {
@@ -31,12 +32,19 @@ describe('alienWord', () => {
   })
 
   it('is built only from taught graphemes', () => {
-    // Every alien word must segment cleanly, or a child cannot decode it
+    // NOT a markDigraphs round-trip: that function is total and lossless, so
+    // every string round-trips, including "xqzw". Decodability means the word
+    // parses as onset + vowel + coda drawn from the actual pools.
+    const longest = (xs: readonly string[]) => [...new Set(xs)].sort((a, b) => b.length - a.length)
+    const ON = longest(AL_ONSETS), VO = longest(AL_VOWELS)
+    const CO = longest([...AL_CODAS_SHORT, ...AL_CODAS_LONG])
     const rng = mulberry32(4)
     for (let i = 0; i < 2000; i++) {
       const w = alienWord(rng)
-      expect(markDigraphs(w).map(s => s.txt).join('')).toBe(w)
-      expect(AL_VOWELS.some(v => w.includes(v))).toBe(true)
+      const ok = ON.some(o => w.startsWith(o) &&
+        VO.some(v => w.startsWith(o + v) &&
+          CO.some(c => o + v + c === w)))
+      expect(ok, `"${w}" does not parse as onset+vowel+coda`).toBe(true)
     }
   })
 
@@ -60,6 +68,10 @@ describe('alienWord', () => {
     const spy = () => { const r = mulberry32(7); return () => { const v = r(); draws.push(v); return v } }
     const rng = spy()
     const w = alienWord(rng)
+    // Assert the assumption explicitly: this word came from the FIRST attempt,
+    // so draws[0..2] are its vowel, onset and coda. If a future pool change
+    // made attempt one get rejected, this would misfire confusingly.
+    expect(draws.length).toBe(3)
     const v = AL_VOWELS[Math.floor(draws[0] as number * AL_VOWELS.length)] as string
     expect(w.startsWith(AL_ONSETS[Math.floor(draws[1] as number * AL_ONSETS.length)] as string)).toBe(true)
     expect(w).toContain(v)

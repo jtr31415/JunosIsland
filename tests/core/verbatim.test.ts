@@ -2,9 +2,15 @@
  * Verbatim-literal guard.
  *
  * Several core/ modules are specified as "copy this literal from the original
- * unchanged" — word lists, grapheme inventories, decoy pools, sound maps,
- * theme palettes. Hand-written assertions cannot really check that: they check
- * whatever the author happened to think of.
+ * unchanged" — word lists, grapheme inventories, alien pools, theme palettes.
+ * Hand-written assertions cannot really check that: they check whatever the
+ * author happened to think of.
+ *
+ * Covered here: GREEN, RED, CONFUSABLE, groupOf, GRAPHS, the built NEIGH map,
+ * the AL_* pools, REAL_BLOCK, THEMES. NOT covered: DECOYS, which lives inside
+ * generateBuild (v0:1169-1170) where a line-range eval cannot reach it — it is
+ * pinned indirectly but effectively by 1,000 golden build items. FRED_SOUNDS
+ * belongs here as soon as Phase 3 ports it.
  *
  * This test instead executes the ORIGINAL's own literals out of the frozen
  * file and deep-compares them with ours. A transcription slip anywhere in this
@@ -49,7 +55,14 @@ describe('core data matches the frozen original verbatim', () => {
   it('the whole neighbour map is identical, entry for entry (v0:432-460)', () => {
     // Derived rather than copied, but comparing the entire built map against
     // the original's is the strongest available check on lev1, buildPool and
-    // the group-exclusion filter all at once — including iteration order.
+    // the group-exclusion filter at once.
+    //
+    // Precisely what this pins: each entry's ARRAY order, which is the
+    // RNG-visible part — generateRead filters an entry (order-preserving) then
+    // indexes it with ri (read.ts), so a reordered neighbour list changes
+    // output. It does NOT pin object key order: toEqual compares objects as
+    // unordered maps. Nothing currently iterates NEIGH's keys; if anything ever
+    // does, this guard will not cover it.
     const code = [[368, 395], [398, 428], [432, 460]] as const
     const o = new Function(
       code.map(([a, b]) => src.slice(a - 1, b).join('\n')).join('\n') + '; return NEIGH;',
@@ -76,6 +89,11 @@ describe('core data matches the frozen original verbatim', () => {
   it('theme palettes, including every hex value (v0:507-515)', () => {
     // A transposed hex digit is invisible to a shape-only test but changes the
     // particle colours, so compare the whole structure.
+    //
+    // Caveat as with NEIGH: toEqual does not pin key order, and the 2D shell
+    // iterates THEMES with for...in (v0:2033, 2082) to build the theme picker.
+    // Our key order matches source today; a reorder would change picker order
+    // without failing here.
     const o = evalRange(507, 515, 'THEMES')
     expect(THEMES).toEqual(o.THEMES)
   })
