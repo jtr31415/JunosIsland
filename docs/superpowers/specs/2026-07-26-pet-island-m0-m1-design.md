@@ -328,10 +328,13 @@ Three layers, weakest to strongest.
    rate.
 2. **The rebuild is the integration test.** The 2D game ships from these modules. An
    unfaithful port is a visibly broken game.
-3. **Golden-output diff — the one that settles it.** Before touching anything, patch a
-   *throwaway copy* of `junos-words.html` to accept a seeded RNG and dump 500 generated
-   items per mode to JSON. After extraction, generate the same 500 from `core/` with the
-   same seed and diff.
+3. **Golden-output diff — the one that settles it.** A harness slices the *pure* line
+   ranges out of the frozen original verbatim, runs them under Node with `Math.random`
+   replaced by a seeded PRNG, and dumps the generated items to JSON. After extraction,
+   `core/` regenerates the same items with the same seed and the two are diffed.
+
+   Running the original's own source text — rather than a hand-patched copy — is what
+   makes this a reference rather than a second port. Nothing is written to `v0/`.
 
    Its sharp edge: this pins the *order* of RNG calls, not just behaviour. Restructure a
    generator equivalently and the diff lights up. That is mostly a feature — it catches
@@ -375,6 +378,7 @@ native code. Optional: the same URL works in an ordinary tab.
 |---|---|
 | Tablet performance unknown until something runs on it | Phase 4 deploys and opens on the device, while the scene is still cheap enough to fix |
 | TTS voice availability differs between desktop and her Android tablet | The en-GB ranking is already field-tested on that device, but the opening leans on it entirely — checked on device at Phase 6 |
-| Golden diff flags equivalent restructuring | Treated as a prompt to explain, not a build failure |
+| Golden diff flags equivalent restructuring | Hard build failure. The fix is to justify the change and re-capture deliberately — a soft gate on the only real fidelity proof is no gate at all |
+| A test encodes a value the frozen original contradicts | Every DOM/timing/class/audio assertion cites the `v0` line it encodes; review gates diff assertion against cited line first. Two plan revisions shipped such tests before this rule existed |
 | M1 feels flat and gets a false-negative verdict | Ship dressed, not grey-boxed; juice pass pulled forward to Phase 4 |
 | Service worker serves stale assets after a fix | `registerType: 'autoUpdate'` configured from day one |

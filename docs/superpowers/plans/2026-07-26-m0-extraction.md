@@ -18,8 +18,50 @@
 - **Save schema is free to change** (no migration needed) but must carry `schemaVersion` and `updatedAt`.
 - **Commit after every task.** Conventional commit prefixes (`feat:`, `test:`, `chore:`, `refactor:`).
 - Node 20+, npm. No Docker.
+- **Every DOM, timing, class-name or audio assertion in a `challenges/` or `platform/`
+  test must cite the `v0/junos-words.html` line it encodes**, as a comment on the
+  assertion. The Phase 2 and Phase 3 review gates diff each such assertion against its
+  cited line *before* reviewing anything else.
+
+  This rule exists because two consecutive plan revisions shipped tests that a faithful
+  port could not pass — a 1000ms wait against a 1080ms timer, `.click()` against a
+  `pointerdown` binding, a linear ramp against an exponential one, `.tricky` against
+  `tk`. Each would have pressured the implementer into changing frozen behaviour to make
+  a test go green, which is the precise failure mode this whole plan exists to prevent.
+  A test that disagrees with the original is wrong by definition; the original is the
+  specification.
 
 ## Revision log
+
+**rev 3 — after Fable 5 re-review (FAIL on rev 2, narrowly).** The re-review confirmed
+the nine-dataset golden sequence is sound end to end — it verified the level-flip
+ordering, the readL2 saturation mirroring, the shared `drawGreen` carry, and the
+cross-boundary anti-repeat guard — and cleared Phase 1 to proceed. It then found four
+blockers, all of them the same disease as rev 1: **tests a faithful port could not pass**.
+
+1. `noticeShown()`/`markNoticeShown()` were promised in prose but absent from the
+   interface, the implementation and the tests, and unreachable from `ChallengeDeps`
+   anyway. Now defined, tested, and `deps.speech` carries the whole `Speaker`.
+2. The dead-zone selector was misquoted — I had invented `.chip` while dropping
+   `.nchip` (number pad) and `.helper` (dot hints), so near-misses beside the number pad
+   would have turned the page. Now quoted verbatim from v0:2067-2068.
+3. The audio test's fake oscillator offered `linearRampToValueAtTime`, but `note()`
+   sweeps with `exponentialRampToValueAtTime` (v0:2008, 2010). A verbatim port would
+   have thrown, pressuring a switch to a linear sweep — an audible change.
+4. The wordFind tests expected class `.tricky` where the original is `tk` (v0:867),
+   called `Element.animate` which jsdom does not implement, and required an `onWrong`
+   call the change list never authorised. Fixed, stubbed, and `onWrong` is now an
+   explicit additive change item 11.
+
+Also: the battery deletion list said "v0:1271-1277", which would have deleted the win
+sound, the word speech and the burst — only v0:1277's charge argument goes. Added
+`roundTimer` to renderer state, `fredTalk`'s document-level query, the `shuffle` RNG
+source, `Speaker.cancel()`, the `--ws` root-write caveat, host timer-cancellation duty,
+and a `main.ts` row completing the line-coverage table.
+
+**The standing rule added to Global Constraints came from this review** and would have
+caught all four blockers mechanically: every DOM/timing/class/audio assertion must cite
+the `v0` line it encodes, and review gates diff it against that line first.
 
 **rev 2 — after Fable 5 review (FAIL verdict on rev 1).** The review confirmed the
 `core/` ports are faithful line by line, that the golden harness slices are complete with
@@ -56,7 +98,7 @@ Phases end at a Fable 5 review gate. Do not begin the next phase until the revie
 | Phase | Tasks | Gate |
 |---|---|---|
 | 0 Foundations | 1–2 | Pipeline green, island stub deployed |
-| 1 Golden capture | 3 | 500 items × 4 modes on disk |
+| 1 Golden capture | 3 | Nine datasets on disk — every level the UI can reach |
 | 2 `core/` extraction | 4–15 | Golden diff clean |
 | 3 Shell rebuild | 16–21 | 2D game plays identically **except the retired battery** |
 
@@ -129,7 +171,7 @@ npm i -D typescript vite vitest @types/node jsdom
 
 Then edit the generated `package.json`: set `"type": "module"`, `"private": true`, and replace the scripts block.
 
-Then set `"type": "module"` in `package.json` and add scripts:
+Scripts block:
 
 ```json
 {
@@ -515,7 +557,8 @@ Confirm the Actions run is green and `https://jtr31415.github.io/JunosIsland/` s
 **Interfaces:**
 - Consumes: `v0/junos-words.html` (read-only)
 - Produces: `tools/golden/golden.json` with shape
-  `{ seed: number, read: ReadPick[][], add: SumItem[], sub: SumItem[], build: BuildItem[] }`
+  `{ seed, read, readL2: ReadPick[][], add, addL2, sub, subL2, subL3: SumItem[], build, buildL2: BuildItem[] }`
+  — nine datasets of 500, covering read/build at levels 1-2, add at 1-2, sub at 1-3
 
 **Why this design:** the original file cannot simply be imported — it does DOM work at load (`const fx = $('fx'), fctx = fx.getContext('2d')`). Rather than stub a browser or add Playwright, the harness slices the *pure* line ranges out of the original file verbatim and runs them under Node with `Math.random` seeded. Using the original source text verbatim is what makes this a true reference rather than a second port.
 
@@ -2084,7 +2127,7 @@ git commit -m "feat: port theme palettes to core"
 ## Task 14: Golden-output verification
 
 **Files:**
-- Create: `tools/golden/verify.mjs`, `tests/golden.test.ts`
+- Create: `tests/golden.test.ts`
 
 **Interfaces:**
 - Consumes: every `core/` generator, `tools/golden/golden.json`
@@ -2092,7 +2135,15 @@ git commit -m "feat: port theme palettes to core"
 
 This is the gate the whole phase exists for. It reproduces the golden run using `core/` and asserts equality.
 
-**The RNG order must match exactly.** In the original, one global `Math.random` served `ri`, `shuffle`, and both decks. So the reproduction must share **one** `Rng` instance across the decks and generators, created with the same seed, and must run the four modes in the same order the capture did (read × 500, add × 500, sub × 500, build × 500).
+**The RNG order must match exactly.** In the original, one global `Math.random` served `ri`, `shuffle`, and both decks. So the reproduction must share **one** `Rng` instance across the decks and generators, created with the same seed, and must run the modes in the same order and at the same levels the capture did:
+
+> read×500, add×500, sub×500, build×500 at level 1 → **flip all four to level 2** → read×500, add×500, sub×500, build×500 → **sub to level 3** → sub×500.
+
+Three consequences that must be preserved, not worked around:
+
+- The same `readState`/`addState`/`subState`/`buildState` objects carry across the level flip. Reading's `n = Math.min(8, MIN + history.length)` (v0:778) therefore saturates at 8 from the first level-2 round, exactly as in the capture.
+- The sums' anti-repeat guard compares against `history[length-1]` (v0:975, 992), so the first level-2 item is checked against the last level-1 item. Reusing the state objects reproduces that; fresh state would not.
+- `drawGreen` is one deck shared between reading and building in the original (v0:807, v0:1165), so it must be one shared closure here. At level 2 building takes the `alienWord` branch and never draws, which is why only the level-1 carry matters.
 
 - [ ] **Step 1: Write the verification test**
 
@@ -2197,7 +2248,7 @@ Add to `tsconfig.json` `compilerOptions`:
 - [ ] **Step 3: Run the golden test**
 
 Run: `npx vitest run tests/golden.test.ts`
-Expected: PASS (4 tests)
+Expected: PASS (9 tests)
 
 **If it fails**, diagnose before changing anything:
 1. Compare the first differing index — `expect(readState.history[0]).toEqual(golden.read[0])` narrows it.
@@ -2230,7 +2281,7 @@ git commit -m "test: verify core reproduces the original generator output exactl
 
 **Interfaces:**
 - Consumes: nothing from `core/`
-- Produces: `Speaker { speak(txt: string, rate?: number, onend?: () => void): boolean; ready(): boolean }`, `createSpeaker(opts?: { onVoicePicked?: (name: string) => void }): Speaker`
+- Produces: `Speaker { speak(txt, rate?, onend?): boolean; ready(): boolean; cancel(): void; noticeShown(): boolean; markNoticeShown(): void }`, `rankVoices(voices): SpeechSynthesisVoice[]`, `createSpeaker(opts?: { onVoicePicked?: (name: string) => void }): Speaker`
 
 The original keeps `voice` and `voiceToastShown` as module globals (`:722`). Here they become closure state inside `createSpeaker` so tests can make independent instances.
 
@@ -2330,6 +2381,29 @@ describe('createSpeaker', () => {
     expect(onVoicePicked).toHaveBeenCalledTimes(1)
     expect(onVoicePicked).toHaveBeenCalledWith('Sonia')
   })
+
+  it('markNoticeShown suppresses the voice announcement', () => {
+    // One shared flag (v0:722): the no-voice fallback toast at v0:905-907 and
+    // the "Voice: X" toast at v0:760 are mutually exclusive.
+    const onVoicePicked = vi.fn()
+    const s = createSpeaker({ onVoicePicked })
+    expect(s.noticeShown()).toBe(false)
+    s.markNoticeShown()
+    expect(s.noticeShown()).toBe(true)
+    s.speak('hello')
+    expect(onVoicePicked).not.toHaveBeenCalled()
+  })
+
+  it('speaking marks the notice as shown', () => {
+    const s = createSpeaker({ onVoicePicked: vi.fn() })
+    s.speak('hello')
+    expect(s.noticeShown()).toBe(true)
+  })
+
+  it('cancel is safe when the API is absent', () => {
+    delete (window as any).speechSynthesis
+    expect(() => createSpeaker().cancel()).not.toThrow()
+  })
 })
 ```
 
@@ -2360,6 +2434,16 @@ export function rankVoices(voices: readonly SpeechSynthesisVoice[]): SpeechSynth
 export interface Speaker {
   speak(txt: string, rate?: number, onend?: () => void): boolean
   ready(): boolean
+  /** Port of the bare speechSynthesis.cancel() in clearRound (v0:847). */
+  cancel(): void
+  /**
+   * Has a voice notice already been shown? One shared flag in the original
+   * (voiceToastShown, v0:722), set either by the "Voice: X" announcement
+   * (v0:760) or by the "No UK English voice" fallback (v0:905-907) — whichever
+   * fires first suppresses the other, so the child never sees two.
+   */
+  noticeShown(): boolean
+  markNoticeShown(): void
 }
 
 export interface SpeakerOptions {
@@ -2387,6 +2471,9 @@ export function createSpeaker(opts: SpeakerOptions = {}): Speaker {
 
   return {
     ready: () => has() && !!voice,
+    cancel: () => { if (has()) window.speechSynthesis.cancel() },
+    noticeShown: () => announced,
+    markNoticeShown: () => { announced = true },
 
     speak(txt, rate, onend) {
       if (!has()) return false
@@ -2678,17 +2765,28 @@ Read `v0/junos-words.html:2004-2027` (`note`, `popSound`) and port the oscillato
 import { describe, it, expect, vi } from 'vitest'
 import { createSfx } from '../../src/platform/audio'
 
+// note() sweeps BOTH frequency and gain with exponentialRampToValueAtTime
+// (v0:2008, v0:2010). The fake must provide it, or a verbatim port throws.
 function fakeCtx() {
-  const osc = { frequency: { setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn() },
-                type: '', connect: vi.fn(), start: vi.fn(), stop: vi.fn() }
-  const gain = { gain: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn(),
-                         linearRampToValueAtTime: vi.fn() }, connect: vi.fn() }
+  const osc = {
+    frequency: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+    type: '', connect: vi.fn(), start: vi.fn(), stop: vi.fn(),
+  }
+  const gain = {
+    gain: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+    connect: vi.fn(),
+  }
   return {
     ctx: { currentTime: 0, destination: {},
            createOscillator: () => osc, createGain: () => gain } as unknown as AudioContext,
     osc, gain,
   }
 }
+
+const freqFrom = (f: ReturnType<typeof fakeCtx>) =>
+  f.osc.frequency.setValueAtTime.mock.calls[0]?.[0]
+const freqTo = (f: ReturnType<typeof fakeCtx>) =>
+  f.osc.frequency.exponentialRampToValueAtTime.mock.calls[0]?.[0]
 
 describe('createSfx', () => {
   it('is silent and does not throw when no AudioContext exists', () => {
@@ -2711,37 +2809,39 @@ describe('createSfx', () => {
     expect(f.osc.start).not.toHaveBeenCalled()
   })
 
-  it('sweeps up for "up" and down for "down" — the inverse of each other', () => {
+  it('sweeps lo->hi for "up" and hi->lo for "down"', () => {
+    // v0:2022 note(lo, hi, ...) and v0:2023 note(hi, lo, ...) — exact inverses
     const f1 = fakeCtx(), f2 = fakeCtx()
-    createSfx(() => f1.ctx).play('up')
-    createSfx(() => f2.ctx).play('down')
-    const upFrom = f1.osc.frequency.setValueAtTime.mock.calls[0]?.[0]
-    const upTo = f1.osc.frequency.linearRampToValueAtTime.mock.calls[0]?.[0]
-    const downFrom = f2.osc.frequency.setValueAtTime.mock.calls[0]?.[0]
-    expect(upTo).toBeGreaterThan(upFrom)
-    expect(downFrom).toBe(upTo)
+    const a = createSfx(() => f1.ctx); a.setTheme('ocean'); a.play('up')
+    const b = createSfx(() => f2.ctx); b.setTheme('ocean'); b.play('down')
+    expect(freqTo(f1)).toBeGreaterThan(freqFrom(f1))
+    expect(freqFrom(f2)).toBe(freqTo(f1))
+    expect(freqTo(f2)).toBe(freqFrom(f1))
   })
 
-  it('"bump" ignores the theme — it is always the same low thud', () => {
+  it('"bump" ignores the theme — always the same low thud', () => {
+    // v0:2024 note(170, 120, ...) — hardcoded, not theme-derived
     const f1 = fakeCtx(), f2 = fakeCtx()
     const a = createSfx(() => f1.ctx); a.setTheme('ocean'); a.play('bump')
     const b = createSfx(() => f2.ctx); b.setTheme('christmas'); b.play('bump')
-    expect(f1.osc.frequency.setValueAtTime.mock.calls[0]?.[0])
-      .toBe(f2.osc.frequency.setValueAtTime.mock.calls[0]?.[0])
+    expect(freqFrom(f1)).toBe(170)
+    expect(freqFrom(f2)).toBe(170)
   })
 
   it('"win" plays two chained notes', () => {
+    // v0:2025 — two note() calls, the second offset by .14s
     const f = fakeCtx()
     createSfx(() => f.ctx).play('win')
     expect(f.osc.start).toHaveBeenCalledTimes(2)
   })
 
   it('follows the theme for "up"', () => {
+    // v0:2021 destructures {lo, hi} from THEMES[theme]
     const f1 = fakeCtx(), f2 = fakeCtx()
     const a = createSfx(() => f1.ctx); a.setTheme('ocean'); a.play('up')
     const b = createSfx(() => f2.ctx); b.setTheme('christmas'); b.play('up')
-    expect(f1.osc.frequency.setValueAtTime.mock.calls[0]?.[0])
-      .not.toBe(f2.osc.frequency.setValueAtTime.mock.calls[0]?.[0])
+    expect(freqFrom(f1)).toBe(320)   // THEMES.ocean.lo
+    expect(freqFrom(f2)).toBe(660)   // THEMES.christmas.lo
   })
 })
 ```
@@ -2757,7 +2857,7 @@ Port `note` and `popSound` from `v0/junos-words.html:2004-2028`, keeping envelop
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `npx vitest run tests/platform/audio.test.ts` — Expected: PASS (4 tests)
+Run: `npx vitest run tests/platform/audio.test.ts` — Expected: PASS (7 tests)
 
 - [ ] **Step 5: Commit**
 
@@ -2790,15 +2890,23 @@ git commit -m "feat: port sound effects to platform"
 Copy `renderSet`, `wordTap`, `speakTarget` (`:840-971`), `renderBuild`, `fredTalk`, `FRED_SOUNDS` (`:1181-1310`), and `renderSum` (`:1010-1159`) with **only** these changes:
 
 1. `$('words')` → `deps.el`
-2. `speak(...)` → `deps.speak(...)`
+2. `speak(...)` → `deps.speech.speak(...)`
 3. `popSound(kind)` → `deps.sfx.play(kind)` — same four kind strings, no extra arguments
 4. `celebrate()`, `burst(x, y)`, `reward()`, `toast(msg)` → the matching `deps` callback
 5. `flyStar(el, charge)` → `deps.flyToScore(el)` — the host owns the star animation, because its `onfinish` is where `addScore` actually fires (v0:956) and that is the 2-point literacy economy, not renderer business
 6. `$('targetCard')` manipulation → `deps.showTarget(html)` / `deps.hideTarget()`
 7. `mode !== 'read'` style guards → `deps.isActive()`
 8. `store[mode]` / `GEN[mode]()` / `renderCurrent()` inside `renderSum`'s `adv` → `deps.onAdvance()`
-9. Renderer-owned mutable state (`round`, `inputLock`, `fredToken`) → closure variables inside the mount function
+9. Renderer-owned mutable state (`round`, `roundTimer`, `inputLock`, `fredToken`) → closure variables inside the mount function
 10. Add TypeScript types
+11. **`deps.onWrong()` is added to the wrong-answer branch.** The original has no such call (v0:926-939 is wobble + `'bump'` + counter); this is a new *observability* hook so the island overlay can react to a stumble. It must be additive only — no existing line changes, and `words2d` passes a no-op so its behaviour is bit-identical
+12. `fredTalk`'s `document.querySelectorAll('#words .slot')` (v0:1218) → `deps.el.querySelectorAll('.slot')`. Change 1 does not cover this: it is a document-level query, not `$('words')`, and left verbatim it would work in `words2d` only by accident of the copied `id="words"` and break silently in the island overlay
+13. `renderSet`'s `shuffle(picks.map(...))` (v0:859) uses core's `shuffle`, which now takes `(rng, a)`. Pass `defaultRng` — challenge rendering is not part of the golden-diff surface and needs no seeding
+14. `clearRound`'s bare `speechSynthesis.cancel()` (v0:847) → `deps.speech.cancel()`. Do not leave the raw global call in `challenges/`, which must not touch browser APIs directly
+
+Two things stay verbatim and are called out so nobody "tidies" them:
+- `document.documentElement.style.setProperty('--ws', …)` (v0:857, v0:1016) writes to the **root** element, deliberately, outside `deps.el`. Keep it. The island overlay must therefore honour `--ws` at `:root` too.
+- Every timing constant in the auto-advance and rescue paths.
 
 **`rewardUntil` and `quietUntil` are NOT renderer state and must not become closure variables.** They are written by the *host* — `reward()` sets both (v0:1811-1812) and `befriend()` sets `quietUntil` (v0:1922) — and only *read* by the renderers: `speakTarget` waits on `quietUntil` (v0:893), `renderSum`'s `adv` waits on `rewardUntil` (v0:1120), `renderBuild`'s `nextB` likewise (v0:1281). Closing over them would mean nothing ever sets them, so auto-advance would stop waiting out the spectacle and TTS would talk over the celebration. They come through `deps.holds`.
 
@@ -2811,7 +2919,9 @@ Copy `renderSet`, `wordTap`, `speakTarget` (`:840-971`), `renderBuild`, `fredTal
 - v0:921 — the `flyStar(el, 1)` charge argument becomes `deps.flyToScore(el)`
 - v0:956 — `if(charge) chargeBattery(charge)` in `flyStar`'s `onfinish` (moves to the host anyway under change 5)
 - v0:1127-1128 — `if(!spendBattery()){ batteryEmptyNudge(); return; }`, leaving the `GEN[mode]()` call (now `deps.onAdvance()`) unconditional
-- v0:1271-1277 — the build-mode charge call, same treatment
+- v0:1277 — `flyStar(slotRow, 2)` loses only its charge argument, becoming
+  `deps.flyToScore(slotRow)`. **Nothing else in v0:1271-1276 is touched** — the `'up'`
+  sound, `doneB`, the word speech and the burst all stay
 
 Nothing else may be dropped.
 
@@ -2870,8 +2980,13 @@ Ported from `v0/junos-words.html:2065-2075`. The 16px padding is deliberate: it 
 
 Comparisons are **strict** (`>` / `<`), matching v0:2071 exactly. Using `>=`/`<=` would flip behaviour on boundary pixels.
 
-The element list is injected rather than queried, but the selector is the original's and belongs with the 2D shell — `words2d/main.ts` passes the result of
-`document.querySelectorAll('#hudLeft,#hudRight,#footer,#words .word,#words .tile,#words .slot,#words .chip,.visitor')` (v0:2067-2068). The island overlay will pass its own.
+The element list is injected rather than queried, but the selector is the original's and belongs with the 2D shell. `words2d/main.ts` passes the result of this selector, **quoted verbatim from v0:2067-2068** — note `.nchip` (number pad) and `.helper` (dot hints), both of which must be present or a near-miss beside the number pad turns the page:
+
+```
+#hudLeft,#hudRight,#footer,#words .word,#words .nchip,#words .tile,#words .helper,#words .slot,.visitor
+```
+
+The island overlay will pass its own equivalent.
 
 ```ts
 /** Port of inDeadZone (junos-words.html:2065). Padding is field-tuned; do not change. */
@@ -2917,7 +3032,12 @@ export interface Holds {
  */
 export interface ChallengeDeps {
   el: HTMLElement
-  speak: Speaker['speak']
+  /**
+   * The whole Speaker, not just speak(). The renderers need cancel() for
+   * clearRound (v0:847) and noticeShown()/markNoticeShown() for the no-voice
+   * fallback (v0:905-907), which shares one flag with the voice announcement.
+   */
+  speech: Speaker
   sfx: Sfx
   holds: Holds
   /** True while this challenge's mode is the active one (ports the `mode !==` guards). */
@@ -2964,7 +3084,13 @@ const ITEM: ReadPick[] = [
 function deps(el: HTMLElement): ChallengeDeps {
   return {
     el,
-    speak: vi.fn(() => true),
+    speech: {
+      speak: vi.fn(() => true),
+      ready: () => true,
+      cancel: vi.fn(),
+      noticeShown: () => false,
+      markNoticeShown: vi.fn(),
+    },
     sfx: { play: vi.fn(), enabled: true, setTheme: vi.fn() },
     holds: { rewardUntil: () => 0, quietUntil: () => 0 },
     isActive: () => true,
@@ -2992,7 +3118,15 @@ function tap(el: HTMLElement): void {
 const SPEAK_DELAY = 900 + ITEM.length * 60
 
 let el: HTMLElement
-beforeEach(() => { vi.useFakeTimers(); el = document.createElement('div'); document.body.append(el) })
+beforeEach(() => {
+  vi.useFakeTimers()
+  // jsdom does not implement Element.animate, but the wrong-answer branch
+  // calls it for the wobble (v0:927-929) and flyStar uses .onfinish (v0:952).
+  // Stub rather than let a verbatim port crash.
+  ;(HTMLElement.prototype as any).animate = vi.fn(() => ({ onfinish: null, cancel: vi.fn() }))
+  el = document.createElement('div')
+  document.body.append(el)
+})
 afterEach(() => { vi.useRealTimers(); el.remove() })
 
 describe('mountWordFind', () => {
@@ -3003,7 +3137,8 @@ describe('mountWordFind', () => {
 
   it('renders the tricky bit of a red word as a marked segment', () => {
     mountWordFind(ITEM, deps(el))
-    expect(el.querySelector('.tricky')).not.toBeNull()
+    // v0:867 — the tricky-bit class is 'tk', and v0:873 marks digraphs 'di'
+    expect(el.querySelector('.tk')).not.toBeNull()
     expect(el.textContent).toContain('said')
     expect(el.textContent).not.toContain('[')
   })
@@ -3012,9 +3147,9 @@ describe('mountWordFind', () => {
     const d = deps(el)
     mountWordFind(ITEM, d)
     vi.advanceTimersByTime(SPEAK_DELAY - 1)
-    expect(d.speak).not.toHaveBeenCalled()
+    expect(d.speech.speak).not.toHaveBeenCalled()
     vi.advanceTimersByTime(2)
-    expect(d.speak).toHaveBeenCalled()
+    expect(d.speech.speak).toHaveBeenCalled()
   })
 
   it('reports a wrong answer without ending the round', () => {
@@ -3022,7 +3157,7 @@ describe('mountWordFind', () => {
     mountWordFind(ITEM, d)
     vi.advanceTimersByTime(SPEAK_DELAY + 50)
     const words = [...el.querySelectorAll<HTMLElement>('.word')]
-    const spoken = (d.speak as any).mock.calls[0][0]
+    const spoken = (d.speech.speak as any).mock.calls[0][0]
     const wrong = words.find(w => w.textContent !== spoken)!
     tap(wrong)
     expect(d.onWrong).toHaveBeenCalled()
@@ -3035,7 +3170,7 @@ describe('mountWordFind', () => {
     mountWordFind(ITEM, d)
     vi.advanceTimersByTime(SPEAK_DELAY + 50)
     const words = [...el.querySelectorAll<HTMLElement>('.word')]
-    const spoken = (d.speak as any).mock.calls[0][0]
+    const spoken = (d.speech.speak as any).mock.calls[0][0]
     tap(words.find(w => w.textContent === spoken)!)
     expect(d.flyToScore).toHaveBeenCalled()
     expect(d.onWrong).not.toHaveBeenCalled()
@@ -3046,7 +3181,7 @@ describe('mountWordFind', () => {
     mountWordFind(ITEM, d)
     vi.advanceTimersByTime(SPEAK_DELAY + 50)
     const words = [...el.querySelectorAll<HTMLElement>('.word')]
-    const spoken = (d.speak as any).mock.calls[0][0]
+    const spoken = (d.speech.speak as any).mock.calls[0][0]
     const wrong = words.find(w => w.textContent !== spoken)!
     tap(wrong); tap(wrong); tap(wrong)
     expect(d.toast).toHaveBeenCalledWith(expect.stringContaining('Listen carefully'))
@@ -3120,6 +3255,7 @@ Every remaining line of the original gets an explicit home. Anything left unassi
 | `profiles.ts` | 554-643 | Picker, avatar chip, add/switch — rewritten onto the async `SaveStore` |
 | `saves.ts` | 644-683 | `todayKey`, `strHash`, `article`, `capName`, `saveSoon`, `loadSave`, `ownedSet` — onto `SaveStore` |
 | `gear.ts` | 2085-2120 | The DDMM PIN dialog and profile delete |
+| `main.ts` | 765-770, 943-971, 1311-1350, 2029-2083, 2124-2163 | `toast`; `flyStar` and `celebrate` bodies (host-side under changes 4-5); `GEN`, `renderCurrent`, `forward`, `back`; `setTheme`/`setMode`/`setLevel` and event wiring; boot |
 
 `article` and `capName` are used by the sticker copy ("You found **a** shark!"); they move with `saves.ts` and are imported where needed.
 
@@ -3128,6 +3264,10 @@ Every remaining line of the original gets an explicit home. Anything left unassi
 - [ ] **Step 4: Wire `main.ts`**
 
 Compose the app: create the `Speaker`, `Sfx` and `SaveStore`; build the decks with `defaultRng`; hold the four mode states; mount the right challenge on mode change; supply the `ChallengeDeps` callbacks from the celebration and score modules.
+
+**Timer-cancellation duty moves to the host.** In the original, one shared `roundTimer` meant `clearRound` cancelled everything, including the pending advance scheduled by `celebrate` (v0:966) and by `renderSum`'s `adv` (v0:1132). Now that those bodies are host-side, `main.ts` owns its own timer handles and **must cancel them on mode switch and on profile switch**, in addition to calling the challenge's teardown. Miss this and a stale advance fires into the wrong mode — a class of bug the original structurally could not have.
+
+Wire `holds` from `celebration.ts`: `{ rewardUntil: () => rewardUntil, quietUntil: () => quietUntil }`.
 
 - [ ] **Step 5: Build and check the artifact**
 
