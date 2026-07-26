@@ -14,7 +14,7 @@
  * changes nothing here (brief §18, and the spec's serene-right rule).
  */
 import * as THREE from 'three'
-import { createBlobShadow } from './juice'
+import { createBlobShadow, SHADOW_LIFT } from './juice'
 
 export type EggStage = 'intact' | 'hairline' | 'crack' | 'big' | 'wobble'
 
@@ -41,6 +41,17 @@ export interface Egg {
 export function createEgg(): Egg {
   const group = new THREE.Group()
   group.name = 'egg'
+
+  /*
+   * The egg proper. Everything that ROCKS lives in here; the ring and the
+   * shadow stay on the outer group and never move.
+   *
+   * Tilting them with the egg was what made the shadow slice into the tile:
+   * a flat disc lying on the ground has nowhere to go when you rotate it
+   * except through the surface. Ground decals belong to the ground.
+   */
+  const body = new THREE.Group()
+  group.add(body)
 
   const mat = (c: number): THREE.MeshStandardMaterial =>
     new THREE.MeshStandardMaterial({ color: c, metalness: 0, roughness: 1 })
@@ -85,7 +96,7 @@ export function createEgg(): Egg {
     }
     g.visible = false
     crackGroups.push(g)
-    group.add(g)
+    body.add(g)
   }
 
   // The glow at the last stage: warmth from inside, never a threat.
@@ -95,7 +106,7 @@ export function createEgg(): Egg {
   )
   glow.scale.set(1, 1.28, 1)
   glow.position.y = 0.38
-  group.add(glow)
+  body.add(glow)
 
   /*
    * A soft ring on the ground beneath, always gently pulsing.
@@ -110,13 +121,18 @@ export function createEgg(): Egg {
     new THREE.MeshBasicMaterial({
       color: 0xfff0b8, transparent: true, opacity: 0.5,
       side: THREE.DoubleSide, depthWrite: false,
+      // A ground decal like the blob, and it needs the same depth bias: the
+      // egg group is scaled to 0.62, so a lift in local units shrinks to
+      // almost nothing in the world and stops clearing the tile beneath.
+      polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2,
     }),
   )
   ring.rotation.x = -Math.PI / 2
-  ring.position.y = 0.02
+  ring.position.y = SHADOW_LIFT
   group.add(ring)
 
-  group.add(shell, spots, createBlobShadow(0.28))
+  body.add(shell, spots)
+  group.add(createBlobShadow(0.28))
   /*
    * Sized against the pets: bigger than the friend it holds, so it reads as
    * something a creature comes out of — but never a boulder. Raised from 0.42
@@ -158,8 +174,8 @@ export function createEgg(): Egg {
       const eager = stage === 'wobble' ? 1 : stage === 'big' ? 0.45 : 0.18
       const due = Math.sin(t * 0.7) > (0.93 - eager * 0.5)
       const shiver = due ? Math.sin(t * 26) * 0.09 * eager : 0
-      group.rotation.z = breathe + shiver
-      group.rotation.x = Math.cos(t * 1.1) * 0.015
+      body.rotation.z = breathe + shiver
+      body.rotation.x = Math.cos(t * 1.1) * 0.015
       glow.material.opacity = stage === 'wobble'
         ? 0.18 + Math.sin(t * 3.2) * 0.12
         : 0
@@ -174,8 +190,8 @@ export function createEgg(): Egg {
         const start = performance.now()
         const step = (): void => {
           const p = Math.min(1, (performance.now() - start) / 700)
-          group.rotation.z = Math.sin(p * Math.PI * 9) * 0.34 * (1 - p)
-          group.scale.setScalar(0.62 * (1 + Math.sin(p * Math.PI) * 0.18))
+          body.rotation.z = Math.sin(p * Math.PI * 9) * 0.34 * (1 - p)
+          body.scale.setScalar(1 + Math.sin(p * Math.PI) * 0.18)
           glow.material.opacity = Math.sin(p * Math.PI) * 0.5
           if (p < 1) { requestAnimationFrame(step); return }
           group.visible = false
@@ -188,8 +204,8 @@ export function createEgg(): Egg {
 
     reset() {
       group.visible = true
-      group.scale.setScalar(0.62)
-      group.rotation.z = 0
+      body.scale.setScalar(1)
+      body.rotation.set(0, 0, 0)
       glow.material.opacity = 0
       stage = 'intact'
       for (const g of crackGroups) g.visible = false

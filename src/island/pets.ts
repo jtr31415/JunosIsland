@@ -7,7 +7,7 @@
  */
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { createBlobShadow } from './juice'
+import { createBlobShadow, castShadow, SHADOW_LIFT } from './juice'
 import { flattenImported } from './lighting'
 import { toWorld } from './world/hex'
 import type { Axial } from './world/hex'
@@ -26,6 +26,8 @@ export const SPECIES = [
 interface Live {
   pet: Pet
   root: THREE.Group
+  /** The blob on the ground. NOT a child of root — see clearOf(). */
+  shadow: THREE.Mesh
   /** Where it is walking to, in world space. */
   goal: THREE.Vector3
   phase: number
@@ -33,9 +35,37 @@ interface Live {
   bounce: number
   /** Seconds left to stand still before wandering again. */
   restFor: number
+  /** Seconds spent trying to travel without getting anywhere. */
+  stuckFor: number
 }
 
 export interface Obstacle { x: number; z: number; r: number }
+
+/**
+ * Move a point out of anything it is standing inside, onto the boundary.
+ *
+ * This is a CONSTRAINT, not a force, and the distinction is the whole fix. The
+ * previous version applied a gentle per-frame push, which a pet walking at
+ * full speed simply out-ran: it strolled into a tree, was nudged a fraction of
+ * the distance back out, and kept going — so pets walked through the scenery.
+ * A push can always be beaten by a bigger push in the other direction.
+ *
+ * Clamping the position afterwards cannot be beaten, because it does not
+ * compete with the movement, it corrects it. And since the correction is
+ * purely radial while the goal-seek keeps its tangential component, a pet that
+ * meets a tree slides around the trunk instead of stopping dead at it.
+ */
+function clearOf(pos: THREE.Vector3, obstacles: readonly Obstacle[]): void {
+  for (const ob of obstacles) {
+    const dx = pos.x - ob.x
+    const dz = pos.z - ob.z
+    const d = Math.hypot(dx, dz)
+    if (d >= ob.r) continue
+    if (d < 1e-4) { pos.x = ob.x + ob.r; continue }  // dead centre: any way out
+    pos.x = ob.x + (dx / d) * ob.r
+    pos.z = ob.z + (dz / d) * ob.r
+  }
+}
 
 export interface PetField {
   group: THREE.Group
@@ -120,17 +150,21 @@ export function createPetField(base = ''): PetField {
         // rather than statues on a plinth.
         root.scale.setScalar(0.16)
         holder.add(root)
-        holder.add(createBlobShadow(0.17))
         const w = toWorld(pet.at as Axial, hexSize)
         holder.position.set(w.x, 0, w.z)
         holder.userData.pick = { kind: 'pet', id: pet.id }
         group.add(holder)
+        // The shadow is a SIBLING of the pet, not a child. Parented, it rose
+        // with every hop and sank under the tile on the way down.
+        const shadow = createBlobShadow(0.17)
+        group.add(shadow)
         live.set(pet.id, {
-          pet, root: holder,
+          pet, root: holder, shadow,
           goal: randomSpot(island, hexSize),
           phase: Math.random() * Math.PI * 2,
           bounce: 0,
           restFor: 2 + Math.random() * 6,
+          stuckFor: 0,
         })
       }
     },
@@ -156,6 +190,7 @@ export function createPetField(base = ''): PetField {
 
       for (const l of live.values()) {
         const pos = l.root.position
+        const was = { x: pos.x, z: pos.z }
         const to = l.goal.clone().sub(pos)
         const dist = to.length()
 
@@ -195,22 +230,27 @@ export function createPetField(base = ''): PetField {
             pos.z += (dz / d) * push
           }
         }
+        // Scenery is SOLID. Applied last, after seeking and separation, so
+        // nothing downstream can push a pet back inside a tree.
+        clearOf(pos, obstacles)
+
         /*
-         * Obstacles nudge, they do not shove. This is now only a safety net
-         * for a pet that started inside scenery — goals are already chosen on
-         * clear ground — so a strong push would just reintroduce the
-         * oscillation it used to cause.
+         * Wedged? Go somewhere else.
+         *
+         * A hard constraint can trap a pet whose goal lies directly behind a
+         * rock: it slides to the point where the only way on is straight
+         * through, and there it stays. Rather than build a pathfinder for a
+         * cube animal on a nine-hex island, notice that it has stopped
+         * getting anywhere and pick a different place to want to be.
          */
-        for (const ob of obstacles) {
-          const dx = pos.x - ob.x
-          const dz = pos.z - ob.z
-          const d = Math.hypot(dx, dz)
-          if (d > 0.0001 && d < ob.r) {
-            const push = (ob.r - d) / ob.r * dt * 1.1
-            pos.x += (dx / d) * push
-            pos.z += (dz / d) * push
+        if (dist >= 0.12) {
+          const moved = Math.hypot(pos.x - was.x, pos.z - was.z)
+          l.stuckFor = moved < dt * 0.25 ? l.stuckFor + dt : 0
+          if (l.stuckFor > 1.2) {
+            l.goal = randomSpot(island, hexSize)
+            l.stuckFor = 0
           }
-        }
+        } else l.stuckFor = 0
 
         // A hop rather than a glide: squash on the ground, stretch in the air.
         const hop = Math.abs(Math.sin(t * 3.4 + l.phase))
@@ -229,6 +269,10 @@ export function createPetField(base = ''): PetField {
         }
 
         l.root.scale.set(sxz, sy, sxz)
+
+        // The shadow follows in x and z only, and stays flat on the ground.
+        l.shadow.position.set(pos.x, SHADOW_LIFT, pos.z)
+        castShadow(l.shadow, pos.y)
       }
     },
   }

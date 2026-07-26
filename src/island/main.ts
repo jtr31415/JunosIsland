@@ -52,6 +52,15 @@ import { petName } from '../core/names'
 declare const __BUILD_STAMP__: string
 const BUILD_STAMP = typeof __BUILD_STAMP__ === 'string' ? __BUILD_STAMP__ : 'dev'
 
+/**
+ * How long a finished page stays up before the next one takes its place.
+ *
+ * Long enough to see that the answer landed, short enough that it reads as
+ * turning a page rather than waiting for something. The page is fully visible
+ * for all of it — this is a pause, not a loading gap.
+ */
+const PAGE_GAP_MS = 700
+
 const canvas = document.getElementById('view') as HTMLCanvasElement
 
 async function boot(): Promise<void> {
@@ -116,7 +125,7 @@ async function boot(): Promise<void> {
 
   const overlay = createOverlay(document.body, {
     speech, sfx,
-    onPassed: () => { void passed() },
+    onPassed: more => { void passed(more) },
     onDismissed: () => {
       // Leaving costs nothing (brief section 18) — but the story must not stay
       // armed, or an unrelated hatch later would resume it out of nowhere.
@@ -311,7 +320,7 @@ async function boot(): Promise<void> {
    *
    * So: compare before and after, and let the state decide what to celebrate.
    */
-  async function passed(): Promise<void> {
+  async function passed(more: boolean): Promise<void> {
     if (flow.challenge === 'read') {
       const name = petName(defaultRng)
       const species = SPECIES[ri(defaultRng, SPECIES.length)] as string
@@ -321,7 +330,7 @@ async function boot(): Promise<void> {
       const hatched = flow.pets.length > petsBefore
 
       if (hatched) {
-        overlay.setContinuing(false)
+        overlay.close()
         await egg.hatch()
         overlay.showName(name)
         const line = HATCH_LINES[flow.pets.length % HATCH_LINES.length] as string
@@ -330,38 +339,43 @@ async function boot(): Promise<void> {
         fred.hop()
         world.lighting.celebrationBump()
         egg.reset()
-      } else {
-        // Not yet — but visibly closer. The egg cracks a little further, which
-        // refresh() applies, and that IS the feedback. No name, no promise.
-        sfx.play('up')
-      }
-
-      refresh()
-
-      if (!hatched && openingResumeAt < 0) {
-        /*
-         * Stay in the work. Reading five pages should feel like one sitting,
-         * not five trips out to the island and back — the world only returns
-         * when the friend arrives, or when she taps back.
-         *
-         * The pause is long enough to see the shell crack a little further,
-         * which is the whole reason the progress is on the egg.
-         */
-        overlay.setContinuing(true)
-        setTimeout(() => {
-          flow = tapEgg({ ...flow, phase: 'free' })
-          openRead()
-          overlay.setContinuing(false)
-        }, 900)
+        refresh()
+        if (openingResumeAt >= 0) {
+          const at = openingResumeAt
+          openingResumeAt = -1
+          setTimeout(() => { void runOpening(at) }, 2200)
+        }
         return
       }
 
-      overlay.setContinuing(false)
-      if (openingResumeAt >= 0) {
-        const at = openingResumeAt
-        openingResumeAt = -1
-        setTimeout(() => { void runOpening(at) }, hatched ? 2200 : 600)
+      // Not yet — but visibly closer. The egg cracks a little further, which
+      // refresh() applies, and that IS the feedback. No name, no promise.
+      sfx.play('up')
+      refresh()
+
+      if (!more || openingResumeAt >= 0) {
+        overlay.close()
+        if (openingResumeAt >= 0) {
+          const at = openingResumeAt
+          openingResumeAt = -1
+          setTimeout(() => { void runOpening(at) }, 600)
+        }
+        return
       }
+
+      /*
+       * Stay in the work. Reading five pages should feel like one sitting,
+       * not five trips out to the island and back — the world only returns
+       * when the friend arrives, or when she taps back.
+       *
+       * The finished page is still on screen throughout this pause, because
+       * finish() no longer tears it down; openRead() replaces it in a single
+       * synchronous step, so the swap is a swap and not a close-and-reopen.
+       */
+      setTimeout(() => {
+        flow = tapEgg({ ...flow, phase: 'free' })
+        openRead()
+      }, PAGE_GAP_MS)
     } else if (flow.challenge === 'sum') {
       openingResumeAt = -1
       const bankedBefore = flow.bankedTiles
@@ -369,7 +383,7 @@ async function boot(): Promise<void> {
       const earned = flow.bankedTiles > bankedBefore
 
       if (earned) {
-        overlay.setContinuing(false)
+        overlay.close()
         speech.speak('You counted us up some land!')
         fred.talk(2.2)
         world.lighting.celebrationBump()
@@ -380,14 +394,14 @@ async function boot(): Promise<void> {
       sfx.play('up')
       refresh()
 
+      if (!more) { overlay.close(); return }
+
       // Same rule for land: keep counting until the plot is finished. Each sum
       // grows the plot a little more, and refresh() has just shown that.
-      overlay.setContinuing(true)
       setTimeout(() => {
         flow = tapSum({ ...flow, phase: 'free' })
         openSum()
-        overlay.setContinuing(false)
-      }, 900)
+      }, PAGE_GAP_MS)
     }
   }
 

@@ -24,19 +24,25 @@ import type { SumItem } from '../core/generators/sums'
 export interface OverlayHost {
   speech: Speaker
   sfx: Sfx
-  /** Fired when the child finishes a round: hatch the egg, or bank a tile. */
-  onPassed(): void
+  /**
+   * The child finished a round: hatch the egg, or bank a tile.
+   *
+   * THE OVERLAY IS STILL OPEN when this fires, and it stays open until the
+   * host either opens the next round or calls close(). That is the wrong way
+   * round from most modals, and it is deliberate: the child stays in the work
+   * until the reward lands (brief §13). The first attempt had the overlay
+   * close itself and the host reopen it a beat later, which meant the island
+   * flashed past between every page — the very trip the rule exists to avoid.
+   *
+   * `more` is false when the child asked to leave with work already banked, so
+   * the host collects the reward but does NOT deal another page.
+   */
+  onPassed(more: boolean): void
   /** Fired when the overlay is dismissed without finishing. Costs nothing. */
   onDismissed(): void
 }
 
 export interface Overlay {
-  /**
-   * True while a page is being swapped for the next one in the same sitting.
-   * The host sets this so the panel does not blink back to the island between
-   * pages — the child stays in the work until the reward lands.
-   */
-  setContinuing(v: boolean): void
   openWordFind(picks: ReadPick[]): void
   /** A build page: assemble one word from grapheme tiles (slice-1 spec §3). */
   openBuild(item: BuildItem): void
@@ -57,16 +63,6 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
   shell.className = 'chunk overlay-panel'
 
   /**
-   * A way out. THIS IS NOT OPTIONAL.
-   *
-   * Without it a child can be trapped: peeking at a sum's answer sets the
-   * renderer's `solved` flag and disables the number pad (a faithful port of
-   * v0), but the island has no forward-tap navigation like the 2D game does,
-   * so nothing can ever fire onAdvance. The only exit was reloading the page.
-   *
-   * Leaving costs nothing — challengeFailed takes no tile and no pet.
-   */
-  /**
    * Say it again.
    *
    * The single most-needed control in a listen-then-tap game: a child who
@@ -79,6 +75,16 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
   again.textContent = '\u{1F50A} say it again'
   again.setAttribute('aria-label', 'say it again')
 
+  /**
+   * A way out. THIS IS NOT OPTIONAL.
+   *
+   * Without it a child can be trapped: peeking at a sum's answer sets the
+   * renderer's `solved` flag and disables the number pad (a faithful port of
+   * v0), but the island has no forward-tap navigation like the 2D game does,
+   * so nothing can ever fire onAdvance. The only exit was reloading the page.
+   *
+   * Leaving costs nothing — challengeFailed takes no tile and no pet.
+   */
   const back = document.createElement('button')
   back.className = 'chunk chunk-button overlay-back'
   back.textContent = '← back to the island'
@@ -122,13 +128,6 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
    * after earning therefore COLLECTS rather than dismisses.
    */
   let earned = false
-  /**
-   * While true, finishing a page swaps in the next one instead of returning to
-   * the island. Reading five pages should feel like one sitting, not five
-   * trips out to the world and back.
-   */
-  let continuing = false
-
   /**
    * Shared timing gates. The island has no spectacles yet, so reward and quiet
    * are always zero — but inputLock is real, because the mash rescues in the
@@ -192,15 +191,23 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
 
   function teardown(): void {
     if (handle) { handle.teardown(); handle = null }
-    // Keep the panel on screen when the next page is already coming.
-    if (!continuing) layer.classList.add('hide')
+    layer.classList.add('hide')
     targetCard.classList.add('hide')
   }
 
+  /**
+   * A round completed on its own terms — every word found, or the sum
+   * answered.
+   *
+   * Note what is NOT here: no teardown and no hide. The finished page stays
+   * exactly as the child left it, and whatever the host does next decides its
+   * fate. If the host deals another page, open*() tears this one down and
+   * remounts in the same synchronous step, so the layer is never painted
+   * hidden and there is no blink. If the host is done, it calls close().
+   */
   function finish(): void {
     earned = false
-    teardown()
-    host.onPassed()
+    host.onPassed(true)
   }
 
   again.onclick = () => { handle?.sayAgain() }
@@ -209,15 +216,16 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
     const wasOpen = !layer.classList.contains('hide')
     if (!wasOpen) return
     // Already answered correctly? Then leaving COLLECTS. Never discard work
-    // the child has actually done (brief section 18).
-    if (earned) { finish(); return }
+    // the child has actually done (brief section 18). But she asked to go, so
+    // the reward lands on the island and no further page is dealt.
+    const collect = earned
+    earned = false
     teardown()
-    host.onDismissed()
+    if (collect) host.onPassed(false)
+    else host.onDismissed()
   }
 
   return {
-    setContinuing(v) { continuing = v },
-
     openWordFind(picks) {
       teardown()
       earned = false
@@ -244,11 +252,14 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
       handle = mountSum(item, deps())
     },
 
-    close() {
-      const wasOpen = !layer.classList.contains('hide')
-      teardown()
-      if (wasOpen) host.onDismissed()
-    },
+    /**
+     * Shut the overlay and go back to the island.
+     *
+     * Silent on purpose: this is the host saying "we are done here", so
+     * firing onDismissed would report the child's own completed sitting back
+     * to the host as an abandonment and un-arm the opening story.
+     */
+    close() { teardown() },
 
     say(text, onTap) {
       sayEl.textContent = text

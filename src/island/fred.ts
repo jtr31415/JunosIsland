@@ -20,7 +20,7 @@
  *            because a completely still Fred reads as broken rather than calm
  */
 import * as THREE from 'three'
-import { createBlobShadow } from './juice'
+import { createBlobShadow, castShadow } from './juice'
 
 /*
  * Kenney-ish greens: saturated but soft, nothing murky. Deliberately BRIGHTER
@@ -170,7 +170,9 @@ export function createFred(): Fred {
   const BASE = 0.3
   body.scale.setScalar(BASE)
   group.add(body)
-  group.add(createBlobShadow(0.16))
+  // Sibling of the body, so a hop leaves it on the ground where it belongs.
+  const shadow = createBlobShadow(0.16)
+  group.add(shadow)
   group.userData.pick = { kind: 'fred' }
 
   let hopT = -1
@@ -250,6 +252,11 @@ export function createFred(): Fred {
         if (blinkT >= 1) { blinkT = -1; eyes.scale.y = 1 }
         else eyes.scale.y = 1 - Math.sin(blinkT * Math.PI) * 0.85
       }
+
+      // He is a heavy frog and his hop is low, so the blob tightens rather
+      // than disappearing — but it does have to react, or the hop reads as
+      // the whole frog sliding upward with his shadow glued underneath.
+      castShadow(shadow, body.position.y)
 
       lean += (leanWant - lean) * 0.1
       body.rotation.x = lean

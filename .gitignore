@@ -12,3 +12,6 @@ dist/
 Assets/*.zip
 Assets/**/*.blend
 Assets/**/*.blend1
+# Same courtesy for KayKit's own promotional renders, kept locally as the
+# art-direction reference the island is being built towards.
+Assets/style/
