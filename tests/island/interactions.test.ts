@@ -34,7 +34,7 @@ describe('tapping the egg', () => {
     const next = handleWorldTap(createFlow(), { kind: 'egg' }, p)
     expect(next.phase).toBe('challenge')
     expect(next.challenge).toBe('read')
-    expect(p.openRead).toHaveBeenCalled()
+    expect(p.openRead).toHaveBeenCalledWith(next)
   })
 
   it('does NOT open a round when the phase forbids it', () => {
@@ -140,7 +140,7 @@ describe('tapping the island', () => {
     const p = ports()
     const next = handleWorldTap(createFlow(), { kind: 'tile', axial: { q: 0, r: 0 } }, p)
     expect(next.challenge).toBe('sum')
-    expect(p.openSum).toHaveBeenCalled()
+    expect(p.openSum).toHaveBeenCalledWith(next)
   })
 
   it('does NOT open a sum while placing', () => {
@@ -180,5 +180,36 @@ describe('finishing and leaving a challenge', () => {
     const f = createFlow()
     expect(handleWorldTap(f, { kind: 'sea' }, p)).toBe(f)
     expect(handleWorldTap(f, null, p)).toBe(f)
+  })
+})
+
+describe('a completed round is never discarded', () => {
+  it('a sum passed outside a challenge phase still changes nothing', () => {
+    // The tombstone for the swallowed-work bug, from the sum side.
+    const placing = readyToPlace()
+    expect(handleChallengePassed(placing)).toBe(placing)
+  })
+
+  it('a legitimately passed sum banks exactly one tile', () => {
+    const next = handleChallengePassed(tapSum(createFlow()))
+    expect(next.bankedTiles).toBe(1)
+    expect(next.phase).toBe('placing')
+  })
+
+  it('two banked tiles drain one at a time without stranding either', () => {
+    // Found at the M1 gate: returning to free with a surplus hid the offer
+    // and the second tile could never be spent.
+    let f = handleChallengePassed(tapSum(createFlow()))
+    f = handleChallengePassed(tapSum({ ...f, phase: 'free' }))
+    expect(f.bankedTiles).toBe(2)
+    const p = ports()
+    f = chooseTile(f, 'grass')
+    f = handleWorldTap(f, { kind: 'socket', axial: { q: 1, r: 0 } }, p)
+    expect(f.phase).toBe('placing')
+    f = chooseTile(f, 'water')
+    f = handleWorldTap(f, { kind: 'socket', axial: { q: 0, r: 1 } }, p)
+    expect(f.bankedTiles).toBe(0)
+    expect(f.phase).toBe('free')
+    expect(count(f.island)).toBe(3)
   })
 })

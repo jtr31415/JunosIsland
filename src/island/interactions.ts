@@ -23,8 +23,17 @@ export interface InteractionPorts {
   challengeOpen(): boolean
   /** True while the opening is playing; it owns taps for its duration. */
   storyPlaying(): boolean
-  openRead(): void
-  openSum(): void
+  /**
+   * Open a round for the ALREADY-TRANSITIONED flow.
+   *
+   * The next state is passed explicitly rather than read from the caller's
+   * variable: this port fires before the caller has assigned it, so a handler
+   * reading its own `flow` would still see the pre-transition phase and refuse
+   * to open. That mistake shipped once and no unit test saw it, because the
+   * tests mock this port.
+   */
+  openRead(next: Flow): void
+  openSum(next: Flow): void
   replayStory(): void
   bouncePet(id: string): void
   say(text: string): void
@@ -48,7 +57,7 @@ export function handleWorldTap(flow: Flow, hit: Hit | null, p: InteractionPorts)
       // Reading hatches eggs (brief section 4).
       const next = tapEgg(flow)
       if (next === flow) return flow          // wrong phase: do nothing, loudly
-      p.openRead()
+      p.openRead(next)
       return next
     }
 
@@ -79,7 +88,7 @@ export function handleWorldTap(flow: Flow, hit: Hit | null, p: InteractionPorts)
       // Asking the island for land: a sum earns a tile.
       const next = tapSum(flow)
       if (next === flow) return flow
-      p.openSum()
+      p.openSum(next)
       return next
     }
 
@@ -95,7 +104,7 @@ export function handleWorldTap(flow: Flow, hit: Hit | null, p: InteractionPorts)
  * in a challenge — the exact shape of the swallowed-work bug — nothing
  * happens and the caller can see it, because the returned state is identical.
  */
-export function handleChallengePassed(flow: Flow, hatch: HatchDetails): Flow {
+export function handleChallengePassed(flow: Flow, hatch?: HatchDetails): Flow {
   if (flow.phase !== 'challenge') return flow
   return challengePassed(flow, hatch)
 }

@@ -84,6 +84,16 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
 
   let handle: ChallengeHandle | null = null
   let toastTimer: ReturnType<typeof setTimeout> | null = null
+  /**
+   * Set the moment a correct answer lands, before the renderer's own
+   * auto-advance has fired.
+   *
+   * Without it there is a two-second window in which the child has answered
+   * correctly, the star has flown, and tapping "back to the island" throws the
+   * work away — completed work discarded, which section 18 forbids. Leaving
+   * after earning therefore COLLECTS rather than dismisses.
+   */
+  let earned = false
 
   /**
    * Shared timing gates. The island has no spectacles yet, so reward and quiet
@@ -112,8 +122,9 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
     holds,
     isActive: () => !layer.classList.contains('hide'),
     /* No score bar on the island — finishing the round is the reward, and the
-       world itself changes. So the star just sparkles where it was earned. */
-    flyToScore: () => {},
+       world itself changes. But this is also the renderer's signal that an
+       answer was CORRECT, which is what makes leaving safe below. */
+    flyToScore: () => { earned = true },
     onWrong: () => {},
     /* For a sum, the first correct answer completes the round. */
     onAdvance: () => { finish() },
@@ -124,8 +135,25 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
     hideTarget: () => targetCard.classList.add('hide'),
     toast,
     burst: () => {},
-    /* For a word-find, celebrate fires when every word has been found. */
-    celebrate: () => { finish() },
+    /*
+     * For a word-find, celebrate fires when every word has been found.
+     *
+     * The 2D game plays 'win', says "Well done!" and bursts for 1.7s before
+     * advancing (v0:959-971). Here the hatch carries the praise, but two
+     * things were genuinely lost: the last tap sounded like every other tap,
+     * and the overlay vanished on the same frame, which reads as "did that
+     * count?". So: the win sound and a half-beat to breathe.
+     *
+     * Deliberately NOT the spoken "Well done!" — speak() cancels the previous
+     * utterance (v0:749, faithfully ported), so the hatch line moments later
+     * would behead it. A stutter is worse than no praise; the hatch line is
+     * already personalised and world-lawful.
+     */
+    celebrate: () => {
+      earned = true
+      host.sfx.play('win')
+      setTimeout(() => finish(), 800)
+    },
   })
 
   function teardown(): void {
@@ -135,25 +163,32 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
   }
 
   function finish(): void {
+    earned = false
     teardown()
     host.onPassed()
   }
 
   back.onclick = () => {
     const wasOpen = !layer.classList.contains('hide')
+    if (!wasOpen) return
+    // Already answered correctly? Then leaving COLLECTS. Never discard work
+    // the child has actually done (brief section 18).
+    if (earned) { finish(); return }
     teardown()
-    if (wasOpen) host.onDismissed()
+    host.onDismissed()
   }
 
   return {
     openWordFind(picks) {
       teardown()
+      earned = false
       layer.classList.remove('hide')
       handle = mountWordFind(picks, deps())
     },
 
     openSum(item) {
       teardown()
+      earned = false
       layer.classList.remove('hide')
       handle = mountSum(item, deps())
     },

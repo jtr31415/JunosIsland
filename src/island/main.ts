@@ -123,15 +123,15 @@ async function boot(): Promise<void> {
    * nothing for real work. Asserting the phase here turns that entire class of
    * mistake into a visible nothing instead of a swallowed something.
    */
-  function openRead(): void {
-    if (flow.phase !== 'challenge' || flow.challenge !== 'read') return
+  function openRead(state: Flow = flow): void {
+    if (state.phase !== 'challenge' || state.challenge !== 'read') return
     generateRead(readStore, { rng: defaultRng, drawGreen, drawRed, neigh, level: 1 })
     overlay.clearSay()
     overlay.openWordFind(readStore.history[readStore.idx] as ReadPick[])
   }
 
-  function openSum(): void {
-    if (flow.phase !== 'challenge' || flow.challenge !== 'sum') return
+  function openSum(state: Flow = flow): void {
+    if (state.phase !== 'challenge' || state.challenge !== 'sum') return
     generateAdd(sumStore, defaultRng, 1)
     overlay.clearSay()
     overlay.openSum(sumStore.history[sumStore.idx] as SumItem)
