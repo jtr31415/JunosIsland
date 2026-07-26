@@ -49,6 +49,12 @@ export interface Flow {
   bankedTiles: number
   /** The type the child picked from the offer, awaiting a socket tap. */
   chosen: TileType | null
+  /**
+   * The plot under construction: chosen type, chosen place, and the sums so
+   * far. Spec §2 makes maths progress physical — the tile is sited first and
+   * then GROWS as sums land, rather than appearing finished at the end.
+   */
+  plot: { at: Axial; type: TileType } | null
   /** There is always an egg to read to, unless one is mid-hatch. */
   eggPresent: boolean
   /** Reading rounds completed toward the current egg. Never decays. */
@@ -67,6 +73,7 @@ export function createFlow(): Flow {
     pets: [],
     bankedTiles: 0,
     chosen: null,
+    plot: null,
     eggPresent: true,
     readProgress: 0,
     sumProgress: 0,
@@ -192,6 +199,7 @@ export function placeTile(f: Flow, a: Axial): Flow {
     island: place(f.island, a, f.chosen ?? 'grass'),
     bankedTiles,
     chosen: null,
+    plot: null,
     // Still owed land? Stay in placing, or the surplus becomes unreachable.
     phase: bankedTiles > 0 ? 'placing' : 'free',
   }

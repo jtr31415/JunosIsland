@@ -123,12 +123,22 @@ export function createEgg(): Egg {
 
     update(_dt, t) {
       if (shudder) return
-      // A slow bob, and an impatient wobble that gets more insistent as the
-      // egg nears hatching — the island gently asking, never nagging (§13).
-      group.position.y = Math.sin(t * 1.5) * 0.04
+      /*
+       * An egg on the ground ROCKS; it does not hover. The first version bobbed
+       * it vertically by 0.04 world units, which at this scale is an eighth of
+       * the egg's own height — enough to read as levitation rather than life.
+       *
+       * So the resting motion is a slow tilt around the base, with an
+       * impatient shiver that grows more insistent as it nears hatching. The
+       * island gently asking, never nagging (brief §13).
+       */
+      group.position.y = 0
+      const breathe = Math.sin(t * 1.5) * 0.022
       const eager = stage === 'wobble' ? 1 : stage === 'big' ? 0.45 : 0.18
       const due = Math.sin(t * 0.7) > (0.93 - eager * 0.5)
-      group.rotation.z = due ? Math.sin(t * 26) * 0.09 * eager : 0
+      const shiver = due ? Math.sin(t * 26) * 0.09 * eager : 0
+      group.rotation.z = breathe + shiver
+      group.rotation.x = Math.cos(t * 1.1) * 0.015
       glow.material.opacity = stage === 'wobble'
         ? 0.18 + Math.sin(t * 3.2) * 0.12
         : 0

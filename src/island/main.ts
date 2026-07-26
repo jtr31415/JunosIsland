@@ -14,8 +14,10 @@ import { createPetField, SPECIES } from './pets'
 import { createEgg } from './egg'
 import { createFred } from './fred'
 import { createPropField } from './world/props'
+import { createGrowingPlot } from './world/increments'
+import type { GrowingPlot } from './world/increments'
 import { createAlbum } from './album'
-import { hatchProgress, landProgress } from './flow'
+import { hatchProgress, landProgress, sumsForTile } from './flow'
 import { pageKind } from './balance'
 import { landPaused, eggsPaused, activeGovernor, GOVERNOR_LINE } from './governors'
 import { OPENING, HATCH_LINES, fill } from './script'
@@ -46,6 +48,10 @@ import { generateAdd } from '../core/generators/sums'
 import type { SumState, SumItem } from '../core/generators/sums'
 import { petName } from '../core/names'
 
+/** Injected at build time by Vite (see vite.island.config.ts). */
+declare const __BUILD_STAMP__: string
+const BUILD_STAMP = typeof __BUILD_STAMP__ === 'string' ? __BUILD_STAMP__ : 'dev'
+
 const canvas = document.getElementById('view') as HTMLCanvasElement
 
 async function boot(): Promise<void> {
@@ -69,6 +75,25 @@ async function boot(): Promise<void> {
 
   const props = createPropField()
   world.scene.add(props.group)
+
+  /*
+   * The plot under construction (spec §2). Sited as soon as the child picks a
+   * socket, then GROWN by each sum, so arithmetic visibly becomes ground.
+   */
+  let plot: GrowingPlot | null = null
+  function showPlot(): void {
+    if (!flow.plot) {
+      if (plot) { world.scene.remove(plot.group); plot.dispose(); plot = null }
+      return
+    }
+    if (!plot) {
+      plot = createGrowingPlot(flow.plot.type, world.models.size)
+      const w = world.worldOf(flow.plot.at)
+      plot.group.position.copy(w)
+      world.scene.add(plot.group)
+    }
+    plot.setProgress(flow.sumProgress, sumsForTile(flow))
+  }
 
   const egg = createEgg()
   world.scene.add(egg.group)
@@ -148,6 +173,7 @@ async function boot(): Promise<void> {
     egg.setProgress(hatchProgress(flow))
     renderOffer()
     renderProgress()
+    showPlot()
     persist()
   }
 
@@ -171,6 +197,38 @@ async function boot(): Promise<void> {
     if (egg) egg.style.width = Math.round(hatchProgress(flow) * 100) + '%'
     if (land) land.style.width = Math.round(landProgress(flow) * 100) + '%'
   }
+
+  /* ---------- reset (a testing tool, not a game feature) ----------
+   *
+   * Deliberately plain, small and cornered: nothing a child would reach for,
+   * and it asks before it wipes. The guardrails say nothing she owns can be
+   * lost, so BEFORE Juno plays unsupervised this belongs behind the 2D game's
+   * DDMM PIN gear, not on the screen. It is here to make testing the pacing
+   * bearable while the economy is still being tuned.
+   */
+  const resetBtn = document.createElement('button')
+  resetBtn.className = 'dev-reset'
+  resetBtn.textContent = 'reset island'
+  resetBtn.title = 'Wipe this island and start again (testing tool)'
+  resetBtn.onclick = () => {
+    const n = flow.pets.length
+    const what = n === 0 ? 'this island' : `this island and ${n} friend${n === 1 ? '' : 's'}`
+    if (!confirm(`Start again? This wipes ${what}.`)) return
+    try { localStorage.removeItem('petIsland.v1.' + PROFILE + '.save') } catch { /* ignore */ }
+    location.reload()
+  }
+  document.body.append(resetBtn)
+
+  /*
+   * Build stamp. Tiny and dim, but it turns "is this the new build?" from a
+   * guess into a glance — which matters because a stale service worker
+   * produced several phantom regressions during development.
+   */
+  const stamp = document.createElement('div')
+  stamp.className = 'dev-stamp'
+  stamp.textContent = BUILD_STAMP
+  stamp.title = 'build'
+  document.body.append(stamp)
 
   /* ---------- the album ---------- */
   const album = createAlbum(document.body, speech)
@@ -431,6 +489,7 @@ async function boot(): Promise<void> {
   })
 
   world.onFrame((dt, t) => {
+    plot?.update(dt)
     props.update(dt, t)
     egg.update(dt, t)
     pets.update(dt, t, flow.island, world.models.size)
