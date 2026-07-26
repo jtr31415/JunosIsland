@@ -14,6 +14,7 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { flattenImported } from './lighting'
 import type { Pet } from './flow'
+import type { Speaker } from '../platform/speech'
 
 /** One offscreen renderer, reused for every portrait. */
 function createPortraitRenderer(size = 192): {
@@ -73,7 +74,19 @@ export interface Album {
   isOpen(): boolean
 }
 
-export function createAlbum(root: HTMLElement, onClose?: () => void): Album {
+/**
+ * @param speech The SAME Speaker the reading game uses.
+ *
+ * This is not optional. A bare `new SpeechSynthesisUtterance(name)` takes the
+ * browser's default voice, which on most machines is a US or robotic one —
+ * so pet names in the album sounded nothing like the same names spoken during
+ * a hatch. The ported speaker carries the en-GB ranking, the rate and the
+ * stuck-engine fallback that were tuned on the child's actual device; the
+ * album has no business having its own voice.
+ */
+export function createAlbum(
+  root: HTMLElement, speech: Speaker, onClose?: () => void,
+): Album {
   const layer = document.createElement('div')
   layer.className = 'album hide'
 
@@ -126,12 +139,9 @@ export function createAlbum(root: HTMLElement, onClose?: () => void): Album {
         name.textContent = pet.name
         cell.append(name)
 
-        // Tapping a friend says their name — the name is the point.
-        cell.onclick = () => {
-          const utter = new SpeechSynthesisUtterance(pet.name)
-          utter.rate = 0.85
-          try { window.speechSynthesis.speak(utter) } catch { /* no voice, no drama */ }
-        }
+        // Tapping a friend says their name — the name is the point, and it
+        // must sound exactly as it did when she read it home.
+        cell.onclick = () => { speech.speak(pet.name) }
 
         grid.append(cell)
         void portraits.shoot(pet.species).then(url => { img.src = url })

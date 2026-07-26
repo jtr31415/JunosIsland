@@ -173,7 +173,7 @@ async function boot(): Promise<void> {
   }
 
   /* ---------- the album ---------- */
-  const album = createAlbum(document.body)
+  const album = createAlbum(document.body, speech)
   const albumBtn = document.createElement('button')
   albumBtn.className = 'chunk chunk-button album-button'
   albumBtn.textContent = '\u{1F4D6} friends'
@@ -219,29 +219,61 @@ async function boot(): Promise<void> {
     overlay.openSum(sumStore.history[sumStore.idx] as SumItem)
   }
 
+  /**
+   * A page or a sum was completed.
+   *
+   * The CEREMONY ONLY RUNS IF THE REWARD ACTUALLY LANDED. Under the cost
+   * curve most pages advance the egg without hatching it, and most sums
+   * advance the plot without finishing it — so firing the hatch animation,
+   * the name card and the spoken hatch line on every completed page announced
+   * a friend arriving when none had. That breaks the world-law the whole game
+   * rests on: a pet comes home when its name is read, not before.
+   *
+   * So: compare before and after, and let the state decide what to celebrate.
+   */
   async function passed(): Promise<void> {
     if (flow.challenge === 'read') {
       const name = petName(defaultRng)
       const species = SPECIES[ri(defaultRng, SPECIES.length)] as string
-      await egg.hatch()
+      const petsBefore = flow.pets.length
+
       flow = handleChallengePassed(flow, { name, species })
-      overlay.showName(name)
-      const line = HATCH_LINES[flow.pets.length % HATCH_LINES.length] as string
-      speech.speak(fill(line, CHILD, name))
-      fred.talk(2.2)
-      fred.hop()
-      world.lighting.celebrationBump()
-      egg.reset()
+      const hatched = flow.pets.length > petsBefore
+
+      if (hatched) {
+        await egg.hatch()
+        overlay.showName(name)
+        const line = HATCH_LINES[flow.pets.length % HATCH_LINES.length] as string
+        speech.speak(fill(line, CHILD, name))
+        fred.talk(2.4)
+        fred.hop()
+        world.lighting.celebrationBump()
+        egg.reset()
+      } else {
+        // Not yet — but visibly closer. The egg cracks a little further, which
+        // refresh() applies, and that IS the feedback. No name, no promise.
+        sfx.play('up')
+      }
+
       refresh()
       if (openingResumeAt >= 0) {
         const at = openingResumeAt
         openingResumeAt = -1
-        setTimeout(() => { void runOpening(at) }, 2200)
+        setTimeout(() => { void runOpening(at) }, hatched ? 2200 : 600)
       }
     } else if (flow.challenge === 'sum') {
       openingResumeAt = -1
+      const bankedBefore = flow.bankedTiles
       flow = challengePassed(flow)
-      speech.speak('You counted us up some land!')
+      const earned = flow.bankedTiles > bankedBefore
+
+      if (earned) {
+        speech.speak('You counted us up some land!')
+        fred.talk(2.2)
+        world.lighting.celebrationBump()
+      } else {
+        sfx.play('up')
+      }
       refresh()
     }
   }
@@ -399,6 +431,7 @@ async function boot(): Promise<void> {
   })
 
   world.onFrame((dt, t) => {
+    props.update(dt, t)
     egg.update(dt, t)
     pets.update(dt, t, flow.island, world.models.size)
   })

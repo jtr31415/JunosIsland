@@ -232,3 +232,35 @@ describe('a completed round is never discarded', () => {
     expect(count(f.island)).toBe(3)
   })
 })
+
+describe('a reward is only announced when it actually lands', () => {
+  /*
+   * The bug this pins: the hatch ceremony fired on EVERY completed page, so a
+   * name was spoken and a friend announced when none had arrived. Under the
+   * cost curve most pages do not hatch anything, so the game was promising a
+   * friend several times per egg and delivering once.
+   *
+   * The observable rule: a pet appears in the flow, or nothing is announced.
+   */
+  it('a mid-egg page adds no pet, so there is nothing to announce', () => {
+    // Get past the free first egg, then read ONE page of the next one
+    const after = hatchOne()
+    const mid = handleChallengePassed(
+      tapEgg({ ...after, phase: 'free' }), { name: 'Ghost', species: 'animal-bee' })
+    expect(mid.pets).toHaveLength(after.pets.length)   // no new friend
+    expect(mid.readProgress).toBeGreaterThan(0)        // but real progress
+  })
+
+  it('the final page of an egg does add the pet', () => {
+    const f = hatchOne(hatchOne(), 'Second')
+    expect(f.pets).toHaveLength(2)
+    expect(f.pets[1]!.name).toBe('Second')
+  })
+
+  it('a mid-plot sum banks no tile, so there is no land to announce', () => {
+    const one = earnTile()                              // first tile is free
+    const mid = handleChallengePassed(tapSum({ ...one, phase: 'free' }))
+    expect(mid.bankedTiles).toBe(one.bankedTiles)       // no new land
+    expect(mid.sumProgress).toBeGreaterThan(0)          // but real progress
+  })
+})
