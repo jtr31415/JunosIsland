@@ -19,6 +19,36 @@
 - **Commit after every task.** Conventional commit prefixes (`feat:`, `test:`, `chore:`, `refactor:`).
 - Node 20+, npm. No Docker.
 
+## Revision log
+
+**rev 2 — after Fable 5 review (FAIL verdict on rev 1).** The review confirmed the
+`core/` ports are faithful line by line, that the golden harness slices are complete with
+no missing symbols, and that Task 14's single-shared-Rng reproduction really is
+equivalent to the original's global `Math.random`. It found seven blockers, all fixed here:
+
+1. Task 18's wordFind tests used 1000ms and `.click()`; the original schedules speech at
+   `900 + picks.length * 60` = 1080ms (v0:886) and binds `pointerdown` (v0:882). As
+   written the tests could only pass if the port broke frozen behaviour.
+2. `rewardUntil`/`quietUntil` were to become renderer closure state, but they are
+   host-written and renderer-read — closing over them would silently kill the
+   reward-hold and quiet-period sequencing the same task orders preserved.
+3. `Sfx` was specified as `'good' | 'bad' | 'pop'` with frequency arguments; the
+   renderers actually call `'up' | 'down' | 'bump' | 'win'` with none, because
+   `popSound` reads `THEMES[theme]` internally (v0:2015-2026).
+4. The battery drop contradicted Task 18's verbatim rule (`spendBattery` sits inside
+   `renderSum` at v0:1127), cited the wrong document, and made the Phase 3 gate false.
+5. The golden capture pinned level 1 only, leaving `alienWord`'s stream, bridging
+   addition, and subtraction levels 2–3 unproven — all one tap away in the UI.
+6. No `git init` step, though the spec requires one.
+7. `jsdom` never installed; `environmentMatchGlobs` removed in Vitest 4.
+
+Also fixed: `RED` is 41 entries not 40 (verified by executing the original's own
+literal); `inDeadZone` used `>=`/`<=` against the original's strict comparisons;
+`speak` used `??` where the original uses `||`; the shared `voiceToastShown` flag was
+split, losing the mutual exclusion between the two voice toasts; three assertions tested
+properties the algorithm does not guarantee; and v0:644-694, 1498-1504, 1529-1530 and
+1825-1833 had no assigned module.
+
 ## Phase boundaries
 
 Phases end at a Fable 5 review gate. Do not begin the next phase until the review passes.
@@ -28,7 +58,7 @@ Phases end at a Fable 5 review gate. Do not begin the next phase until the revie
 | 0 Foundations | 1–2 | Pipeline green, island stub deployed |
 | 1 Golden capture | 3 | 500 items × 4 modes on disk |
 | 2 `core/` extraction | 4–15 | Golden diff clean |
-| 3 Shell rebuild | 16–21 | 2D game plays identically |
+| 3 Shell rebuild | 16–21 | 2D game plays identically **except the retired battery** |
 
 M1 (Phases 4–8, the island) gets its own plan, written after Phase 3's review passes — its task detail depends on the module signatures this plan produces, and inventing them now would be fabrication.
 
@@ -64,7 +94,7 @@ M1 (Phases 4–8, the island) gets its own plan, written after Phase 3's review 
 | `src/challenges/sum.ts` | `renderSum`, number pad, dot hints |
 | `src/words2d/` | 2D shell: html, css, ambience, spectacles, album, profiles |
 | `tools/golden/capture.mjs` | Slices the original file, seeds it, dumps golden JSON |
-| `tools/golden/verify.mjs` | Regenerates from `core/` and diffs |
+| `tests/golden.test.ts` | Regenerates from `core/` and diffs against the golden JSON |
 
 ---
 
@@ -77,13 +107,27 @@ M1 (Phases 4–8, the island) gets its own plan, written after Phase 3's review 
 - Consumes: nothing
 - Produces: `Rng`, `mulberry32(seed: number): Rng`, `ri(rng: Rng, n: number): number`, `shuffle<T>(rng: Rng, a: T[]): T[]`, `defaultRng: Rng`
 
-- [ ] **Step 1: Initialise the package**
+- [ ] **Step 0: Initialise the repository**
+
+The working directory is not a git repo yet and the remote is empty.
 
 ```bash
 cd C:/Users/joetr/Documents/JunosIsland
-npm init -y
-npm i -D typescript vite vitest @types/node
+git init -b main
 ```
+
+Write `.gitignore` (`node_modules/`, `dist/`, `Assets/*.zip`, `Assets/**/*.blend`), then make the first commit containing `pet-island-brief.md`, `v0/`, and `docs/`.
+
+- [ ] **Step 1: Initialise the package**
+
+`jsdom` is required — Tasks 15 and 18 declare `@vitest-environment jsdom` and Vitest errors without the package installed.
+
+```bash
+npm init -y
+npm i -D typescript vite vitest @types/node jsdom
+```
+
+Then edit the generated `package.json`: set `"type": "module"`, `"private": true`, and replace the scripts block.
 
 Then set `"type": "module"` in `package.json` and add scripts:
 
@@ -123,6 +167,8 @@ Then set `"type": "module"` in `package.json` and add scripts:
 
 - [ ] **Step 3: Add `vitest.config.ts`**
 
+`environmentMatchGlobs` was removed in Vitest 4. Tests needing a DOM declare it per-file with a `@vitest-environment jsdom` docblock instead — which the tests in Tasks 15 and 18 already carry.
+
 ```ts
 import { defineConfig } from 'vitest/config'
 
@@ -130,7 +176,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    environmentMatchGlobs: [['tests/challenges/**', 'jsdom']],
+    include: ['tests/**/*.test.ts'],
   },
 })
 ```
@@ -516,12 +562,26 @@ Math.random = () => {
 const document = { getElementById: () => null };
 `
 
+// Levels matter. The sliced `levels` object starts at all-1s, so a level-1-only
+// capture would never exercise alienWord's RNG stream (read L2, build L2), the
+// bridging branch of generateAdd (L2), or generateSub L2/L3 — all of which are
+// one tap away in the shipped UI. Capture every level the UI can reach.
 const driver = `
-const out = { seed: ${SEED}, read: [], add: [], sub: [], build: [] };
-for (let i = 0; i < 500; i++) { generateRead(); out.read.push(store.read.history[store.read.idx]); }
-for (let i = 0; i < 500; i++) { generateAdd();  out.add.push(store.add.history[store.add.idx]); }
-for (let i = 0; i < 500; i++) { generateSub();  out.sub.push(store.sub.history[store.sub.idx]); }
+const out = { seed: ${SEED}, read: [], readL2: [], add: [], addL2: [],
+              sub: [], subL2: [], subL3: [], build: [], buildL2: [] };
+for (let i = 0; i < 500; i++) { generateRead();  out.read.push(store.read.history[store.read.idx]); }
+for (let i = 0; i < 500; i++) { generateAdd();   out.add.push(store.add.history[store.add.idx]); }
+for (let i = 0; i < 500; i++) { generateSub();   out.sub.push(store.sub.history[store.sub.idx]); }
 for (let i = 0; i < 500; i++) { generateBuild(); out.build.push(store.build.history[store.build.idx]); }
+
+levels.read = 2; levels.add = 2; levels.sub = 2; levels.build = 2;
+for (let i = 0; i < 500; i++) { generateRead();  out.readL2.push(store.read.history[store.read.idx]); }
+for (let i = 0; i < 500; i++) { generateAdd();   out.addL2.push(store.add.history[store.add.idx]); }
+for (let i = 0; i < 500; i++) { generateSub();   out.subL2.push(store.sub.history[store.sub.idx]); }
+for (let i = 0; i < 500; i++) { generateBuild(); out.buildL2.push(store.build.history[store.build.idx]); }
+
+levels.sub = 3;
+for (let i = 0; i < 500; i++) { generateSub();   out.subL3.push(store.sub.history[store.sub.idx]); }
 return out;
 `
 
@@ -529,16 +589,15 @@ const result = new Function(prelude + slice + driver)()
 
 mkdirSync(here, { recursive: true })
 writeFileSync(resolve(here, 'golden.json'), JSON.stringify(result, null, 2))
-console.log(
-  `golden.json written: read=${result.read.length} add=${result.add.length} ` +
-  `sub=${result.sub.length} build=${result.build.length}`
-)
+console.log('golden.json written:', Object.entries(result)
+  .filter(([k]) => k !== 'seed')
+  .map(([k, v]) => `${k}=${v.length}`).join(' '))
 ```
 
 - [ ] **Step 2: Run the capture**
 
 Run: `node tools/golden/capture.mjs`
-Expected: `golden.json written: read=500 add=500 sub=500 build=500`
+Expected: `golden.json written: read=500 readL2=500 add=500 addL2=500 sub=500 subL2=500 subL3=500 build=500 buildL2=500`
 
 If it throws a `ReferenceError` naming an identifier, a needed line range was missed — widen `RANGES` to include that definition and rerun. Do not stub the missing symbol.
 
@@ -587,7 +646,7 @@ import { GREEN, RED, CONFUSABLE, groupOf } from '../../src/core/wordlists'
 describe('wordlists', () => {
   it('has the expected list sizes', () => {
     expect(GREEN).toHaveLength(56)
-    expect(RED).toHaveLength(40)
+    expect(RED).toHaveLength(41)
   })
 
   it('GREEN words are plain — no bracket markup', () => {
@@ -1055,12 +1114,15 @@ describe('alienWord', () => {
     }
   })
 
-  it('never repeats the onset as the coda', () => {
+  it('never ends with the same grapheme it starts with', () => {
+    // The original skips any draw where onset === coda (v0:497), so no alien
+    // word is a "bab"/"dad" shape. Compare the two ends directly.
     const rng = mulberry32(3)
     for (let i = 0; i < 2000; i++) {
       const w = alienWord(rng)
-      const onset = AL_ONSETS.filter(o => w.startsWith(o)).sort((a, b) => b.length - a.length)[0]!
-      expect(w.slice(onset.length)).not.toBe('')
+      const onset = [...AL_ONSETS].sort((a, b) => b.length - a.length).find(o => w.startsWith(o))!
+      const coda = w.slice(onset.length).replace(/^(ee|oo|or|[aeiou])/, '')
+      expect(coda).not.toBe(onset)
     }
   })
 
@@ -1451,12 +1513,15 @@ describe('generateRead — level 1', () => {
     }
   })
 
-  it('includes roughly 35% red words once rounds are large', () => {
+  it('mixes both word classes once rounds are large', () => {
+    // NOT an exact count: neighbour substitution replaces a victim with
+    // {w: nb.raw, cls: nb.cls} (v0:828), which can change the red/green split
+    // after the initial 35% draw. Assert the guarantee, not the starting ratio.
     const { state, deps } = harness(1, 11)
     for (let i = 0; i < 30; i++) generateRead(state, deps)
     const big = state.history[29]!
-    const reds = big.filter(p => p.cls === 'red').length
-    expect(reds).toBe(Math.round(12 * 0.35))
+    expect(big.filter(p => p.cls === 'red').length).toBeGreaterThan(0)
+    expect(big.filter(p => p.cls === 'green').length).toBeGreaterThan(0)
   })
 
   it('plants at least one near-twin pair in a large round', () => {
@@ -1654,14 +1719,16 @@ describe('generateAdd', () => {
     }
   })
 
-  it('avoids repeating the immediately previous sum', () => {
+  it('rarely repeats the immediately previous sum', () => {
+    // The retry guard gives up after 6 collisions (v0:986), so a repeat is
+    // permitted, just very unlikely. Assert the guard works, not perfection.
     const s = fresh(), rng = mulberry32(3)
     for (let i = 0; i < 500; i++) generateAdd(s, rng, 1)
     let repeats = 0
     for (let i = 1; i < s.history.length; i++) {
       if (s.history[i]!.a === s.history[i - 1]!.a && s.history[i]!.b === s.history[i - 1]!.b) repeats++
     }
-    expect(repeats).toBe(0)
+    expect(repeats).toBeLessThan(5)
   })
 
   it('sets idx to the newest item', () => {
@@ -2057,26 +2124,64 @@ describe('golden output — core matches the frozen original', () => {
   const subState: SumState = { history: [], idx: -1 }
   const buildState: BuildState = { history: [], idx: -1 }
 
-  // Same order as tools/golden/capture.mjs.
-  for (let i = 0; i < 500; i++) generateRead(readState, { rng, drawGreen, drawRed, neigh, level: 1 })
-  for (let i = 0; i < 500; i++) generateAdd(addState, rng, 1)
-  for (let i = 0; i < 500; i++) generateSub(subState, rng, 1)
-  for (let i = 0; i < 500; i++) generateBuild(buildState, { rng, drawGreen, level: 1 })
+  // Order must match tools/golden/capture.mjs EXACTLY, including the level
+  // changes. One shared Rng stands in for the original's single global
+  // Math.random, and drawGreen is deliberately shared between read and build
+  // because the original has one module-level deck serving both (v0:807, 1165).
+  const take = (n: number, fn: () => void) => { for (let i = 0; i < n; i++) fn() }
 
-  it('reproduces all 500 reading rounds', () => {
-    expect(readState.history).toEqual(golden.read)
+  take(500, () => generateRead(readState, { rng, drawGreen, drawRed, neigh, level: 1 }))
+  take(500, () => generateAdd(addState, rng, 1))
+  take(500, () => generateSub(subState, rng, 1))
+  take(500, () => generateBuild(buildState, { rng, drawGreen, level: 1 }))
+
+  const readL2 = readState.history.length
+  const addL2 = addState.history.length
+  const subL2 = subState.history.length
+  const buildL2 = buildState.history.length
+
+  take(500, () => generateRead(readState, { rng, drawGreen, drawRed, neigh, level: 2 }))
+  take(500, () => generateAdd(addState, rng, 2))
+  take(500, () => generateSub(subState, rng, 2))
+  take(500, () => generateBuild(buildState, { rng, drawGreen, level: 2 }))
+
+  const subL3 = subState.history.length
+  take(500, () => generateSub(subState, rng, 3))
+
+  it('reproduces the level 1 reading rounds', () => {
+    expect(readState.history.slice(0, readL2)).toEqual(golden.read)
   })
 
-  it('reproduces all 500 additions', () => {
-    expect(addState.history).toEqual(golden.add)
+  it('reproduces the level 2 alien reading rounds', () => {
+    expect(readState.history.slice(readL2)).toEqual(golden.readL2)
   })
 
-  it('reproduces all 500 subtractions', () => {
-    expect(subState.history).toEqual(golden.sub)
+  it('reproduces the level 1 additions', () => {
+    expect(addState.history.slice(0, addL2)).toEqual(golden.add)
   })
 
-  it('reproduces all 500 build items', () => {
-    expect(buildState.history).toEqual(golden.build)
+  it('reproduces the level 2 bridging additions', () => {
+    expect(addState.history.slice(addL2)).toEqual(golden.addL2)
+  })
+
+  it('reproduces the level 1 subtractions', () => {
+    expect(subState.history.slice(0, subL2)).toEqual(golden.sub)
+  })
+
+  it('reproduces the level 2 subtractions', () => {
+    expect(subState.history.slice(subL2, subL3)).toEqual(golden.subL2)
+  })
+
+  it('reproduces the level 3 subtractions', () => {
+    expect(subState.history.slice(subL3)).toEqual(golden.subL3)
+  })
+
+  it('reproduces the level 1 build items', () => {
+    expect(buildState.history.slice(0, buildL2)).toEqual(golden.build)
+  })
+
+  it('reproduces the level 2 alien build items', () => {
+    expect(buildState.history.slice(buildL2)).toEqual(golden.buildL2)
   })
 })
 ```
@@ -2127,7 +2232,14 @@ git commit -m "test: verify core reproduces the original generator output exactl
 - Consumes: nothing from `core/`
 - Produces: `Speaker { speak(txt: string, rate?: number, onend?: () => void): boolean; ready(): boolean }`, `createSpeaker(opts?: { onVoicePicked?: (name: string) => void }): Speaker`
 
-The original keeps `voice` and `voiceToastShown` as module globals (`:722`). Here they become closure state inside `createSpeaker` so tests can make independent instances. Behaviour is unchanged.
+The original keeps `voice` and `voiceToastShown` as module globals (`:722`). Here they become closure state inside `createSpeaker` so tests can make independent instances.
+
+**One behavioural subtlety that must be preserved.** `voiceToastShown` is a *single shared* flag in the original, set both by the "Voice: X" announcement (v0:760) and by the "No UK English voice on this device" fallback in `speakTarget` (v0:905-907) — whichever fires first suppresses the other, so the child never sees two voice toasts. Splitting it would lose that mutual exclusion. `createSpeaker` therefore exposes the flag rather than hiding it:
+
+- `noticeShown(): boolean` — has any voice notice been shown?
+- `markNoticeShown(): void` — called by the word-find no-voice path before it toasts
+
+`wordFind` must call these instead of keeping its own flag.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -2285,7 +2397,8 @@ export function createSpeaker(opts: SpeakerOptions = {}): Speaker {
         const u = new SpeechSynthesisUtterance(txt)
         u.voice = voice
         u.lang = voice.lang
-        u.rate = rate ?? 0.85
+        /* `||` not `??` — matches v0:752, where rate 0 falls back to 0.85 */
+        u.rate = rate || 0.85
         u.pitch = 1.05
         u.volume = 1
         if (onend) {
@@ -2549,9 +2662,13 @@ git commit -m "feat: add async SaveStore with localStorage implementation"
 
 **Interfaces:**
 - Consumes: nothing
-- Produces: `SoundKind = 'good' | 'bad' | 'pop'`, `Sfx { play(kind: SoundKind, lo: number, hi: number): void; enabled: boolean }`, `createSfx(ctxFactory?: () => AudioContext | null): Sfx`
+- Produces: `SoundKind = 'up' | 'down' | 'bump' | 'win'`, `Sfx { play(kind: SoundKind): void; enabled: boolean; setTheme(t: ThemeName): void }`, `createSfx(ctxFactory?: () => AudioContext | null): Sfx`
 
-Read `v0/junos-words.html:2004-2028` (`note`, `popSound`) and port the oscillator envelopes exactly. The theme's `lo`/`hi` frequencies come from `core/themes.ts`.
+Read `v0/junos-words.html:2004-2027` (`note`, `popSound`) and port the oscillator envelopes exactly.
+
+**The kind names are the original's and must not be renamed** — the renderers call `popSound('up')` (v0:922, 1271), `'bump'` (v0:930, 1137, 1294), `'down'` (v0:1145) and `'win'` (v0:960, 1092, 1116, 1278), and Task 18 ports those call sites verbatim. `'win'` is two chained notes (v0:2025), not one.
+
+`popSound` also reads `THEMES[theme]` internally (v0:2021), so **callers pass no frequencies**. `Sfx` therefore holds the current theme and exposes `setTheme`; renderer call sites stay literally `deps.sfx.play('up')`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -2576,12 +2693,12 @@ function fakeCtx() {
 describe('createSfx', () => {
   it('is silent and does not throw when no AudioContext exists', () => {
     const sfx = createSfx(() => null)
-    expect(() => sfx.play('good', 320, 880)).not.toThrow()
+    expect(() => sfx.play('up')).not.toThrow()
   })
 
   it('starts and stops an oscillator when playing', () => {
     const f = fakeCtx()
-    createSfx(() => f.ctx).play('good', 320, 880)
+    createSfx(() => f.ctx).play('up')
     expect(f.osc.start).toHaveBeenCalled()
     expect(f.osc.stop).toHaveBeenCalled()
   })
@@ -2590,17 +2707,41 @@ describe('createSfx', () => {
     const f = fakeCtx()
     const sfx = createSfx(() => f.ctx)
     sfx.enabled = false
-    sfx.play('good', 320, 880)
+    sfx.play('up')
     expect(f.osc.start).not.toHaveBeenCalled()
   })
 
-  it('uses a different frequency for good and bad', () => {
+  it('sweeps up for "up" and down for "down" — the inverse of each other', () => {
     const f1 = fakeCtx(), f2 = fakeCtx()
-    createSfx(() => f1.ctx).play('good', 320, 880)
-    createSfx(() => f2.ctx).play('bad', 320, 880)
-    const a = f1.osc.frequency.setValueAtTime.mock.calls[0]?.[0]
-    const b = f2.osc.frequency.setValueAtTime.mock.calls[0]?.[0]
-    expect(a).not.toBe(b)
+    createSfx(() => f1.ctx).play('up')
+    createSfx(() => f2.ctx).play('down')
+    const upFrom = f1.osc.frequency.setValueAtTime.mock.calls[0]?.[0]
+    const upTo = f1.osc.frequency.linearRampToValueAtTime.mock.calls[0]?.[0]
+    const downFrom = f2.osc.frequency.setValueAtTime.mock.calls[0]?.[0]
+    expect(upTo).toBeGreaterThan(upFrom)
+    expect(downFrom).toBe(upTo)
+  })
+
+  it('"bump" ignores the theme — it is always the same low thud', () => {
+    const f1 = fakeCtx(), f2 = fakeCtx()
+    const a = createSfx(() => f1.ctx); a.setTheme('ocean'); a.play('bump')
+    const b = createSfx(() => f2.ctx); b.setTheme('christmas'); b.play('bump')
+    expect(f1.osc.frequency.setValueAtTime.mock.calls[0]?.[0])
+      .toBe(f2.osc.frequency.setValueAtTime.mock.calls[0]?.[0])
+  })
+
+  it('"win" plays two chained notes', () => {
+    const f = fakeCtx()
+    createSfx(() => f.ctx).play('win')
+    expect(f.osc.start).toHaveBeenCalledTimes(2)
+  })
+
+  it('follows the theme for "up"', () => {
+    const f1 = fakeCtx(), f2 = fakeCtx()
+    const a = createSfx(() => f1.ctx); a.setTheme('ocean'); a.play('up')
+    const b = createSfx(() => f2.ctx); b.setTheme('christmas'); b.play('up')
+    expect(f1.osc.frequency.setValueAtTime.mock.calls[0]?.[0])
+      .not.toBe(f2.osc.frequency.setValueAtTime.mock.calls[0]?.[0])
   })
 })
 ```
@@ -2650,14 +2791,29 @@ Copy `renderSet`, `wordTap`, `speakTarget` (`:840-971`), `renderBuild`, `fredTal
 
 1. `$('words')` → `deps.el`
 2. `speak(...)` → `deps.speak(...)`
-3. `addScore(n)` → `deps.onCorrect()` / `deps.onWrong()`
-4. `celebrate()`, `burst(x, y)`, `reward()` → the matching `deps` callback
-5. Module-level `round`, `inputLock`, `fredToken`, `rewardUntil`, `quietUntil` → closure variables inside the mount function
-6. Add TypeScript types
+3. `popSound(kind)` → `deps.sfx.play(kind)` — same four kind strings, no extra arguments
+4. `celebrate()`, `burst(x, y)`, `reward()`, `toast(msg)` → the matching `deps` callback
+5. `flyStar(el, charge)` → `deps.flyToScore(el)` — the host owns the star animation, because its `onfinish` is where `addScore` actually fires (v0:956) and that is the 2-point literacy economy, not renderer business
+6. `$('targetCard')` manipulation → `deps.showTarget(html)` / `deps.hideTarget()`
+7. `mode !== 'read'` style guards → `deps.isActive()`
+8. `store[mode]` / `GEN[mode]()` / `renderCurrent()` inside `renderSum`'s `adv` → `deps.onAdvance()`
+9. Renderer-owned mutable state (`round`, `inputLock`, `fredToken`) → closure variables inside the mount function
+10. Add TypeScript types
 
-**Do not** change any timing constant, any class name, any DOM structure, the wrong-answer counters (`wrongs`, `wrongsB`), the mash-rescue thresholds, the auto-advance sequencing, or the dead-zone padding. Those are the field-tested behaviour this entire plan exists to preserve. If a line looks redundant, leave it.
+**`rewardUntil` and `quietUntil` are NOT renderer state and must not become closure variables.** They are written by the *host* — `reward()` sets both (v0:1811-1812) and `befriend()` sets `quietUntil` (v0:1922) — and only *read* by the renderers: `speakTarget` waits on `quietUntil` (v0:893), `renderSum`'s `adv` waits on `rewardUntil` (v0:1120), `renderBuild`'s `nextB` likewise (v0:1281). Closing over them would mean nothing ever sets them, so auto-advance would stop waiting out the spectacle and TTS would talk over the celebration. They come through `deps.holds`.
 
-`wrongs` and `wrongsB` stay as separate inline locals in their own renderers. Do not unify them (spec §5).
+**Do not** change any timing constant, any class name, any DOM structure, the wrong-answer counters (`round.wrongs`, `wrongsB`), the mash-rescue thresholds, the auto-advance sequencing, or the dead-zone padding. Those are the field-tested behaviour this entire plan exists to preserve. If a line looks redundant, leave it.
+
+`round.wrongs` and `wrongsB` stay as separate inline counters in their own renderers. Do not unify them (spec §5).
+
+**The one sanctioned deletion: the battery** (brief §4 "the battery is retired; do not port it"). It is the sole exception to the verbatim rule, and it sits *inside* these renderers, so the exact lines to drop are named here rather than left to judgement:
+
+- v0:921 — the `flyStar(el, 1)` charge argument becomes `deps.flyToScore(el)`
+- v0:956 — `if(charge) chargeBattery(charge)` in `flyStar`'s `onfinish` (moves to the host anyway under change 5)
+- v0:1127-1128 — `if(!spendBattery()){ batteryEmptyNudge(); return; }`, leaving the `GEN[mode]()` call (now `deps.onAdvance()`) unconditional
+- v0:1271-1277 — the build-mode charge call, same treatment
+
+Nothing else may be dropped.
 
 - [ ] **Step 1: Write the dead-zone test**
 
@@ -2712,14 +2868,19 @@ Expected: FAIL — cannot resolve module
 
 Ported from `v0/junos-words.html:2065-2075`. The 16px padding is deliberate: it stops a stray fingertip near a control from registering as a wrong answer.
 
+Comparisons are **strict** (`>` / `<`), matching v0:2071 exactly. Using `>=`/`<=` would flip behaviour on boundary pixels.
+
+The element list is injected rather than queried, but the selector is the original's and belongs with the 2D shell — `words2d/main.ts` passes the result of
+`document.querySelectorAll('#hudLeft,#hudRight,#footer,#words .word,#words .tile,#words .slot,#words .chip,.visitor')` (v0:2067-2068). The island overlay will pass its own.
+
 ```ts
 /** Port of inDeadZone (junos-words.html:2065). Padding is field-tuned; do not change. */
 export function inDeadZone(x: number, y: number, els: readonly Element[]): boolean {
   const pad = 16
   for (const el of els) {
     const r = el.getBoundingClientRect()
-    if (x >= r.left - pad && x <= r.right + pad &&
-        y >= r.top - pad && y <= r.bottom + pad) return true
+    if (x > r.left - pad && x < r.right + pad &&
+        y > r.top - pad && y < r.bottom + pad) return true
   }
   return false
 }
@@ -2736,6 +2897,21 @@ import type { Sfx } from '../platform/audio'
 import type { Speaker } from '../platform/speech'
 
 /**
+ * Timing gates owned by the HOST, read by the challenges.
+ *
+ * reward() sets both (v0:1811-1812); befriend() sets quietUntil (v0:1922).
+ * Challenges only ever read them, to avoid auto-advancing over a spectacle
+ * or speaking over the celebration. These cannot be renderer closure state:
+ * nothing inside a renderer ever sets them.
+ */
+export interface Holds {
+  /** Timestamp until which auto-advance must wait. */
+  rewardUntil(): number
+  /** Timestamp until which TTS must stay silent. */
+  quietUntil(): number
+}
+
+/**
  * Everything a challenge needs from its host. The 2D shell and the island
  * overlay supply different implementations; the challenge itself is identical.
  */
@@ -2743,12 +2919,23 @@ export interface ChallengeDeps {
   el: HTMLElement
   speak: Speaker['speak']
   sfx: Sfx
-  /** A correct answer landed. The host decides what a point is worth. */
-  onCorrect(): void
+  holds: Holds
+  /** True while this challenge's mode is the active one (ports the `mode !==` guards). */
+  isActive(): boolean
+  /**
+   * Fly a star from this element to the score. The host owns it because the
+   * animation's onfinish is where scoring actually happens (v0:956) — literacy
+   * pays 2, maths pays 1.
+   */
+  flyToScore(el: HTMLElement): void
   /** A wrong answer landed. Costs nothing but a wobble (brief section 18). */
   onWrong(): void
-  /** The round is finished and the host may move on. */
+  /** The round is finished; the host advances to the next item. */
   onAdvance(): void
+  /** Fallback when no voice is available: show the word instead of saying it. */
+  showTarget(html: string): void
+  hideTarget(): void
+  toast(msg: string): void
   burst(x: number, y: number): void
   celebrate(): void
 }
@@ -2778,14 +2965,31 @@ function deps(el: HTMLElement): ChallengeDeps {
   return {
     el,
     speak: vi.fn(() => true),
-    sfx: { play: vi.fn(), enabled: true },
-    onCorrect: vi.fn(),
+    sfx: { play: vi.fn(), enabled: true, setTheme: vi.fn() },
+    holds: { rewardUntil: () => 0, quietUntil: () => 0 },
+    isActive: () => true,
+    flyToScore: vi.fn(),
     onWrong: vi.fn(),
     onAdvance: vi.fn(),
+    showTarget: vi.fn(),
+    hideTarget: vi.fn(),
+    toast: vi.fn(),
     burst: vi.fn(),
     celebrate: vi.fn(),
   }
 }
+
+/** The renderer binds pointerdown (v0:882), not click. */
+function tap(el: HTMLElement): void {
+  el.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+}
+
+/**
+ * speakTarget is scheduled at 900 + picks.length * 60 (v0:886) — 1080ms for a
+ * 3-word round. Anything less and the test would be pressuring the implementer
+ * to change a field-tested constant.
+ */
+const SPEAK_DELAY = 900 + ITEM.length * 60
 
 let el: HTMLElement
 beforeEach(() => { vi.useFakeTimers(); el = document.createElement('div'); document.body.append(el) })
@@ -2804,23 +3008,52 @@ describe('mountWordFind', () => {
     expect(el.textContent).not.toContain('[')
   })
 
-  it('speaks the target word', () => {
+  it('speaks the target word after the scheduled delay', () => {
     const d = deps(el)
     mountWordFind(ITEM, d)
-    vi.advanceTimersByTime(1000)
+    vi.advanceTimersByTime(SPEAK_DELAY - 1)
+    expect(d.speak).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(2)
     expect(d.speak).toHaveBeenCalled()
   })
 
   it('reports a wrong answer without ending the round', () => {
     const d = deps(el)
     mountWordFind(ITEM, d)
-    vi.advanceTimersByTime(1000)
+    vi.advanceTimersByTime(SPEAK_DELAY + 50)
     const words = [...el.querySelectorAll<HTMLElement>('.word')]
     const spoken = (d.speak as any).mock.calls[0][0]
     const wrong = words.find(w => w.textContent !== spoken)!
-    wrong.click()
+    tap(wrong)
     expect(d.onWrong).toHaveBeenCalled()
     expect(d.onAdvance).not.toHaveBeenCalled()
+    expect(d.flyToScore).not.toHaveBeenCalled()
+  })
+
+  it('a correct tap flies a star to the score', () => {
+    const d = deps(el)
+    mountWordFind(ITEM, d)
+    vi.advanceTimersByTime(SPEAK_DELAY + 50)
+    const words = [...el.querySelectorAll<HTMLElement>('.word')]
+    const spoken = (d.speak as any).mock.calls[0][0]
+    tap(words.find(w => w.textContent === spoken)!)
+    expect(d.flyToScore).toHaveBeenCalled()
+    expect(d.onWrong).not.toHaveBeenCalled()
+  })
+
+  it('three wrong taps trigger the rescue and lock input', () => {
+    const d = deps(el)
+    mountWordFind(ITEM, d)
+    vi.advanceTimersByTime(SPEAK_DELAY + 50)
+    const words = [...el.querySelectorAll<HTMLElement>('.word')]
+    const spoken = (d.speak as any).mock.calls[0][0]
+    const wrong = words.find(w => w.textContent !== spoken)!
+    tap(wrong); tap(wrong); tap(wrong)
+    expect(d.toast).toHaveBeenCalledWith(expect.stringContaining('Listen carefully'))
+    // input is locked for 1800ms (v0:934) — further taps do nothing
+    const wrongCalls = (d.onWrong as any).mock.calls.length
+    tap(wrong)
+    expect((d.onWrong as any).mock.calls.length).toBe(wrongCalls)
   })
 
   it('teardown clears the element and cancels pending timers', () => {
@@ -2864,7 +3097,7 @@ git commit -m "refactor: extract challenge renderers verbatim with injected depe
 - Consumes: everything built so far
 - Produces: a playable single-file build at `dist/words/junos-words.html`
 
-Move the remaining parts of the original — CSS, ambience, particles and spectacles, the sticker album, profiles, the PIN gear — into modules. These are not shared with the island, so they stay 2D-only. Port them verbatim; the battery is the one thing deliberately dropped (spec §1, brief §4).
+Move the remaining parts of the original — CSS, ambience, particles and spectacles, the sticker album, profiles, the PIN gear — into modules. These are not shared with the island, so they stay 2D-only. Port them verbatim; the battery is the one thing deliberately dropped (brief §4 and §7, which retire it in favour of habitat coupling).
 
 - [ ] **Step 1: Extract the stylesheet verbatim**
 
@@ -2876,9 +3109,21 @@ Copy the `<body>` markup into `src/words2d/index.html`, keeping every element id
 
 - [ ] **Step 3: Port the remaining modules**
 
-`ambience.ts` (`:1353-1497`), `celebration.ts` (`:1507-1823`, the particle engine, spectacles and banner), `album.ts` (`STICKERS`, `:1874-2002`), `profiles.ts` (`:554-643`, rewritten onto the async `SaveStore`), `gear.ts` (`:2085-2120`, the DDMM PIN).
+Every remaining line of the original gets an explicit home. Anything left unassigned in a line-precise plan is where behaviour gets rewritten by accident.
 
-**Drop the battery.** Do not port `updateBattery`, `chargeBattery`, `spendBattery`, `batteryEmptyNudge`, `BATT_START`, `BATT_MAX`, or their UI. Habitat coupling replaces it in M1.
+| Module | Original lines | Contents |
+|---|---|---|
+| `ambience.ts` | 1353-1497 | Critters, decor, floaters, sparkles, per-theme ambience |
+| `celebration.ts` | 1507-1823 | Particle engine, spectacles, banner, `reward()` — **sets `rewardUntil` and `quietUntil` (1811-1812)**, which feed `ChallengeDeps.holds` |
+| `score.ts` | 1498-1504, 1529-1530, 1825-1833 | `updateScore`, `CHILD_NAME`, `REWARD_EVERY`, `addScore` — the 2-point literacy economy and the reward threshold |
+| `album.ts` | 517-552, 686-694, 1874-2002 | `STICKERS`, `CAT_FLAT`, `visitorSticker`, hatch/befriend/day-latch, book UI. `befriend()` also sets `quietUntil` (1922) |
+| `profiles.ts` | 554-643 | Picker, avatar chip, add/switch — rewritten onto the async `SaveStore` |
+| `saves.ts` | 644-683 | `todayKey`, `strHash`, `article`, `capName`, `saveSoon`, `loadSave`, `ownedSet` — onto `SaveStore` |
+| `gear.ts` | 2085-2120 | The DDMM PIN dialog and profile delete |
+
+`article` and `capName` are used by the sticker copy ("You found **a** shark!"); they move with `saves.ts` and are imported where needed.
+
+**Drop the battery** (brief §4, §7). Do not port `updateBattery`, `chargeBattery`, `spendBattery`, `batteryEmptyNudge`, `BATT_START`, `BATT_MAX`, or their UI, and remove the battery element from the copied markup. Habitat coupling replaces it in M1. Task 18 lists the exact in-renderer battery lines to drop.
 
 - [ ] **Step 4: Wire `main.ts`**
 
@@ -2912,6 +3157,9 @@ Open `v0/junos-words.html` and `dist/words/junos-words.html` in two browser wind
 - [ ] Theme switching changes palette, ambience and sounds
 - [ ] Profile switching works; the PIN gear opens with today's DDMM
 - [ ] TTS speaks in an en-GB voice
+- [ ] **Battery retired:** no battery UI anywhere, and sums advance freely with no charge gate and no empty-battery nudge. This is the one intended difference from `v0/`
+- [ ] Auto-advance waits out a spectacle rather than cutting through it (the `rewardUntil` hold)
+- [ ] TTS stays quiet during a celebration, then resumes (the `quietUntil` hold)
 
 Record any difference as a defect against the port. Do not proceed with known differences.
 

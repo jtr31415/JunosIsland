@@ -172,12 +172,28 @@ become injected callbacks.
 - `sum.ts` — `renderSum`, number pad, dot hints, fives colour-blocking
 - `deadzone.ts` — `inDeadZone` (already standalone)
 - `mount.ts` — container contract: `mount(el, item, deps)` where `deps` supplies
-  `speak`, `onCorrect`, `onWrong`, `addScore`, `celebrate`, `burst`
+  `speak`, `sfx`, `holds`, `isActive`, `flyToScore`, `onWrong`, `onAdvance`,
+  `showTarget`/`hideTarget`, `toast`, `celebrate`, `burst`
 
-**Explicitly not done in M0:** the mash counters (`wrongs` in `renderSum`, `wrongsB` in
-`renderBuild`) stay as inline locals in their own renderers. Unifying them into a shared
-rule is tempting and is exactly where field-tested behaviour would quietly drift. They
-are unified in M3 or never.
+  `holds` matters more than it looks: `rewardUntil` and `quietUntil` are written by the
+  *host* (`reward()`, `befriend()`) and only read by the renderers, which use them to
+  avoid auto-advancing over a spectacle or speaking across a celebration. They cannot
+  become renderer-local state — nothing inside a renderer ever sets them.
+
+  Scoring stays with the host too: the star animation's `onfinish` is where points are
+  actually awarded, and literacy pays 2 while maths pays 1.
+
+**Explicitly not done in M0:** the mash counters (`round.wrongs` in the word-find,
+`wrongsB` in `renderBuild`) stay as inline counters in their own renderers. Unifying them
+into a shared rule is tempting and is exactly where field-tested behaviour would quietly
+drift. They are unified in M3 or never.
+
+**The one sanctioned deletion is the battery** (brief §4, §7 — "the battery is retired;
+do not port it"). It is the sole exception to the verbatim rule and it lives *inside*
+these renderers, so the plan names the exact lines rather than leaving it to judgement.
+The Phase 3 gate reads "plays identically **except the retired battery**", and the parity
+checklist has a line confirming maths advances with no charge gate — an intended
+difference stated out loud beats a gate that is quietly false.
 
 ---
 
@@ -319,8 +335,17 @@ Three layers, weakest to strongest.
 
    Its sharp edge: this pins the *order* of RNG calls, not just behaviour. Restructure a
    generator equivalently and the diff lights up. That is mostly a feature — it catches
-   accidental reordering — but a diff is a prompt to explain, not an automatic build
-   failure.
+   accidental reordering.
+
+   **It is nonetheless a hard CI gate.** A failing golden diff fails the build. The
+   "restructured equivalently" case is real but rare, and the correct response is to
+   justify the change and re-capture deliberately — not to let a red diff be waved
+   through as probably-fine. A soft gate on the project's only real fidelity proof is
+   no gate at all.
+
+   The capture covers **every level the shipped UI can reach**, not just level 1:
+   reading and building at levels 1–2 (so `alienWord`'s RNG stream is pinned),
+   addition at 1–2 (the bridging branch), subtraction at 1–3.
 
 ---
 
@@ -331,7 +356,7 @@ Three layers, weakest to strongest.
 | 0 | Repo, TS, Vitest, both Vite configs, CI, Pages — proven with a trivial build | Pipeline green before any porting |
 | 1 | Golden-output capture from the throwaway instrumented copy | 500 items × 4 modes on disk |
 | 2 | `core/` extraction bottom-up (`rng` -> `wordlists` -> `segmentation` -> `decks` -> `neighbours` -> `alien`/`names` -> `generators`), tests alongside | Golden diff clean |
-| 3 | `platform/` + `challenges/`, 2D shell reassembled, single-file build | **The 2D game plays identically** |
+| 3 | `platform/` + `challenges/`, 2D shell reassembled, single-file build | **The 2D game plays identically, except the retired battery** |
 | 4 | Island skeleton: canvas, orbit camera, hex grid, raycast, juice v0 | Deployed to Pages, opened on the tablet |
 | 5 | The loop: word challenge -> hatch -> pet wanders; sum -> pick-of-three -> socket -> tile drops | |
 | 6 | Fred, opening script, TTS | Checked on the tablet, not assumed |
