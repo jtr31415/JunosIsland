@@ -55,11 +55,12 @@ const BUILD_STAMP = typeof __BUILD_STAMP__ === 'string' ? __BUILD_STAMP__ : 'dev
 /**
  * How long a finished page stays up before the next one takes its place.
  *
- * Long enough to see that the answer landed, short enough that it reads as
- * turning a page rather than waiting for something. The page is fully visible
- * for all of it — this is a pause, not a loading gap.
+ * Deliberately short. The overlay has already held the finished page for its
+ * own beat before handing over, so this is only the turn of the page — and
+ * because finish() no longer tears the panel down, the old page is on screen
+ * throughout rather than the child staring at a blank card.
  */
-const PAGE_GAP_MS = 700
+const PAGE_GAP_MS = 260
 
 const canvas = document.getElementById('view') as HTMLCanvasElement
 

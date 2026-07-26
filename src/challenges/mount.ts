@@ -63,6 +63,18 @@ export interface ChallengeDeps {
   toast(msg: string): void
   burst(x: number, y: number): void
   celebrate(): void
+  /**
+   * How long a solved sum sits before the next one arrives, in milliseconds.
+   *
+   * v0 waits 2000 (v0:1129) because the star it just launched has to reach the
+   * score bar and be counted before the board changes underneath it. The
+   * island has no score bar and no star — flyToScore only records that the
+   * answer was right — so the whole two seconds is dead air there, and dead
+   * air between pages is the one thing a child in the middle of a run will
+   * notice. Injected rather than edited: omit it and the 2D game keeps the
+   * frozen constant exactly.
+   */
+  advanceDelay?: number
 }
 
 /**

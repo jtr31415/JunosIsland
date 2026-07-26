@@ -126,7 +126,7 @@ export function mountSum(p: SumItem, deps: ChallengeDeps): ChallengeHandle {
           }
           deps.onAdvance()
         }
-        roundTimer = setTimeout(adv, 2000)
+        roundTimer = setTimeout(adv, deps.advanceDelay ?? 2000)
       } else {
         c.animate(
           [{ translate: '0 0' }, { translate: '-6px 0' }, { translate: '6px 0' },

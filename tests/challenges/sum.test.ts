@@ -149,6 +149,22 @@ describe('mountSum', () => {
     expect(d.onAdvance).toHaveBeenCalledTimes(1)
   })
 
+  it('lets a host shorten the wait without touching the default', () => {
+    /*
+     * The 2000ms above exists so v0's star can reach the score bar before the
+     * board changes. The island has neither, so it injects a shorter wait —
+     * and the point of injecting rather than editing is that the test above
+     * still passes untouched for every host that does not.
+     */
+    const { d } = makeDeps(el)
+    mountSum(ADD, { ...d, advanceDelay: 300 })
+    tap(chip(el, 12))
+    vi.advanceTimersByTime(299)
+    expect(d.onAdvance).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(2)
+    expect(d.onAdvance).toHaveBeenCalledTimes(1)
+  })
+
   it('waits out a reward show before advancing', () => {
     // v0:1120-1122 — never cut through a spectacle
     const { d, setReward } = makeDeps(el)

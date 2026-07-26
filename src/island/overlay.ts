@@ -55,6 +55,17 @@ export interface Overlay {
   isOpen(): boolean
 }
 
+/**
+ * How long a finished round holds before the host is told, in milliseconds.
+ *
+ * Long enough to register that the last answer landed and to let the win
+ * sound start; short enough that a child working through five pages is never
+ * waiting on the game. These were 800 and 2000, which stacked with the host's
+ * own page gap into a pause that read as the app thinking.
+ */
+const FINISHED_HOLD_MS = 420
+const SUM_ADVANCE_MS = 420
+
 export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
   const layer = document.createElement('div')
   layer.className = 'overlay hide'
@@ -168,6 +179,8 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
     hideTarget: () => targetCard.classList.add('hide'),
     toast,
     burst: () => {},
+    /* No score bar and no star to wait for — see ChallengeDeps.advanceDelay. */
+    advanceDelay: SUM_ADVANCE_MS,
     /*
      * For a word-find, celebrate fires when every word has been found.
      *
@@ -185,7 +198,7 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
     celebrate: () => {
       earned = true
       host.sfx.play('win')
-      setTimeout(() => finish(), 800)
+      setTimeout(() => finish(), FINISHED_HOLD_MS)
     },
   })
 
