@@ -2509,7 +2509,7 @@ export function createSpeaker(opts: SpeakerOptions = {}): Speaker {
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `npx vitest run tests/platform/speech.test.ts` — Expected: PASS (11 tests)
+Run: `npx vitest run tests/platform/speech.test.ts` — Expected: PASS (13 tests)
 
 - [ ] **Step 5: Commit**
 
@@ -2877,7 +2877,8 @@ git commit -m "feat: port sound effects to platform"
 **Interfaces:**
 - Consumes: `core/` generators and types; `Speaker`; `Sfx`
 - Produces:
-  - `ChallengeDeps { el: HTMLElement; speak: Speaker['speak']; sfx: Sfx; onCorrect(): void; onWrong(): void; onAdvance(): void; burst(x: number, y: number): void; celebrate(): void }`
+  - `Holds { rewardUntil(): number; quietUntil(): number }`
+  - `ChallengeDeps { el: HTMLElement; speech: Speaker; sfx: Sfx; holds: Holds; isActive(): boolean; flyToScore(el: HTMLElement): void; onWrong(): void; onAdvance(): void; showTarget(html: string): void; hideTarget(): void; toast(msg: string): void; burst(x: number, y: number): void; celebrate(): void }`
   - `mountWordFind(item: ReadPick[], deps: ChallengeDeps): () => void`
   - `mountBuild(item: BuildItem, deps: ChallengeDeps): () => void`
   - `mountSum(item: SumItem, deps: ChallengeDeps): () => void`
@@ -2896,13 +2897,15 @@ Copy `renderSet`, `wordTap`, `speakTarget` (`:840-971`), `renderBuild`, `fredTal
 5. `flyStar(el, charge)` → `deps.flyToScore(el)` — the host owns the star animation, because its `onfinish` is where `addScore` actually fires (v0:956) and that is the 2-point literacy economy, not renderer business
 6. `$('targetCard')` manipulation → `deps.showTarget(html)` / `deps.hideTarget()`
 7. `mode !== 'read'` style guards → `deps.isActive()`
-8. `store[mode]` / `GEN[mode]()` / `renderCurrent()` inside `renderSum`'s `adv` → `deps.onAdvance()`
+8. `store[mode]` / `GEN[mode]()` / `renderCurrent()` → `deps.onAdvance()`, in **both** `renderSum`'s `adv` (v0:1124-1130) **and** `renderBuild`'s `nextB` (v0:1285-1286). Separately, the `store.build.history[store.build.idx]` reads in `speakBuildWord` (v0:1187) and `fredTalk` (v0:1215) become the mounted `item` — there is no `store` to import, so TypeScript forces *a* resolution, but this is *the* resolution
 9. Renderer-owned mutable state (`round`, `roundTimer`, `inputLock`, `fredToken`) → closure variables inside the mount function
 10. Add TypeScript types
 11. **`deps.onWrong()` is added to the wrong-answer branch.** The original has no such call (v0:926-939 is wobble + `'bump'` + counter); this is a new *observability* hook so the island overlay can react to a stumble. It must be additive only — no existing line changes, and `words2d` passes a no-op so its behaviour is bit-identical
 12. `fredTalk`'s `document.querySelectorAll('#words .slot')` (v0:1218) → `deps.el.querySelectorAll('.slot')`. Change 1 does not cover this: it is a document-level query, not `$('words')`, and left verbatim it would work in `words2d` only by accident of the copied `id="words"` and break silently in the island overlay
 13. `renderSet`'s `shuffle(picks.map(...))` (v0:859) uses core's `shuffle`, which now takes `(rng, a)`. Pass `defaultRng` — challenge rendering is not part of the golden-diff surface and needs no seeding
 14. `clearRound`'s bare `speechSynthesis.cancel()` (v0:847) → `deps.speech.cancel()`. Do not leave the raw global call in `challenges/`, which must not touch browser APIs directly
+
+15. `voiceToastShown` (v0:905-907) → `deps.speech.noticeShown()` / `deps.speech.markNoticeShown()`. One shared flag in the original, so the "Voice: X" announcement and the "No UK English voice" fallback are mutually exclusive — the child never sees two voice toasts. A renderer-local flag would lose that
 
 Two things stay verbatim and are called out so nobody "tidies" them:
 - `document.documentElement.style.setProperty('--ws', …)` (v0:857, v0:1016) writes to the **root** element, deliberately, outside `deps.el`. Keep it. The island overlay must therefore honour `--ws` at `:root` too.
@@ -2944,13 +2947,15 @@ function rectEl(left: number, top: number, width: number, height: number): Eleme
 }
 
 describe('inDeadZone', () => {
-  const els = [rectEl(100, 100, 50, 50)]
+  const els = [rectEl(100, 100, 50, 50)]   // left 100, right 150, top 100, bottom 150
 
   it('is true inside an element', () => {
+    // v0:2071
     expect(inDeadZone(120, 120, els)).toBe(true)
   })
 
   it('is true within the 16px padding around an element', () => {
+    // v0:2066 pad = 16 — near-misses beside a control must not turn the page
     expect(inDeadZone(90, 120, els)).toBe(true)
     expect(inDeadZone(160, 120, els)).toBe(true)
   })
@@ -2959,8 +2964,16 @@ describe('inDeadZone', () => {
     expect(inDeadZone(400, 400, els)).toBe(false)
   })
 
-  it('is false just beyond the padding', () => {
-    expect(inDeadZone(83, 120, els)).toBe(false)
+  it('excludes the exact boundary pixel — comparisons are strict', () => {
+    // v0:2071 uses `x > r.left - pad`, NOT `>=`. This is the ONLY assertion
+    // that can tell the two apart: at x = 100 - 16 = 84 exactly, strict gives
+    // false and inclusive gives true. Without it, a regression to `>=` passes
+    // every other test in this file.
+    expect(inDeadZone(84, 120, els)).toBe(false)
+    expect(inDeadZone(85, 120, els)).toBe(true)
+    expect(inDeadZone(166, 120, els)).toBe(false)   // right 150 + 16
+    expect(inDeadZone(120, 84, els)).toBe(false)    // top 100 - 16
+    expect(inDeadZone(120, 166, els)).toBe(false)   // bottom 150 + 16
   })
 
   it('is false when there are no elements', () => {

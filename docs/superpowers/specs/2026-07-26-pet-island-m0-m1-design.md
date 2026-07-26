@@ -172,7 +172,8 @@ become injected callbacks.
 - `sum.ts` — `renderSum`, number pad, dot hints, fives colour-blocking
 - `deadzone.ts` — `inDeadZone` (already standalone)
 - `mount.ts` — container contract: `mount(el, item, deps)` where `deps` supplies
-  `speak`, `sfx`, `holds`, `isActive`, `flyToScore`, `onWrong`, `onAdvance`,
+  `speech` (the whole `Speaker`, since renderers need `cancel()` and the shared
+  voice-notice flag), `sfx`, `holds`, `isActive`, `flyToScore`, `onWrong`, `onAdvance`,
   `showTarget`/`hideTarget`, `toast`, `celebrate`, `burst`
 
   `holds` matters more than it looks: `rewardUntil` and `quietUntil` are written by the
@@ -357,7 +358,7 @@ Three layers, weakest to strongest.
 | Phase | Work | Gate |
 |---|---|---|
 | 0 | Repo, TS, Vitest, both Vite configs, CI, Pages — proven with a trivial build | Pipeline green before any porting |
-| 1 | Golden-output capture from the throwaway instrumented copy | 500 items × 4 modes on disk |
+| 1 | Golden-output capture by slicing the frozen original under a seeded RNG | Nine datasets on disk — every level the UI can reach |
 | 2 | `core/` extraction bottom-up (`rng` -> `wordlists` -> `segmentation` -> `decks` -> `neighbours` -> `alien`/`names` -> `generators`), tests alongside | Golden diff clean |
 | 3 | `platform/` + `challenges/`, 2D shell reassembled, single-file build | **The 2D game plays identically, except the retired battery** |
 | 4 | Island skeleton: canvas, orbit camera, hex grid, raycast, juice v0 | Deployed to Pages, opened on the tablet |
