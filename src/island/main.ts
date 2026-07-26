@@ -16,10 +16,11 @@ import { createFred } from './fred'
 import { OPENING, HATCH_LINES, fill } from './script'
 import { loadIsland, saveIsland } from './save'
 import { createLocalStore } from '../platform/storage'
+import { createFlow, tapEgg, tapSum, challengePassed, chooseTile, tileOffer } from './flow'
 import {
-  createFlow, tapEgg, tapSum, challengePassed, challengeFailed,
-  chooseTile, placeTile, tileOffer,
-} from './flow'
+  handleWorldTap, handleChallengePassed, handleChallengeDismissed,
+} from './interactions'
+import type { InteractionPorts } from './interactions'
 import type { Flow } from './flow'
 import type { TileType } from './world/grid'
 import { sockets } from './world/grid'
@@ -83,7 +84,7 @@ async function boot(): Promise<void> {
       // Leaving costs nothing (brief section 18) — but the story must not stay
       // armed, or an unrelated hatch later would resume it out of nowhere.
       openingResumeAt = -1
-      flow = challengeFailed(flow)
+      flow = handleChallengeDismissed(flow)
       overlay.say('Tap the egg to read it home — or tap the island for land!')
       refresh()
     },
@@ -141,7 +142,7 @@ async function boot(): Promise<void> {
       const name = petName(defaultRng)
       const species = SPECIES[ri(defaultRng, SPECIES.length)] as string
       await egg.hatch()
-      flow = challengePassed(flow, { name, species })
+      flow = handleChallengePassed(flow, { name, species })
       overlay.showName(name)
       const line = HATCH_LINES[flow.pets.length % HATCH_LINES.length] as string
       speech.speak(fill(line, CHILD, name))
@@ -271,44 +272,28 @@ async function boot(): Promise<void> {
 
   /* ---------- taps ---------- */
 
+  /**
+   * Every tap goes through the tested wiring layer. This handler does nothing
+   * but supply ports and re-render — all the decisions live in
+   * interactions.ts, where they can be asserted.
+   */
+  const ports: InteractionPorts = {
+    challengeOpen: () => overlay.isOpen(),
+    storyPlaying: () => inOpening,
+    openRead,
+    openSum,
+    replayStory: () => { void runOpening() },
+    bouncePet: id => pets.bounce(id),
+    say: text => overlay.say(text),
+    clearSay: () => overlay.clearSay(),
+    speak: text => { speech.speak(text) },
+    win: () => sfx.play('win'),
+  }
+
   canvas.addEventListener('pointerdown', e => {
-    if (overlay.isOpen() || inOpening) return
-    const hit = world.pick(e.clientX, e.clientY)
-    if (!hit) return
-
-    if (hit.kind === 'egg' && flow.phase === 'free') {
-      flow = tapEgg(flow)
-      openRead()
-      return
-    }
-
-    if (hit.kind === 'socket' && flow.phase === 'placing' && flow.chosen) {
-      flow = placeTile(flow, hit.axial)
-      overlay.clearSay()
-      sfx.play('win')
-      refresh()
-      return
-    }
-
-    if (hit.kind === 'fred') {
-      // "tell me again?" — replayable forever (brief section 3), but only from
-      // free play: runOpening guards this too, belt and braces.
-      if (flow.phase === 'free') void runOpening()
-      return
-    }
-
-    if (hit.kind === 'pet') {
-      pets.bounce(hit.id)
-      const p = flow.pets.find(x => x.id === hit.id)
-      if (p) speech.speak(p.name)
-      return
-    }
-
-    // Tapping the island itself asks for land: a sum earns a tile.
-    if (hit.kind === 'tile' && flow.phase === 'free') {
-      flow = tapSum(flow)
-      openSum()
-    }
+    const before = flow
+    flow = handleWorldTap(flow, world.pick(e.clientX, e.clientY), ports)
+    if (flow !== before) refresh()
   })
 
   world.onFrame((dt, t) => {
