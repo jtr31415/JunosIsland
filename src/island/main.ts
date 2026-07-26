@@ -129,6 +129,11 @@ async function boot(): Promise<void> {
       fred.hop()
       egg.reset()
       refresh()
+      if (openingResumeAt >= 0) {
+        const at = openingResumeAt
+        openingResumeAt = -1
+        setTimeout(() => { void runOpening(at) }, 2200)
+      }
     } else if (flow.challenge === 'sum') {
       flow = challengePassed(flow)
       speech.speak('You counted us up some land!')
@@ -139,18 +144,21 @@ async function boot(): Promise<void> {
   /* ---------- the opening: Fred's Lonely Rock (brief section 3) ---------- */
 
   let inOpening = false
+  /** Where to resume after the opening hands over to the child. */
+  let openingResumeAt = -1
 
   /**
    * Twenty seconds, tap to advance, fully voiced. Plays once per profile and
    * is replayable forever by tapping Fred. Skippable at any point: the world
    * is already playable behind it, so nothing is gated on sitting through it.
    */
-  async function runOpening(): Promise<void> {
+  async function runOpening(from = 0): Promise<void> {
     if (inOpening) return
     inOpening = true
-    egg.group.visible = false
+    if (from === 0) egg.group.visible = false
 
-    for (const beat of OPENING) {
+    for (let i = from; i < OPENING.length; i++) {
+      const beat = OPENING[i] as typeof OPENING[number]
       const text = fill(beat.line, CHILD, flow.pets[0]?.name ?? 'your friend')
 
       if (beat.cue === 'egg-arrives') {
@@ -170,12 +178,13 @@ async function boot(): Promise<void> {
 
       // The two beats that hand over to the child.
       if (beat.cue === 'first-read') {
+        // Hand over to the child, and remember to pick the story back up
+        // afterwards — beats 7 and 8 are the name reveal and the ask for land.
         overlay.clearSay()
+        openingResumeAt = i + 1
         flow = tapEgg(flow)
         openRead()
         inOpening = false
-        openingSeen = true
-        persist()
         return
       }
       if (beat.cue === 'ask-land') {
