@@ -71,6 +71,15 @@ const FOREST_DETAIL = [
 /** Only the small pieces scatter; trees are placed as features. */
 const DETAIL_SMALL = FOREST_DETAIL.slice(0, 8)
 
+/** What grows on water. The same set the growing plot builds a pond from. */
+const WATER_PIECES = [
+  'waterlily_A', 'waterlily_B', 'waterplant_A', 'waterplant_B', 'waterplant_C',
+]
+
+/** Pull q and r back out of a tile key. */
+const parts0 = (k: string): number => Number(k.split(',')[0])
+const parts1 = (k: string): number => Number(k.split(',')[1])
+
 /**
  * What ground a piece is willing to stand on.
  *
@@ -106,6 +115,15 @@ export interface PropField {
   sync(island: Island, hexSize: number, surface: Surface): Promise<void>
   /** Where scenery stands, so pets walk around it rather than through. */
   obstacles(): Array<{ x: number; z: number; r: number }>
+  /**
+   * Load one scenery piece by name, textured and ready to add.
+   *
+   * Shared with the growing plot so a tile under construction grows the SAME
+   * trees and rocks it will keep once finished — building it out of stand-in
+   * primitives and swapping them at the end would make completion a visual
+   * discontinuity rather than the last step of a sequence.
+   */
+  load(name: string): Promise<THREE.Object3D>
   /**
    * EVERYTHING standing on the ground, ground cover included.
    *
@@ -212,7 +230,36 @@ export function createPropField(base = ''): PropField {
       }
 
       for (const [k, type] of island.tiles) {
-        if (placed.has(k) || type !== 'grass') continue
+        if (placed.has(k)) continue
+
+        /*
+         * Water gets lilies and reeds rather than nothing.
+         *
+         * It used to be skipped entirely, which meant a child who built a
+         * pond watched eight water plants grow on it during the build and
+         * then saw a bare blue hex the moment it completed. Losing what she
+         * had just made is precisely what brief §18 forbids.
+         */
+        if (type === 'water') {
+          const wh = hash({ q: parts0(k), r: parts1(k) })
+          const w = toWorld({ q: parts0(k), r: parts1(k) }, hexSize)
+          const count = 2 + (wh % 3)
+          for (let i = 0; i < count; i++) {
+            const ih = hash({ q: parts0(k) * 13 + i, r: parts1(k) * 7 - i })
+            const name = WATER_PIECES[ih % WATER_PIECES.length] as string
+            const bit = await model(name)
+            const ang = ((ih >> 4) % 360) * Math.PI / 180
+            const rad = hexSize * (0.15 + ((ih >> 7) % 45) / 100)
+            bit.position.set(w.x + Math.cos(ang) * rad, 0, w.z + Math.sin(ang) * rad)
+            bit.rotation.y = ((ih >> 11) % 360) * Math.PI / 180
+            bit.scale.setScalar(0.55 + ((ih >> 13) % 25) / 100)
+            group.add(bit)
+            decor.push({ x: bit.position.x, z: bit.position.z, r: hexSize * 0.14 })
+          }
+          placed.add(k)
+          continue
+        }
+        if (type !== 'grass') continue
         const parts = k.split(',').map(Number)
         const a: Axial = { q: parts[0] as number, r: parts[1] as number }
         const h = hash(a)
@@ -290,6 +337,8 @@ export function createPropField(base = ''): PropField {
         }
       }
     },
+
+    load: (name: string) => (/^[A-Z]/.test(name) ? forestModel(name) : model(name)),
 
     obstacles: () => blocks,
 

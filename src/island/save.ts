@@ -11,6 +11,7 @@
 import { createFlow } from './flow'
 import type { Flow, Pet } from './flow'
 import type { Island, TileType } from './world/grid'
+import type { Axial } from './world/hex'
 import type { SaveStore } from '../platform/storage'
 
 /** The serialised shape. Plain JSON — no Maps, no class instances. */
@@ -24,6 +25,14 @@ interface IslandSave {
   readProgress?: number
   sumProgress?: number
   tilesEarned?: number
+  /**
+   * The plot under construction.
+   *
+   * Saved because it is the only record of WHERE the sums already answered
+   * are being spent. Without it a reload mid-build silently discards both the
+   * site the child chose and the work she did on it (brief section 18).
+   */
+  plot?: { at: Axial; type: TileType } | null
 }
 
 export function toSave(flow: Flow, openingSeen: boolean): IslandSave {
@@ -35,7 +44,17 @@ export function toSave(flow: Flow, openingSeen: boolean): IslandSave {
     readProgress: flow.readProgress,
     sumProgress: flow.sumProgress,
     tilesEarned: flow.tilesEarned,
+    plot: flow.plot,
   }
+}
+
+/** Defensive: a hand-edited or truncated save must not crash the island. */
+function readPlot(v: unknown): Flow['plot'] {
+  if (!v || typeof v !== 'object') return null
+  const p = v as { at?: { q?: unknown; r?: unknown }; type?: unknown }
+  if (typeof p.at?.q !== 'number' || typeof p.at?.r !== 'number') return null
+  if (p.type !== 'grass' && p.type !== 'water') return null
+  return { at: { q: p.at.q, r: p.at.r }, type: p.type }
 }
 
 export function fromSave(save: IslandSave | null): { flow: Flow; openingSeen: boolean } {
@@ -51,14 +70,35 @@ export function fromSave(save: IslandSave | null): { flow: Flow; openingSeen: bo
       pets: Array.isArray(save.pets) ? save.pets : [],
       bankedTiles: typeof save.bankedTiles === 'number' ? save.bankedTiles : 0,
       readProgress: typeof save.readProgress === 'number' ? save.readProgress : 0,
-      sumProgress: typeof save.sumProgress === 'number' ? save.sumProgress : 0,
-      tilesEarned: typeof save.tilesEarned === 'number' ? save.tilesEarned : 0,
-      // Never mid-challenge, so a reload cannot strand the child in a round
-      // she is unable to finish. But if land is still owed, resume in
-      // 'placing' — otherwise the offer never reappears and a tile she has
-      // already earned becomes permanently unreachable (brief section 18).
+      /*
+       * Falls back to the island's own size, not to zero. A save written
+       * before this field existed would otherwise reset the cost curve and
+       * price a twelve-tile island's next tile at a single sum (§4).
+       */
+      tilesEarned: typeof save.tilesEarned === 'number'
+        ? save.tilesEarned : Math.max(0, save.tiles.length - 1),
+      plot: readPlot(save.plot),
+      /*
+       * Never mid-challenge, so a reload cannot strand the child in a round
+       * she is unable to finish.
+       *
+       * A save written under the old flow may still hold a BANKED tile —
+       * earned, paid for, never placed. Land she has already worked for
+       * cannot be lost (brief §18), so it resumes in 'placing': she picks a
+       * type and a socket, and placeTile() sees the work is already done and
+       * finishes the tile on the spot rather than charging for it twice.
+       */
       phase: (typeof save.bankedTiles === 'number' && save.bankedTiles > 0)
         ? 'placing' : 'free',
+      /*
+       * Progress toward the CURRENT plot, restored as it was.
+       *
+       * Deliberately NOT overwritten to fake a prepayment: a save can hold
+       * both an old banked tile and a plot half built, and clobbering this
+       * would destroy the sums already spent on that plot. The credit lives
+       * in bankedTiles, which placeTile spends once and commitPlot clears.
+       */
+      sumProgress: typeof save.sumProgress === 'number' ? save.sumProgress : 0,
       challenge: null,
       chosen: null,
     },

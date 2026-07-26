@@ -61,7 +61,7 @@ export function activeGovernor(f: Flow): Governor {
 
 /** May the child start a NEW plot right now? A plot mid-build always finishes. */
 export const landPaused = (f: Flow): boolean =>
-  activeGovernor(f) === 'space-surplus' && f.bankedTiles === 0
+  activeGovernor(f) === 'space-surplus' && f.plot === null
 
 /** May a new egg be worked on right now? */
 export const eggsPaused = (f: Flow): boolean =>

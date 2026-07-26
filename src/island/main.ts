@@ -23,7 +23,7 @@ import { landPaused, eggsPaused, activeGovernor, GOVERNOR_LINE } from './governo
 import { OPENING, HATCH_LINES, fill } from './script'
 import { loadIsland, saveIsland } from './save'
 import { createLocalStore } from '../platform/storage'
-import { createFlow, tapEgg, tapSum, challengePassed, chooseTile, tileOffer } from './flow'
+import { createFlow, tapEgg, tapSum, askForLand, challengePassed, chooseTile, tileOffer } from './flow'
 import {
   handleWorldTap, handleChallengePassed, handleChallengeDismissed,
 } from './interactions'
@@ -61,6 +61,14 @@ const BUILD_STAMP = typeof __BUILD_STAMP__ === 'string' ? __BUILD_STAMP__ : 'dev
  */
 const PAGE_GAP_MS = 260
 
+/**
+ * How long a finished plot stays up showing its flourish.
+ *
+ * The tile itself is already real underneath by this point — this is purely
+ * the last increment getting its moment before the scaffolding is removed.
+ */
+const PLOT_FAREWELL_MS = 1400
+
 const canvas = document.getElementById('view') as HTMLCanvasElement
 
 async function boot(): Promise<void> {
@@ -90,13 +98,45 @@ async function boot(): Promise<void> {
    * socket, then GROWN by each sum, so arithmetic visibly becomes ground.
    */
   let plot: GrowingPlot | null = null
+  /** Set while a finished plot is showing its flourish before being removed. */
+  let plotFarewell: ReturnType<typeof setTimeout> | null = null
+  /** Tear a plot down now, cancelling any farewell in progress. */
+  function dropPlot(): void {
+    if (plotFarewell) { clearTimeout(plotFarewell); plotFarewell = null }
+    if (plot) { world.scene.remove(plot.group); plot.dispose(); plot = null }
+  }
+
   function showPlot(): void {
     if (!flow.plot) {
-      if (plot) { world.scene.remove(plot.group); plot.dispose(); plot = null }
+      /*
+       * The plot is paid for and the tile is real. LET THE LAST STEP PLAY.
+       *
+       * The flow machine commits the tile in the same transition that reaches
+       * full payment, so a plot never exists in a finished state — which meant
+       * the tenth increment, the completion flourish, could not once be seen
+       * and the intro tile showed no build at all. So the scaffolding stays up
+       * for a beat at full progress before it comes down.
+       */
+      if (plot && !plotFarewell) {
+        plot.setProgress(1, 1)
+        const going = plot
+        plotFarewell = setTimeout(() => {
+          world.scene.remove(going.group)
+          going.dispose()
+          if (plot === going) plot = null
+          plotFarewell = null
+        }, PLOT_FAREWELL_MS)
+      }
       return
     }
+    // A new plot while the old one is still bowing: clear it out at once, or
+    // two hexes overlap and the farewell disposes the wrong one.
+    if (plotFarewell) dropPlot()
     if (!plot) {
-      plot = createGrowingPlot(flow.plot.type, world.models.size)
+      plot = createGrowingPlot(flow.plot.type, world.models.size, {
+        models: world.models,
+        prop: name => props.load(name),
+      })
       const w = world.worldOf(flow.plot.at)
       plot.group.position.copy(w)
       world.scene.add(plot.group)
@@ -398,9 +438,15 @@ async function boot(): Promise<void> {
       }, PAGE_GAP_MS)
     } else if (flow.challenge === 'sum') {
       openingResumeAt = -1
-      const bankedBefore = flow.bankedTiles
+      /*
+       * "Earned" now means the PLOT FINISHED and became real land — the tile
+       * is committed by the flow machine the moment it is paid for, so the
+       * island growing is the signal. Under the old flow this compared banked
+       * tiles, which no longer exist.
+       */
+      const tilesBefore = flow.island.tiles.size
       flow = challengePassed(flow)
-      const earned = flow.bankedTiles > bankedBefore
+      const earned = flow.island.tiles.size > tilesBefore
 
       if (earned) {
         overlay.close()
@@ -419,7 +465,12 @@ async function boot(): Promise<void> {
       // Same rule for land: keep counting until the plot is finished. Each sum
       // grows the plot a little more, and refresh() has just shown that.
       setTimeout(() => {
-        flow = tapSum({ ...flow, phase: 'free' })
+        const next = tapSum({ ...flow, phase: 'free' })
+        // No plot left to advance (it just completed, or the child left the
+        // bank without siting). Going back to the island beats dealing a sum
+        // that would build nothing.
+        if (next.challenge !== 'sum') { overlay.close(); return }
+        flow = next
         openSum()
       }, PAGE_GAP_MS)
     }
@@ -476,9 +527,16 @@ async function boot(): Promise<void> {
         return
       }
       if (beat.cue === 'ask-land') {
-        overlay.clearSay()
-        flow = tapSum(flow)
-        openSum()
+        /*
+         * Fred asks the child to count him up some land, so this must OPEN
+         * THE BANK, not a sum. Under the new flow tapSum requires a plot to
+         * advance and there is none on a first run, so it no-opped, openSum
+         * no-opped after it, and the opening ended mid-sentence with the
+         * caption wiped — the scripted first tile never happened at all.
+         */
+        flow = askForLand(flow)
+        refresh()
+        overlay.say('Pick some land, then choose where it goes!')
         break
       }
     }
@@ -555,14 +613,14 @@ async function boot(): Promise<void> {
   const ports: InteractionPorts = {
     challengeOpen: () => overlay.isOpen(),
     storyPlaying: () => inOpening,
-    openRead: state => {
-      if (eggsPaused(state)) { invite('nursery-queue'); return }
-      openRead(state)
-    },
-    openSum: state => {
-      if (landPaused(state)) { invite('space-surplus'); return }
-      openSum(state)
-    },
+    // The governors are asked BEFORE the transition now (see interactions.ts),
+    // so these just open. A port that declined here used to strand the flow
+    // in 'challenge' with no overlay and no way out but a reload.
+    openRead: state => { openRead(state) },
+    openSum: state => { openSum(state) },
+    eggsPaused,
+    landPaused,
+    invite,
     replayStory: () => { void runOpening() },
     bouncePet: id => pets.bounce(id),
     say: text => overlay.say(text),

@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { toSave, fromSave, loadIsland, saveIsland } from '../../src/island/save'
 import {
-  createFlow, challengePassed, tapEgg, tapSum, chooseTile, placeTile,
-  pagesForEgg, sumsForTile,
+  createFlow, challengePassed, tapEgg, tapSum, askForLand, chooseTile, placeTile,
+  pagesForEgg,
 } from '../../src/island/flow'
 import type { Flow } from '../../src/island/flow'
 import { count, tileAt } from '../../src/island/world/grid'
@@ -22,15 +22,24 @@ class MemStorage implements Storage {
 let mem: MemStorage
 beforeEach(() => { mem = new MemStorage() })
 
-/** An island with some history: a pet, and a placed water tile. */
+/** An island with some history: a pet, and a finished water tile. */
 function playedFlow(): Flow {
   let f: Flow = createFlow()
   for (let i = 0, n = pagesForEgg(f); i < n; i++) {
     f = challengePassed(tapEgg({ ...f, phase: 'free' }), { name: 'Bimo', species: 'animal-fox' })
   }
-  for (let i = 0, n = sumsForTile(f); i < n; i++) f = challengePassed(tapSum({ ...f, phase: 'free' }))
-  f = chooseTile(f, 'water')
-  f = placeTile(f, { q: 1, r: 0 })
+  f = askForLand({ ...f, phase: 'free' })
+  f = placeTile(chooseTile(f, 'water'), { q: 1, r: 0 })
+  while (f.plot) f = challengePassed(tapSum({ ...f, phase: 'free' }))
+  return f
+}
+
+/** An island with a plot half built: sited, some sums paid, not finished. */
+function midBuildFlow(): Flow {
+  let f = playedFlow()
+  f = askForLand({ ...f, phase: 'free' })
+  f = placeTile(chooseTile(f, 'grass'), { q: 0, r: 1 })
+  f = challengePassed(tapSum({ ...f, phase: 'free' }))
   return f
 }
 
@@ -56,15 +65,30 @@ describe('island save', () => {
     expect(openingSeen).toBe(false)
   })
 
-  it('keeps banked tiles across a reload — nothing owed is lost', async () => {
-    // Brief section 18: nothing a child owns can be lost or expire
+  it('keeps a half-built plot across a reload, site and all', async () => {
+    /*
+     * Brief section 18: nothing a child owns can be lost. The plot is the
+     * only record of which socket she chose and how many sums she has
+     * already spent on it, so dropping it from the save quietly throws both
+     * away and starts her over on the next tile.
+     */
     const store = createLocalStore(mem)
-    let f: Flow = createFlow()
-    for (let i = 0, n = sumsForTile(f); i < n; i++) f = challengePassed(tapSum({ ...f, phase: 'free' }))
-    expect(f.bankedTiles).toBe(1)
-    await saveIsland(store, 'p1', f, true)
+    const before = midBuildFlow()
+    expect(before.plot).not.toBeNull()
+    expect(before.sumProgress).toBeGreaterThan(0)
+
+    await saveIsland(store, 'p1', before, true)
     const { flow } = await loadIsland(store, 'p1')
-    expect(flow.bankedTiles).toBe(1)
+
+    expect(flow.plot).toEqual(before.plot)
+    expect(flow.sumProgress).toBe(before.sumProgress)
+  })
+
+  it('ignores a plot that has been corrupted rather than crashing', () => {
+    const bad = { tiles: [['0,0', 'grass']] as Array<[string, 'grass']>, pets: [],
+      bankedTiles: 0, openingSeen: true, plot: { at: { q: 'x' }, type: 'lava' } }
+    const { flow } = fromSave(bad as never)
+    expect(flow.plot).toBeNull()
   })
 
   it('always resumes in free play, never mid-challenge', async () => {
@@ -109,27 +133,33 @@ describe('island save', () => {
   })
 })
 
-describe('island save — owed land survives visibly', () => {
-  it('resumes in placing when tiles are still owed', async () => {
-    // Otherwise the offer never reappears after a reload and the tile, though
-    // faithfully saved, can never be spent (brief section 18).
-    const store = createLocalStore(mem)
-    let owed: Flow = createFlow()
-    for (let i = 0, n = sumsForTile(owed); i < n; i++) {
-      owed = challengePassed(tapSum({ ...owed, phase: 'free' }))
-    }
-    expect(owed.bankedTiles).toBe(1)
-    await saveIsland(store, 'p1', owed, true)
-    const { flow } = await loadIsland(store, 'p1')
-    expect(flow.bankedTiles).toBe(1)
+describe('island save — land already earned survives visibly', () => {
+  it('converts an OLD banked tile into a plot that is already paid for', () => {
+    /*
+     * Saves written under the previous flow banked a finished tile that had
+     * never been placed. Under the new flow there is nowhere to put that, and
+     * simply dropping it would take back land she had worked for.
+     *
+     * So it resumes in 'placing' with the work credited: she picks a type and
+     * a socket, and the tile completes on siting rather than being charged
+     * for a second time.
+     */
+    const { flow } = fromSave({
+      tiles: [['0,0', 'grass']], pets: [], bankedTiles: 1, openingSeen: true,
+      readProgress: 0, sumProgress: 0, tilesEarned: 1,
+    })
     expect(flow.phase).toBe('placing')
+
+    const sited = placeTile(chooseTile(flow, 'grass'), { q: 1, r: 0 })
+    expect(sited.plot).toBeNull()               // finished on the spot
+    expect(count(sited.island)).toBe(2)
   })
 
   it('resumes in free play when nothing is owed', async () => {
     const store = createLocalStore(mem)
     await saveIsland(store, 'p1', playedFlow(), true)
     const { flow } = await loadIsland(store, 'p1')
-    expect(flow.bankedTiles).toBe(0)
     expect(flow.phase).toBe('free')
+    expect(flow.plot).toBeNull()
   })
 })

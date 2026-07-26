@@ -14,7 +14,7 @@
  * placing, tap a socket with no tile chosen, finish a round that never
  * legitimately opened — assertable in a plain unit test.
  */
-import { tapEgg, tapSum, challengePassed, challengeFailed, placeTile } from './flow'
+import { tapEgg, tapSum, askForLand, challengePassed, challengeFailed, placeTile } from './flow'
 import type { Flow, HatchDetails } from './flow'
 import type { Hit } from './scene'
 
@@ -34,6 +34,19 @@ export interface InteractionPorts {
    */
   openRead(next: Flow): void
   openSum(next: Flow): void
+  /**
+   * Is a governor currently asking for the OTHER thing? (spec §5)
+   *
+   * Asked BEFORE the transition, never after. The ports used to decline to
+   * open a round that the flow had already moved into 'challenge' — leaving
+   * the child in a phase with no overlay to finish or dismiss, where every
+   * subsequent tap no-ops and only a reload recovers. A governor is an
+   * invitation, so it must divert the tap, not strand it.
+   */
+  eggsPaused(f: Flow): boolean
+  landPaused(f: Flow): boolean
+  /** Fred asks for the other thing instead. Never a lockout. */
+  invite(which: 'space-surplus' | 'nursery-queue'): void
   replayStory(): void
   bouncePet(id: string): void
   say(text: string): void
@@ -55,6 +68,7 @@ export function handleWorldTap(flow: Flow, hit: Hit | null, p: InteractionPorts)
   switch (hit.kind) {
     case 'egg': {
       // Reading hatches eggs (brief section 4).
+      if (p.eggsPaused(flow)) { p.invite('nursery-queue'); return flow }
       const next = tapEgg(flow)
       if (next === flow) return flow          // wrong phase: do nothing, loudly
       p.openRead(next)
@@ -71,10 +85,29 @@ export function handleWorldTap(flow: Flow, hit: Hit | null, p: InteractionPorts)
     case 'socket': {
       if (flow.phase !== 'placing' || !flow.chosen) return flow
       const next = placeTile(flow, hit.axial)
-      if (next === flow) return flow          // not a legal socket; tile kept
+      if (next === flow) return flow          // not a legal socket; choice kept
       p.clearSay()
       p.win()
-      return next
+      /*
+       * The plot is sited, so start building it straight away. Without this
+       * the child picks a spot, watches a ghost hex appear, and is handed
+       * back to an island with no obvious way to get on with it.
+       *
+       * Unless siting finished it outright — a plot restored from an old
+       * banked save is already paid for — in which case the tile is real and
+       * there is nothing to open.
+       *
+       * NOTE the tapSum: the port refuses any state that is not already in a
+       * sum challenge, and placeTile returns 'free'. Handing it the sited
+       * state directly opened nothing at all, silently, and the test did not
+       * catch it because it mocks the port. This is the third time that exact
+       * shape has shipped; hence the transition happens HERE.
+       */
+      if (!next.plot) return next
+      const building = tapSum(next)
+      if (building === next) return next
+      p.openSum(building)
+      return building
     }
 
     case 'pet': {
@@ -85,10 +118,24 @@ export function handleWorldTap(flow: Flow, hit: Hit | null, p: InteractionPorts)
     }
 
     case 'tile': {
-      // Asking the island for land: a sum earns a tile.
-      const next = tapSum(flow)
+      /*
+       * Asking the island for land.
+       *
+       * With a plot already under construction this opens the next sum. With
+       * none it opens the bank — pick a type, pick a socket — because spec §2
+       * builds the tile in view and there is nothing to advance until the
+       * child has said what and where.
+       */
+      /*
+       * The governor is checked HERE, on the path that STARTS new land.
+       * Checking it only inside the port meant it could never fire: by then
+       * a plot always existed, and the pause requires that there is none.
+       */
+      if (!flow.plot && p.landPaused(flow)) { p.invite('space-surplus'); return flow }
+      const next = askForLand(flow)
       if (next === flow) return flow
-      p.openSum(next)
+      if (next.phase === 'challenge') p.openSum(next)
+      else p.say('Pick some land, then choose where it goes!')
       return next
     }
 

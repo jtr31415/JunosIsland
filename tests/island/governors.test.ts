@@ -2,14 +2,19 @@ import { describe, it, expect } from 'vitest'
 import {
   activeGovernor, inGracePeriod, spaceSurplus, landPaused, eggsPaused, GOVERNOR_LINE,
 } from '../../src/island/governors'
-import { createFlow, challengePassed, tapEgg, tapSum, chooseTile, placeTile } from '../../src/island/flow'
+import { createFlow, challengePassed, tapEgg, chooseTile, placeTile } from '../../src/island/flow'
 import type { Flow } from '../../src/island/flow'
 import { sockets } from '../../src/island/world/grid'
 
-/** Grow the island by n grass tiles, ignoring the economy. */
+/**
+ * Grow the island by n grass tiles, ignoring the economy.
+ *
+ * Prepaid: sumProgress well past any price the curve can name, so siting the
+ * plot finishes it on the spot and the helper stays one step per tile.
+ */
 function grow(f: Flow, n: number): Flow {
   for (let i = 0; i < n; i++) {
-    let g = challengePassed(tapSum({ ...f, phase: 'free', sumProgress: 999 }))
+    let g: Flow = { ...f, phase: 'placing', chosen: null, plot: null, sumProgress: 999 }
     g = chooseTile(g, 'grass')
     const s = sockets(g.island)[0]!
     f = placeTile(g, s)
@@ -47,10 +52,11 @@ describe('the space-surplus governor', () => {
     expect(landPaused(f)).toBe(true)
   })
 
-  it('lets a plot already paid for finish anyway', () => {
-    // §5: a plot mid-build always finishes; work is never taken back
+  it('lets a plot already under construction finish anyway', () => {
+    // §5: a plot mid-build always finishes; work is never taken back. The
+    // governor pauses STARTING land, never finishing it.
     let f = withPets(grow(createFlow(), 6), 2)
-    f = { ...f, bankedTiles: 1 }
+    f = { ...f, plot: { at: { q: 4, r: 0 }, type: 'grass' } }
     expect(activeGovernor(f)).toBe('space-surplus')
     expect(landPaused(f)).toBe(false)
   })
