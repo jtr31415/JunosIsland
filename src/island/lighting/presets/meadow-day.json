@@ -1,0 +1,10 @@
+{
+  "id": "meadow-day",
+  "sky":  { "top": "#7ec8ff", "horizon": "#eaf6ff" },
+  "sun":  { "color": "#ffe3b3", "intensity": 1.6, "elevation": 35, "azimuth": 40 },
+  "hemi": { "sky": "#bfe3ff", "ground": "#ffd9a0", "intensity": 0.9 },
+  "rim":  { "color": "#9fb8ff", "intensity": 0.25 },
+  "fog":  { "near": 30, "far": 90 },
+  "exposure": 1.1,
+  "particles": "pollen"
+}

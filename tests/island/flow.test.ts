@@ -3,7 +3,23 @@ import {
   createFlow, tapEgg, tapSum, challengePassed, challengeFailed,
   chooseTile, placeTile, tileOffer,
 } from '../../src/island/flow'
+import { ROUNDS_PER_HATCH, SUMS_PER_TILE, hatchProgress, landProgress } from '../../src/island/flow'
+import type { Flow } from '../../src/island/flow'
 import { count } from '../../src/island/world/grid'
+
+/** Read enough rounds to actually hatch: a pet is meant to be an occasion. */
+function readUntilHatch(f: Flow, name = 'Bimo', species = 'animal-fox'): Flow {
+  for (let i = 0; i < ROUNDS_PER_HATCH; i++) {
+    f = challengePassed(tapEgg(f), { name, species })
+  }
+  return f
+}
+
+/** Answer enough sums to earn one tile. */
+function sumsUntilTile(f: Flow): Flow {
+  for (let i = 0; i < SUMS_PER_TILE; i++) f = challengePassed(tapSum({ ...f, phase: 'free' }))
+  return f
+}
 
 describe('flow — the earn loop', () => {
   it('starts in free play with one rock and no pets', () => {
@@ -21,19 +37,38 @@ describe('flow — the earn loop', () => {
     expect(f.challenge).toBe('read')
   })
 
-  it('passing a reading challenge hatches exactly one pet', () => {
-    let f = tapEgg(createFlow())
-    f = challengePassed(f, { name: 'Bimo', species: 'animal-fox' })
+  it('takes several reading rounds to hatch one pet', () => {
+    // A pet per round made hatching weightless — the island filled up before
+    // anything felt earned.
+    let f = createFlow()
+    for (let i = 1; i < ROUNDS_PER_HATCH; i++) {
+      f = challengePassed(tapEgg(f), { name: 'Bimo', species: 'animal-fox' })
+      expect(f.pets).toHaveLength(0)
+      expect(f.readProgress).toBe(i)
+    }
+    f = challengePassed(tapEgg(f), { name: 'Bimo', species: 'animal-fox' })
     expect(f.pets).toHaveLength(1)
-    expect(f.pets[0]!.name).toBe('Bimo')
+    expect(f.readProgress).toBe(0)        // reset for the next egg
     expect(f.phase).toBe('free')
   })
 
+  it('reports progress toward the next hatch and the next tile', () => {
+    let f = challengePassed(tapEgg(createFlow()), { name: 'B', species: 'animal-bee' })
+    expect(hatchProgress(f)).toBeCloseTo(1 / ROUNDS_PER_HATCH)
+    f = challengePassed(tapSum({ ...f, phase: 'free' }))
+    expect(landProgress(f)).toBeCloseTo(1 / SUMS_PER_TILE)
+  })
+
+  it('progress is never lost by a wrong answer', () => {
+    let f = challengePassed(tapEgg(createFlow()), { name: 'B', species: 'animal-bee' })
+    const before = f.readProgress
+    f = challengeFailed(tapEgg(f))
+    expect(f.readProgress).toBe(before)
+  })
+
   it('a hatched pet keeps its name and species forever', () => {
-    let f = tapEgg(createFlow())
-    f = challengePassed(f, { name: 'Sheptun', species: 'animal-crab' })
-    f = tapEgg(f)
-    f = challengePassed(f, { name: 'Corbell', species: 'animal-bee' })
+    let f = readUntilHatch(createFlow(), 'Sheptun', 'animal-crab')
+    f = readUntilHatch(f, 'Corbell', 'animal-bee')
     expect(f.pets.map(p => p.name)).toEqual(['Sheptun', 'Corbell'])
     expect(f.pets.map(p => p.species)).toEqual(['animal-crab', 'animal-bee'])
   })
@@ -44,24 +79,28 @@ describe('flow — the earn loop', () => {
     expect(f.challenge).toBe('sum')
   })
 
-  it('passing a maths challenge banks exactly one tile', () => {
-    // Maths earns land (brief section 4)
-    let f = tapSum(createFlow())
-    f = challengePassed(f)
+  it('takes several sums to earn one tile', () => {
+    // Maths earns land (brief section 4), but land is meant to cost something
+    let f = createFlow()
+    for (let i = 1; i < SUMS_PER_TILE; i++) {
+      f = challengePassed(tapSum(f))
+      expect(f.bankedTiles).toBe(0)
+      expect(f.sumProgress).toBe(i)
+    }
+    f = challengePassed(tapSum(f))
     expect(f.bankedTiles).toBe(1)
+    expect(f.sumProgress).toBe(0)
     expect(f.phase).toBe('placing')
   })
 
   it('a banked tile offers three types to choose from', () => {
-    let f = tapSum(createFlow())
-    f = challengePassed(f)
+    const f = sumsUntilTile(createFlow())
     const offer = tileOffer(f)
     expect(offer).toHaveLength(3)
   })
 
   it('choosing then placing consumes the tile and grows the island', () => {
-    let f = tapSum(createFlow())
-    f = challengePassed(f)
+    let f = sumsUntilTile(createFlow())
     f = chooseTile(f, 'water')
     const before = count(f.island)
     f = placeTile(f, { q: 1, r: 0 })
@@ -71,14 +110,14 @@ describe('flow — the earn loop', () => {
   })
 
   it('places the type that was chosen', () => {
-    let f = challengePassed(tapSum(createFlow()))
+    let f = sumsUntilTile(createFlow())
     f = chooseTile(f, 'water')
     f = placeTile(f, { q: 1, r: 0 })
     expect(f.island.tiles.get('1,0')).toBe('water')
   })
 
   it('cannot place where there is no socket', () => {
-    let f = challengePassed(tapSum(createFlow()))
+    let f = sumsUntilTile(createFlow())
     f = chooseTile(f, 'grass')
     const before = count(f.island)
     f = placeTile(f, { q: 9, r: 9 })   // far out at sea
@@ -131,7 +170,7 @@ describe('flow — the earn loop', () => {
   })
 
   it('offers only tile types the child can actually use', () => {
-    let f = challengePassed(tapSum(createFlow()))
+    const f = sumsUntilTile(createFlow())
     for (const t of tileOffer(f)) expect(['grass', 'water']).toContain(t)
   })
 })
@@ -141,8 +180,8 @@ describe('flow — land owed is always reachable', () => {
     // Found at the M1 gate: returning to 'free' with a surplus made the offer
     // invisible, and no transition re-entered 'placing' except another sum —
     // so a tile she had earned became permanently unreachable.
-    let f = challengePassed(tapSum(createFlow()))
-    f = challengePassed(tapSum({ ...f, phase: 'free' }))
+    let f = sumsUntilTile(createFlow())
+    f = sumsUntilTile({ ...f, phase: 'free' })
     expect(f.bankedTiles).toBe(2)
     f = chooseTile(f, 'grass')
     f = placeTile(f, { q: 1, r: 0 })
@@ -155,7 +194,7 @@ describe('flow — land owed is always reachable', () => {
   })
 
   it('never lets a tile be chosen or placed mid-challenge', () => {
-    let f = challengePassed(tapSum(createFlow()))
+    let f = sumsUntilTile(createFlow())
     f = { ...f, phase: 'challenge', challenge: 'read' }
     const chosen = chooseTile(f, 'water')
     expect(chosen.chosen).toBeNull()

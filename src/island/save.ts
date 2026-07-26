@@ -19,6 +19,10 @@ interface IslandSave {
   pets: Pet[]
   bankedTiles: number
   openingSeen: boolean
+  /** Progress toward the next hatch and the next tile. Earned work: it must
+   *  survive a reload or the child silently starts over (brief section 18). */
+  readProgress?: number
+  sumProgress?: number
 }
 
 export function toSave(flow: Flow, openingSeen: boolean): IslandSave {
@@ -27,6 +31,8 @@ export function toSave(flow: Flow, openingSeen: boolean): IslandSave {
     pets: [...flow.pets],
     bankedTiles: flow.bankedTiles,
     openingSeen,
+    readProgress: flow.readProgress,
+    sumProgress: flow.sumProgress,
   }
 }
 
@@ -42,6 +48,8 @@ export function fromSave(save: IslandSave | null): { flow: Flow; openingSeen: bo
       island,
       pets: Array.isArray(save.pets) ? save.pets : [],
       bankedTiles: typeof save.bankedTiles === 'number' ? save.bankedTiles : 0,
+      readProgress: typeof save.readProgress === 'number' ? save.readProgress : 0,
+      sumProgress: typeof save.sumProgress === 'number' ? save.sumProgress : 0,
       // Never mid-challenge, so a reload cannot strand the child in a round
       // she is unable to finish. But if land is still owed, resume in
       // 'placing' — otherwise the offer never reappears and a tile she has

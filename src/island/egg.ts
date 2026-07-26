@@ -25,7 +25,7 @@ export function createEgg(): Egg {
   // friendly spots. Nothing here should read as fragile or precious-scary.
   const shell = new THREE.Mesh(
     new THREE.SphereGeometry(0.30, 18, 14),
-    new THREE.MeshLambertMaterial({ color: 0xfff4dc }),
+    new THREE.MeshStandardMaterial({ color: 0xfff4dc, metalness: 0, roughness: 1 }),
   )
   shell.scale.set(1, 1.28, 1)
   shell.position.y = 0.38
@@ -34,7 +34,7 @@ export function createEgg(): Egg {
   for (let i = 0; i < 5; i++) {
     const s = new THREE.Mesh(
       new THREE.SphereGeometry(0.075, 10, 8),
-      new THREE.MeshLambertMaterial({ color: 0x8fd6ff }),
+      new THREE.MeshStandardMaterial({ color: 0x8fd6ff, metalness: 0, roughness: 1 }),
     )
     const a = (i / 5) * Math.PI * 2
     s.position.set(Math.cos(a) * 0.24, 0.38 + Math.sin(a * 1.7) * 0.16, Math.sin(a) * 0.24)

@@ -3,7 +3,10 @@ import {
   handleWorldTap, handleChallengePassed, handleChallengeDismissed,
 } from '../../src/island/interactions'
 import type { InteractionPorts } from '../../src/island/interactions'
-import { createFlow, tapEgg, tapSum, challengePassed, chooseTile } from '../../src/island/flow'
+import {
+  createFlow, tapEgg, tapSum, challengePassed, chooseTile,
+  ROUNDS_PER_HATCH, SUMS_PER_TILE,
+} from '../../src/island/flow'
 import type { Flow } from '../../src/island/flow'
 import { count } from '../../src/island/world/grid'
 
@@ -23,9 +26,23 @@ function ports(over: Partial<InteractionPorts> = {}): InteractionPorts {
   }
 }
 
+/** Answer enough sums to actually earn a tile (pacing: SUMS_PER_TILE). */
+function earnTile(f: Flow = createFlow()): Flow {
+  for (let i = 0; i < SUMS_PER_TILE; i++) f = challengePassed(tapSum({ ...f, phase: 'free' }))
+  return f
+}
+
+/** Read enough rounds to actually hatch (pacing: ROUNDS_PER_HATCH). */
+function hatchOne(f: Flow = createFlow(), name = 'Bimo'): Flow {
+  for (let i = 0; i < ROUNDS_PER_HATCH; i++) {
+    f = challengePassed(tapEgg({ ...f, phase: 'free' }), { name, species: 'animal-fox' })
+  }
+  return f
+}
+
 /** A flow that has earned a tile and chosen water, awaiting a socket tap. */
 function readyToPlace(): Flow {
-  return chooseTile(challengePassed(tapSum(createFlow())), 'water')
+  return chooseTile(earnTile(), 'water')
 }
 
 describe('tapping the egg', () => {
@@ -95,7 +112,7 @@ describe('tapping a socket', () => {
 
   it('does nothing when no tile has been chosen yet', () => {
     const p = ports()
-    const banked = challengePassed(tapSum(createFlow()))   // banked, not chosen
+    const banked = earnTile()                              // banked, not chosen
     const next = handleWorldTap(banked, { kind: 'socket', axial: { q: 1, r: 0 } }, p)
     expect(next).toBe(banked)
     expect(p.win).not.toHaveBeenCalled()
@@ -120,7 +137,7 @@ describe('tapping a socket', () => {
 describe('tapping a pet', () => {
   it('bounces it and says its name', () => {
     const p = ports()
-    let f = challengePassed(tapEgg(createFlow()), { name: 'Bimo', species: 'animal-fox' })
+    const f = hatchOne()
     const id = f.pets[0]!.id
     const next = handleWorldTap(f, { kind: 'pet', id }, p)
     expect(next).toBe(f)                       // tapping a pet changes nothing
@@ -160,13 +177,14 @@ describe('finishing and leaving a challenge', () => {
     expect(next.pets).toHaveLength(0)
   })
 
-  it('a legitimately opened round hatches a pet', () => {
+  it('a legitimately opened round counts toward the hatch', () => {
     const next = handleChallengePassed(tapEgg(createFlow()), { name: 'Bimo', species: 'animal-fox' })
-    expect(next.pets).toHaveLength(1)
+    expect(next.readProgress).toBe(1)
+    expect(hatchOne().pets).toHaveLength(1)
   })
 
   it('leaving costs nothing — no pet, no tile, egg still there', () => {
-    const banked = challengePassed(tapSum(createFlow()))
+    const banked = earnTile()
     const mid = tapEgg({ ...banked, phase: 'free' })
     const out = handleChallengeDismissed(mid)
     expect(out.phase).toBe('free')
@@ -190,17 +208,17 @@ describe('a completed round is never discarded', () => {
     expect(handleChallengePassed(placing)).toBe(placing)
   })
 
-  it('a legitimately passed sum banks exactly one tile', () => {
+  it('a legitimately passed sum counts toward the tile', () => {
     const next = handleChallengePassed(tapSum(createFlow()))
-    expect(next.bankedTiles).toBe(1)
-    expect(next.phase).toBe('placing')
+    expect(next.sumProgress).toBe(1)
+    expect(earnTile().bankedTiles).toBe(1)
   })
 
   it('two banked tiles drain one at a time without stranding either', () => {
     // Found at the M1 gate: returning to free with a surplus hid the offer
     // and the second tile could never be spent.
-    let f = handleChallengePassed(tapSum(createFlow()))
-    f = handleChallengePassed(tapSum({ ...f, phase: 'free' }))
+    let f = earnTile()
+    f = earnTile(f)
     expect(f.bankedTiles).toBe(2)
     const p = ports()
     f = chooseTile(f, 'grass')

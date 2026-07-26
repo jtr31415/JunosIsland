@@ -13,6 +13,9 @@ import { createOverlay } from './overlay'
 import { createPetField, SPECIES } from './pets'
 import { createEgg } from './egg'
 import { createFred } from './fred'
+import { createPropField } from './world/props'
+import { createAlbum } from './album'
+import { hatchProgress, landProgress } from './flow'
 import { OPENING, HATCH_LINES, fill } from './script'
 import { loadIsland, saveIsland } from './save'
 import { createLocalStore } from '../platform/storage'
@@ -58,6 +61,9 @@ async function boot(): Promise<void> {
   world.scene.add(pets.group)
   world.pickables.push(pets.group)
 
+  const props = createPropField()
+  world.scene.add(props.group)
+
   const egg = createEgg()
   world.scene.add(egg.group)
   world.pickables.push(egg.group)
@@ -100,6 +106,8 @@ async function boot(): Promise<void> {
 
   function refresh(): void {
     world.setIsland(flow.island)
+    void props.sync(flow.island, world.models.size)
+      .then(() => pets.setObstacles(props.obstacles()))
     // Fred sits on the home rock, a little off centre so the egg and any pet
     // have room. Slightly larger than a collectible pet, never tile-sized.
     const home = world.worldOf({ q: 0, r: 0 })
@@ -109,8 +117,39 @@ async function boot(): Promise<void> {
     void pets.sync(flow.pets, flow.island, world.models.size)
     if (flow.phase !== 'placing') placeEgg()
     renderOffer()
+    renderProgress()
     persist()
   }
+
+  /* ---------- progress ----------
+   * A hatch now costs five reading rounds and a tile ten sums, so the child
+   * needs to SEE that she is getting somewhere - otherwise the work feels
+   * like it goes nowhere, which is the opposite of what the pacing is for.
+   */
+  const progressBar = document.createElement('div')
+  progressBar.className = 'chunk progress'
+  progressBar.innerHTML =
+    '<span class="progress-row"><span class="progress-icon">\u{1F95A}</span>' +
+    '<span class="progress-track"><i id="eggFill"></i></span></span>' +
+    '<span class="progress-row"><span class="progress-icon">\u{1F33F}</span>' +
+    '<span class="progress-track"><i id="landFill"></i></span></span>'
+  document.body.append(progressBar)
+
+  function renderProgress(): void {
+    const egg = document.getElementById('eggFill')
+    const land = document.getElementById('landFill')
+    if (egg) egg.style.width = Math.round(hatchProgress(flow) * 100) + '%'
+    if (land) land.style.width = Math.round(landProgress(flow) * 100) + '%'
+  }
+
+  /* ---------- the album ---------- */
+  const album = createAlbum(document.body)
+  const albumBtn = document.createElement('button')
+  albumBtn.className = 'chunk chunk-button album-button'
+  albumBtn.textContent = '\u{1F4D6} friends'
+  albumBtn.setAttribute('aria-label', 'open the album of friends')
+  albumBtn.onclick = () => album.open(flow.pets)
+  document.body.append(albumBtn)
 
   /* ---------- the two verbs ---------- */
 
@@ -148,6 +187,7 @@ async function boot(): Promise<void> {
       speech.speak(fill(line, CHILD, name))
       fred.talk(2.2)
       fred.hop()
+      world.lighting.celebrationBump()
       egg.reset()
       refresh()
       if (openingResumeAt >= 0) {

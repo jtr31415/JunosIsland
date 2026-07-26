@@ -83,9 +83,13 @@ export async function loadTileModels(base = '', season: Season = 'Summer'): Prom
     geometry[type] = geo
 
     if (!material) {
-      // Flat colour, no PBR (brief section 15). Lambert reads chunky and is
-      // cheap; bind the seasonal atlas rather than the glTF's default.
-      material = new THREE.MeshLambertMaterial({ map: atlas, color: 0xffffff })
+      // MeshStandard with metalness clamped to 0 and roughness high (lighting
+      // brief §1). Lambert ignores the hemisphere light's ground colour, which
+      // is exactly the warm-underside contrast the rig exists to produce — so
+      // flat-but-standard, not Lambert.
+      material = new THREE.MeshStandardMaterial({
+        map: atlas, color: 0xffffff, metalness: 0, roughness: 1,
+      })
     }
 
     if (type === 'grass') {

@@ -9,7 +9,10 @@
 import * as THREE from 'three'
 import { createOrbitCamera } from './camera'
 import type { OrbitCamera } from './camera'
-import { SUMMER_SKY, createSky, createLights, applyFog, createSea } from './juice'
+import { createSea } from './juice'
+import { createLighting } from './lighting'
+import type { Lighting, LightingPreset } from './lighting'
+import meadowDay from './lighting/presets/meadow-day.json'
 import { loadTileModels, createTileField, createSocketField } from './world/tiles'
 import type { TileModels, TileField } from './world/tiles'
 import { toWorld } from './world/hex'
@@ -27,6 +30,7 @@ export type Hit =
 
 export interface World {
   scene: THREE.Scene
+  lighting: Lighting
   camera: OrbitCamera
   models: TileModels
   tiles: TileField
@@ -46,13 +50,13 @@ export async function createWorld(canvas: HTMLCanvasElement): Promise<World> {
   // Capped for tablet fill-rate: a 3x retina buffer is the fastest way to
   // lose 60fps on mid-range hardware, and at this art scale it buys nothing.
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
-  renderer.outputColorSpace = THREE.SRGBColorSpace
 
   const scene = new THREE.Scene()
-  applyFog(scene, SUMMER_SKY)
-  scene.add(createSky(SUMMER_SKY))
+  // Colour space, tone mapping, the three lights, the sky dome and the fog all
+  // belong to the lighting module. Nothing here touches them.
+  const lighting = createLighting(renderer, meadowDay as LightingPreset)
+  lighting.attach(scene)
   scene.add(createSea())
-  for (const l of createLights()) scene.add(l)
 
   const camera = createOrbitCamera(canvas)
 
@@ -83,6 +87,7 @@ export async function createWorld(canvas: HTMLCanvasElement): Promise<World> {
 
   const world: World = {
     scene,
+    lighting,
     camera,
     models,
     tiles,
@@ -154,6 +159,7 @@ export async function createWorld(canvas: HTMLCanvasElement): Promise<World> {
         const dt = Math.min(0.05, last ? t - last : 0.016)
         last = t
         camera.update()
+        lighting.update(dt)
         socketField.pulse(t)
         for (const fn of frameFns) fn(dt, t)
         renderer.render(scene, camera.camera)

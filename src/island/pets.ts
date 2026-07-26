@@ -8,6 +8,7 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { createBlobShadow } from './juice'
+import { flattenImported } from './lighting'
 import { toWorld } from './world/hex'
 import type { Axial } from './world/hex'
 import type { Island } from './world/grid'
@@ -32,12 +33,16 @@ interface Live {
   bounce: number
 }
 
+export interface Obstacle { x: number; z: number; r: number }
+
 export interface PetField {
   group: THREE.Group
   /** Bring the scene in line with flow state, loading any new species. */
   sync(pets: readonly Pet[], island: Island, hexSize: number): Promise<void>
   /** Squash-stretch bounce, e.g. when tapped. */
   bounce(id: string): void
+  /** Trees and rocks to walk around rather than through. */
+  setObstacles(list: Obstacle[]): void
   update(dt: number, t: number, island: Island, hexSize: number): void
 }
 
@@ -47,6 +52,7 @@ export function createPetField(base = ''): PetField {
   const loader = new GLTFLoader()
   const cache = new Map<string, THREE.Group>()
   const live = new Map<string, Live>()
+  let obstacles: Obstacle[] = []
 
   async function model(species: string): Promise<THREE.Group> {
     const hit = cache.get(species)
@@ -56,18 +62,10 @@ export function createPetField(base = ''): PetField {
     // pure white, which looks like a material bug rather than a missing asset.
     const gltf = await loader.loadAsync(`${base}pets/${species}.glb`)
     const root = gltf.scene
-    root.traverse(o => {
-      const m = o as THREE.Mesh
-      if (m.isMesh) {
-        // Flat and chunky, matching the tiles: no PBR shine (brief section 15).
-        const src = m.material as THREE.MeshStandardMaterial
-        m.material = new THREE.MeshLambertMaterial({
-          map: src.map ?? null,
-          color: src.color ?? new THREE.Color(0xffffff),
-          vertexColors: (m.geometry.getAttribute('color') !== undefined),
-        })
-      }
-    })
+    // Flat-colour packs often arrive metallic and render black under this rig
+    // (lighting brief §1), so clamp on the way in rather than swapping the
+    // material — Standard is what picks up the hemisphere's warm underside.
+    flattenImported(root)
     cache.set(species, root)
     return root.clone(true)
   }
@@ -96,7 +94,9 @@ export function createPetField(base = ''): PetField {
         // Kenney pets stand ~1.5 units tall against a 2.0-wide hex, which
         // reads as a monument rather than a pet. Scale so one comfortably
         // fits its tile with room to wander.
-        root.scale.setScalar(0.5)
+        // A pet should sit ON its tile, not straddle it. The Kenney models
+        // stand ~1.5 units against a 2.0-wide hex, which read as monuments.
+        root.scale.setScalar(0.32)
         holder.add(root)
         holder.add(createBlobShadow(0.34))
         const w = toWorld(pet.at as Axial, hexSize)
@@ -117,7 +117,11 @@ export function createPetField(base = ''): PetField {
       if (l) l.bounce = 1
     },
 
+    setObstacles(list) { obstacles = list },
+
     update(dt, t, island, hexSize) {
+      const others = [...live.values()]
+
       for (const l of live.values()) {
         const pos = l.root.position
         const to = l.goal.clone().sub(pos)
@@ -130,6 +134,35 @@ export function createPetField(base = ''): PetField {
           to.normalize()
           pos.addScaledVector(to, Math.min(dist, dt * 0.9))
           l.root.rotation.y = Math.atan2(to.x, to.z)
+        }
+
+        /*
+         * Gentle separation: pets nudge apart rather than standing inside one
+         * another, and walk around trees instead of through them. Deliberately
+         * a soft push, not collision — a pet that got stuck against a rock
+         * would look broken, and nothing here is worth a pathfinder.
+         */
+        const SEP = hexSize * 0.34
+        for (const o of others) {
+          if (o === l) continue
+          const dx = pos.x - o.root.position.x
+          const dz = pos.z - o.root.position.z
+          const d = Math.hypot(dx, dz)
+          if (d > 0.0001 && d < SEP) {
+            const push = (SEP - d) / SEP * dt * 2.2
+            pos.x += (dx / d) * push
+            pos.z += (dz / d) * push
+          }
+        }
+        for (const ob of obstacles) {
+          const dx = pos.x - ob.x
+          const dz = pos.z - ob.z
+          const d = Math.hypot(dx, dz)
+          if (d > 0.0001 && d < ob.r) {
+            const push = (ob.r - d) / ob.r * dt * 3.0
+            pos.x += (dx / d) * push
+            pos.z += (dz / d) * push
+          }
         }
 
         // A hop rather than a glide: squash on the ground, stretch in the air.

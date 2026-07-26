@@ -14,6 +14,16 @@ import type { Island, TileType } from './world/grid'
 import { key } from './world/hex'
 import type { Axial } from './world/hex'
 
+/**
+ * How much work each reward costs.
+ *
+ * The first build gave a pet per reading round and a tile per sum, which made
+ * both feel weightless — the island filled up before anything had been earned.
+ * A hatch should be an occasion.
+ */
+export const ROUNDS_PER_HATCH = 5
+export const SUMS_PER_TILE = 10
+
 export type Phase = 'opening' | 'free' | 'challenge' | 'placing'
 export type ChallengeKind = 'read' | 'sum' | null
 
@@ -36,6 +46,10 @@ export interface Flow {
   chosen: TileType | null
   /** There is always an egg to read to, unless one is mid-hatch. */
   eggPresent: boolean
+  /** Reading rounds completed toward the current egg. Never decays. */
+  readProgress: number
+  /** Sums answered toward the next tile. Never decays. */
+  sumProgress: number
 }
 
 export function createFlow(): Flow {
@@ -47,8 +61,15 @@ export function createFlow(): Flow {
     bankedTiles: 0,
     chosen: null,
     eggPresent: true,
+    readProgress: 0,
+    sumProgress: 0,
   }
 }
+
+/** 0..1 toward the next hatch — drives the egg's glow. */
+export const hatchProgress = (f: Flow): number => f.readProgress / ROUNDS_PER_HATCH
+/** 0..1 toward the next tile. */
+export const landProgress = (f: Flow): number => f.sumProgress / SUMS_PER_TILE
 
 /** Reading hatches eggs (brief section 4). */
 export function tapEgg(f: Flow): Flow {
@@ -74,6 +95,11 @@ export function challengePassed(f: Flow, hatch?: HatchDetails): Flow {
   if (f.phase !== 'challenge') return f
 
   if (f.challenge === 'read' && hatch) {
+    const readProgress = f.readProgress + 1
+    if (readProgress < ROUNDS_PER_HATCH) {
+      // Not yet. The egg is closer, and that progress can never be lost.
+      return { ...f, phase: 'free', challenge: null, readProgress }
+    }
     const home = firstFreeSpot(f)
     const pet: Pet = {
       id: 'pet' + (f.pets.length + 1) + '-' + hatch.name,
@@ -88,11 +114,22 @@ export function challengePassed(f: Flow, hatch?: HatchDetails): Flow {
       pets: [...f.pets, pet],
       // A fresh egg washes ashore, so there is always something to read to.
       eggPresent: true,
+      readProgress: 0,
     }
   }
 
   if (f.challenge === 'sum') {
-    return { ...f, phase: 'placing', challenge: null, bankedTiles: f.bankedTiles + 1 }
+    const sumProgress = f.sumProgress + 1
+    if (sumProgress < SUMS_PER_TILE) {
+      return { ...f, phase: 'free', challenge: null, sumProgress }
+    }
+    return {
+      ...f,
+      phase: 'placing',
+      challenge: null,
+      bankedTiles: f.bankedTiles + 1,
+      sumProgress: 0,
+    }
   }
 
   return { ...f, phase: 'free', challenge: null }
