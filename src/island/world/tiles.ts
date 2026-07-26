@@ -13,18 +13,33 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { toWorld } from './hex'
 import type { Axial } from './hex'
-import type { Island, TileType } from './grid'
+import type { Island } from './grid'
+import { lookFor } from './coast'
+
+/**
+ * The models a tile can be drawn with — NOT the same thing as a TileType.
+ *
+ * The child owns grass and water; the coast variants are derived from where
+ * those sit relative to one another (see coast.ts), so they exist here and
+ * nowhere in the saved state.
+ */
+export type RenderKind = 'grass' | 'water'
+  | 'coast_A' | 'coast_B' | 'coast_C' | 'coast_D'
 
 export interface TileModels {
   /** Circumradius of the loaded hex, in world units. */
   size: number
-  geometry: Record<TileType, THREE.BufferGeometry>
+  geometry: Record<RenderKind, THREE.BufferGeometry>
   material: THREE.Material
 }
 
-const TILE_URL: Record<TileType, string> = {
+const TILE_URL: Record<RenderKind, string> = {
   grass: 'tiles/hex_grass.gltf',
   water: 'tiles/hex_water.gltf',
+  coast_A: 'tiles/hex_coast_A.gltf',
+  coast_B: 'tiles/hex_coast_B.gltf',
+  coast_C: 'tiles/hex_coast_C.gltf',
+  coast_D: 'tiles/hex_coast_D.gltf',
 }
 
 /**
@@ -70,11 +85,11 @@ export async function loadTileModels(base = '', season: Season = 'Summer'): Prom
   atlas.magFilter = THREE.LinearFilter
   atlas.wrapS = THREE.ClampToEdgeWrapping
   atlas.wrapT = THREE.ClampToEdgeWrapping
-  const geometry = {} as Record<TileType, THREE.BufferGeometry>
+  const geometry = {} as Record<RenderKind, THREE.BufferGeometry>
   let material: THREE.Material | null = null
   let size = 1
 
-  for (const type of Object.keys(TILE_URL) as TileType[]) {
+  for (const type of Object.keys(TILE_URL) as RenderKind[]) {
     const gltf = await loader.loadAsync(base + TILE_URL[type])
     const mesh = firstMesh(gltf.scene)
     const geo = mesh.geometry.clone()
@@ -109,7 +124,7 @@ export interface TileField {
   /** Rebuild every instance from island state. */
   sync(island: Island): void
   /** Axial coord under a given instance of a given type, for picking. */
-  coordOf(type: TileType, instanceId: number): Axial | undefined
+  coordOf(kind: RenderKind, instanceId: number): Axial | undefined
   dispose(): void
 }
 
@@ -117,10 +132,10 @@ export function createTileField(models: TileModels, capacity = 512): TileField {
   const group = new THREE.Group()
   group.name = 'tiles'
 
-  const meshes = {} as Record<TileType, THREE.InstancedMesh>
-  const coords = {} as Record<TileType, Axial[]>
+  const meshes = {} as Record<RenderKind, THREE.InstancedMesh>
+  const coords = {} as Record<RenderKind, Axial[]>
 
-  for (const type of Object.keys(models.geometry) as TileType[]) {
+  for (const type of Object.keys(models.geometry) as RenderKind[]) {
     const im = new THREE.InstancedMesh(models.geometry[type], models.material, capacity)
     im.count = 0
     im.name = 'tiles:' + type
@@ -131,27 +146,45 @@ export function createTileField(models: TileModels, capacity = 512): TileField {
     group.add(im)
   }
 
+  const turns = {} as Record<RenderKind, number[]>
   const m = new THREE.Matrix4()
 
   return {
     group,
 
     sync(island: Island) {
-      for (const type of Object.keys(meshes) as TileType[]) coords[type] = []
-
-      for (const [k, type] of island.tiles) {
-        const parts = k.split(',').map(Number)
-        const a: Axial = { q: parts[0] as number, r: parts[1] as number }
-        coords[type].push(a)
+      for (const type of Object.keys(meshes) as RenderKind[]) {
+        coords[type] = []
+        turns[type] = []
       }
 
-      for (const type of Object.keys(meshes) as TileType[]) {
+      /*
+       * The coastline is recomputed for the WHOLE island on every sync, not
+       * just for the tile that changed. Placing one hex re-sands up to six
+       * neighbours — and, where it fills a gap, un-sands them — so anything
+       * incremental would leave stale shoreline behind the child's back.
+       * A few dozen hexes is nothing; correctness is worth more here.
+       */
+      for (const k of island.tiles.keys()) {
+        const parts = k.split(',').map(Number)
+        const a: Axial = { q: parts[0] as number, r: parts[1] as number }
+        const look = lookFor(island, a)
+        const kind: RenderKind =
+          look.kind === 'coast' ? (`coast_${look.variant}` as RenderKind) : look.kind
+        coords[kind].push(a)
+        turns[kind].push(look.turns)
+      }
+
+      for (const type of Object.keys(meshes) as RenderKind[]) {
         const im = meshes[type]
         const list = coords[type]
         im.count = Math.min(list.length, capacity)
         list.slice(0, capacity).forEach((a, i) => {
           const w = toWorld(a, models.size)
-          m.makeTranslation(w.x, 0, w.z)
+          // Turn the model so its sand faces the sea. One sixth of a turn per
+          // step, which is what coast.ts's `turns` counts.
+          m.makeRotationY((turns[type][i] as number) * Math.PI / 3)
+          m.setPosition(w.x, 0, w.z)
           im.setMatrixAt(i, m)
         })
         im.instanceMatrix.needsUpdate = true
@@ -159,12 +192,12 @@ export function createTileField(models: TileModels, capacity = 512): TileField {
       }
     },
 
-    coordOf(type: TileType, instanceId: number) {
-      return coords[type]?.[instanceId]
+    coordOf(kind: RenderKind, instanceId: number) {
+      return coords[kind]?.[instanceId]
     },
 
     dispose() {
-      for (const type of Object.keys(meshes) as TileType[]) meshes[type].dispose()
+      for (const type of Object.keys(meshes) as RenderKind[]) meshes[type].dispose()
     },
   }
 }
