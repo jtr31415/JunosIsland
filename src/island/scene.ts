@@ -13,8 +13,8 @@ import { createSea } from './juice'
 import { createLighting } from './lighting'
 import type { Lighting, LightingPreset } from './lighting'
 import meadowDay from './lighting/presets/meadow-day.json'
-import { loadTileModels, createTileField, createSocketField } from './world/tiles'
-import type { TileModels, TileField } from './world/tiles'
+import { loadTileModels, createTileField, createSocketField, createSurface } from './world/tiles'
+import type { TileModels, TileField, Surface } from './world/tiles'
 import { toWorld } from './world/hex'
 import type { Axial } from './world/hex'
 import type { Island } from './world/grid'
@@ -34,6 +34,8 @@ export interface World {
   camera: OrbitCamera
   models: TileModels
   tiles: TileField
+  /** Ask the tile meshes what the ground is doing at a point. */
+  surface: Surface
   /** Objects that want a raycast: pets, eggs, Fred. Keyed for identification. */
   pickables: THREE.Object3D[]
   setIsland(i: Island): void
@@ -62,6 +64,7 @@ export async function createWorld(canvas: HTMLCanvasElement): Promise<World> {
 
   const models = await loadTileModels()
   const tiles = createTileField(models)
+  const surface = createSurface(tiles)
   const socketField = createSocketField(models)
   scene.add(tiles.group)
   scene.add(socketField.group)
@@ -91,6 +94,7 @@ export async function createWorld(canvas: HTMLCanvasElement): Promise<World> {
     camera,
     models,
     tiles,
+    surface,
     pickables,
 
     setIsland(i: Island) {

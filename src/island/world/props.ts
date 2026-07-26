@@ -18,6 +18,7 @@ import { flattenImported } from '../lighting'
 import { toWorld } from './hex'
 import type { Axial } from './hex'
 import type { Island } from './grid'
+import type { Surface, Ground } from './tiles'
 
 /**
  * Weighted by how much each reads as "landscape" rather than "object".
@@ -70,6 +71,18 @@ const FOREST_DETAIL = [
 /** Only the small pieces scatter; trees are placed as features. */
 const DETAIL_SMALL = FOREST_DETAIL.slice(0, 8)
 
+/**
+ * What ground a piece is willing to stand on.
+ *
+ * Trees, bushes and grass need soil, so they keep to the green. Stone does
+ * not care — a rock on a beach is a rock on a beach — so rocks may also sit
+ * on the sand of a coast ramp. Nothing may stand over open water, which on a
+ * coast tile means the part of the hex that has been cut away entirely.
+ */
+const ROCKY = /rock/i
+const allows = (name: string, ground: Ground): boolean =>
+  ground === 'green' || (ground === 'sand' && ROCKY.test(name))
+
 const TOTAL_WEIGHT = LAND_PROPS.reduce((n, p) => n + p.weight, 0)
 
 function pickProp(h: number): typeof LAND_PROPS[number] {
@@ -90,9 +103,19 @@ function hash(a: Axial): number {
 
 export interface PropField {
   group: THREE.Group
-  sync(island: Island, hexSize: number): Promise<void>
+  sync(island: Island, hexSize: number, surface: Surface): Promise<void>
   /** Where scenery stands, so pets walk around it rather than through. */
   obstacles(): Array<{ x: number; z: number; r: number }>
+  /**
+   * EVERYTHING standing on the ground, ground cover included.
+   *
+   * Distinct from obstacles() on purpose. A pet steps over a grass tuft, so a
+   * tuft is no obstacle — but an egg sitting in one is half-buried and cannot
+   * be tapped cleanly, and the egg is the single most important thing on the
+   * island to be able to tap. So the egg avoids all of this; pets avoid only
+   * what they would actually walk into.
+   */
+  clutter(): Array<{ x: number; z: number; r: number }>
   update(dt: number, t: number): void
 }
 
@@ -103,6 +126,7 @@ export function createPropField(base = ''): PropField {
   const cache = new Map<string, THREE.Object3D>()
   const placed = new Set<string>()
   const blocks: Array<{ x: number; z: number; r: number }> = []
+  const decor: Array<{ x: number; z: number; r: number }> = []
   const clouds: THREE.Object3D[] = []
   let atlas: THREE.Texture | null = null
   let forestTex: THREE.Texture | null = null
@@ -163,7 +187,7 @@ export function createPropField(base = ''): PropField {
   return {
     group,
 
-    async sync(island, hexSize) {
+    async sync(island, hexSize, surface) {
       // Clouds, once. They give the sky something to be other than a gradient,
       // and drifting cloud is a cheap way to keep the world alive while the
       // child is thinking about a word.
@@ -200,14 +224,33 @@ export function createPropField(base = ''): PropField {
         if (h % 3 === 0) { placed.add(k); continue }
 
         const spec = pickProp(h)
-        const obj = await model(spec.name)
         const w = toWorld(a, hexSize)
         // Big features sit centred — a mountain half off its hex looks broken.
         // Small ones scatter, so a wood does not look like a plantation.
         const spread = spec.big ? 0.12 : 0.5
-        const ox = (((h >> 3) % 100) / 100 - 0.5) * hexSize * spread
-        const oz = (((h >> 9) % 100) / 100 - 0.5) * hexSize * spread
-        obj.position.set(w.x + ox, 0, w.z + oz)
+
+        /*
+         * Find ground it can actually stand on, trying the derived spot first
+         * and then working inward. On a coast tile most of the offsets a plain
+         * hex would allow are over open sea, so the first choice frequently
+         * has to be given up — and a tile with nowhere green left simply grows
+         * nothing, which is what a beach looks like anyway.
+         */
+        let spot: { x: number; z: number; y: number } | null = null
+        for (let attempt = 0; attempt < 6 && !spot; attempt++) {
+          const pull = 1 - attempt / 6                     // ... inward
+          const ox = (((h >> 3) % 100) / 100 - 0.5) * hexSize * spread * pull
+          const oz = (((h >> 9) % 100) / 100 - 0.5) * hexSize * spread * pull
+          const x = w.x + ox, z = w.z + oz
+          if (!allows(spec.name, surface.groundAt(x, z))) continue
+          spot = { x, z, y: surface.heightAt(x, z) ?? 0 }
+        }
+        if (!spot) { placed.add(k); continue }
+
+        const obj = await model(spec.name)
+        // Sit ON the ground, not at y = 0 — coast ramps slope, and later
+        // elevation will too.
+        obj.position.set(spot.x, spot.y, spot.z)
         obj.rotation.y = ((h >> 5) % 6) * (Math.PI / 3)   // snap to hex facings
         obj.scale.setScalar((spec.big ? 0.72 : 0.5) + ((h >> 11) % 26) / 100)
         group.add(obj)
@@ -231,18 +274,26 @@ export function createPropField(base = ''): PropField {
         for (let d = 0; d < detailCount; d++) {
           const dh = hash({ q: a.q * 31 + d, r: a.r * 17 - d })
           const name = DETAIL_SMALL[dh % DETAIL_SMALL.length] as string
-          const bit = await forestModel(name)
           const ang = ((dh >> 4) % 360) * Math.PI / 180
           const rad = hexSize * (0.2 + ((dh >> 7) % 52) / 100)
-          bit.position.set(w.x + Math.cos(ang) * rad, 0, w.z + Math.sin(ang) * rad)
+          const x = w.x + Math.cos(ang) * rad
+          const z = w.z + Math.sin(ang) * rad
+          // Tufts over the sea used to float; stones on the beach are fine.
+          if (!allows(name, surface.groundAt(x, z))) continue
+          const bit = await forestModel(name)
+          bit.position.set(x, surface.heightAt(x, z) ?? 0, z)
           bit.rotation.y = ((dh >> 11) % 360) * Math.PI / 180
-          bit.scale.setScalar(0.4 + ((dh >> 13) % 30) / 100)
+          const scale = 0.4 + ((dh >> 13) % 30) / 100
+          bit.scale.setScalar(scale)
           group.add(bit)
+          decor.push({ x, z, r: hexSize * 0.16 * (scale / 0.5) })
         }
       }
     },
 
     obstacles: () => blocks,
+
+    clutter: () => [...blocks, ...decor],
 
     update(dt, t) {
       // Drift around the island rather than across it, so none ever crosses

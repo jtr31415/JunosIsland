@@ -30,8 +30,7 @@ import {
 import type { InteractionPorts } from './interactions'
 import type { Flow } from './flow'
 import type { TileType } from './world/grid'
-import { sockets } from './world/grid'
-import { toWorld, key, neighbours } from './world/hex'
+import { toWorld } from './world/hex'
 import type { Axial } from './world/hex'
 
 import { createSpeaker } from '../platform/speech'
@@ -138,57 +137,77 @@ async function boot(): Promise<void> {
   })
 
   /**
-   * The egg sits ON the shore — an owned tile at the island's edge — never in
-   * open water, and never inside a tree.
+   * Somewhere the egg can sit in the open, on green ground, on ANY land tile.
    *
-   * The scenery pass made that second condition real: once most tiles grew a
-   * clump, an egg placed at a fixed offset simply disappeared into one, and an
-   * invisible egg is an unplayable game. So the spot is chosen CLEAR of the
-   * obstacles the prop field reports, trying several positions around the tile
-   * before settling.
+   * Three rules, each of them learned the hard way:
    *
-   * Preference: a coastal grass tile, then any grass tile, then the home rock.
+   *   - Clear of everything, not just of obstacles. Pets step over a grass
+   *     tuft so a tuft is no obstacle to them, but an egg standing in one is
+   *     half-buried and cannot be tapped cleanly — and tapping the egg is the
+   *     whole game. So this uses clutter(), which counts the ground cover too.
+   *   - On GREEN ground. Coast tiles cut the water side of the hex away
+   *     entirely, so an offset that was harmless on a full hex now hangs the
+   *     egg over open sea.
+   *   - Anywhere. It used to prefer the newest, most coastal tile, which on a
+   *     grown island wedged it into whatever had just sprouted there. The
+   *     island is small enough that any clear spot is a findable spot.
+   *
+   * Deterministic: the same island always puts the egg in the same place, so
+   * it does not hop about between reloads.
    */
   function placeEgg(): void {
-    const open = new Set(sockets(flow.island).map(key))
-    const blocks = props.obstacles()
+    const clutter = props.clutter()
     const size = world.models.size
 
-    const candidates: Axial[] = []
+    const tiles: Axial[] = []
     for (const [k, type] of flow.island.tiles) {
       if (type !== 'grass') continue
       const parts = k.split(',').map(Number)
-      const a: Axial = { q: parts[0] as number, r: parts[1] as number }
-      if (a.q === 0 && a.r === 0 && flow.island.tiles.size > 1) continue
-      const coastal = neighbours(a).some(n => open.has(key(n)))
-      if (coastal) candidates.unshift(a) 
-      else candidates.push(a)
+      tiles.push({ q: parts[0] as number, r: parts[1] as number })
     }
-    if (!candidates.length) candidates.push({ q: 0, r: 0 })
+    if (!tiles.length) tiles.push({ q: 0, r: 0 })
+    // Stable order, so the choice below cannot drift with Map iteration.
+    tiles.sort((a, b) => (a.q - b.q) || (a.r - b.r))
 
-    const clearOf = (x: number, z: number): boolean =>
-      blocks.every(o => Math.hypot(x - o.x, z - o.z) > o.r + size * 0.18)
-
-    // Try each tile, and several spots around each, until one is in the open.
-    for (const a of candidates) {
-      const w = toWorld(a, size)
-      for (let i = 0; i < 8; i++) {
-        const ang = (i / 8) * Math.PI * 2
-        const x = w.x + Math.cos(ang) * size * 0.42
-        const z = w.z + Math.sin(ang) * size * 0.42
-        if (clearOf(x, z)) { egg.setPosition(x, z); return }
+    /** How much open space a spot has around it — bigger is better. */
+    const clearance = (x: number, z: number): number => {
+      if (world.surface.groundAt(x, z) !== 'green') return -1
+      let worst = Infinity
+      for (const o of clutter) {
+        worst = Math.min(worst, Math.hypot(x - o.x, z - o.z) - o.r)
+        if (worst <= 0) return -1
       }
-      if (clearOf(w.x, w.z)) { egg.setPosition(w.x, w.z); return }
+      return worst
     }
 
-    // Nowhere clear: put it on the home rock, which props always leave empty.
+    // The egg's own footprint, plus room for a finger either side of it.
+    const NEEDED = size * 0.30
+
+    let best: { x: number; z: number; room: number } | null = null
+    for (const a of tiles) {
+      const w = toWorld(a, size)
+      for (let i = 0; i < 13; i++) {
+        // A coarse spiral over the tile rather than one ring, so a tile with
+        // a clump on one side is still usable on the other.
+        const ang = (i / 13) * Math.PI * 2 * 3
+        const rad = size * (i === 0 ? 0 : 0.14 + (i / 13) * 0.42)
+        const x = w.x + Math.cos(ang) * rad
+        const z = w.z + Math.sin(ang) * rad
+        const room = clearance(x, z)
+        if (room >= NEEDED) { egg.setPosition(x, z); return }
+        if (room > 0 && (!best || room > best.room)) best = { x, z, room }
+      }
+    }
+
+    // Nowhere roomy: take the best of a bad lot rather than none at all.
+    if (best) { egg.setPosition(best.x, best.z); return }
     const home = toWorld({ q: 0, r: 0 }, size)
-    egg.setPosition(home.x + size * 0.32, home.z + size * 0.32)
+    egg.setPosition(home.x, home.z)
   }
 
   function refresh(): void {
     world.setIsland(flow.island)
-    void props.sync(flow.island, world.models.size).then(() => {
+    void props.sync(flow.island, world.models.size, world.surface).then(() => {
       pets.setObstacles(props.obstacles())
       // Re-site the egg now the scenery is known: obstacles() is empty until
       // the props have loaded, so the first placement cannot see the trees.

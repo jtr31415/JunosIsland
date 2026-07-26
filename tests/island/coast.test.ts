@@ -14,6 +14,7 @@ import { fileURLToPath } from 'node:url'
 import {
   COAST_CANONICAL, COAST_VARIANTS, longestRun, waterMask, lookFor,
 } from '../../src/island/world/coast'
+import type { CoastVariant } from '../../src/island/world/coast'
 import { createIsland, place } from '../../src/island/world/grid'
 import type { Island } from '../../src/island/world/grid'
 import { DIRECTIONS, toWorld, key, distance } from '../../src/island/world/hex'
@@ -261,7 +262,9 @@ describe('lookFor', () => {
       if (type !== 'grass') continue
       const [q, r] = k.split(',').map(Number)
       const at = { q: q as number, r: r as number }
-      if (waterMask(i, at) === 0) continue
+      const arc = longestRun(waterMask(i, at))
+      // Arcs of five and six have no model — see MAX_COAST_ARC.
+      if (arc.length === 0 || arc.length > 4) continue
       expect(lookFor(i, at).kind).toBe('coast')
     }
   })
@@ -286,11 +289,42 @@ describe('lookFor', () => {
     }
   })
 
+  it('leaves the lonely rock a WHOLE tile, not a corner of one', () => {
+    /*
+     * Water on all six sides. The first version borrowed the four-edge model,
+     * whose waterless variant cuts two thirds of the hex away — so the very
+     * first tile of the game rendered as a sliver of sand with Fred standing
+     * on the corner. An island is not a coastline; it keeps its whole hex.
+     */
+    expect(lookFor(createIsland(), { q: 0, r: 0 })).toEqual({ kind: 'grass', turns: 0 })
+  })
+
+  it('keeps a five-edge spit whole too', () => {
+    // Two tiles in the open sea: each has five wet edges and one neighbour.
+    const pair = place(createIsland(), DIRECTIONS[0] as Axial, 'grass')
+    expect(lookFor(pair, { q: 0, r: 0 })).toEqual({ kind: 'grass', turns: 0 })
+    expect(lookFor(pair, DIRECTIONS[0] as Axial)).toEqual({ kind: 'grass', turns: 0 })
+  })
+
   it('picks the arc-length model that matches the shoreline', () => {
-    // Fred's lonely rock: water on all six sides, so the widest model there is.
-    const look = lookFor(createIsland(), { q: 0, r: 0 })
+    // A tile on the rim of a solid blob: land behind it, sea in front.
+    const look = lookFor(pondInLand(), { q: 1, r: 1 })
     expect(look.kind).toBe('coast')
-    if (look.kind === 'coast') expect(look.variant).toBe('D')
+    if (look.kind === 'coast') {
+      const arc = longestRun(waterMask(pondInLand(), { q: 1, r: 1 }))
+      expect(COAST_CANONICAL[look.variant].length).toBe(arc.length)
+    }
+  })
+
+  it('only ever draws a coast where a model actually fits', () => {
+    // The property behind MAX_COAST_ARC: no mask may resolve to a variant
+    // whose arc does not match, and none above four may resolve at all.
+    for (let mask = 0; mask < 64; mask++) {
+      const arc = longestRun(mask)
+      if (arc.length === 0 || arc.length > 4) continue
+      const variant = COAST_VARIANTS[arc.length - 1] as CoastVariant
+      expect(COAST_CANONICAL[variant].length).toBe(arc.length)
+    }
   })
 
   it('re-sands a neighbour when a tile is placed beside it', () => {
@@ -300,10 +334,16 @@ describe('lookFor', () => {
      * coastline would have gone stale exactly here.
      */
     const lone = createIsland()
-    const before = lookFor(lone, { q: 0, r: 0 })
-    const after = lookFor(place(lone, DIRECTIONS[0] as never, 'grass'), { q: 0, r: 0 })
-    expect(before).not.toEqual(after)
+    expect(lookFor(lone, { q: 0, r: 0 }).kind).toBe('grass')
+
+    // Two neighbours, so the rock drops from six wet edges to four and
+    // crosses from "island" into "shoreline" without being touched itself.
+    let grown = place(lone, DIRECTIONS[0] as Axial, 'grass')
+    grown = place(grown, DIRECTIONS[1] as Axial, 'grass')
+
+    const after = lookFor(grown, { q: 0, r: 0 })
     expect(after.kind).toBe('coast')
+    if (after.kind === 'coast') expect(after.variant).toBe('D')
   })
 
   it('is stable — the same island always draws the same coastline', () => {

@@ -91,15 +91,27 @@ export function longestRun(mask: number): Run {
 }
 
 /**
+ * The widest arc the models cover. Beyond it, a tile is not a coast at all.
+ *
+ * A coast model is land on one side and sea on the other, and the waterless
+ * variants CUT THE SEA SIDE AWAY so the ocean shows through. That is the right
+ * trade for a headland and completely wrong for an island: borrowing the
+ * four-edge model for a tile with six wet edges deleted two thirds of the hex
+ * and left Fred standing on a corner of his own rock. Above this width there
+ * is no land side to stand on, so the tile stays a whole grass hex.
+ */
+const MAX_COAST_ARC = 4
+
+/**
  * How to draw one owned tile.
  *
- * Two honest limitations, both of which degrade to something ordinary rather
- * than something broken:
+ * Two honest limitations, both of which degrade to a plain hex rather than to
+ * something broken:
  *
- *   - The pack has models for one to four adjacent water edges. A tile with
- *     five or six — a spit, or Fred's lonely rock before anything is built
- *     beside it — borrows the four-edge model, so one or two edges keep the
- *     old grass cliff. Rare, and much better than no sand at all.
+ *   - Arcs of five or six have no model and no sensible substitute, so they
+ *     draw as whole grass with the old cliff edge. That covers Fred's lonely
+ *     rock and the odd spit — and a full tile she can see is worth more than
+ *     a beach that eats it (brief §18).
  *   - A tile with water on two OPPOSITE sides is not one arc but two, and no
  *     single model can serve both. The longer arc wins and the shorter one
  *     stays a cliff. Choosing the longest is what keeps the coastline
@@ -109,9 +121,9 @@ export function lookFor(island: Island, a: Axial): TileLook {
   if (tileAt(island, a) === 'water') return { kind: 'water', turns: 0 }
 
   const run = longestRun(waterMask(island, a))
-  if (run.length === 0) return { kind: 'grass', turns: 0 }
+  if (run.length === 0 || run.length > MAX_COAST_ARC) return { kind: 'grass', turns: 0 }
 
-  const variant = COAST_VARIANTS[Math.min(run.length, 4) - 1] as CoastVariant
+  const variant = COAST_VARIANTS[run.length - 1] as CoastVariant
   const canonical = COAST_CANONICAL[variant]
   /*
    * rotation.y = turns * PI/3 moves the model's direction k to k + turns.

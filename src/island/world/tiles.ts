@@ -258,3 +258,58 @@ export function createSocketField(models: TileModels, capacity = 128): {
     setVisible(v: boolean) { group.visible = v },
   }
 }
+
+/* --------------------------------------------------------------- surfaces */
+
+/**
+ * What is underfoot at a point: grass, the sand of a coast ramp, or open sea.
+ *
+ * Measured from the models rather than assumed. On a coast tile the top face
+ * sits at y = 0 and reads green, the sand band runs from about -0.10 down to
+ * the waterline at -0.20, and the water side is cut away entirely — so height
+ * alone separates the three cleanly, with no need to sample the atlas.
+ */
+export type Ground = 'green' | 'sand' | 'none'
+
+/** Everything below this is sand; at or above it, grass. */
+const SAND_TOP = -0.07
+
+export interface Surface {
+  /** Ground height at a world point, or null where there is no tile at all. */
+  heightAt(x: number, z: number): number | null
+  groundAt(x: number, z: number): Ground
+}
+
+/**
+ * Ask the actual tile meshes what the ground is doing at a point.
+ *
+ * This exists because scenery used to be placed at a fixed offset from a
+ * tile's centre and dropped at y = 0 — which was fine while every tile was a
+ * flat full hex, and broke the moment coast tiles arrived: a tree offset
+ * toward the water landed over the cut-away part of the hex and hung in the
+ * air above the sea. Raycasting the real geometry answers "is there ground
+ * here, and how high" for every model, rotation and future elevation at once,
+ * which no amount of arithmetic about arcs would.
+ */
+export function createSurface(field: TileField): Surface {
+  const ray = new THREE.Raycaster()
+  const down = new THREE.Vector3(0, -1, 0)
+  const from = new THREE.Vector3()
+
+  const hit = (x: number, z: number): number | null => {
+    // Start well above anything the island can grow, and look straight down.
+    from.set(x, 8, z)
+    ray.set(from, down)
+    const hits = ray.intersectObjects(field.group.children, false)
+    return hits[0] ? hits[0].point.y : null
+  }
+
+  return {
+    heightAt: hit,
+    groundAt(x, z) {
+      const y = hit(x, z)
+      if (y === null) return 'none'
+      return y >= SAND_TOP ? 'green' : 'sand'
+    },
+  }
+}
