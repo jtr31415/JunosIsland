@@ -21,6 +21,7 @@ import { GREEN, RED, CONFUSABLE, groupOf } from '../../src/core/wordlists'
 import { GRAPHS } from '../../src/core/segmentation'
 import { buildPool, buildNeighbours } from '../../src/core/neighbours'
 import { AL_ONSETS, AL_VOWELS, AL_CODAS_SHORT, AL_CODAS_LONG, REAL_BLOCK } from '../../src/core/alien'
+import { THEMES } from '../../src/core/themes'
 
 const src = readFileSync(resolve(__dirname, '../../v0/junos-words.html'), 'utf8').split(/\r?\n/)
 
@@ -70,5 +71,12 @@ describe('core data matches the frozen original verbatim', () => {
     expect(AL_CODAS_SHORT).toEqual(o.AL_CODAS_SHORT)
     expect(AL_CODAS_LONG).toEqual(o.AL_CODAS_LONG)
     expect([...REAL_BLOCK].sort()).toEqual([...(o.REAL_BLOCK as Set<string>)].sort())
+  })
+
+  it('theme palettes, including every hex value (v0:507-515)', () => {
+    // A transposed hex digit is invisible to a shape-only test but changes the
+    // particle colours, so compare the whole structure.
+    const o = evalRange(507, 515, 'THEMES')
+    expect(THEMES).toEqual(o.THEMES)
   })
 })
