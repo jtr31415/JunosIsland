@@ -55,26 +55,42 @@ export function createFred(): Fred {
   const box = (w: number, h: number, d: number, c: number): THREE.Mesh =>
     new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(c))
 
+  /**
+   * A rounded lump: a sphere squashed to the given proportions.
+   *
+   * Frogs have no hard edges. Cubes gave Fred a made-of-bricks look that read
+   * as construction rather than creature, so the parts a child actually looks
+   * at — the eyes and the legs — are spheres. The torso stays boxy on purpose:
+   * it keeps him in the same chunky family as the cube pets, and the contrast
+   * is what makes the rounded parts read as anatomy.
+   */
+  const lump = (w: number, h: number, d: number, c: number): THREE.Mesh => {
+    const m = new THREE.Mesh(new THREE.SphereGeometry(0.5, 14, 10), mat(c))
+    m.scale.set(w, h, d)
+    return m
+  }
+
   // Wide and low, the way a sitting frog is.
-  const torso = box(0.82, 0.5, 0.66, BODY)
+  const torso = lump(0.9, 0.6, 0.76, BODY)
   torso.position.y = 0.3
   body.add(torso)
 
   // The head is its own group so it can turn independently.
   const head = new THREE.Group()
-  const skull = box(0.7, 0.36, 0.5, BODY)
-  skull.position.set(0, 0.62, 0.06)
+  const skull = lump(0.74, 0.44, 0.58, BODY)
+  skull.position.set(0, 0.6, 0.06)
   head.add(skull)
 
   // Eye cubes PROTRUDING above the skull, not set into it.
+  // Bulging domes on stalks, the way a frog's eyes actually sit.
   const eyes = new THREE.Group()
   for (const side of [-1, 1]) {
-    const socket = box(0.24, 0.22, 0.24, BODY)
-    socket.position.set(side * 0.21, 0.85, 0.04)
-    const white = box(0.16, 0.15, 0.06, EYE_WHITE)
-    white.position.set(side * 0.21, 0.86, 0.17)
-    const pupil = box(0.075, 0.1, 0.04, PUPIL)
-    pupil.position.set(side * 0.21, 0.86, 0.21)
+    const socket = lump(0.28, 0.28, 0.28, BODY)
+    socket.position.set(side * 0.2, 0.82, 0.04)
+    const white = lump(0.2, 0.2, 0.14, EYE_WHITE)
+    white.position.set(side * 0.2, 0.84, 0.14)
+    const pupil = lump(0.1, 0.13, 0.07, PUPIL)
+    pupil.position.set(side * 0.2, 0.84, 0.2)
     eyes.add(socket, white, pupil)
   }
   head.add(eyes)
@@ -90,8 +106,8 @@ export function createFred(): Fred {
     head.add(corner)
   }
 
-  const jaw = box(0.62, 0.14, 0.44, BODY_DARK)
-  jaw.position.set(0, 0.44, 0.1)
+  const jaw = lump(0.68, 0.2, 0.5, BODY_DARK)
+  jaw.position.set(0, 0.42, 0.1)
   head.add(jaw)
 
   const throat = new THREE.Mesh(new THREE.SphereGeometry(0.19, 12, 9), mat(THROAT))
@@ -101,8 +117,8 @@ export function createFred(): Fred {
 
   body.add(head)
 
-  const chin = box(0.3, 0.14, 0.05, BELLY)
-  chin.position.set(0, 0.17, 0.34)
+  const chin = lump(0.34, 0.18, 0.1, BELLY)
+  chin.position.set(0, 0.16, 0.34)
   body.add(chin)
 
   /*
@@ -113,13 +129,13 @@ export function createFred(): Fred {
   const hindLegs: THREE.Group[] = []
   for (const side of [-1, 1]) {
     const leg = new THREE.Group()
-    const thigh = box(0.2, 0.34, 0.26, BODY)
-    thigh.position.set(side * 0.46, 0.4, -0.06)
+    const thigh = lump(0.26, 0.4, 0.32, BODY)
+    thigh.position.set(side * 0.44, 0.4, -0.04)
     thigh.rotation.z = side * -0.35
-    const shin = box(0.17, 0.3, 0.22, BODY_DARK)
-    shin.position.set(side * 0.52, 0.16, 0.1)
-    const foot = box(0.2, 0.09, 0.32, BODY_DARK)
-    foot.position.set(side * 0.52, 0.05, 0.26)
+    const shin = lump(0.2, 0.34, 0.26, BODY_DARK)
+    shin.position.set(side * 0.5, 0.16, 0.1)
+    const foot = lump(0.26, 0.11, 0.38, BODY_DARK)
+    foot.position.set(side * 0.5, 0.05, 0.26)
     leg.add(thigh, shin, foot)
     hindLegs.push(leg)
     body.add(leg)
@@ -128,16 +144,16 @@ export function createFred(): Fred {
   // FRONT ARMS: long and straight, propping the chest up.
   const arms: THREE.Mesh[] = []
   for (const side of [-1, 1]) {
-    const arm = box(0.12, 0.3, 0.12, BODY)
-    arm.position.set(side * 0.3, 0.16, 0.3)
-    const hand = box(0.16, 0.07, 0.2, BODY_DARK)
-    hand.position.set(side * 0.3, 0.03, 0.36)
+    const arm = lump(0.15, 0.34, 0.15, BODY)
+    arm.position.set(side * 0.29, 0.17, 0.3)
+    const hand = lump(0.2, 0.09, 0.24, BODY_DARK)
+    hand.position.set(side * 0.29, 0.03, 0.36)
     body.add(arm, hand)
     arms.push(arm)
   }
 
   // The leaf hat: the clearest signal that he is not collectible.
-  const stalk = box(0.045, 0.13, 0.045, LEAF)
+  const stalk = lump(0.055, 0.15, 0.055, LEAF)
   stalk.position.set(0.05, 1.02, 0)
   const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.19, 10, 7), mat(LEAF))
   leaf.scale.set(1, 0.26, 0.6)
@@ -145,10 +161,16 @@ export function createFred(): Fred {
   leaf.rotation.z = -0.4
   body.add(stalk, leaf)
 
-  const BASE = 0.62
+  /*
+   * Sized RELATIVE TO A PET, which is the only comparison that matters: the
+   * brief asks for "slightly larger than a collectible pet" so he reads as
+   * character rather than catchable. Pets render at 0.16 of their ~1.5-unit
+   * models; this puts Fred about half again their height, not triple it.
+   */
+  const BASE = 0.3
   body.scale.setScalar(BASE)
   group.add(body)
-  group.add(createBlobShadow(0.32))
+  group.add(createBlobShadow(0.16))
   group.userData.pick = { kind: 'fred' }
 
   let hopT = -1

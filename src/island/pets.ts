@@ -94,11 +94,13 @@ export function createPetField(base = ''): PetField {
         // Kenney pets stand ~1.5 units tall against a 2.0-wide hex, which
         // reads as a monument rather than a pet. Scale so one comfortably
         // fits its tile with room to wander.
-        // A pet should sit ON its tile, not straddle it. The Kenney models
-        // stand ~1.5 units against a 2.0-wide hex, which read as monuments.
-        root.scale.setScalar(0.32)
+        // A pet should sit ON its tile with room around it, not fill it. The
+        // Kenney models stand ~1.5 units against a 2.0-wide hex, so they need
+        // taking right down before they read as little creatures in a world
+        // rather than statues on a plinth.
+        root.scale.setScalar(0.16)
         holder.add(root)
-        holder.add(createBlobShadow(0.34))
+        holder.add(createBlobShadow(0.17))
         const w = toWorld(pet.at as Axial, hexSize)
         holder.position.set(w.x, 0, w.z)
         holder.userData.pick = { kind: 'pet', id: pet.id }
@@ -142,7 +144,7 @@ export function createPetField(base = ''): PetField {
          * a soft push, not collision — a pet that got stuck against a rock
          * would look broken, and nothing here is worth a pathfinder.
          */
-        const SEP = hexSize * 0.34
+        const SEP = hexSize * 0.2
         for (const o of others) {
           if (o === l) continue
           const dx = pos.x - o.root.position.x

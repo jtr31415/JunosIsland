@@ -43,6 +43,12 @@ export function createEgg(): Egg {
   }
 
   group.add(shell, spots, createBlobShadow(0.28))
+  /*
+   * Sized against the pets, not the tile. An egg should look like something a
+   * creature comes out of — a little bigger than the pet it holds, never a
+   * boulder sitting on the grass.
+   */
+  group.scale.setScalar(0.42)
   group.userData.pick = { kind: 'egg' }
 
   let shudder = 0

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { toSave, fromSave, loadIsland, saveIsland } from '../../src/island/save'
 import {
   createFlow, challengePassed, tapEgg, tapSum, chooseTile, placeTile,
-  ROUNDS_PER_HATCH, SUMS_PER_TILE,
+  pagesForEgg, sumsForTile,
 } from '../../src/island/flow'
 import type { Flow } from '../../src/island/flow'
 import { count, tileAt } from '../../src/island/world/grid'
@@ -25,10 +25,10 @@ beforeEach(() => { mem = new MemStorage() })
 /** An island with some history: a pet, and a placed water tile. */
 function playedFlow(): Flow {
   let f: Flow = createFlow()
-  for (let i = 0; i < ROUNDS_PER_HATCH; i++) {
+  for (let i = 0, n = pagesForEgg(f); i < n; i++) {
     f = challengePassed(tapEgg({ ...f, phase: 'free' }), { name: 'Bimo', species: 'animal-fox' })
   }
-  for (let i = 0; i < SUMS_PER_TILE; i++) f = challengePassed(tapSum({ ...f, phase: 'free' }))
+  for (let i = 0, n = sumsForTile(f); i < n; i++) f = challengePassed(tapSum({ ...f, phase: 'free' }))
   f = chooseTile(f, 'water')
   f = placeTile(f, { q: 1, r: 0 })
   return f
@@ -60,7 +60,7 @@ describe('island save', () => {
     // Brief section 18: nothing a child owns can be lost or expire
     const store = createLocalStore(mem)
     let f: Flow = createFlow()
-    for (let i = 0; i < SUMS_PER_TILE; i++) f = challengePassed(tapSum({ ...f, phase: 'free' }))
+    for (let i = 0, n = sumsForTile(f); i < n; i++) f = challengePassed(tapSum({ ...f, phase: 'free' }))
     expect(f.bankedTiles).toBe(1)
     await saveIsland(store, 'p1', f, true)
     const { flow } = await loadIsland(store, 'p1')
@@ -115,7 +115,9 @@ describe('island save — owed land survives visibly', () => {
     // faithfully saved, can never be spent (brief section 18).
     const store = createLocalStore(mem)
     let owed: Flow = createFlow()
-    for (let i = 0; i < SUMS_PER_TILE; i++) owed = challengePassed(tapSum({ ...owed, phase: 'free' }))
+    for (let i = 0, n = sumsForTile(owed); i < n; i++) {
+      owed = challengePassed(tapSum({ ...owed, phase: 'free' }))
+    }
     expect(owed.bankedTiles).toBe(1)
     await saveIsland(store, 'p1', owed, true)
     const { flow } = await loadIsland(store, 'p1')

@@ -27,7 +27,8 @@ import type { InteractionPorts } from './interactions'
 import type { Flow } from './flow'
 import type { TileType } from './world/grid'
 import { sockets } from './world/grid'
-import { toWorld } from './world/hex'
+import { toWorld, key, neighbours } from './world/hex'
+import type { Axial } from './world/hex'
 
 import { createSpeaker } from '../platform/speech'
 import { createSfx } from '../platform/audio'
@@ -96,12 +97,35 @@ async function boot(): Promise<void> {
     },
   })
 
-  /** Put the egg just off the island's edge, bobbing in the shallows. */
+  /**
+   * The egg sits ON the shore — an owned tile at the island's edge — never in
+   * open water. It washed ashore; it is not floating out at sea waiting to be
+   * fetched, and a child should never have to tap the ocean to reach it.
+   *
+   * Preference order: a coastal grass tile (one with an empty neighbour), then
+   * any grass tile, then the home rock.
+   */
   function placeEgg(): void {
-    const s = sockets(flow.island)[0]
-    if (!s) return
-    const w = toWorld(s, world.models.size)
-    egg.setPosition(w.x, w.z)
+    const open = new Set(sockets(flow.island).map(key))
+    let best: Axial | null = null
+    let bestIsCoastal = false
+
+    for (const [k, type] of flow.island.tiles) {
+      if (type !== 'grass') continue
+      const parts = k.split(',').map(Number)
+      const a: Axial = { q: parts[0] as number, r: parts[1] as number }
+      const coastal = neighbours(a).some(n => open.has(key(n)))
+      // Keep off the home rock unless it is all we have: Fred stands there.
+      const isHome = a.q === 0 && a.r === 0
+      if (isHome && flow.island.tiles.size > 1) continue
+      if (!best || (coastal && !bestIsCoastal)) { best = a; bestIsCoastal = coastal }
+      if (coastal) break
+    }
+
+    const at = best ?? { q: 0, r: 0 }
+    const w = toWorld(at, world.models.size)
+    // Nudged toward the tile's edge so it reads as washed up, not placed.
+    egg.setPosition(w.x + world.models.size * 0.3, w.z + world.models.size * 0.3)
   }
 
   function refresh(): void {

@@ -5,7 +5,7 @@ import {
 import type { InteractionPorts } from '../../src/island/interactions'
 import {
   createFlow, tapEgg, tapSum, challengePassed, chooseTile,
-  ROUNDS_PER_HATCH, SUMS_PER_TILE,
+  pagesForEgg, sumsForTile,
 } from '../../src/island/flow'
 import type { Flow } from '../../src/island/flow'
 import { count } from '../../src/island/world/grid'
@@ -28,13 +28,13 @@ function ports(over: Partial<InteractionPorts> = {}): InteractionPorts {
 
 /** Answer enough sums to actually earn a tile (pacing: SUMS_PER_TILE). */
 function earnTile(f: Flow = createFlow()): Flow {
-  for (let i = 0; i < SUMS_PER_TILE; i++) f = challengePassed(tapSum({ ...f, phase: 'free' }))
+  for (let i = 0, n = sumsForTile(f); i < n; i++) f = challengePassed(tapSum({ ...f, phase: 'free' }))
   return f
 }
 
 /** Read enough rounds to actually hatch (pacing: ROUNDS_PER_HATCH). */
 function hatchOne(f: Flow = createFlow(), name = 'Bimo'): Flow {
-  for (let i = 0; i < ROUNDS_PER_HATCH; i++) {
+  for (let i = 0, n = pagesForEgg(f); i < n; i++) {
     f = challengePassed(tapEgg({ ...f, phase: 'free' }), { name, species: 'animal-fox' })
   }
   return f
@@ -177,9 +177,10 @@ describe('finishing and leaving a challenge', () => {
     expect(next.pets).toHaveLength(0)
   })
 
-  it('a legitimately opened round counts toward the hatch', () => {
+  it('a legitimately opened round earns the first pet', () => {
+    // The curve makes the FIRST egg a single page, so one round hatches it
     const next = handleChallengePassed(tapEgg(createFlow()), { name: 'Bimo', species: 'animal-fox' })
-    expect(next.readProgress).toBe(1)
+    expect(next.pets).toHaveLength(1)
     expect(hatchOne().pets).toHaveLength(1)
   })
 
@@ -208,9 +209,9 @@ describe('a completed round is never discarded', () => {
     expect(handleChallengePassed(placing)).toBe(placing)
   })
 
-  it('a legitimately passed sum counts toward the tile', () => {
+  it('a legitimately passed sum earns the first tile', () => {
     const next = handleChallengePassed(tapSum(createFlow()))
-    expect(next.sumProgress).toBe(1)
+    expect(next.bankedTiles).toBe(1)
     expect(earnTile().bankedTiles).toBe(1)
   })
 

@@ -15,14 +15,19 @@ import { key } from './world/hex'
 import type { Axial } from './world/hex'
 
 /**
- * How much work each reward costs.
+ * How much work each reward costs — from the curve, never a constant.
  *
- * The first build gave a pet per reading round and a tile per sum, which made
- * both feel weightless — the island filled up before anything had been earned.
- * A hatch should be an occasion.
+ * A flat price made the first hatch as expensive as the twentieth, which is
+ * wrong at both ends: the first should be nearly free so the loop teaches
+ * itself, and later ones should be real work. The curve does both and
+ * flattens rather than running away (slice-1 spec §4).
  */
-export const ROUNDS_PER_HATCH = 5
-export const SUMS_PER_TILE = 10
+import { eggCost, tileCost } from './balance'
+
+/** Pages this egg costs. Eggs are counted by how many have already hatched. */
+export const pagesForEgg = (f: Flow): number => eggCost(f.pets.length + 1)
+/** Sums this tile costs. Tiles counted by how many have been placed. */
+export const sumsForTile = (f: Flow): number => tileCost(f.tilesEarned + 1)
 
 export type Phase = 'opening' | 'free' | 'challenge' | 'placing'
 export type ChallengeKind = 'read' | 'sum' | null
@@ -50,6 +55,8 @@ export interface Flow {
   readProgress: number
   /** Sums answered toward the next tile. Never decays. */
   sumProgress: number
+  /** How many tiles have been earned in total — drives the cost curve. */
+  tilesEarned: number
 }
 
 export function createFlow(): Flow {
@@ -63,13 +70,16 @@ export function createFlow(): Flow {
     eggPresent: true,
     readProgress: 0,
     sumProgress: 0,
+    tilesEarned: 0,
   }
 }
 
-/** 0..1 toward the next hatch — drives the egg's glow. */
-export const hatchProgress = (f: Flow): number => f.readProgress / ROUNDS_PER_HATCH
+/** 0..1 toward the next hatch — drives the egg's crack stages. */
+export const hatchProgress = (f: Flow): number =>
+  Math.min(1, f.readProgress / Math.max(1, pagesForEgg(f)))
 /** 0..1 toward the next tile. */
-export const landProgress = (f: Flow): number => f.sumProgress / SUMS_PER_TILE
+export const landProgress = (f: Flow): number =>
+  Math.min(1, f.sumProgress / Math.max(1, sumsForTile(f)))
 
 /** Reading hatches eggs (brief section 4). */
 export function tapEgg(f: Flow): Flow {
@@ -96,7 +106,7 @@ export function challengePassed(f: Flow, hatch?: HatchDetails): Flow {
 
   if (f.challenge === 'read' && hatch) {
     const readProgress = f.readProgress + 1
-    if (readProgress < ROUNDS_PER_HATCH) {
+    if (readProgress < pagesForEgg(f)) {
       // Not yet. The egg is closer, and that progress can never be lost.
       return { ...f, phase: 'free', challenge: null, readProgress }
     }
@@ -120,7 +130,7 @@ export function challengePassed(f: Flow, hatch?: HatchDetails): Flow {
 
   if (f.challenge === 'sum') {
     const sumProgress = f.sumProgress + 1
-    if (sumProgress < SUMS_PER_TILE) {
+    if (sumProgress < sumsForTile(f)) {
       return { ...f, phase: 'free', challenge: null, sumProgress }
     }
     return {
@@ -128,6 +138,7 @@ export function challengePassed(f: Flow, hatch?: HatchDetails): Flow {
       phase: 'placing',
       challenge: null,
       bankedTiles: f.bankedTiles + 1,
+      tilesEarned: f.tilesEarned + 1,
       sumProgress: 0,
     }
   }

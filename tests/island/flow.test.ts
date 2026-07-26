@@ -3,21 +3,25 @@ import {
   createFlow, tapEgg, tapSum, challengePassed, challengeFailed,
   chooseTile, placeTile, tileOffer,
 } from '../../src/island/flow'
-import { ROUNDS_PER_HATCH, SUMS_PER_TILE, hatchProgress, landProgress } from '../../src/island/flow'
+import { hatchProgress, landProgress, pagesForEgg, sumsForTile } from '../../src/island/flow'
 import type { Flow } from '../../src/island/flow'
 import { count } from '../../src/island/world/grid'
 
-/** Read enough rounds to actually hatch: a pet is meant to be an occasion. */
+/**
+ * Read enough pages to actually hatch. The cost comes from the CURVE, so
+ * these helpers ask the flow what it wants rather than assuming a constant —
+ * a test that hardcoded 5 would quietly rot the moment balance.json changed.
+ */
 function readUntilHatch(f: Flow, name = 'Bimo', species = 'animal-fox'): Flow {
-  for (let i = 0; i < ROUNDS_PER_HATCH; i++) {
-    f = challengePassed(tapEgg(f), { name, species })
-  }
+  const need = pagesForEgg(f)
+  for (let i = 0; i < need; i++) f = challengePassed(tapEgg({ ...f, phase: 'free' }), { name, species })
   return f
 }
 
-/** Answer enough sums to earn one tile. */
+/** Answer enough sums to earn one tile, whatever the curve currently asks. */
 function sumsUntilTile(f: Flow): Flow {
-  for (let i = 0; i < SUMS_PER_TILE; i++) f = challengePassed(tapSum({ ...f, phase: 'free' }))
+  const need = sumsForTile(f)
+  for (let i = 0; i < need; i++) f = challengePassed(tapSum({ ...f, phase: 'free' }))
   return f
 }
 
@@ -37,30 +41,37 @@ describe('flow — the earn loop', () => {
     expect(f.challenge).toBe('read')
   })
 
-  it('takes several reading rounds to hatch one pet', () => {
-    // A pet per round made hatching weightless — the island filled up before
-    // anything felt earned.
-    let f = createFlow()
-    for (let i = 1; i < ROUNDS_PER_HATCH; i++) {
-      f = challengePassed(tapEgg(f), { name: 'Bimo', species: 'animal-fox' })
-      expect(f.pets).toHaveLength(0)
-      expect(f.readProgress).toBe(i)
-    }
-    f = challengePassed(tapEgg(f), { name: 'Bimo', species: 'animal-fox' })
+  it('the FIRST egg costs a single page, so the loop teaches itself', () => {
+    // Slice-1 spec §1 beat 2 and §4: base 1. The very first hatch must be
+    // almost free, or the child never sees what reading is FOR.
+    const f = challengePassed(tapEgg(createFlow()), { name: 'Bimo', species: 'animal-fox' })
     expect(f.pets).toHaveLength(1)
-    expect(f.readProgress).toBe(0)        // reset for the next egg
-    expect(f.phase).toBe('free')
+  })
+
+  it('later eggs cost progressively more', () => {
+    let f = readUntilHatch(createFlow())
+    const second = pagesForEgg(f)
+    expect(second).toBeGreaterThan(1)
+    for (let i = 1; i < second; i++) {
+      f = challengePassed(tapEgg({ ...f, phase: 'free' }), { name: 'Two', species: 'animal-bee' })
+      expect(f.pets).toHaveLength(1)      // not yet
+    }
+    f = challengePassed(tapEgg({ ...f, phase: 'free' }), { name: 'Two', species: 'animal-bee' })
+    expect(f.pets).toHaveLength(2)
+    expect(f.readProgress).toBe(0)
   })
 
   it('reports progress toward the next hatch and the next tile', () => {
-    let f = challengePassed(tapEgg(createFlow()), { name: 'B', species: 'animal-bee' })
-    expect(hatchProgress(f)).toBeCloseTo(1 / ROUNDS_PER_HATCH)
-    f = challengePassed(tapSum({ ...f, phase: 'free' }))
-    expect(landProgress(f)).toBeCloseTo(1 / SUMS_PER_TILE)
+    let f = readUntilHatch(createFlow())          // past the free first egg
+    const need = pagesForEgg(f)
+    f = challengePassed(tapEgg({ ...f, phase: 'free' }), { name: 'B', species: 'animal-bee' })
+    expect(hatchProgress(f)).toBeCloseTo(1 / need)
+    expect(landProgress(createFlow())).toBe(0)
   })
 
   it('progress is never lost by a wrong answer', () => {
-    let f = challengePassed(tapEgg(createFlow()), { name: 'B', species: 'animal-bee' })
+    let f = readUntilHatch(createFlow())
+    f = challengePassed(tapEgg({ ...f, phase: 'free' }), { name: 'B', species: 'animal-bee' })
     const before = f.readProgress
     f = challengeFailed(tapEgg(f))
     expect(f.readProgress).toBe(before)
@@ -79,18 +90,20 @@ describe('flow — the earn loop', () => {
     expect(f.challenge).toBe('sum')
   })
 
-  it('takes several sums to earn one tile', () => {
-    // Maths earns land (brief section 4), but land is meant to cost something
-    let f = createFlow()
-    for (let i = 1; i < SUMS_PER_TILE; i++) {
-      f = challengePassed(tapSum(f))
-      expect(f.bankedTiles).toBe(0)
-      expect(f.sumProgress).toBe(i)
-    }
-    f = challengePassed(tapSum(f))
+  it('the first tile costs a single sum, and later ones cost more', () => {
+    // Maths earns land (brief §4); the curve makes the first nearly free
+    let f = challengePassed(tapSum(createFlow()))
     expect(f.bankedTiles).toBe(1)
-    expect(f.sumProgress).toBe(0)
-    expect(f.phase).toBe('placing')
+    expect(f.tilesEarned).toBe(1)
+
+    const second = sumsForTile(f)
+    expect(second).toBeGreaterThan(1)
+    for (let i = 1; i < second; i++) {
+      f = challengePassed(tapSum({ ...f, phase: 'free' }))
+      expect(f.bankedTiles).toBe(1)       // still only the first
+    }
+    f = challengePassed(tapSum({ ...f, phase: 'free' }))
+    expect(f.bankedTiles).toBe(2)
   })
 
   it('a banked tile offers three types to choose from', () => {
