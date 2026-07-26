@@ -135,3 +135,32 @@ describe('flow — the earn loop', () => {
     for (const t of tileOffer(f)) expect(['grass', 'water']).toContain(t)
   })
 })
+
+describe('flow — land owed is always reachable', () => {
+  it('stays in placing while more tiles are owed', () => {
+    // Found at the M1 gate: returning to 'free' with a surplus made the offer
+    // invisible, and no transition re-entered 'placing' except another sum —
+    // so a tile she had earned became permanently unreachable.
+    let f = challengePassed(tapSum(createFlow()))
+    f = challengePassed(tapSum({ ...f, phase: 'free' }))
+    expect(f.bankedTiles).toBe(2)
+    f = chooseTile(f, 'grass')
+    f = placeTile(f, { q: 1, r: 0 })
+    expect(f.bankedTiles).toBe(1)
+    expect(f.phase).toBe('placing')      // still owed one, so still placing
+    f = chooseTile(f, 'water')
+    f = placeTile(f, { q: 0, r: 1 })
+    expect(f.bankedTiles).toBe(0)
+    expect(f.phase).toBe('free')
+  })
+
+  it('never lets a tile be chosen or placed mid-challenge', () => {
+    let f = challengePassed(tapSum(createFlow()))
+    f = { ...f, phase: 'challenge', challenge: 'read' }
+    const chosen = chooseTile(f, 'water')
+    expect(chosen.chosen).toBeNull()
+    const placed = placeTile(f, { q: 1, r: 0 })
+    expect(placed.bankedTiles).toBe(1)   // still owed
+    expect(count(placed.island)).toBe(count(f.island))
+  })
+})

@@ -103,3 +103,25 @@ describe('island save', () => {
     expect(count(sam.flow.island)).toBe(1)
   })
 })
+
+describe('island save — owed land survives visibly', () => {
+  it('resumes in placing when tiles are still owed', async () => {
+    // Otherwise the offer never reappears after a reload and the tile, though
+    // faithfully saved, can never be spent (brief section 18).
+    const store = createLocalStore(mem)
+    const owed = challengePassed(tapSum(createFlow()))
+    expect(owed.bankedTiles).toBe(1)
+    await saveIsland(store, 'p1', owed, true)
+    const { flow } = await loadIsland(store, 'p1')
+    expect(flow.bankedTiles).toBe(1)
+    expect(flow.phase).toBe('placing')
+  })
+
+  it('resumes in free play when nothing is owed', async () => {
+    const store = createLocalStore(mem)
+    await saveIsland(store, 'p1', playedFlow(), true)
+    const { flow } = await loadIsland(store, 'p1')
+    expect(flow.bankedTiles).toBe(0)
+    expect(flow.phase).toBe('free')
+  })
+})

@@ -32,7 +32,9 @@ import { makeDeck } from '../core/decks'
 import { GREEN, RED } from '../core/wordlists'
 import { buildPool, buildNeighbours } from '../core/neighbours'
 import { generateRead } from '../core/generators/read'
+import type { ReadState, ReadPick } from '../core/generators/read'
 import { generateAdd } from '../core/generators/sums'
+import type { SumState, SumItem } from '../core/generators/sums'
 import { petName } from '../core/names'
 
 const canvas = document.getElementById('view') as HTMLCanvasElement
@@ -46,8 +48,8 @@ async function boot(): Promise<void> {
   const drawGreen = makeDeck(defaultRng, GREEN)
   const drawRed = makeDeck(defaultRng, RED)
   const neigh = buildNeighbours(buildPool())
-  const readStore = { history: [], idx: -1 } as { history: any[]; idx: number }
-  const sumStore = { history: [], idx: -1 } as { history: any[]; idx: number }
+  const readStore: ReadState = { history: [], idx: -1 }
+  const sumStore: SumState = { history: [], idx: -1 }
 
   let flow: Flow = createFlow()   // replaced by the save below
 
@@ -77,7 +79,14 @@ async function boot(): Promise<void> {
   const overlay = createOverlay(document.body, {
     speech, sfx,
     onPassed: () => { void passed() },
-    onDismissed: () => { flow = challengeFailed(flow); refresh() },
+    onDismissed: () => {
+      // Leaving costs nothing (brief section 18) — but the story must not stay
+      // armed, or an unrelated hatch later would resume it out of nowhere.
+      openingResumeAt = -1
+      flow = challengeFailed(flow)
+      overlay.say('Tap the egg to read it home — or tap the island for land!')
+      refresh()
+    },
   })
 
   /** Put the egg just off the island's edge, bobbing in the shallows. */
@@ -104,16 +113,27 @@ async function boot(): Promise<void> {
 
   /* ---------- the two verbs ---------- */
 
+  /**
+   * Open a challenge ONLY if the flow transition actually moved us into one.
+   *
+   * Every wiring bug found at the M1 gate had the same shape: a transition
+   * no-ops (wrong phase), main.ts opens the challenge anyway, the child does
+   * the whole round, and challengePassed then matches no branch — so she gets
+   * nothing for real work. Asserting the phase here turns that entire class of
+   * mistake into a visible nothing instead of a swallowed something.
+   */
   function openRead(): void {
-    generateRead(readStore as never, {
-      rng: defaultRng, drawGreen, drawRed, neigh, level: 1,
-    } as never)
-    overlay.openWordFind(readStore.history[readStore.idx])
+    if (flow.phase !== 'challenge' || flow.challenge !== 'read') return
+    generateRead(readStore, { rng: defaultRng, drawGreen, drawRed, neigh, level: 1 })
+    overlay.clearSay()
+    overlay.openWordFind(readStore.history[readStore.idx] as ReadPick[])
   }
 
   function openSum(): void {
-    generateAdd(sumStore as never, defaultRng, 1)
-    overlay.openSum(sumStore.history[sumStore.idx])
+    if (flow.phase !== 'challenge' || flow.challenge !== 'sum') return
+    generateAdd(sumStore, defaultRng, 1)
+    overlay.clearSay()
+    overlay.openSum(sumStore.history[sumStore.idx] as SumItem)
   }
 
   async function passed(): Promise<void> {
@@ -135,6 +155,7 @@ async function boot(): Promise<void> {
         setTimeout(() => { void runOpening(at) }, 2200)
       }
     } else if (flow.challenge === 'sum') {
+      openingResumeAt = -1
       flow = challengePassed(flow)
       speech.speak('You counted us up some land!')
       refresh()
@@ -153,7 +174,11 @@ async function boot(): Promise<void> {
    * is already playable behind it, so nothing is gated on sitting through it.
    */
   async function runOpening(from = 0): Promise<void> {
-    if (inOpening) return
+    // Never start the story over a live round or mid-placement: at beat 6 it
+    // calls tapEgg, which no-ops outside 'free', and the child would then
+    // read a whole round for nothing. At beat 8 openSum would tear down a
+    // half-finished word-find outright.
+    if (inOpening || overlay.isOpen() || flow.phase !== 'free') return
     inOpening = true
     if (from === 0) egg.group.visible = false
 
@@ -266,8 +291,9 @@ async function boot(): Promise<void> {
     }
 
     if (hit.kind === 'fred') {
-      // "tell me again?" — the opening is replayable forever (brief section 3)
-      void runOpening()
+      // "tell me again?" — replayable forever (brief section 3), but only from
+      // free play: runOpening guards this too, belt and braces.
+      if (flow.phase === 'free') void runOpening()
       return
     }
 

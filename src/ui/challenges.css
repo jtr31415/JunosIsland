@@ -12,8 +12,11 @@
  * --ws is set by the renderers themselves (v0:857) to size words to the round.
  */
 
+/* NOTE: --ws is set by the renderers on :root (v0:857) to size words to the
+   round — 19 - n*1.05, down to 6.5vmin at twelve words. Declaring it HERE
+   would shadow that inherited value and freeze every round at one size, so
+   the fallback lives in the var() call instead. */
 #words {
-  --ws: 11vmin;
   display: flex;
   flex-wrap: wrap;
   gap: 0.7rem 0.9rem;
@@ -27,7 +30,7 @@
 .word {
   display: inline-flex;
   align-items: baseline;
-  font-size: clamp(1.5rem, var(--ws), 4.5rem);
+  font-size: clamp(1.4rem, var(--ws, 11vmin), 4.5rem);
   font-weight: 800;
   line-height: 1.1;
   padding: 0.3em 0.55em;
@@ -177,3 +180,14 @@
 
 .tile:active { transform: translateY(.22rem); box-shadow: none; }
 .tile.used { opacity: .3; pointer-events: none; }
+
+/* The way out of a challenge. Quiet, but always reachable. */
+.overlay-back {
+  display: block;
+  margin: 1.2rem auto 0;
+  background: var(--paper);
+  border-radius: 999px;
+  padding: .5rem 1.2rem;
+  font-size: clamp(.85rem, 2.2vmin, 1.05rem);
+  opacity: .75;
+}

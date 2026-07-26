@@ -109,7 +109,13 @@ export function challengeFailed(f: Flow): Flow {
   return { ...f, phase: 'free', challenge: null }
 }
 
-/** Three tile types to pick from; the child chooses, then places. */
+/**
+ * Three tile types to pick from; the child chooses, then places.
+ *
+ * Grass appears twice deliberately: at this stage most of what makes an
+ * island feel like an island is ground, and a child who wants water can
+ * always take it. M2 widens this as biomes arrive.
+ */
 export function tileOffer(f: Flow): TileType[] {
   if (f.bankedTiles < 1) return []
   return ['grass', 'water', 'grass']
@@ -117,6 +123,7 @@ export function tileOffer(f: Flow): TileType[] {
 
 export function chooseTile(f: Flow, t: TileType): Flow {
   if (f.bankedTiles < 1) return f
+  if (f.phase === 'challenge') return f      // never mid-round
   return { ...f, chosen: t, phase: 'placing' }
 }
 
@@ -128,14 +135,17 @@ export function chooseTile(f: Flow, t: TileType): Flow {
  */
 export function placeTile(f: Flow, a: Axial): Flow {
   if (f.bankedTiles < 1) return f
+  if (f.phase === 'challenge') return f      // never mid-round
   const legal = sockets(f.island).some(s => key(s) === key(a))
   if (!legal) return f
+  const bankedTiles = f.bankedTiles - 1
   return {
     ...f,
     island: place(f.island, a, f.chosen ?? 'grass'),
-    bankedTiles: f.bankedTiles - 1,
+    bankedTiles,
     chosen: null,
-    phase: 'free',
+    // Still owed land? Stay in placing, or the surplus becomes unreachable.
+    phase: bankedTiles > 0 ? 'placing' : 'free',
   }
 }
 

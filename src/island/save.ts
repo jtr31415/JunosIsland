@@ -42,9 +42,12 @@ export function fromSave(save: IslandSave | null): { flow: Flow; openingSeen: bo
       island,
       pets: Array.isArray(save.pets) ? save.pets : [],
       bankedTiles: typeof save.bankedTiles === 'number' ? save.bankedTiles : 0,
-      // A saved game always resumes in free play: never mid-challenge, so a
-      // reload can never strand the child in a round she cannot finish.
-      phase: 'free',
+      // Never mid-challenge, so a reload cannot strand the child in a round
+      // she is unable to finish. But if land is still owed, resume in
+      // 'placing' — otherwise the offer never reappears and a tile she has
+      // already earned becomes permanently unreachable (brief section 18).
+      phase: (typeof save.bankedTiles === 'number' && save.bankedTiles > 0)
+        ? 'placing' : 'free',
       challenge: null,
       chosen: null,
     },

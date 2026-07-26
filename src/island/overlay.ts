@@ -42,10 +42,29 @@ export interface Overlay {
 export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
   const layer = document.createElement('div')
   layer.className = 'overlay hide'
+
+  const shell = document.createElement('div')
+  shell.className = 'chunk overlay-panel'
+
+  /**
+   * A way out. THIS IS NOT OPTIONAL.
+   *
+   * Without it a child can be trapped: peeking at a sum's answer sets the
+   * renderer's `solved` flag and disables the number pad (a faithful port of
+   * v0), but the island has no forward-tap navigation like the 2D game does,
+   * so nothing can ever fire onAdvance. The only exit was reloading the page.
+   *
+   * Leaving costs nothing — challengeFailed takes no tile and no pet.
+   */
+  const back = document.createElement('button')
+  back.className = 'chunk chunk-button overlay-back'
+  back.textContent = '← back to the island'
+  back.setAttribute('aria-label', 'back to the island')
+
   const panel = document.createElement('div')
-  panel.className = 'chunk overlay-panel'
   panel.id = 'words'          // the ported renderers style themselves from this
-  layer.append(panel)
+  shell.append(panel, back)
+  layer.append(shell)
 
   const sayEl = document.createElement('div')
   sayEl.className = 'chunk say hide'
@@ -118,6 +137,12 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
   function finish(): void {
     teardown()
     host.onPassed()
+  }
+
+  back.onclick = () => {
+    const wasOpen = !layer.classList.contains('hide')
+    teardown()
+    if (wasOpen) host.onDismissed()
   }
 
   return {
