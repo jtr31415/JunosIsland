@@ -48,6 +48,12 @@ jobs:
           console.log('words build is fully inlined');
           "
 
+      # Proves the ARTIFACT boots and renders, not just that the modules pass
+      # their unit tests. Half of M0's integration proof; the manual parity
+      # check against v0/junos-words.html is the other half.
+      - name: Boot smoke test
+        run: npm run smoke
+
       - name: Assemble Pages site
         run: |
           mkdir -p _site

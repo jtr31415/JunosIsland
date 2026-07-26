@@ -1,12 +1,90 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en-GB">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Juno's Words</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Juno's Words &amp; Numbers</title>
 </head>
-<body>
-  <div id="app">words2d build stub</div>
-  <script type="module" src="./main.ts"></script>
+<body class="ocean">
+
+<div id="scene">
+  <div id="ambience"></div>
+  <div id="words"></div>
+</div>
+<canvas id="fx"></canvas>
+<div id="banner"></div>
+
+<div id="hudLeft">
+  <div class="hudrow" id="themes">
+    <button id="btnOcean" class="on" title="Under the sea">🌊</button>
+    <button id="btnSpace" title="Outer space">🚀</button>
+    <button id="btnUni" title="Unicorn forest">🦄</button>
+    <button id="btnGarden" title="Garden">🌻</button>
+    <button id="btnHall" title="Halloween">🎃</button>
+    <button id="btnXmas" title="Christmas">🎄</button>
+    <button id="btnSummer" title="Summer holiday">🏖️</button>
+  </div>
+  <div class="hudrow" id="modes">
+    <button id="btnRead" class="on" title="Reading">🔤</button>
+    <button id="btnBuild" title="Word building">🧩</button>
+    <button id="btnAdd" title="Adding">➕</button>
+    <button id="btnSub" title="Taking away">➖</button>
+  </div>
+</div>
+
+<div id="hudRight">
+  <div class="hudrow">
+    <button id="btnSound" class="on" title="Sound on or off">🔊</button>
+    <button id="btnReset" title="Start again">↺</button>
+    <button id="btnGear" title="Grown-ups">⚙️</button>
+    <button id="btnBook" title="Sticker book">📖</button>
+  </div>
+  <div class="hudrow" id="levels">
+    <button id="btnL1" class="lvl" title="Level 1">1</button>
+    <button id="btnL2" class="lvl" title="Level 2">2</button>
+    <button id="btnL3" class="lvl" title="Level 3">3</button>
+  </div>
+</div>
+
+<div id="footer">
+  <div id="targetCard" class="hide"></div>
+  <div class="sayrow">
+    <button id="btnSay" title="Say it again">📢</button>
+    <button id="btnFred" class="hide" title="Fred talk — sound it out">🐸</button>
+  </div>
+  <div id="statusRow">
+    <button id="whoBtn" title="Change player">🦄</button>
+    <div id="score"><span id="scoreTxt">🐚 0</span></div>
+    <div id="egg" title="Next surprise"><span id="eggRing"></span><span id="eggEmoji">🥚</span></div>
+  </div>
+  <div id="legend"><span class="g">green = sound it out</span><span class="r">red = tricky word</span></div>
+  <div id="hint">Listen, then tap the word! &middot; Tap right for new words</div>
+</div>
+
+<div id="hatchCard"><span id="hatchEmoji"></span><span id="hatchName"></span></div>
+
+<div id="profiles">
+  <div class="bkCard">
+    <h2 class="pkTitle">Who's playing?</h2>
+    <div class="pgrid" id="pGrid"></div>
+    <div id="avWrap" class="hide">
+      <h2 class="pkTitle" id="avTitle">Pick your picture!</h2>
+      <div class="avgrid" id="avGrid"></div>
+    </div>
+  </div>
+</div>
+
+<div id="book">
+  <div class="bkCard">
+    <div class="bkTop">
+      <h2>📖 <span id="bkWho">Juno</span>'s Sticker Book <span id="bkCount"></span></h2>
+      <button id="bkClose" title="Close">✖</button>
+    </div>
+    <div id="bkBody"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script type="module" src="./main.ts"></script>
 </body>
 </html>

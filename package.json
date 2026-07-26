@@ -15,7 +15,8 @@
     "name:words": "node -e \"import('node:fs').then(fs=>fs.copyFileSync('dist/words/index.html','dist/words/junos-words.html'))\"",
     "build:island": "vite build --config vite.island.config.ts",
     "build": "npm run build:words && npm run build:island",
-    "golden:capture": "node tools/golden/capture.mjs"
+    "golden:capture": "node tools/golden/capture.mjs",
+    "smoke": "node tools/smoke/boot.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",
