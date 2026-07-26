@@ -11,17 +11,23 @@
     "test:watch": "vitest",
     "dev": "vite --config vite.island.config.ts",
     "dev:words": "vite --config vite.words.config.ts",
-    "build:words": "vite build --config vite.words.config.ts && npm run postbuild:words",
-    "postbuild:words": "node -e \"import('node:fs').then(fs=>fs.copyFileSync('dist/words/index.html','dist/words/junos-words.html'))\"",
+    "build:words": "vite build --config vite.words.config.ts && npm run name:words",
+    "name:words": "node -e \"import('node:fs').then(fs=>fs.copyFileSync('dist/words/index.html','dist/words/junos-words.html'))\"",
     "build:island": "vite build --config vite.island.config.ts",
     "build": "npm run build:words && npm run build:island",
     "golden:capture": "node tools/golden/capture.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",
+    "@types/three": "^0.185.1",
     "jsdom": "^29.1.1",
     "typescript": "^7.0.2",
     "vite": "^8.1.5",
+    "vite-plugin-pwa": "^1.3.0",
+    "vite-plugin-singlefile": "^2.3.3",
     "vitest": "^4.1.10"
+  },
+  "dependencies": {
+    "three": "^0.185.1"
   }
 }
