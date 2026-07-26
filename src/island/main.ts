@@ -12,6 +12,10 @@ import { createWorld } from './scene'
 import { createOverlay } from './overlay'
 import { createPetField, SPECIES } from './pets'
 import { createEgg } from './egg'
+import { createFred } from './fred'
+import { OPENING, HATCH_LINES, fill } from './script'
+import { loadIsland, saveIsland } from './save'
+import { createLocalStore } from '../platform/storage'
 import {
   createFlow, tapEgg, tapSum, challengePassed, challengeFailed,
   chooseTile, placeTile, tileOffer,
@@ -45,7 +49,7 @@ async function boot(): Promise<void> {
   const readStore = { history: [], idx: -1 } as { history: any[]; idx: number }
   const sumStore = { history: [], idx: -1 } as { history: any[]; idx: number }
 
-  let flow: Flow = createFlow()
+  let flow: Flow = createFlow()   // replaced by the save below
 
   const pets = createPetField()
   world.scene.add(pets.group)
@@ -54,6 +58,21 @@ async function boot(): Promise<void> {
   const egg = createEgg()
   world.scene.add(egg.group)
   world.pickables.push(egg.group)
+
+  const fred = createFred()
+  world.scene.add(fred.group)
+  world.pickables.push(fred.group)
+
+  /* Saves. One profile for now; profiles proper arrive in M3. */
+  const store = createLocalStore()
+  const PROFILE = 'juno'
+  const CHILD = 'Juno'
+  const loaded = await loadIsland(store, PROFILE)
+  let openingSeen = loaded.openingSeen
+
+  const persist = (): void => { void saveIsland(store, PROFILE, flow, openingSeen) }
+
+  flow = loaded.flow
 
   const overlay = createOverlay(document.body, {
     speech, sfx,
@@ -71,10 +90,16 @@ async function boot(): Promise<void> {
 
   function refresh(): void {
     world.setIsland(flow.island)
+    // Fred sits on the home rock, a little off centre so the egg and any pet
+    // have room. Slightly larger than a collectible pet, never tile-sized.
+    const home = world.worldOf({ q: 0, r: 0 })
+    fred.group.position.set(home.x - world.models.size * 0.28, 0, home.z + world.models.size * 0.30)
+    fred.group.rotation.y = Math.PI * 0.28      // face the default camera
     world.showSockets(flow.phase === 'placing')
     void pets.sync(flow.pets, flow.island, world.models.size)
     if (flow.phase !== 'placing') placeEgg()
     renderOffer()
+    persist()
   }
 
   /* ---------- the two verbs ---------- */
@@ -98,7 +123,10 @@ async function boot(): Promise<void> {
       await egg.hatch()
       flow = challengePassed(flow, { name, species })
       overlay.showName(name)
-      speech.speak(name + '! Home at last!')
+      const line = HATCH_LINES[flow.pets.length % HATCH_LINES.length] as string
+      speech.speak(fill(line, CHILD, name))
+      fred.talk(2.2)
+      fred.hop()
       egg.reset()
       refresh()
     } else if (flow.challenge === 'sum') {
@@ -106,6 +134,75 @@ async function boot(): Promise<void> {
       speech.speak('You counted us up some land!')
       refresh()
     }
+  }
+
+  /* ---------- the opening: Fred's Lonely Rock (brief section 3) ---------- */
+
+  let inOpening = false
+
+  /**
+   * Twenty seconds, tap to advance, fully voiced. Plays once per profile and
+   * is replayable forever by tapping Fred. Skippable at any point: the world
+   * is already playable behind it, so nothing is gated on sitting through it.
+   */
+  async function runOpening(): Promise<void> {
+    if (inOpening) return
+    inOpening = true
+    egg.group.visible = false
+
+    for (const beat of OPENING) {
+      const text = fill(beat.line, CHILD, flow.pets[0]?.name ?? 'your friend')
+
+      if (beat.cue === 'egg-arrives') {
+        egg.reset()
+        egg.group.visible = true
+        sfx.play('up')
+      }
+      if (beat.cue === 'point-egg') fred.pointAt(egg.group.position)
+
+      overlay.say(text)
+      speech.speak(text)
+      fred.talk(Math.min(6, text.length * 0.06))
+      if (beat.cue === 'egg-arrives') fred.hop()
+
+      await waitForTap()
+      fred.pointAt(null)
+
+      // The two beats that hand over to the child.
+      if (beat.cue === 'first-read') {
+        overlay.clearSay()
+        flow = tapEgg(flow)
+        openRead()
+        inOpening = false
+        openingSeen = true
+        persist()
+        return
+      }
+      if (beat.cue === 'ask-land') {
+        overlay.clearSay()
+        flow = tapSum(flow)
+        openSum()
+        break
+      }
+    }
+
+    overlay.clearSay()
+    inOpening = false
+    openingSeen = true
+    persist()
+  }
+
+  /** Tap anywhere to advance a beat. */
+  function waitForTap(): Promise<void> {
+    return new Promise(resolve => {
+      const done = (): void => {
+        window.removeEventListener('pointerdown', done, true)
+        resolve()
+      }
+      window.addEventListener('pointerdown', done, true)
+      // Never trap a child who does not tap: move on by itself.
+      setTimeout(done, 6500)
+    })
   }
 
   /* ---------- the pick-of-three tile offer ---------- */
@@ -141,7 +238,7 @@ async function boot(): Promise<void> {
   /* ---------- taps ---------- */
 
   canvas.addEventListener('pointerdown', e => {
-    if (overlay.isOpen()) return
+    if (overlay.isOpen() || inOpening) return
     const hit = world.pick(e.clientX, e.clientY)
     if (!hit) return
 
@@ -156,6 +253,12 @@ async function boot(): Promise<void> {
       overlay.clearSay()
       sfx.play('win')
       refresh()
+      return
+    }
+
+    if (hit.kind === 'fred') {
+      // "tell me again?" — the opening is replayable forever (brief section 3)
+      void runOpening()
       return
     }
 
@@ -178,10 +281,17 @@ async function boot(): Promise<void> {
     pets.update(dt, t, flow.island, world.models.size)
   })
 
+  world.onFrame((dt, t) => fred.update(dt, t))
+
   refresh()
   world.start()
   document.getElementById('boot')?.remove()
-  overlay.say('Tap the egg to read it home — or tap the island for land!')
+
+  if (!openingSeen) {
+    void runOpening()
+  } else {
+    overlay.say('Tap the egg to read it home — or tap the island for land!')
+  }
 }
 
 boot().catch(err => {
