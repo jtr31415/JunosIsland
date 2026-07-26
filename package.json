@@ -1,0 +1,27 @@
+{
+  "name": "junos-island",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Pet Island - a diegetic phonics and maths island for ages 5-10",
+  "license": "UNLICENSED",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "dev": "vite --config vite.island.config.ts",
+    "dev:words": "vite --config vite.words.config.ts",
+    "build:words": "vite build --config vite.words.config.ts && npm run postbuild:words",
+    "postbuild:words": "node -e \"import('node:fs').then(fs=>fs.copyFileSync('dist/words/index.html','dist/words/junos-words.html'))\"",
+    "build:island": "vite build --config vite.island.config.ts",
+    "build": "npm run build:words && npm run build:island",
+    "golden:capture": "node tools/golden/capture.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "jsdom": "^29.1.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.1.5",
+    "vitest": "^4.1.10"
+  }
+}
