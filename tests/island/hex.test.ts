@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { key, parse, neighbours, toWorld, distance, DIRECTIONS } from '../../src/island/world/hex'
 
 describe('hex', () => {
@@ -80,5 +82,36 @@ describe('hex', () => {
   it('exposes six distinct directions', () => {
     expect(DIRECTIONS).toHaveLength(6)
     expect(new Set(DIRECTIONS.map(key)).size).toBe(6)
+  })
+})
+
+describe('layout matches the actual KayKit tile', () => {
+  // Read the real asset rather than trusting a remembered convention. The
+  // orientation is a property of the ART, and getting it wrong tiles the
+  // island with seams or overlaps.
+  const gltf = JSON.parse(
+    readFileSync(resolve(__dirname, '../../src/island/public/tiles/hex_grass.gltf'), 'utf8'),
+  )
+  const acc = gltf.accessors[gltf.meshes[0].primitives[0].attributes.POSITION]
+  const halfX = (acc.max[0] - acc.min[0]) / 2
+  const halfZ = (acc.max[2] - acc.min[2]) / 2
+
+  it('the tile really is pointy-top', () => {
+    // Pointy-top: depth (2R) exceeds width (sqrt(3)R), so halfZ > halfX.
+    expect(halfZ).toBeGreaterThan(halfX)
+    expect(halfZ / halfX).toBeCloseTo(2 / Math.sqrt(3), 4)
+  })
+
+  it('tiles laid out at the measured size meet exactly, with no seam or overlap', () => {
+    const size = halfZ                     // circumradius, as tiles.ts measures it
+    const centre = toWorld({ q: 0, r: 0 }, size)
+    for (const n of neighbours({ q: 0, r: 0 })) {
+      const w = toWorld(n, size)
+      const gap = Math.hypot(w.x - centre.x, w.z - centre.z)
+      // Two adjacent hexes touch when their centres are sqrt(3)*R apart,
+      // which for this asset is exactly its flat-to-flat width.
+      expect(gap).toBeCloseTo(Math.sqrt(3) * size, 5)
+      expect(gap).toBeCloseTo(halfX * 2, 4)
+    }
   })
 })

@@ -1,12 +1,18 @@
 /**
- * Flat-top hexagonal grid on axial coordinates.
+ * POINTY-TOP hexagonal grid on axial coordinates.
  *
  * Pure maths over plain data — no Three.js, no DOM — so the geometry the
  * whole island rests on is unit-tested without a GPU.
  *
- * Convention follows Red Blob Games' axial layout. `size` is the hex's
- * circumradius (centre to corner); adjacent centres are therefore sqrt(3)*size
- * apart, which is what makes tiles meet without gaps or overlap.
+ * Orientation is dictated by the art, not by preference: the KayKit hex has a
+ * z-extent of 2.309 against an x-extent of 2.0, which is pointy-top (width
+ * sqrt(3)*R, depth 2*R). Laying it out flat-top leaves visible seams that look
+ * like a bug in this file rather than a mismatched convention — so the
+ * orientation is asserted against the real asset in the tests.
+ *
+ * `size` is the circumradius (centre to point). Adjacent centres are therefore
+ * sqrt(3)*size apart, which is true of both orientations and is what makes
+ * tiles meet without gaps or overlap.
  */
 
 export interface Axial { q: number; r: number }
@@ -30,13 +36,13 @@ export const neighbours = (a: Axial): Axial[] =>
 
 /**
  * Axial to world position on the ground plane (y is always 0).
- * Flat-top layout: columns step by 3/2*size in x, rows shear in z.
+ * Pointy-top layout: rows step by 3/2*size in z, columns shear in x.
  */
 export function toWorld(a: Axial, size: number): { x: number; z: number } {
   const SQRT3 = Math.sqrt(3)
   return {
-    x: size * 1.5 * a.q,
-    z: size * SQRT3 * (a.r + a.q / 2),
+    x: size * SQRT3 * (a.q + a.r / 2),
+    z: size * 1.5 * a.r,
   }
 }
 

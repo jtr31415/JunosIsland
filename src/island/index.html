@@ -2,11 +2,19 @@
 <html lang="en-GB">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
   <title>Pet Island</title>
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #bfe9ff;
+      font-family: system-ui, sans-serif; -webkit-text-size-adjust: 100%; }
+    #view { display: block; width: 100vw; height: 100vh; touch-action: none; }
+    #boot { position: fixed; inset: 0; display: grid; place-items: center;
+      font-size: 5vmin; color: #2b5f7a; }
+  </style>
 </head>
 <body>
-  <div id="app">island build stub</div>
+  <canvas id="view"></canvas>
+  <div id="boot">Building the island…</div>
   <script type="module" src="./main.ts"></script>
 </body>
 </html>
