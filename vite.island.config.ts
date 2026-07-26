@@ -32,8 +32,8 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
       },
       manifest: {
-        name: 'Pet Island',
-        short_name: 'Pet Island',
+        name: "Juno's Island",
+        short_name: "Juno's Island",
         description: 'Read eggs home and count up some land.',
         start_url: '/JunosIsland/',
         scope: '/JunosIsland/',
