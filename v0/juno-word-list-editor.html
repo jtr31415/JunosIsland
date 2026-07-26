@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Juno's Word List Editor</title>
+<style>
+  :root{--green:#118a2f;--red:#e2362b;--ink:#1c2530;--mut:#5c6a7a}
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:#eef1f4;color:var(--ink);margin:0;padding:18px}
+  .wrap{max-width:1000px;margin:0 auto}
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{color:var(--mut);font-size:14px;margin:0 0 18px}
+  .card{background:#fff;border-radius:14px;padding:16px;
+    box-shadow:0 2px 10px rgba(10,20,40,.08);margin-bottom:16px}
+  .card h2{font-size:16px;margin:0 0 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .count{font-size:13px;font-weight:600;color:var(--mut);background:#eef1f4;
+    padding:2px 10px;border-radius:999px}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media (max-width:700px){.cols{grid-template-columns:1fr}}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{display:inline-flex;align-items:center;gap:7px;background:#fff;
+    border:2px solid;border-radius:999px;padding:7px 8px 7px 13px;
+    font-weight:700;font-size:17px;cursor:pointer;transition:transform .1s}
+  .chip:active{transform:scale(.94)}
+  .chip.green{color:var(--green);border-color:#bfe6c9}
+  .chip.red{color:var(--red);border-color:#f3c3bf}
+  /* wavy = tricky bit, solid = digraph/trigraph */
+  .chip .tk{text-decoration:underline wavy;text-decoration-thickness:2px;text-underline-offset:3px}
+  .chip .di{text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:3px}
+  .chip .btn2{display:inline-flex;align-items:center;justify-content:center;
+    width:24px;height:24px;border-radius:50%;background:#eef1f4;color:#8a97a5;
+    font-size:13px;font-weight:700;text-decoration:none}
+  .chip .btn2:hover{background:#2b3b4e;color:#fff}
+  .chip .x:hover{background:var(--red) !important}
+  .tip{font-size:13px;color:var(--mut);margin-top:10px;line-height:1.5}
+
+  .addrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  input[type=text]{flex:1;min-width:140px;padding:10px 12px;font-size:16px;
+    border:2px solid #d5dde5;border-radius:10px;outline:none}
+  input[type=text]:focus{border-color:#8fb4e8}
+  button{border:none;border-radius:10px;padding:10px 16px;font-size:15px;
+    font-weight:700;cursor:pointer;transition:transform .1s}
+  button:active{transform:scale(.96)}
+  .bg{background:#d9f2df;color:var(--green)}
+  .br{background:#fbe0dd;color:var(--red)}
+  .bn{background:#e3e9f0;color:#2b3b4e}
+  .bp{background:#2b3b4e;color:#fff}
+
+  textarea{width:100%;min-height:110px;padding:12px;font-size:14px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    border:2px solid #d5dde5;border-radius:10px;outline:none;resize:vertical}
+  textarea:focus{border-color:#8fb4e8}
+  #jsonArea{min-height:180px}
+  .btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  #changes{font-size:14px;line-height:1.5;color:var(--ink);white-space:pre-wrap;
+    background:#f6f8fa;border-radius:10px;padding:12px;margin-top:10px;display:none}
+  #msg{font-size:14px;font-weight:700;margin-left:6px}
+  .ok{color:var(--green)}.err{color:var(--red)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Juno's Word List Editor</h1>
+  <p class="sub">Tap a word to switch it between green (sound it out) and red (tricky).
+    On red words, the <b>wavy</b> bit is the tricky grapheme — tap ✎ to change which letters
+    are marked. Solid underlines are digraphs, found automatically. Export the JSON when done.</p>
+
+  <div class="cols">
+    <div class="card">
+      <h2>🟢 Green — sound it out <span class="count" id="gCount"></span></h2>
+      <div class="chips" id="gList"></div>
+    </div>
+    <div class="card">
+      <h2>🔴 Red — tricky words <span class="count" id="rCount"></span></h2>
+      <div class="chips" id="rList"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Add a word</h2>
+    <div class="addrow">
+      <input type="text" id="newWord" placeholder="type a word, e.g. s[ai]d for a red one&hellip;" maxlength="16">
+      <button class="bg" id="addG">+ Green</button>
+      <button class="br" id="addR">+ Red</button>
+      <span id="msg"></span>
+    </div>
+    <p class="tip">For red words, wrap the tricky bit in square brackets: <b>s[ai]d</b>, <b>w[a]s</b>.
+      Green words never need brackets. Words over 4 letters are allowed but will get a
+      gentle telling-off, per the Reception brief.</p>
+  </div>
+
+  <div class="card">
+    <h2>Sound-alike groups (never in the same batch)</h2>
+    <textarea id="confArea" spellcheck="false"></textarea>
+    <p class="tip">One group per line, words separated by commas, no brackets needed.</p>
+  </div>
+
+  <div class="card">
+    <h2>Export / Import</h2>
+    <div class="btnrow">
+      <button class="bp" id="btnExport">Export JSON</button>
+      <button class="bn" id="btnCopy">Copy</button>
+      <button class="bn" id="btnDownload">Download .json</button>
+      <button class="bn" id="btnLoad">Load from JSON below</button>
+      <button class="bn" id="btnReset">Reset to original</button>
+    </div>
+    <div id="changes"></div>
+    <textarea id="jsonArea" spellcheck="false" placeholder="Exported JSON appears here. You can also paste a previous export and press Load."></textarea>
+  </div>
+</div>
+
+<script>
+/* The lists currently baked into the game — the starting point.
+   Red words: [brackets] mark the tricky grapheme. */
+const ORIGINAL = {
+  green: [
+    'a','am','an','and','as','at','back','big','but','can','dad','did',
+    'for','from','get','got','had','has','help','him','his','if','in',
+    'is','it','jump','just','let','look','mum','no','not','off','on',
+    'pull','push','put','ran','red','run','sat','see','sit','stop','that',
+    'them','then','this','too','up','us','went','when','will','with','yes'
+  ],
+  red: [
+    '[a]ll','[are]','b[e]','b[y]','c[o]m[e]','d[o]','d[oes]','d[ow]n',
+    'g[o]','hav[e]','h[e]','h[er]','h[ere]','[I]','int[o]','l[i]k[e]',
+    'l[o]v[e]','m[e]','m[y]','n[ow]','o[f]','[oh]','[one]','[ou]t',
+    's[ai]d','sh[e]','s[o]','s[o]m[e]','th[e]','th[ey]','t[o]','t[wo]',
+    'w[a]nt','w[a]s','w[e]','w[ere]','wh[a]t','[who]','wh[y]','y[ou]',
+    'y[our]'
+  ],
+  confusable: [
+    ['to','too','two'],
+    ['of','off'],
+    ['an','and'],
+    ['then','them']
+  ]
+};
+
+let green = new Set(ORIGINAL.green);
+let red   = new Set(ORIGINAL.red);
+
+const $ = id => document.getElementById(id);
+
+/* ---- markup helpers, identical to the game's ---- */
+function plainWord(str){ return str.replace(/[\[\]]/g, ''); }
+
+function parseMark(str){
+  const segs = []; let buf = '', inB = false;
+  for(const ch of str){
+    if(ch === '['){ if(buf) segs.push({txt:buf, k:'plain'}); buf = ''; inB = true; }
+    else if(ch === ']'){ if(buf) segs.push({txt:buf, k:'tricky'}); buf = ''; inB = false; }
+    else buf += ch;
+  }
+  if(buf) segs.push({txt:buf, k: inB ? 'tricky' : 'plain'});
+  return segs;
+}
+
+const GRAPHS = ['igh','ear','air','ure',
+  'ch','sh','th','wh','ph','ng','nk','qu','ck','ff','ll','ss','zz',
+  'ai','ay','ee','ea','ie','oa','oo','ou','ow','oi','oy',
+  'or','ar','ur','er','ir','aw','au','ew','ue','oe'];
+
+function markDigraphs(txt){
+  const out = []; let i = 0;
+  outer: while(i < txt.length){
+    for(const g of GRAPHS){
+      if(txt.startsWith(g, i)){ out.push({txt:g, k:'di'}); i += g.length; continue outer; }
+    }
+    if(out.length && out[out.length - 1].k === 'plain') out[out.length - 1].txt += txt[i];
+    else out.push({txt:txt[i], k:'plain'});
+    i++;
+  }
+  return out;
+}
+
+function wordSpans(raw, mount){
+  parseMark(raw).forEach(sg => {
+    if(sg.k === 'tricky'){
+      const sp = document.createElement('span');
+      sp.className = 'tk'; sp.textContent = sg.txt;
+      mount.appendChild(sp);
+    } else {
+      markDigraphs(sg.txt).forEach(d => {
+        const sp = document.createElement('span');
+        if(d.k === 'di') sp.className = 'di';
+        sp.textContent = d.txt;
+        mount.appendChild(sp);
+      });
+    }
+  });
+}
+
+const ci = (a, b) => plainWord(a).toLowerCase().localeCompare(plainWord(b).toLowerCase());
+function norm(w){
+  w = w.trim().replace(/\s+/g, '');
+  if(!w) return '';
+  return plainWord(w).toLowerCase() === 'i' && plainWord(w).length === 1
+    ? w.replace(/i/i, 'I') : w.toLowerCase();
+}
+const plainSet = set => new Set([...set].map(w => plainWord(w)));
+
+function render(){
+  const build = (set, cls, mountId) => {
+    const mount = $(mountId);
+    mount.innerHTML = '';
+    [...set].sort(ci).forEach(raw => {
+      const chip = document.createElement('span');
+      chip.className = 'chip ' + cls;
+      wordSpans(raw, chip);
+      chip.title = 'Tap to make this ' + (cls === 'green' ? 'red' : 'green');
+      if(cls === 'red'){
+        const ed = document.createElement('span');
+        ed.className = 'btn2';
+        ed.textContent = '\u270e';
+        ed.title = 'Edit which letters are the tricky bit';
+        ed.addEventListener('click', e => { e.stopPropagation(); editMark(raw); });
+        chip.appendChild(ed);
+      }
+      const x = document.createElement('span');
+      x.className = 'btn2 x';
+      x.textContent = '\u00d7';
+      x.title = 'Remove ' + plainWord(raw);
+      x.addEventListener('click', e => { e.stopPropagation(); del(raw); });
+      chip.appendChild(x);
+      chip.addEventListener('click', () => toggle(raw));
+      mount.appendChild(chip);
+    });
+  };
+  build(green, 'green', 'gList');
+  build(red,   'red',   'rList');
+  $('gCount').textContent = green.size + ' words';
+  $('rCount').textContent = red.size + ' words';
+}
+
+function toggle(raw){
+  if(green.has(raw)){
+    green.delete(raw);
+    red.add(raw);  /* no brackets yet — add them with ✎ */
+  } else {
+    red.delete(raw);
+    green.add(plainWord(raw));  /* green words carry no tricky marks */
+  }
+  render();
+}
+
+function del(raw){
+  green.delete(raw); red.delete(raw);
+  render();
+}
+
+function editMark(raw){
+  const entry = prompt(
+    'Wrap the tricky bit in [brackets], e.g. s[ai]d.\nLetters must stay the same:', raw);
+  if(entry === null) return;
+  const cleaned = norm(entry);
+  if(plainWord(cleaned) !== plainWord(raw)){
+    say('The letters changed — only move the brackets', false);
+    return;
+  }
+  red.delete(raw);
+  red.add(cleaned);
+  render();
+  say('Marking updated', true);
+}
+
+function say(msg, ok){
+  const el = $('msg');
+  el.textContent = msg;
+  el.className = ok ? 'ok' : 'err';
+  clearTimeout(say.t);
+  say.t = setTimeout(() => el.textContent = '', 3500);
+}
+
+function addWord(cls){
+  const w = norm($('newWord').value);
+  if(!w){ say('Type a word first', false); return; }
+  const pw = plainWord(w);
+  if(plainSet(green).has(pw) || plainSet(red).has(pw)){
+    say('"' + pw + '" is already in a list — tap it there to move it', false);
+    return;
+  }
+  if(cls === 'green') green.add(pw);
+  else red.add(w);  /* keep any brackets the user typed */
+  $('newWord').value = '';
+  say(pw.length > 4 ? 'Added — though that\u2019s over 4 letters, rebel' : 'Added "' + pw + '"', true);
+  render();
+}
+
+function parseConf(){
+  return $('confArea').value.split('\n')
+    .map(line => line.split(',').map(w => plainWord(norm(w))).filter(Boolean))
+    .filter(g => g.length >= 2);
+}
+function confToText(groups){ return groups.map(g => g.join(', ')).join('\n'); }
+
+function diffSummary(){
+  const ogP = plainSet(new Set(ORIGINAL.green)), orP = plainSet(new Set(ORIGINAL.red));
+  const orRaw = {}; ORIGINAL.red.forEach(w => orRaw[plainWord(w)] = w);
+  const moves = [], adds = [], rems = [], marks = [];
+  green.forEach(w => {
+    const p = plainWord(w);
+    if(orP.has(p)) moves.push(p + ': red \u2192 green');
+    else if(!ogP.has(p)) adds.push(p + ' (green)');
+  });
+  red.forEach(w => {
+    const p = plainWord(w);
+    if(ogP.has(p)) moves.push(p + ': green \u2192 red');
+    else if(!orP.has(p)) adds.push(p + ' (red)');
+    else if(orRaw[p] !== w) marks.push(orRaw[p] + ' \u2192 ' + w);
+  });
+  const nowP = new Set([...plainSet(green), ...plainSet(red)]);
+  [...ogP, ...orP].forEach(p => { if(!nowP.has(p)) rems.push(p); });
+  if(!moves.length && !adds.length && !rems.length && !marks.length)
+    return 'No changes from the original lists.';
+  let out = 'Changes vs original:';
+  if(moves.length) out += '\nMoved: '           + moves.sort().join(', ');
+  if(marks.length) out += '\nMarking changed: ' + marks.sort().join(', ');
+  if(adds.length)  out += '\nAdded: '           + adds.sort().join(', ');
+  if(rems.length)  out += '\nRemoved: '         + rems.sort().join(', ');
+  return out;
+}
+
+function doExport(){
+  const data = {
+    green: [...green].sort(ci),
+    red:   [...red].sort(ci),
+    confusable: parseConf()
+  };
+  $('jsonArea').value = JSON.stringify(data, null, 2);
+  const ch = $('changes');
+  ch.style.display = 'block';
+  ch.textContent = diffSummary();
+}
+
+function doCopy(){
+  if(!$('jsonArea').value) doExport();
+  const ta = $('jsonArea');
+  ta.select(); ta.setSelectionRange(0, 999999);
+  try{
+    navigator.clipboard.writeText(ta.value)
+      .then(() => say('Copied', true))
+      .catch(() => { document.execCommand('copy'); say('Copied', true); });
+  }catch(e){
+    document.execCommand('copy'); say('Copied', true);
+  }
+}
+
+function doDownload(){
+  if(!$('jsonArea').value) doExport();
+  const blob = new Blob([$('jsonArea').value], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'juno-words.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function doLoad(){
+  try{
+    const data = JSON.parse($('jsonArea').value);
+    if(!Array.isArray(data.green) || !Array.isArray(data.red)) throw new Error('bad shape');
+    green = new Set(data.green.map(w => plainWord(norm(w))).filter(Boolean));
+    red   = new Set(data.red.map(norm).filter(Boolean));
+    const rp = plainSet(red);
+    green.forEach(w => { if(rp.has(w)) green.delete(w); });
+    if(Array.isArray(data.confusable)){
+      $('confArea').value = confToText(
+        data.confusable.filter(g => Array.isArray(g))
+          .map(g => g.map(w => plainWord(norm(w))).filter(Boolean))
+      );
+    }
+    render();
+    say('Loaded', true);
+  }catch(e){
+    say('That JSON did not parse — check it and try again', false);
+  }
+}
+
+function doReset(){
+  green = new Set(ORIGINAL.green);
+  red   = new Set(ORIGINAL.red);
+  $('confArea').value = confToText(ORIGINAL.confusable);
+  $('jsonArea').value = '';
+  $('changes').style.display = 'none';
+  render();
+  say('Back to the original lists', true);
+}
+
+$('addG').addEventListener('click', () => addWord('green'));
+$('addR').addEventListener('click', () => addWord('red'));
+$('newWord').addEventListener('keydown', e => { if(e.key === 'Enter') addWord('green'); });
+$('btnExport').addEventListener('click', doExport);
+$('btnCopy').addEventListener('click', doCopy);
+$('btnDownload').addEventListener('click', doDownload);
+$('btnLoad').addEventListener('click', doLoad);
+$('btnReset').addEventListener('click', doReset);
+
+$('confArea').value = confToText(ORIGINAL.confusable);
+render();
+</script>
+</body>
+</html>

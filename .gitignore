@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+
+# Source asset archives and Blender sources stay local.
+# Both packs are CC0 so republishing is permitted; we decline as a courtesy
+# to KayKit (the SOURCE tier is a paid download) and to keep the repo lean.
+Assets/*.zip
+Assets/**/*.blend
+Assets/**/*.blend1
