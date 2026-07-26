@@ -6,6 +6,9 @@ dist/
 # Source asset archives and Blender sources stay local.
 # Both packs are CC0 so republishing is permitted; we decline as a courtesy
 # to KayKit (the SOURCE tier is a paid download) and to keep the repo lean.
+# The source archives and Blender files stay local. Runtime assets live in
+# src/island/public/ instead, which also avoids a case collision with this
+# folder on case-insensitive Windows vs case-sensitive Linux CI.
 Assets/*.zip
 Assets/**/*.blend
 Assets/**/*.blend1
