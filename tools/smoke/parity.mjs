@@ -32,6 +32,7 @@ const SEED = 20260726
 const seededSource = `
 let __s = ${SEED} >>> 0;
 Math.random = () => {
+  globalThis.__draws = (globalThis.__draws || 0) + 1;
   __s = (__s + 0x6d2b79f5) >>> 0;
   let t = __s;
   t = Math.imul(t ^ (t >>> 15), t | 1);
@@ -69,13 +70,39 @@ function boot(html, { isModule }) {
         translate() {}, rotate() {}, ellipse() {}, quadraticCurveTo() {},
         createRadialGradient: () => ({ addColorStop() {} }),
       })
-      w.Element.prototype.animate = () => ({ onfinish: null, cancel() {}, finish() {} })
+      // The stub MUST fire onfinish. flyStar banks the point in its onfinish
+      // (v0:956); a stub that swallows it leaves scoring, reward, hatch and
+      // album identically dead on both sides — green over an unrun economy.
+      w.Element.prototype.animate = () => {
+        const anim = { cancel() {}, finish() {} }
+        let cb = null
+        Object.defineProperty(anim, 'onfinish', {
+          get: () => cb,
+          set: fn => { cb = fn; if (fn) w.setTimeout(() => fn(), 0) },
+        })
+        return anim
+      }
+      // v0:1625 spectacle() reads matchMedia; without it the first reward
+      // crashes the original's realm only.
+      w.matchMedia = () => ({ matches: false, addListener() {}, removeListener() {} })
       w.requestAnimationFrame = () => 0
-      // DELETE, not set-undefined: the speech wrapper checks
-      // `'speechSynthesis' in window`, which is true for a property that
-      // exists holding undefined (v0:745). Both games then take the
-      // no-voice path, which is what we want for a headless diff.
-      delete w.speechSynthesis
+      // A fake en-GB voice in BOTH realms. Without it both sides take the
+      // no-voice fallback and the listen-then-tap loop — the actual game —
+      // is never exercised. The spoken stream is then diffable, which catches
+      // wrong targets, wrong Fred sequences and wrong praise copy.
+      w.__spoken = []
+      w.SpeechSynthesisUtterance = class {
+        constructor(t) { this.text = t; this.onend = null; this.onerror = null }
+      }
+      w.speechSynthesis = {
+        getVoices: () => [{ name: 'Sonia', lang: 'en-GB' }],
+        speak(u) { w.__spoken.push(u.text); if (u.onend) w.setTimeout(() => u.onend(), 0) },
+        cancel() {},
+        onvoiceschanged: null,
+      }
+      // Count RNG draws so a divergence can be localised to a step rather
+      // than presenting as a wall of downstream noise.
+      w.__draws = 0
     },
   })
 
@@ -87,8 +114,24 @@ function boot(html, { isModule }) {
   return { dom, errors }
 }
 
-/** The comparable surface: what the child actually sees in the play area. */
+/**
+ * The comparable surface. Deliberately wider than #words: a wrong score
+ * amount, toast, spoken word or hatched sticker all live outside the play
+ * area, and diffing only #words would pass straight over the economy.
+ */
 function snapshot(dom) {
+  const d = dom.window.document
+  return [
+    'words:' + playArea(dom),
+    'score:' + (d.getElementById('scoreTxt')?.textContent ?? ''),
+    'spoken:' + (dom.window.__spoken ?? []).join('>'),
+    'toast:' + (d.getElementById('toast')?.textContent ?? ''),
+    'target:' + (d.getElementById('targetCard')?.textContent ?? ''),
+    'hint:' + (d.getElementById('hint')?.textContent ?? ''),
+  ].join(String.fromCharCode(10))
+}
+
+function playArea(dom) {
   const box = dom.window.document.getElementById('words')
   if (!box) return '<no #words>'
   const walk = el => {
@@ -116,7 +159,7 @@ const rebuilt = boot(readFileSync(resolve(root, 'dist/words/junos-words.html'), 
 
 /** Same script through both. Mode switches, level switches, and new items. */
 const STEPS = [
-  ['initial reading round', () => {}],
+  ['initial reading round', () => {}, 0],
   ['forward to round 2', d => forward(d)],
   ['forward to round 3', d => forward(d)],
   ['reading level 2 (alien)', d => clickId(d, 'btnL2')],
@@ -130,14 +173,39 @@ const STEPS = [
   ['sub mode', d => { clickId(d, 'btnL1'); clickId(d, 'btnSub') }],
   ['sub level 3', d => clickId(d, 'btnL3')],
   ['back to reading', d => { clickId(d, 'btnL1'); clickId(d, 'btnRead') }],
+  // The game IS listen-then-tap. Wait for the prompt, then tap the word that
+  // was spoken — this drives flyStar -> onfinish -> addScore, the economy the
+  // narrower diff would have skipped entirely.
+  ['hear the target', null, 1300],
+  ['tap the spoken word', d => tapSpokenWord(d), 900],
+  ['tap the next word', d => tapSpokenWord(d), 900],
+  ['tap the last word', d => tapSpokenWord(d), 900],
 ]
+
+/**
+ * jsdom timers are REAL timers, so the only way to let them fire is to yield
+ * to the event loop. A busy-wait blocks it and nothing ever runs — which is
+ * how the first version of this harness "passed" fourteen steps without ever
+ * driving a single spoken word or scored tap.
+ */
+const wait = ms => new Promise(r => setTimeout(r, ms))
+
+/** Tap whichever rendered word matches the most recently spoken text. */
+function tapSpokenWord(dom) {
+  const d = dom.window.document
+  const spoken = dom.window.__spoken ?? []
+  const want = spoken[spoken.length - 1]
+  if (!want) return
+  const el = [...d.querySelectorAll('#words .word')].find(w => w.textContent === want)
+  if (el) el.dispatchEvent(new dom.window.MouseEvent('pointerdown', { bubbles: true }))
+}
 
 let mismatches = 0
 console.log('step                        original vs rebuilt')
 console.log('------------------------------------------------')
-for (const [name, act] of STEPS) {
-  act(original.dom)
-  act(rebuilt.dom)
+for (const [name, act, settleMs] of STEPS) {
+  if (act) { act(original.dom); act(rebuilt.dom) }
+  if (settleMs) await wait(settleMs)
   const a = snapshot(original.dom)
   const b = snapshot(rebuilt.dom)
   const same = a === b
@@ -151,6 +219,26 @@ for (const [name, act] of STEPS) {
 
 if (original.errors.length) console.log('\noriginal boot errors:', original.errors.join(' | '))
 if (rebuilt.errors.length) console.log('rebuilt boot errors :', rebuilt.errors.join(' | '))
+
+// Self-checks. A harness that silently stops exercising the real path is this
+// project's known failure mode — green while proving nothing has happened
+// twice already. Assert the speech and scoring channels actually ran.
+const spokenA = original.dom.window.__spoken || []
+const spokenB = rebuilt.dom.window.__spoken || []
+const scoreA = original.dom.window.document.getElementById('scoreTxt').textContent
+const scoreB = rebuilt.dom.window.document.getElementById('scoreTxt').textContent
+console.log('')
+console.log('self-check  spoken utterances : ' + spokenA.length + ' / ' + spokenB.length)
+console.log('self-check  first spoken      : ' + JSON.stringify(spokenA.slice(0, 4)))
+console.log('self-check  score bar         : "' + scoreA + '" / "' + scoreB + '"')
+if (!spokenA.length || !spokenB.length) {
+  console.log('SELF-CHECK FAILED: no speech occurred, so the listen-then-tap loop was never driven')
+  mismatches++
+}
+if (!/[1-9]/.test(scoreA) || !/[1-9]/.test(scoreB)) {
+  console.log('SELF-CHECK FAILED: score never moved, so flyStar -> addScore never ran')
+  mismatches++
+}
 
 console.log(mismatches
   ? `\n${mismatches} step(s) differ — the port is NOT faithful`

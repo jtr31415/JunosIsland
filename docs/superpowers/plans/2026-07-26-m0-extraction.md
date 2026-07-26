@@ -3296,6 +3296,10 @@ Copy the `<body>` markup into `src/words2d/index.html`, keeping every element id
 
 - [ ] **Step 3: Port the remaining modules**
 
+**Built as ONE module, `src/words2d/shell.ts`** — see rev 4. The table below is
+the ORIGINAL plan and is kept only to show what went where; it is not the file
+layout. Every listed range lives in `shell.ts`, spliced verbatim.
+
 Every remaining line of the original gets an explicit home. Anything left unassigned in a line-precise plan is where behaviour gets rewritten by accident.
 
 | Module | Original lines | Contents |
@@ -3304,8 +3308,8 @@ Every remaining line of the original gets an explicit home. Anything left unassi
 | `celebration.ts` | 1507-1823 | Particle engine, spectacles, banner, `reward()` — **sets `rewardUntil` and `quietUntil` (1811-1812)**, which feed `ChallengeDeps.holds` |
 | `score.ts` | 1498-1504, 1529-1530, 1825-1833 | `updateScore`, `CHILD_NAME`, `REWARD_EVERY`, `addScore` — the 2-point literacy economy and the reward threshold |
 | `album.ts` | 517-552, 686-694, 1874-2002 | `STICKERS`, `CAT_FLAT`, `visitorSticker`, hatch/befriend/day-latch, book UI. `befriend()` also sets `quietUntil` (1922) |
-| `profiles.ts` | 554-643 | Picker, avatar chip, add/switch — rewritten onto the async `SaveStore` |
-| `saves.ts` | 644-683 | `todayKey`, `strHash`, `article`, `capName`, `saveSoon`, `loadSave`, `ownedSet` — onto `SaveStore` |
+| profiles | 554-643 | Picker, avatar chip, add/switch. **Keeps the original's verbatim localStorage code** — not `SaveStore` (rev 4, deviation 3) |
+| saves | 644-683 | `todayKey`, `strHash`, `article`, `capName`, `saveSoon`, `loadSave`, `ownedSet` — verbatim localStorage |
 | `gear.ts` | 2085-2120 | The DDMM PIN dialog and profile delete |
 | `main.ts` | 765-770, 943-971, 1311-1350, 2029-2083, 2124-2163 | `toast`; `flyStar` and `celebrate` bodies (host-side under changes 4-5); `GEN`, `renderCurrent`, `forward`, `back`; `setTheme`/`setMode`/`setLevel` and event wiring; boot |
 
