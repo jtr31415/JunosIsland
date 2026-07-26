@@ -27,6 +27,27 @@ const TILE_URL: Record<TileType, string> = {
   water: 'tiles/hex_water.gltf',
 }
 
+/**
+ * KayKit ships four palettes of the same atlas, and the tile geometry samples
+ * whichever is bound. Measured at the grass swatch:
+ *
+ *   base   #a2a721  olive        Summer #3b903a  green
+ *   Fall   #ba782d  orange       Winter #c1d9ed  pale blue
+ *
+ * The glTF references `base`, which renders the "grass" as olive-yellow. For a
+ * bright, summery island (brief section 1.2) we bind Summer instead. This is
+ * the recolour pipeline of brief section 15 in its simplest form — and it hands
+ * us the seasonal calendar of section 4 for nothing.
+ */
+export type Season = 'base' | 'Summer' | 'Fall' | 'Winter'
+
+const ATLAS: Record<Season, string> = {
+  base: 'tiles/hexagons_medieval.png',
+  Summer: 'tiles/hexagons_medieval_Summer.png',
+  Fall: 'tiles/hexagons_medieval_Fall.png',
+  Winter: 'tiles/hexagons_medieval_Winter.png',
+}
+
 /** Pull the first mesh out of a glTF scene, baking in its local transform. */
 function firstMesh(root: THREE.Object3D): THREE.Mesh {
   let found: THREE.Mesh | null = null
@@ -36,8 +57,19 @@ function firstMesh(root: THREE.Object3D): THREE.Mesh {
   return found
 }
 
-export async function loadTileModels(base = ''): Promise<TileModels> {
+export async function loadTileModels(base = '', season: Season = 'Summer'): Promise<TileModels> {
   const loader = new GLTFLoader()
+  const atlas = await new THREE.TextureLoader().loadAsync(base + ATLAS[season])
+  atlas.colorSpace = THREE.SRGBColorSpace
+  atlas.flipY = false                      // glTF UV origin is top-left
+  // Each tile samples a tiny swatch of a 1024 atlas — grass is 41x139 px — so
+  // mipmapping averages across neighbouring swatches and bleeds one tile's
+  // colour into the next at distance. No mips, clamped.
+  atlas.generateMipmaps = false
+  atlas.minFilter = THREE.LinearFilter
+  atlas.magFilter = THREE.LinearFilter
+  atlas.wrapS = THREE.ClampToEdgeWrapping
+  atlas.wrapT = THREE.ClampToEdgeWrapping
   const geometry = {} as Record<TileType, THREE.BufferGeometry>
   let material: THREE.Material | null = null
   let size = 1
@@ -51,11 +83,9 @@ export async function loadTileModels(base = ''): Promise<TileModels> {
     geometry[type] = geo
 
     if (!material) {
-      const m = Array.isArray(mesh.material) ? mesh.material[0]! : mesh.material
       // Flat colour, no PBR (brief section 15). Lambert reads chunky and is
-      // cheap; keep the atlas map, drop the shine.
-      const src = m as THREE.MeshStandardMaterial
-      material = new THREE.MeshLambertMaterial({ map: src.map ?? null, color: 0xffffff })
+      // cheap; bind the seasonal atlas rather than the glTF's default.
+      material = new THREE.MeshLambertMaterial({ map: atlas, color: 0xffffff })
     }
 
     if (type === 'grass') {
