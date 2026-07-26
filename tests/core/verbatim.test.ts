@@ -18,6 +18,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 import { GREEN, RED, CONFUSABLE, groupOf } from '../../src/core/wordlists'
+import { GRAPHS } from '../../src/core/segmentation'
 
 const src = readFileSync(resolve(__dirname, '../../v0/junos-words.html'), 'utf8').split(/\r?\n/)
 
@@ -33,5 +34,12 @@ describe('core data matches the frozen original verbatim', () => {
     expect(RED).toEqual(o.RED)
     expect(CONFUSABLE).toEqual(o.CONFUSABLE)
     expect(groupOf).toEqual(o.groupOf)
+  })
+
+  it('GRAPHS inventory and order (v0:412-415)', () => {
+    // Order is matching priority, not decoration — a sorted copy would break
+    // longest-first matching, so compare the sequence, not the set.
+    const o = evalRange(412, 415, 'GRAPHS')
+    expect(GRAPHS).toEqual(o.GRAPHS)
   })
 })
