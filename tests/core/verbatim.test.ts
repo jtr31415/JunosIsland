@@ -19,6 +19,7 @@ import { resolve } from 'node:path'
 
 import { GREEN, RED, CONFUSABLE, groupOf } from '../../src/core/wordlists'
 import { GRAPHS } from '../../src/core/segmentation'
+import { buildPool, buildNeighbours } from '../../src/core/neighbours'
 
 const src = readFileSync(resolve(__dirname, '../../v0/junos-words.html'), 'utf8').split(/\r?\n/)
 
@@ -41,5 +42,16 @@ describe('core data matches the frozen original verbatim', () => {
     // longest-first matching, so compare the sequence, not the set.
     const o = evalRange(412, 415, 'GRAPHS')
     expect(GRAPHS).toEqual(o.GRAPHS)
+  })
+
+  it('the whole neighbour map is identical, entry for entry (v0:432-460)', () => {
+    // Derived rather than copied, but comparing the entire built map against
+    // the original's is the strongest available check on lev1, buildPool and
+    // the group-exclusion filter all at once — including iteration order.
+    const code = [[368, 395], [398, 428], [432, 460]] as const
+    const o = new Function(
+      code.map(([a, b]) => src.slice(a - 1, b).join('\n')).join('\n') + '; return NEIGH;',
+    )() as Record<string, unknown>
+    expect(buildNeighbours(buildPool())).toEqual(o)
   })
 })
