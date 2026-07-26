@@ -8,15 +8,34 @@
 import * as THREE from 'three'
 
 /**
+ * Where the water surface sits. The KayKit water hex's top face is at -0.2 and
+ * the coast ramps run down to meet it, so everything wet shares this height.
+ */
+export const SEA_LEVEL = -0.21
+
+/**
  * The sea: a big soft plane the island sits in. Not a simulation — a mood.
  * It bobs very slightly so the world is never completely still.
  */
 export function createSea(): THREE.Mesh {
   const geo = new THREE.PlaneGeometry(400, 400, 1, 1)
-  const mat = new THREE.MeshStandardMaterial({ color: 0x4fb8e8, metalness: 0, roughness: 1 })
+  /*
+   * The SAME blue as the atlas water swatch (#2473b4, sampled from the water
+   * hex's own UVs), because the open sea and a placed pond are one body of
+   * water and must look like it. The old lighter blue was fine while the
+   * island had no shoreline; the moment coast tiles arrived, their sand ramps
+   * ran down to meet a sea of visibly the wrong colour.
+   */
+  const mat = new THREE.MeshStandardMaterial({ color: 0x2473b4, metalness: 0, roughness: 1 })
   const sea = new THREE.Mesh(geo, mat)
   sea.rotation.x = -Math.PI / 2
-  sea.position.y = -0.34
+  /*
+   * Just under the water hex's own surface, which sits at y = -0.2. The sand
+   * ramps on the coast tiles stop at that height expecting water there, so a
+   * sea at the old -0.34 left them ending in mid-air above it. A hair below
+   * rather than exactly level, so the two never z-fight where they overlap.
+   */
+  sea.position.y = SEA_LEVEL
   sea.name = 'sea'
   return sea
 }

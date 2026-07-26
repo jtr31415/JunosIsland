@@ -98,6 +98,13 @@ function heightAt(tris: Tri[], x: number, z: number): number | null {
 /** Land sits at y=0, water at y=-0.2, the sand ramp between. */
 const WATER_LEVEL = -0.15
 
+/**
+ * The models in use are the WATERLESS variants, which cut the water part of
+ * the hex away so the open sea shows through. An edge with no geometry over it
+ * is therefore not a measurement failure — it is the wettest answer there is.
+ */
+const NO_GEOMETRY_IS_WATER = true
+
 /** Which edges of a model are water, in DIRECTIONS order. */
 function measureWaterEdges(stem: string): number[] {
   const tris = loadTriangles(stem)
@@ -116,7 +123,7 @@ function measureWaterEdges(stem: string): number[] {
     const w = toWorld(d, 1)
     const len = Math.hypot(w.x, w.z)
     const y = heightAt(tris, (w.x / len) * inradius * 0.93, (w.z / len) * inradius * 0.93)
-    if (y !== null && y < WATER_LEVEL) out.push(k)
+    if (y === null ? NO_GEOMETRY_IS_WATER : y < WATER_LEVEL) out.push(k)
   })
   return out
 }
@@ -129,8 +136,8 @@ describe('the coast models, measured from the assets', () => {
     expect(measureWaterEdges('hex_water')).toEqual([0, 1, 2, 3, 4, 5])
   })
 
-  it.each(COAST_VARIANTS)('hex_coast_%s matches its entry in COAST_CANONICAL', v => {
-    const measured = measureWaterEdges(`hex_coast_${v}`)
+  it.each(COAST_VARIANTS)('hex_coast_%s_waterless matches COAST_CANONICAL', v => {
+    const measured = measureWaterEdges(`hex_coast_${v}_waterless`)
     const { start, length } = COAST_CANONICAL[v]
     const expected = Array.from({ length }, (_, i) => (start + i) % 6).sort((a, b) => a - b)
     expect(measured).toEqual(expected)

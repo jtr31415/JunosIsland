@@ -36,10 +36,20 @@ export interface TileModels {
 const TILE_URL: Record<RenderKind, string> = {
   grass: 'tiles/hex_grass.gltf',
   water: 'tiles/hex_water.gltf',
-  coast_A: 'tiles/hex_coast_A.gltf',
-  coast_B: 'tiles/hex_coast_B.gltf',
-  coast_C: 'tiles/hex_coast_C.gltf',
-  coast_D: 'tiles/hex_coast_D.gltf',
+  /*
+   * The WATERLESS coast models: land and sand ramp only, with the water part
+   * of the hex cut away entirely.
+   *
+   * The watered versions carry their own slab of dark blue, and against an
+   * open sea that turned every shore tile into a raised navy plate — the
+   * island read as a pile of separate blue-and-sand tiles rather than one
+   * landmass with a beach. Cutting the water out lets the sea show through,
+   * which is what these variants exist for.
+   */
+  coast_A: 'tiles/hex_coast_A_waterless.gltf',
+  coast_B: 'tiles/hex_coast_B_waterless.gltf',
+  coast_C: 'tiles/hex_coast_C_waterless.gltf',
+  coast_D: 'tiles/hex_coast_D_waterless.gltf',
 }
 
 /**
