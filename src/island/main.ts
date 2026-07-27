@@ -810,7 +810,49 @@ async function boot(): Promise<void> {
   document.body.append(stamp)
 
   /* ---------- the album ---------- */
-  const album = createAlbum(document.body, speech)
+  /*
+   * ONE wiring site, and every port is mandatory rather than optional.
+   *
+   * Each of these has a control on the pop-out card, so a port quietly missing
+   * would be a button that quietly does nothing — the exact shape of the four
+   * dead features HANDOFF §5 lists. `AlbumWorld` requires all six, so tsc
+   * catches a forgotten wire; `tests/island/album.test.ts` pins the two that
+   * types cannot express.
+   */
+  const album = createAlbum(document.body, speech, {
+    /*
+     * The island's OWN loader and cache. Not the album's.
+     *
+     * `pets.preview` clones the shared prototype, which has already had
+     * `wearFaceUVs` applied — so the friend on the card is literally the friend
+     * on the island, and she stays right the day item 7 dresses anybody. The
+     * album's separate GLTFLoader (still used for the grid's thumbnails) never
+     * sees that fix.
+     */
+    preview: species => pets.preview(species),
+    /*
+     * WHERE SHE IS NOW — and this is the whole of "find it on the map".
+     *
+     * NOT `flow.pets[].at`, which is where she HATCHED. Wandering happens on the
+     * live scene-graph roots inside `pets.ts` and is never written back to the
+     * flow, so the hatch spot is a different tile on any grown island. This is
+     * the one port that had to be added to `pets.ts` for this feature.
+     */
+    livePosition: id => pets.positionOf(id),
+    // The fallback, for a friend whose ~140KB GLB has not landed yet. Better
+    // than a button that does nothing on a slow tablet.
+    hatchPosition: pet => world.worldOf(pet.at),
+    focusOn: point => world.focusOn(point),
+    /*
+     * One renderer and one frame loop.
+     *
+     * The pop-out's turntable draws through the world's own, exactly as the
+     * challenge stage does. A second live GL context is what `scene.ts` calls
+     * "the expensive way to do this" on the target tablet.
+     */
+    onFrame: fn => world.onFrame(fn),
+    onOverlayFrame: fn => world.onOverlayFrame(fn),
+  })
   const albumBtn = document.createElement('button')
   albumBtn.className = 'chunk chunk-button album-button'
   albumBtn.textContent = '\u{1F4D6} friends'

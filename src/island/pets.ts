@@ -419,6 +419,24 @@ export interface PetField {
   /** Squash-stretch bounce, e.g. when tapped. */
   bounce(id: string): void
   /**
+   * Where a friend is standing RIGHT NOW, or null if she is not out yet.
+   *
+   * The album's "find it on the map" needs this and cannot use `flow.pets[].at`,
+   * which is the HATCH spot: wandering happens on these live roots and is never
+   * written back to `Flow` — deliberately, since a save write per frame per pet
+   * would be absurd. So the coordinate the camera flies to has to be read off
+   * the scene graph, and only this module has it.
+   *
+   * A COPY, never the live vector. Handing out `l.root.position` would let any
+   * caller teleport a pet by accident, and the one caller here is a camera that
+   * wants a point rather than a handle.
+   *
+   * Null when the id is unknown OR when its ~140KB GLB is still in flight —
+   * `sync` creates nothing until the model lands. The caller decides what to do
+   * about that; it must not be told a pet is at the origin.
+   */
+  positionOf(id: string): THREE.Vector3 | null
+  /**
    * A standalone copy of a species, for showing off.
    *
    * Not a live pet — no id, no wandering, no place on the island. The hatch
@@ -706,6 +724,11 @@ export function createPetField(base = ''): PetField {
        * Remembered instead, and played the moment it lands.
        */
       pendingBounce.add(id)
+    },
+
+    positionOf(id) {
+      const l = live.get(id)
+      return l ? l.root.position.clone() : null
     },
 
     setObstacles(list) {

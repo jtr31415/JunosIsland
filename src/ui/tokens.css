@@ -239,6 +239,165 @@ body:has(.overlay:not(.hide)) .album-button { display: none; }
   padding: 0;
 }
 
+/* ---- the album pop-out: one friend, large and turning ---- */
+
+/*
+ * Joe: "if you click it, it should pop out bigger with an option to find it on
+ * the map and a button to read its name. the pop out album should rotate it as
+ * well."
+ *
+ * NO BACKGROUND AND NO BACKDROP FILTER, and that is not a style choice.
+ *
+ * The friend is drawn by the world's own renderer into the canvas, which is
+ * BEHIND every piece of DOM on the page — so anything painted here is painted
+ * over her. `.album` has both an opaque paper card and a 3px blur, which is why
+ * the grid steps aside while this is up (see album.ts `popOpen`) rather than
+ * sitting behind it. What belongs behind the friend is her island, and the island
+ * is already being drawn there.
+ *
+ * Same reasoning, and the same result, as `.stage-slot` and the hatch's
+ * transparent container.
+ */
+.album-pop {
+  position: fixed;
+  inset: 0;
+  z-index: 21;
+  display: grid;
+  place-items: center;
+  padding: 2vh 2vw;
+}
+
+/*
+ * Taps fall THROUGH the card to the layer, which is what makes "tap beside it to
+ * go back" a single equality test rather than a hit test — the same trick
+ * `.overlay` uses. The paper panel and the close button take theirs back.
+ */
+.album-pop-card {
+  pointer-events: none;
+  width: min(96vw, 66rem);
+  height: min(84vh, 34rem);
+  display: grid;
+  /* The friend gets the larger half: she is the reason the card opened. */
+  grid-template-columns: 1.35fr 1fr;
+  gap: 2vw;
+  align-items: center;
+}
+
+/* A hole, not a container. CSS decides where it is; album.ts only asks. */
+.album-pop-stage {
+  position: relative;
+  height: 100%;
+  min-height: 12rem;
+}
+
+.album-pop-panel {
+  position: relative;              /* the ✕ hangs in its corner */
+  pointer-events: auto;
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+  max-height: 100%;
+  overflow-y: auto;
+  background: rgba(255, 253, 246, .96);
+}
+
+/*
+ * THREE ROWS, whether or not the third is filled. See `FACT_ROWS` in album.ts.
+ *
+ * Item 7 gives a pet a `{setId, speciesId}` and this card starts reading "Cherry
+ * — Fox", so the third fact is coming. Two facts centred in the panel would move
+ * both of them down the day the colour arrives; top-aligned against a reserved
+ * row, nothing shifts and the name stays exactly where her eye has learned it is.
+ */
+.album-facts {
+  display: grid;
+  grid-template-rows: repeat(3, minmax(0, auto));
+  align-content: start;
+  gap: .15rem;
+  /* Room for the ✕ in the panel's corner, so a long name never runs under it. */
+  padding-right: 2.6rem;
+}
+
+/*
+ * Declared rather than inherited. These are WORDS SHE READS, so the literacy
+ * stack is part of the content: 'Edu SA Beginner' gives the closed-loop `a` and
+ * the hooked `l` Joe asked for, and Andika behind it is SIL's literacy face.
+ * index.html sets the same stack on `body`, but a species name must not be one
+ * refactor away from Roboto — which is exactly how every word she read was
+ * rendered for the first two phases.
+ */
+.album-fact {
+  font-family: 'Edu SA Beginner', Andika, system-ui, sans-serif;
+  color: var(--ink);
+  line-height: 1.15;
+}
+
+.album-fact-name {
+  font-size: clamp(1.8rem, 6vmin, 3.4rem);
+  font-weight: 900;
+}
+
+/* Plainly secondary to the name, and plainly still a word to read. */
+.album-fact-species {
+  font-size: clamp(1.1rem, 3.4vmin, 1.8rem);
+  font-weight: 700;
+  opacity: .82;
+}
+
+/* Reserved for item 7's set name. Styled now so the day it lands is a data
+   change and not a layout change. */
+.album-fact-set {
+  font-size: clamp(1rem, 3vmin, 1.6rem);
+  font-weight: 700;
+  opacity: .7;
+}
+
+.album-pop-actions {
+  display: grid;
+  gap: .7rem;
+}
+
+/* Full width and stacked: two big targets a finger cannot mix up, in reading
+   order, rather than a row of narrow ones. */
+.album-say, .album-find {
+  width: 100%;
+  text-align: center;
+  font-size: clamp(.95rem, 2.6vmin, 1.25rem);
+  padding: .8rem 1rem;
+}
+
+.album-say { background: var(--sand); color: #4a3406; }
+.album-find { background: var(--sky); color: #10384d; }
+
+/*
+ * The way back to the grid, in the PANEL's corner — the same place, and the same
+ * size, as `.album-close` on the grid's own card.
+ *
+ * Fixed to a corner of the SCREEN is where this started, and it landed straight
+ * on top of the egg-and-land progress card: top-left belongs to `.progress`,
+ * top-right to `.album-button`, and bottom-right to the row of `.dev-reset`
+ * buttons (HANDOFF §6). There is no free corner, and the panel has one.
+ */
+.album-pop-close {
+  position: absolute;
+  top: .6rem;
+  right: .6rem;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 999px;
+  padding: 0;
+}
+
+/* Portrait, or anything narrow: the friend on top, her words underneath. */
+@media (orientation: portrait), (max-width: 44rem) {
+  .album-pop-card {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1.2fr 1fr;
+    gap: 2vh;
+    height: min(88vh, 44rem);
+  }
+}
+
 /* The button that opens it, sitting quietly in the corner. */
 .album-button {
   position: fixed;
