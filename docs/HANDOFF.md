@@ -180,6 +180,26 @@ moment of choice.
 if you are careless. The opening now waits for the voice to *end* rather than
 guessing a duration; the hatch line is spoken *after* the round closes.
 
+### A flag written on the happy path is a flag that is never written
+
+`openingSeen` was set on the line after the opening's beat loop — and that loop
+is one `main.ts` almost never runs off the end of. Beat six hands over to the
+child and `return`s; she can back out of that round, which clears the resume
+point and ends the story for good; and a reload lands wherever it lands. All
+three left the flag false, so the profile stayed "never seen" and Fred started
+again from "Oh! Hello" on **every single load**, which is what Joe reported.
+
+The save layer was innocent, and looked guilty for an hour: a run that reaches
+the last beat writes and reloads perfectly. Only the *interrupted* run is broken,
+and the interrupted run is the normal one.
+
+**So:** record a one-shot the moment it STARTS, not when it happens to finish,
+and claim it synchronously before the first `await` — the same rule the save's
+revision counter follows, for the same reason. `island/opening.ts` is the gate
+that owns it; `tests/island/opening.test.ts` asserts the ordering in `main.ts`,
+because a `let` that four code paths must remember to set is a bug waiting for
+its fifth path.
+
 ### Verify with a cold cache
 
 A pet-model fetch budget of 1200ms passed every time locally and failed every
