@@ -202,9 +202,24 @@ export function challengeFailed(f: Flow): Flow {
  * island feel like an island is ground, and a child who wants water can
  * always take it. M2 widens this as biomes arrive.
  */
+/**
+ * The kinds of land she can choose between.
+ *
+ * ONE BUTTON PER KIND. It used to offer `['grass', 'water', 'grass']` — a
+ * pick-of-three with grass listed twice, from slice-1 §7's weighting of the
+ * first-run offer. Joe, reasonably: "the type strangely being land, water,
+ * land — I don't see why two land options are needed?" He is right. Weighting
+ * a random draw is one thing; showing a child the same button twice and asking
+ * her to choose is another, and she cannot tell them apart because there is
+ * nothing to tell.
+ *
+ * It grows on its own when the biome ladder lands (item 14) and there are
+ * spring, desert and ice to choose from — at which point this is a genuine
+ * pick-of-several rather than a pick-of-three that was really a pick-of-two.
+ */
 export function tileOffer(f: Flow): TileType[] {
   if (f.phase !== 'placing') return []
-  return ['grass', 'water', 'grass']
+  return ['grass', 'water']
 }
 
 /**

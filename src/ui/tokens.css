@@ -288,3 +288,93 @@ body:has(.overlay:not(.hide)) .say { display: none; }
   pointer-events: none;
   font-variant-numeric: tabular-nums;
 }
+
+/* ---------------------------------------------------- the grown-ups panel ---
+ *
+ * The PIN, the menu and the two irreversible confirmations. These were browser
+ * prompt() and confirm() dialogs, which on a tablet are grey system slabs in
+ * another typeface that cannot be styled and read as the page having broken.
+ *
+ * Built on the same .overlay / .overlay-panel bones the name prompt uses, so
+ * there is one modal look in the game rather than two.
+ */
+.grownups-panel {
+  max-width: min(22rem, 88vw);
+  text-align: center;
+}
+
+.grownups-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: .35rem;
+}
+
+.grownups-note,
+.grownups-body {
+  font-size: .95rem;
+  opacity: .85;
+  margin-bottom: .8rem;
+  line-height: 1.45;
+}
+
+.grownups-body { text-align: left; }
+.grownups-gap { height: .5rem; }
+
+/* Four slots, monospaced so they do not shuffle as they fill. */
+.grownups-dots {
+  font: 700 2rem/1 ui-monospace, monospace;
+  letter-spacing: .35rem;
+  margin: .2rem 0 .9rem;
+}
+
+/* A wrong PIN says so and clears; mistyping is not changing your mind. */
+.grownups-wrong {
+  color: #b4483f;
+  animation: grownups-shake .4s;
+}
+
+@keyframes grownups-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+
+.grownups-pad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: .5rem;
+  margin-bottom: .9rem;
+}
+
+.grownups-key {
+  font-size: 1.35rem;
+  padding: .55rem 0;
+  /* A thumb, not a mouse pointer. */
+  min-height: 3rem;
+}
+
+.grownups-list {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  margin-bottom: .9rem;
+}
+
+.grownups-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .15rem;
+  text-align: left;
+  padding: .6rem .8rem;
+}
+
+.grownups-choice-label { font-weight: 700; }
+.grownups-choice-detail { font-size: .85rem; opacity: .75; }
+
+/* The two irreversible things in the game do not get the ordinary button. */
+.grownups-danger {
+  background: #b4483f;
+  color: #fff;
+  border-color: #8f3229;
+}

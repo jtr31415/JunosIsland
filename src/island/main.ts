@@ -28,6 +28,7 @@ import { landPaused, eggsPaused, activeGovernor, GOVERNOR_LINE } from './governo
 import { OPENING, HATCH_LINES, fill } from './script'
 import { loadIsland, saveIsland } from './save'
 import { commit, ceremony } from './ceremony'
+import { askPin, askChoice, askConfirm } from './grownups'
 import type { Committed, Exits } from './ceremony'
 import { createLocalStore } from '../platform/storage'
 import { createDurableStore } from '../platform/durable'
@@ -588,46 +589,54 @@ async function boot(): Promise<void> {
   gearBtn.textContent = '⚙'
   gearBtn.title = 'Grown-ups'
   gearBtn.setAttribute('aria-label', 'grown-ups menu')
-  gearBtn.onclick = () => {
+  gearBtn.onclick = () => { void grownUps() }
+
+  /**
+   * The grown-ups' door, in the game's own interface.
+   *
+   * Was a `prompt()` for the PIN, another `prompt()` asking someone to type a
+   * menu number, and a `confirm()`. On a tablet those are grey system slabs in
+   * a different typeface that cannot be styled and read as the page having
+   * broken — and a text prompt for four digits summons a full keyboard over
+   * half the screen. It is the one surface here a PARENT uses, so it should
+   * not be the one surface that looks unfinished.
+   */
+  async function grownUps(): Promise<void> {
     /*
-     * From the CLOCK, so advance-day does not lock a grown-up out of the
-     * gear in the middle of a debug session. In production the clock is the
-     * real one, so this is still simply today's date (v0:1080).
+     * From the CLOCK, so advance-day does not lock a grown-up out of the gear
+     * in the middle of a debug session. In production the clock is the real
+     * one, so this is still simply today's date (v0:1080).
      */
     const d = new Date(clock.now())
     // DDMM, exactly as v0:1080 computes it.
     const pin = String(d.getDate()).padStart(2, '0')
       + String(d.getMonth() + 1).padStart(2, '0')
-    const entry = prompt('Grown-ups only — PIN please:')
-    if (entry === null) return
-    if (entry.trim() !== pin) { overlay.toast('Wrong PIN'); return }
+    if (!await askPin(document.body, pin)) return
 
-    const choice = prompt([
-      'Grown-ups',
-      '',
-      '1  Back up to a file',
-      '2  Restore from a backup',
-      '3  Play the story again',
-      '4  Start again (wipes this island)',
-      '',
-      'Type a number:',
-    ].join('\n'))
+    const n = flow.pets.length
+    const friends = `${n} friend${n === 1 ? '' : 's'}`
+    const choice = await askChoice(document.body, 'Grown-ups', [
+      { id: 'backup', label: 'Back up to a file', detail: `${friends} and this island` },
+      { id: 'restore', label: 'Restore from a backup', detail: 'replaces what is here' },
+      { id: 'story', label: 'Play the story again', detail: 'the opening, from the top' },
+      { id: 'wipe', label: 'Start again', detail: `wipes this island and ${friends}` },
+    ])
     if (choice === null) return
 
-    if (choice.trim() === '1') { void backup(); return }
-    if (choice.trim() === '2') { void restore(); return }
+    if (choice === 'backup') { await backup(); return }
+    if (choice === 'restore') { await restore(); return }
     /*
      * Brief §3 wants the story replayable forever. It used to be a tap on
      * Fred, which Joe hit mid-game — the intro restarted and walked her
      * through challenges that handed over an animal and then a tile. Still
      * available, now behind the PIN where a curious tap cannot reach it.
      */
-    if (choice.trim() === '3') { void runOpening(); return }
-    if (choice.trim() !== '4') return
+    if (choice === 'story') { void runOpening(); return }
 
-    const n = flow.pets.length
-    const what = n === 0 ? 'this island' : `this island and ${n} friend${n === 1 ? '' : 's'}`
-    if (!confirm(`Start again? This wipes ${what}.`)) return
+    const sure = await askConfirm(document.body, 'Start again?',
+      [`This wipes this island and ${friends}.`, '', 'It cannot be undone.'].join('\n'),
+      'wipe it', true)
+    if (!sure) return
     /*
      * Through the store, not by reaching into localStorage.
      *
@@ -677,7 +686,9 @@ async function boot(): Promise<void> {
     const mine = current
       ? summarise(current)
       : { name: childName || 'unnamed', savedAt: '', pets: flow.pets.length }
-    if (!confirm(confirmText(summary, mine))) return
+    const sure = await askConfirm(document.body, 'Restore a backup?',
+      confirmText(summary, mine), 'restore it', true)
+    if (!sure) return
 
     /*
      * restore() verifies the backup against its own checksum before adopting
@@ -1294,8 +1305,21 @@ async function boot(): Promise<void> {
       b.textContent = TILE_FACE[t]
       b.setAttribute('aria-label', t === 'water' ? 'water' : 'grass')
       b.onclick = () => {
-        flow = chooseTile(flow, t)
-        overlay.say('Now tap where it goes!')
+        const next = chooseTile(flow, t)
+        flow = next
+        /*
+         * She asked at a socket, so choosing a kind SITES it — and then gets
+         * straight on with building it, exactly as tapping a socket with a
+         * kind already in hand does. Without this the second question was gone
+         * but the second TAP was not: the plot appeared and then sat there
+         * waiting to be poked.
+         */
+        if (next.plot) {
+          const building = tapSum(next)
+          if (building !== next) { flow = building; openSum(building) }
+        } else {
+          overlay.say('Now tap where it goes!')
+        }
         refresh()
       }
       b.style.animationDelay = i * 0.06 + 's'

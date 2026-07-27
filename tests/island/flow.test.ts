@@ -95,16 +95,20 @@ describe('flow — the earn loop', () => {
 
   it('asking for land opens the bank, not a sum', () => {
     /*
-     * Spec section 2: "pick 1 of 3 tile types -> pick a socket -> ghost hex
-     * appears -> each correct sum advances the build". With nothing under
-     * construction there is no plot for a sum to advance, so the first tap
-     * opens the offer instead. Doing the maths first is exactly the invisible
-     * progress the growing plot exists to abolish.
+     * Spec section 2: "pick a tile type -> pick a socket -> ghost hex appears
+     * -> each correct sum advances the build". With nothing under construction
+     * there is no plot for a sum to advance, so the first tap opens the offer
+     * instead. Doing the maths first is exactly the invisible progress the
+     * growing plot exists to abolish.
+     *
+     * The spec says one of THREE; there are two kinds of land in the game so
+     * far, so there are two buttons. It becomes a real pick-of-several when
+     * the biome ladder lands.
      */
     const f = askForLand(createFlow())
     expect(f.phase).toBe('placing')
     expect(f.plot).toBeNull()
-    expect(tileOffer(f)).toHaveLength(3)
+    expect(tileOffer(f).length).toBeGreaterThan(1)
   })
 
   it('asking again once a plot is under construction opens the sum', () => {
@@ -166,9 +170,21 @@ describe('flow — the earn loop', () => {
     expect(f.sumProgress).toBe(0)
   })
 
-  it('the bank offers three types to choose from', () => {
-    const f = askForLand(createFlow())
-    expect(tileOffer(f)).toHaveLength(3)
+  it('offers one button per KIND of land, with no duplicates', () => {
+    /*
+     * It used to offer ['grass', 'water', 'grass'] — a pick-of-three with
+     * grass listed twice, from slice-1 §7's weighting of the first-run draw.
+     * Joe: "the type strangely being land, water, land — I don't see why two
+     * land options are needed?" Weighting a random draw is one thing; showing
+     * a child the same button twice and asking her to pick is another, and she
+     * cannot tell them apart because there is nothing to tell.
+     *
+     * It grows on its own when the biome ladder lands and there are spring,
+     * desert and ice to choose from.
+     */
+    const offer = tileOffer(askForLand(createFlow()))
+    expect(new Set(offer).size).toBe(offer.length)
+    expect(offer).toEqual(['grass', 'water'])
   })
 
   it('builds the type that was chosen', () => {
