@@ -102,6 +102,44 @@ describe('landing a finished plot', () => {
     expect(makePlot().group.position.y).toBe(0)
   })
 
+  it('hovers over its socket while it is being built', () => {
+    /*
+     * The build happens in REAL SPACE, over the island, with the place it is
+     * going visible underneath it — not lifted into a vignette with its own
+     * grass and sky behind it. Joe's call, and the right one: the first says
+     * "here is your tile arriving", the second "here is a diagram of it".
+     */
+    const plot = makePlot()
+    plot.float(true)
+    plot.update(1 / 60)
+    expect(plot.group.position.y).toBeGreaterThan(0.5)
+  })
+
+  it('falls from where it was hovering, not from an arbitrary ceiling', () => {
+    // Switching the hover off must not drop it to the ground first: a jump
+    // down followed by a teleport back into the air is not a landing.
+    const plot = makePlot()
+    plot.float(true)
+    plot.update(1 / 60)
+    const hovering = plot.group.position.y
+
+    plot.land(900)
+    plot.update(1 / 60)
+    expect(plot.group.position.y).toBeGreaterThan(hovering * 0.7)
+  })
+
+  it('stops hovering once it has landed, and stays down', () => {
+    const plot = makePlot()
+    plot.float(true)
+    plot.update(1 / 60)
+    plot.land(400)
+    for (let i = 0; i < 120; i++) plot.update(1 / 60)
+    expect(plot.group.position.y).toBe(0)
+    // ...and the hover does not creep back in on later frames.
+    for (let i = 0; i < 60; i++) plot.update(1 / 60)
+    expect(plot.group.position.y).toBe(0)
+  })
+
   it('lifts, falls, and comes to rest ON the ground', () => {
     const plot = makePlot()
     plot.land(900)

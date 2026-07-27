@@ -175,6 +175,12 @@ async function boot(): Promise<void> {
       world.scene.add(plot.group)
     }
     plot.setProgress(state.sumProgress, sumsForTile(state))
+    /*
+     * A plot under construction ALWAYS hovers over its socket, whether or not
+     * she is mid-sum. It is a thing she is making, visible on her island —
+     * walking away to poke a pet should not put it away in a drawer.
+     */
+    plot.float(true)
   }
 
   const egg = createEgg()
@@ -460,29 +466,31 @@ async function boot(): Promise<void> {
      * The ports fire before the caller has assigned `flow` — deliberately, so
      * a handler cannot read a pre-transition phase — which means that on the
      * very tap that sites a plot, showPlot() has not run yet and there is
-     * nothing to stage. Asking for it here, from the transitioned state, is
-     * what makes the first sum of a new tile show the ghost hex rather than
-     * an empty plinth.
+     * nothing to show.
      */
     if (kind === 'sum') showPlot(state)
-    const piece = kind === 'read' ? egg.group
-      : kind === 'sum' ? plot?.group ?? null
-        : null
-    stage.show(piece ?? null, world.scene)
-    if (!piece) { overlay.setStaged(false); return false }
-    // An egg is small and a hex is not; frame each for what it is.
+
     /*
-     * An egg stands up and a tile lies flat, so the eye rests at a different
-     * height for each. Framing the plot like an egg put it on the bottom edge
-     * of the vignette with a screenful of empty sky above it.
+     * THE BUILD HAPPENS IN REAL SPACE.
+     *
+     * A tile under construction is NOT lifted onto the vignette's turntable.
+     * It hovers over its own socket, on the real island, with the place it is
+     * going visible underneath it the whole time — Joe's call, and the right
+     * one: a vignette with its own grass and sky behind it says "here is a
+     * diagram of your tile", whereas floating over the island itself says
+     * "here is your tile, arriving".
+     *
+     * The split layout still applies, so the panel takes one side and the
+     * world shows through the other. Nothing is drawn into that gap: the
+     * stage slot is transparent, and what she sees there IS the island.
      */
-    /*
-     * Eye above, aim low: you look DOWN onto a tile lying on the ground —
-     * but only far enough to see its surface, not so far that the horizon
-     * leaves the frame and the vignette becomes a wall of grass.
-     */
-    if (kind === 'read') stage.frame(0.55)
-    else stage.frame(world.models.size, 0.28, 0.95)
+    const piece = kind === 'read' ? egg.group : null
+    stage.show(piece, world.scene)
+
+    if (kind === 'sum') { refreshDots(kind, state); return !!plot }
+    if (!piece) return false
+
+    stage.frame(0.55)
     refreshDots(kind, state)
     return true
   }

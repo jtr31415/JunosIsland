@@ -121,7 +121,15 @@ const fitFor = (name: string): readonly [number, number] =>
  * "arc across the screen to its chosen socket", and a purely vertical fall is
  * a different sentence: something dropped, not something delivered.
  */
-const LAND_HEIGHT = balance.stage.landHeight
+/**
+ * How high the plot hovers over its socket while it is being built, and the
+ * height the fly-back falls from — the same number, because it falls from
+ * where it has been waiting.
+ *
+ * Clear of the island's own scenery so it never looks like it has already
+ * landed, low enough that the socket beneath it stays in the same glance.
+ */
+const FLOAT_HEIGHT = balance.stage.landHeight
 
 /** Where in the arc the tile meets the ground; the rest is the settle. */
 const TOUCHDOWN = 0.72
@@ -151,6 +159,16 @@ export interface GrowingPlot {
    * cross-scene screen-space tween buys a nicer first second at the cost of
    * being wrong about where the land actually is.
    */
+  /**
+   * Hover the plot above its socket while it is being built.
+   *
+   * IN THE REAL WORLD, over the real island — not lifted into a separate
+   * scene with its own ground and sky. Joe's call, and the right one: a
+   * vignette with its own grass behind it says "here is a diagram of your
+   * tile", whereas floating over the island itself says "here is your tile,
+   * arriving". The place it is going is visible underneath it the whole time.
+   */
+  float(on: boolean): void
   land(ms: number, reach?: number): void
   /** Ease the newly-revealed pieces in. Call per frame. */
   update(dt: number): void
@@ -222,6 +240,9 @@ export function createGrowingPlot(
   let landT = -1
   let landMs = 900
   let landReach = 1.6
+  /** Hovering above the socket while she builds it. */
+  let floating = false
+  let hover = 0
 
   const install = (index: number, object: THREE.Object3D, preview = true): void => {
     if (disposed) return
@@ -329,13 +350,31 @@ export function createGrowingPlot(
 
     },
 
+    float(on) {
+      // Deliberately does NOT reset the position when switched off: land()
+      // takes over from wherever it is, and a jump to the ground followed by
+      // a teleport back into the air is not a landing.
+      floating = on
+    },
+
     land(ms, reach = balance.stage.landReach) {
+      floating = false
       landMs = Math.max(120, ms)
       landReach = reach
       landT = 0
     },
 
     update(dt) {
+      if (floating) {
+        /*
+         * A slow, shallow hover. Enough to say "not placed yet" without
+         * bobbing so hard it reads as unstable — this is a thing waiting to
+         * be set down, not a thing at sea.
+         */
+        hover += dt
+        group.position.set(0, FLOAT_HEIGHT + Math.sin(hover * 1.3) * 0.06, 0)
+      }
+
       if (landT >= 0) {
         landT = Math.min(1, landT + dt * (1000 / landMs))
         if (landT >= 1) {
@@ -352,7 +391,8 @@ export function createGrowingPlot(
            */
           const t = landT / TOUCHDOWN
           const fall = t * t
-          group.position.y = LAND_HEIGHT * (1 - fall)
+          // From where it has been hovering, not from an arbitrary ceiling.
+          group.position.y = FLOAT_HEIGHT * (1 - fall)
           // ...and swing in from the side, so it arcs rather than drops.
           group.position.x = landReach * (1 - t) * (1 - t * 0.35)
           group.scale.set(1, 1, 1)
