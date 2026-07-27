@@ -17,6 +17,51 @@ verdict outranks every document here (brief §18), and the notes below marked
 
 ---
 
+## The overnight run, 27–28 July
+
+Joe went to bed and asked for autonomous work with Fable reviewing plans and
+results. Twenty-seven commits. Every merge was Fable-reviewed first and gated on
+all six gates; **917 tests** at the time of writing, up from 739.
+
+**What landed, in the order it did:**
+
+| | |
+|---|---|
+| Reading | word-build to word-find is now **3:1**, at Joe's request. Overrides slice-1 §3's "roughly 50/50". |
+| Typography | **the font was never loading.** `challenges.css` had named Andika since the port with nothing bundled and no `@font-face`, so every word Juno has ever read was Roboto — double-storey `a`, straight `l`, the two shapes she is not taught. Now Edu SA Beginner, bundled and precached. |
+| Camera | the pivot was pinned at the origin forever; it eases to the island's centroid and a tap on her own land turns the island about that tile. |
+| Hatch | the pet model is **warmed a whole egg ahead**. Measured cold: 569.9 ms → 0.2 ms. |
+| Species | a five-deep memory primed from `flow.pets`, so **her island is the memory** and a reload cannot hand her the same animal twice. |
+| Coast | a floor of dry connections so she cannot wall herself in. **An empirical margin, not a theorem** — see below. |
+| Challenge | a corner ×, and the same card comes back rather than re-rolling. |
+| Pets | tap target constant across zoom, `clearOf` converges, both random flakes dead. |
+| Scenery | shadows under the larger props, the signpost is solid, and **a regression of mine that had broken most of the island's scenery** is fixed. |
+
+**The two things worth reading twice.**
+
+*I shipped a bug that made the island emptier while claiming to fill it.* The
+tree work indexed `LEAFY_TREES[(dh >> 5) % length]`, and `hash` is unsigned, so a
+signed shift gave a negative index for half of all hashes → `undefined` → a fetch
+for `forest/undefined.gltf` → the loader threw → **and the rejection escaped
+`sync()`, which loops over every tile.** One bad tree left every hex after it
+bare: a nineteen-hex island with scenery on exactly one. My original test could
+not have caught it, because it checked that every name in the catalogue exists
+rather than that every name CHOSEN does.
+
+*Fable falsified a guarantee we were about to ship.* The dry-connection floor
+claimed the island "can never reach a shape it cannot build out of". Fable
+produced a 64-tap counterexample through the real tap path. It is now **pinned as
+a test that asserts the failure**, so the limit is known rather than forgotten,
+and the structural fix is carded.
+
+**Fable earned its place three more times:** it caught a wiring line that no test
+defended, where deleting one line would have silently reverted the whole tap-target
+fix with 864 tests still green; it found a test whose name claimed a protection it
+was not providing; and it found the same signed-shift bug in a comment of mine that
+justified a floor the code does not enforce.
+
+---
+
 ## Provenance of the playtest quotes
 
 Fable, reviewing the camera and preload diffs, flagged that quotes attributed to
