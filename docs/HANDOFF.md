@@ -296,6 +296,35 @@ service worker before verifying is doing real work, not ceremony.
   silently fall behind IndexedDB on a full device. Anything that reads a save
   for a PURPOSE — export, import, diagnostics — has to pick the higher
   revision the way `get` does, not just read localStorage.
+- **There are TWO places scenery is placed, and a fix to one is not a fix to
+  the other.** `props.ts` dresses tiles the island grows on its own;
+  `world/increments.ts` grows the tiles she builds herself, and the finished
+  group is handed over by `adopt()`. Trees-inside-rocks was reported twice
+  because the first fix only touched the first path.
+- **Eight full-size features do not fit round one hex.** `props.ts` plants ONE
+  feature per tile; the growing plot plants eight, so they get their own
+  smaller `FITS.grown`. Measured: full size places 74% of the time without
+  overlapping, the smaller size 94%.
+- **Coast costs are a table, not a formula, and 40 is a ceiling.** Walls (land
+  standing in water) and cliffs (water against her grass) trade against each
+  other — raising the wall cost from 40 to 100 cuts walls 37→11 but takes
+  cliffs 1→24, because plain water starts winning. Cliffs matter more.
+- **A set recolours a species' BASE COAT only**, decided per species from
+  `species-base.json`, which `npm run pets:atlas` generates from the models'
+  own UVs. Two wrong answers were tried first and both are instructive: a hue
+  rotation does nothing to an animal with no hue (the polar bear), and deciding
+  base-versus-marking per atlas BAND lets the pale species lose the vote to the
+  23 others sharing that band. Membership is a colour REGION — an exact-RGB
+  list banded every animal like a deckchair, because the atlas is a gradient.
+- **Dev buttons all share `.dev-reset`**, which is fixed to the bottom-right
+  corner. Anything new needs a `right` offset or it lands on top of the gear.
+- **The dev server always runs the PREVIEW channel.** Building is unchanged —
+  production unless `ISLAND_CHANNEL=preview` — but `npm run dev` on production
+  would have every flag off and the Pet-o-matic unreachable.
+- **A dev-only feature needs `__CHANNEL__`, not just a flag.** A runtime flag
+  cannot be folded by Rollup, so the code ships unreachable-but-downloaded —
+  the whole Pet-o-matic was precached that way. `npm run channel` checks both
+  markers in both directions.
 - **The service worker uses `skipWaiting` + `clientsClaim`.** `autoUpdate`
   alone waits for every tab to close, which produces phantom regressions —
   fixes demonstrably in the deployed JavaScript but not in what the browser
