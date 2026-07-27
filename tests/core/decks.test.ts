@@ -158,12 +158,31 @@ describe('makeMemoryDeck', () => {
   })
 
   it('ignores a history item that is not in the pack', () => {
-    // An old save could name a species that no longer ships. It must not eat a
-    // memory slot and it must not throw.
-    const draw = makeMemoryDeck(mulberry32(31), ABC, 2)
-    draw.remember(['ghost', 'a'])
-    const got = Array.from({ length: 20 }, draw)
-    expect(got[0]).not.toBe('a')
+    /*
+     * An old save could name a species that no longer ships. It must not eat a
+     * memory slot and it must not throw.
+     *
+     * The history OVERFLOWS the window on purpose, and that is the whole test.
+     * Fable caught the first version passing vacuously: `remember(['ghost','a'])`
+     * with a window of two blocks 'a' whether the guard exists or not, so
+     * deleting the guard left the test green. Here 'ghost' must be dropped
+     * BEFORE the window is taken, or it displaces a real species and the memory
+     * silently shortens — which is exactly how a legacy save full of retired
+     * names would revive the repeat bug it exists to prevent.
+     */
+    const SMALL = ['a', 'b', 'c']
+    /*
+     * Swept across seeds rather than trusting one. With the guard 'ghost' is
+     * dropped, the window is ['b','a'] and 'b' can NEVER come out first. Without
+     * it the window is ['ghost','a'], 'b' is eligible, and it comes out first
+     * about half the time — so a single seed could pass either way and prove
+     * nothing.
+     */
+    for (let seed = 1; seed <= 40; seed++) {
+      const draw = makeMemoryDeck(mulberry32(seed), SMALL, 2)
+      draw.remember(['b', 'ghost', 'a'])
+      expect(draw(), `seed ${seed}`).toBe('c')
+    }
   })
 
   it('does not mutate the source array', () => {

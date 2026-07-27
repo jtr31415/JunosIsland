@@ -404,6 +404,5 @@ Either the cost curve re-bases or session length halves. This wants numbers.
    still the highest-value action available and it has been true for two phases.
 
 **Carried into Phase 5, already carded:** pets walk through Juno's signpost (same
-class as Fred and the egg); larger props cast no shadows; two cats hatched in a
-row, so the species draw may have no memory; tilt-shift with the lighting rework;
+class as Fred and the egg); larger props cast no shadows; tilt-shift with the lighting rework;
 and `docs/nextphase.zip` is still in the repo, uncommitted and redundant.
