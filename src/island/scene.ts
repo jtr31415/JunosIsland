@@ -14,20 +14,21 @@ import { createLighting } from './lighting'
 import type { Lighting, LightingPreset } from './lighting'
 import meadowDay from './lighting/presets/meadow-day.json'
 import { loadTileModels, createTileField, createSocketField, createSurface } from './world/tiles'
-import type { TileModels, TileField, Surface } from './world/tiles'
+import type { TileModels, TileField, Surface, RenderKind } from './world/tiles'
 import { toWorld } from './world/hex'
 import type { Axial } from './world/hex'
 import type { Island } from './world/grid'
 import { buildableSockets } from './world/coast'
 import { sockets } from './world/grid'
+import { pickFrom } from './picking'
 
-export type Hit =
-  | { kind: 'tile'; axial: Axial }
-  | { kind: 'socket'; axial: Axial }
-  | { kind: 'pet'; id: string }
-  | { kind: 'egg' }
-  | { kind: 'fred' }
-  | { kind: 'sea' }
+/*
+ * `Hit` and the rule that decides between several of them live in `picking.ts`,
+ * which needs no GL context and is therefore testable. Re-exported here because
+ * this is where the rest of the game expects to find the type.
+ */
+export type { Hit } from './picking'
+import type { Hit } from './picking'
 
 export interface World {
   scene: THREE.Scene
@@ -136,32 +137,14 @@ export async function createWorld(canvas: HTMLCanvasElement): Promise<World> {
       ndc.y = -((clientY - rect.top) / rect.height) * 2 + 1
       raycaster.setFromCamera(ndc, camera.camera)
 
-      // Sockets first: while placing, an invitation outranks the thing beneath.
-      if (socketField.group.visible) {
-        const hits = raycaster.intersectObjects(socketField.group.children, false)
-        const h = hits[0]
-        if (h && h.instanceId !== undefined) {
-          const a = socketField.coordOf(h.instanceId)
-          if (a) return { kind: 'socket', axial: a }
-        }
-      }
-
-      const pets = raycaster.intersectObjects(pickables, true)
-      if (pets[0]) {
-        let o: THREE.Object3D | null = pets[0].object
-        while (o && !o.userData.pick) o = o.parent
-        if (o?.userData.pick) return o.userData.pick as Hit
-      }
-
-      const tileHits = raycaster.intersectObjects(tiles.group.children, false)
-      const t = tileHits[0]
-      if (t && t.instanceId !== undefined) {
-        const type = (t.object as THREE.InstancedMesh).userData.tileType
-        const a = tiles.coordOf(type, t.instanceId)
-        if (a) return { kind: 'tile', axial: a }
-      }
-
-      return { kind: 'sea' }
+      // The precedence rule itself lives in picking.ts, where it can be tested.
+      return pickFrom(raycaster, {
+        sockets: socketField.group,
+        socketAt: id => socketField.coordOf(id),
+        pickables,
+        tiles: tiles.group,
+        tileAt: (kind, id) => tiles.coordOf(kind as RenderKind, id),
+      })
     },
 
     onFrame(fn) { frameFns.push(fn) },
