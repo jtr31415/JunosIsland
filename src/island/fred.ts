@@ -21,6 +21,7 @@
  */
 import * as THREE from 'three'
 import { createBlobShadow, castShadow } from './juice'
+import { footprintBelow, WALKING_HEIGHT } from './world/props'
 
 /*
  * Kenney-ish greens: saturated but soft, nothing murky. Deliberately BRIGHTER
@@ -49,6 +50,21 @@ export interface Fred {
    */
   setHome(x: number, z: number, radius: number): void
   pointAt(target: THREE.Vector3 | null): void
+  /**
+   * Where Fred is standing and how much room he takes, for anything that has
+   * to walk round him.
+   *
+   * Joe, playing: "animals can still clip through the frog." He was not in
+   * anybody's obstacle list — the same fault the egg had, and the same shape:
+   * a hand-built object that the scenery pipeline never sees, so `obstacles()`
+   * knew nothing about it and pets walked straight through the one character
+   * on the island.
+   *
+   * Asked afresh rather than published once, because he MOVES: he potters
+   * about his patch between hops, and a keep-out circle pinned to where he
+   * first stood is a keep-out circle in the wrong place a minute later.
+   */
+  obstacle(): { x: number; z: number; r: number }
   update(dt: number, t: number): void
 }
 
@@ -178,8 +194,28 @@ export function createFred(): Fred {
   const BASE = 0.3
   body.scale.setScalar(BASE)
   group.add(body)
+
+  /*
+   * MEASURED, once, while he stands at the origin at rest.
+   *
+   * Two numbers come out of it and both used to be guesses. How tall he is
+   * decides the shadow he throws; how wide he is BELOW walking height decides
+   * how far a pet has to stay off him. Walking height rather than his full
+   * extent for the same reason the scenery uses it: his leaf hat is not in
+   * anybody's way. The keep-out was never wrong here because it was never
+   * written down at all — he was in no obstacle list — but writing it down as
+   * `hexSize × a guess` is how every other one on this island came out too
+   * small, so it is taken from the model.
+   */
+  body.updateMatrixWorld(true)
+  const bounds = new THREE.Box3().setFromObject(body)
+  /** How tall he stands, in world units. */
+  const STANDING = bounds.max.y - bounds.min.y
+  /** How far his splayed legs reach out from his centre, at ankle height. */
+  const KEEP_OUT = footprintBelow(body, WALKING_HEIGHT)
+
   // Sibling of the body, so a hop leaves it on the ground where it belongs.
-  const shadow = createBlobShadow(0.16)
+  const shadow = createBlobShadow(0.16, STANDING)
   group.add(shadow)
   group.userData.pick = { kind: 'fred' }
 
@@ -237,6 +273,25 @@ export function createFred(): Fred {
       while (want < -Math.PI) want += Math.PI * 2
       headYawWant = Math.max(-0.8, Math.min(0.8, want))
       leanWant = 0.14
+    },
+
+    obstacle() {
+      /*
+       * Where he ACTUALLY is, not where his group sits. A hop carries the body
+       * across the group before the landing writes it back, so during the half
+       * second he is in the air his group is still at the take-off point — and
+       * a pet would happily walk through the frog in mid-flight.
+       *
+       * The body's offset is in his own frame and he turns to face each hop,
+       * so it has to come back out through his facing.
+       */
+      const s = Math.sin(group.rotation.y)
+      const c = Math.cos(group.rotation.y)
+      return {
+        x: group.position.x + body.position.x * c + body.position.z * s,
+        z: group.position.z - body.position.x * s + body.position.z * c,
+        r: KEEP_OUT,
+      }
     },
 
     update(dt, t) {
@@ -304,7 +359,10 @@ export function createFred(): Fred {
       // He is a heavy frog and his hop is low, so the blob tightens rather
       // than disappearing — but it does have to react, or the hop reads as
       // the whole frog sliding upward with his shadow glued underneath.
-      castShadow(shadow, body.position.y)
+      // ...and it tracks him ACROSS the hop as well as under it: the body
+      // moves within the group while he is in the air, and a shadow left at the
+      // take-off point is a shadow the frog visibly flies away from.
+      castShadow(shadow, body.position.y, body.position.x, body.position.z)
 
       lean += (leanWant - lean) * 0.1
       body.rotation.x = lean

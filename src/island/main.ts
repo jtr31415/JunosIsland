@@ -244,6 +244,15 @@ async function boot(): Promise<void> {
   const fred = createFred()
   world.scene.add(fred.group)
   world.pickables.push(fred.group)
+  /*
+   * Fred is SOLID, and he moves.
+   *
+   * The scenery is published once when it grows; he potters about his patch
+   * between hops, so a circle recorded at start-up would block empty grass and
+   * let pets through the frog. Asked afresh each frame instead — the same
+   * omission the egg had, which is why pets walked through that too.
+   */
+  pets.setMovers(() => [fred.obstacle()])
 
   /*
    * Her signpost, on the home tile. The one place the world says out loud

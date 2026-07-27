@@ -50,6 +50,62 @@ export interface Lighting {
   current(): LightingPreset
 }
 
+/**
+ * Where a shadow falls, given the active sun.
+ *
+ * The rig has exactly ONE shadow caster (§2.2), so there is exactly one answer
+ * — and everything that draws a shadow has to give the same one or the scene
+ * stops reading as a single lit place. Joe, looking at the island: "drop
+ * shadow location and shape is inconsistent with single point sun light
+ * source." It was: every blob was a circle drawn concentrically under its
+ * object, which is the shadow you get from a lamp directly overhead, while the
+ * preset's sun sits at 35° elevation and 40° azimuth.
+ */
+export interface SunShadow {
+  /** Unit ground direction a shadow is thrown in — away from the sun. */
+  x: number
+  z: number
+  /** cot(elevation): ground units a shadow reaches per unit of height. */
+  reach: number
+  /** 1/sin(elevation): how much a round caster's shadow stretches. */
+  stretch: number
+}
+
+/**
+ * The sun everything shares.
+ *
+ * Module-level on purpose. There is one island and one sun; the challenge
+ * stage builds a second rig from the SAME preset precisely so the egg on the
+ * turntable is lit like the egg on the shore, and a shadow that disagreed
+ * between the two would give that away. Null until a rig exists, and a null
+ * sun casts straight down — a fair answer for a scene with no lighting in it
+ * rather than a hardcoded direction, which §7 would call a sin.
+ */
+let activeSun: { elevation: number; azimuth: number } | null = null
+
+/**
+ * The elevation a shadow is computed at is FLOORED.
+ *
+ * cot(elevation) runs away at the horizon: a 2° sun throws a blob 29 times an
+ * object's height across the island, which is neither readable nor cheap to
+ * fake. Nothing in the presets goes near it, and the floor means nothing can.
+ */
+const LOWEST_SUN = (10 * Math.PI) / 180
+
+export function sunShadow(): SunShadow | null {
+  if (!activeSun) return null
+  const el = Math.max(LOWEST_SUN, (activeSun.elevation * Math.PI) / 180)
+  const az = (activeSun.azimuth * Math.PI) / 180
+  return {
+    // sunPosition puts the sun at ground bearing (sin az, cos az); the shadow
+    // goes the other way.
+    x: -Math.sin(az),
+    z: -Math.cos(az),
+    reach: 1 / Math.tan(el),
+    stretch: 1 / Math.sin(el),
+  }
+}
+
 /** Sun direction from elevation/azimuth in degrees, at a fixed distance. */
 function sunPosition(elevationDeg: number, azimuthDeg: number, dist = 30): THREE.Vector3 {
   const el = (elevationDeg * Math.PI) / 180
@@ -160,8 +216,15 @@ export function createLighting(
 
     sun.color = lerpColor(new THREE.Color(p.sun.color), new THREE.Color(q.sun.color), t)
     sun.intensity = mix(p.sun.intensity, q.sun.intensity)
-    sun.position.copy(sunPosition(
-      mix(p.sun.elevation, q.sun.elevation), mix(p.sun.azimuth, q.sun.azimuth)))
+    const elevation = mix(p.sun.elevation, q.sun.elevation)
+    const azimuth = mix(p.sun.azimuth, q.sun.azimuth)
+    sun.position.copy(sunPosition(elevation, azimuth))
+    /*
+     * Published HERE, in the one place the sun's angles are decided, so a
+     * blob shadow cannot drift out of step with the light that casts it —
+     * including mid-tween, when the sun is between two presets.
+     */
+    activeSun = { elevation, azimuth }
 
     rim.color = lerpColor(new THREE.Color(p.rim.color), new THREE.Color(q.rim.color), t)
     rim.intensity = mix(p.rim.intensity, q.rim.intensity)
