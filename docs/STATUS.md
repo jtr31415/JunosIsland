@@ -4,7 +4,11 @@
 numbering. Read `docs/HANDOFF.md` first for how to work on this without
 breaking it; this is what has been done and what is left.*
 
-**Phase 3's P0 is complete (items 0–4) and P1 has started (items 5–6).** The
+**PHASE 3 IS COMPLETE — items 0–6.** Its close-out is
+`docs/PHASE3-HANDOVER.md`: what exists, how it is wired, and what Phase 4 has to
+decide. Item 6's wiring onto live pets is item 7, which is Phase 5.
+
+The
 game is deployed at <https://jtr31415.github.io/JunosIsland/> and **has still
 not been played by the QA department**, whose verdict outranks every document
 here (brief §18).
@@ -20,9 +24,10 @@ ship for release after phase 4 and then patch in phase 5 after."*
 So the shape is now:
 
 - **Phase 3** — items 0–6. Done, bar item 6's wiring.
-- **Phase 4 — the release.** Item 13 (adaptive difficulty), then tilt-shift.
-  Ship after this.
-- **Phase 5 — the patch.** Everything else: items 7–12 and 14–17.
+- **Phase 4 — the release.** Item 13 (adaptive difficulty). Ship after this.
+- **Phase 5 — the patch.** Tilt-shift FIRST, packaged with a lighting rework —
+  Joe, 27 July: *"hold the tiltshift and pack with a lighting rework. we are not
+  quite there yet. we put that in early phase 5."* Then items 7–12 and 14–17.
 
 Two things follow that need Joe rather than me.
 
@@ -63,7 +68,7 @@ tablet from it.
 | 11 | Small ports | Phase 5 — scope grew, see below. |
 | 12 | Per-item records + scheduler | Phase 5. |
 | **13** | Adaptive difficulty | **PHASE 4 — next.** One question to settle first, below. |
-| — | **Tilt-shift** | **PHASE 4**, after 13. Needs a lighting-brief amendment; see above. |
+| — | **Tilt-shift** | **PHASE 5, early**, packaged with a lighting rework. Needs a brief amendment; see above. |
 | 14 | Biome & tile ladder | Phase 5. `docs/rock-hexes-proposal.md` is a down-payment on it. |
 | 15 | Stardust, Star Pool, first wonder | Phase 5. |
 | 16 | Persona simulator | Phase 5. |
