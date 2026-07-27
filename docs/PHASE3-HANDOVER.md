@@ -360,7 +360,22 @@ gesture — that is Chrome policy, not a bug.
 
 ## 10. What Phase 4 needs to decide
 
-Phase 4 is **item 13, adaptive difficulty, and it is the release.**
+Phase 4 is **the release**: item 13, adaptive difficulty, plus the playtest
+fixes Joe ruled into it on 27 July —
+
+- **A challenge needs an X**, and it must resume the SAME card. The escape is
+  easy; the resume is the load-bearing half, because a way out that re-rolls the
+  question is a way to skip a word she does not fancy. The generators hold their
+  own history, so the drawn item has to live in `Flow` rather than be
+  regenerated.
+- **Preload the pet model.** The hatch is the emotional peak and the model
+  arrives late. This will be worse on the tablet than in any test we run — a
+  1200ms fetch budget passed every time locally and failed every time cold.
+- **A floor of two dry connections**, so she cannot ring her island in water and
+  leave it unable to grow. The exact mirror of `mustBeWater`, and `tileTypeFor`
+  is already the choke point for both directions.
+- **The album pop-out**: bigger, rotating, find-it-on-the-map, and a button that
+  speaks its name.
 
 **The blocking question, unchanged since it was found:**
 `pet-island-difficulty.md` §5 and slice-1 §4 are in the same currency and

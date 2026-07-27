@@ -24,8 +24,15 @@ ship for release after phase 4 and then patch in phase 5 after."*
 So the shape is now:
 
 - **Phase 3** — items 0–6. Done, bar item 6's wiring.
-- **Phase 4 — the release.** Item 13 (adaptive difficulty). Ship after this.
-- **Phase 5 — the patch.** Tilt-shift FIRST, packaged with a lighting rework —
+- **Phase 4 — the release.** Item 13 (adaptive difficulty), plus the playtest
+  fixes Joe has ruled into it (27 July): a challenge X button that resumes the
+  SAME card, preloading the pet model before a hatch, a floor of two dry
+  connections so the island cannot be snookered by water, and the album pop-out.
+  Ship after this.
+- **Phase 5 — the patch.** Juno's own first feature request is in here — she
+  wants to change her mind after picking the wrong tile type, which must carry
+  her sums over rather than restart the build (brief §19). Tilt-shift FIRST,
+  packaged with a lighting rework —
   Joe, 27 July: *"hold the tiltshift and pack with a lighting rework. we are not
   quite there yet. we put that in early phase 5."* Then items 7–12 and 14–17.
 
