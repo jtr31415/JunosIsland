@@ -83,7 +83,7 @@ describe('summarise', () => {
 })
 
 describe('confirmText', () => {
-  it('says whose island, how many friends, and that it can be undone', () => {
+  it('says whose island, how many friends, and what will happen', () => {
     const text = confirmText(
       { name: 'Juno', savedAt: '3/6/2026, 10:00:00', pets: 7 },
       { name: 'Juno', savedAt: '', pets: 2 },
@@ -91,7 +91,7 @@ describe('confirmText', () => {
     expect(text).toContain("Restore Juno's island?")
     expect(text).toContain('7 friends')
     expect(text).toContain('2 friends')
-    expect(text).toContain('can be undone')
+    expect(text).toContain('will be replaced')
   })
 
   it('does not say "1 friends"', () => {

@@ -71,8 +71,7 @@ export function confirmText(incoming: BackupSummary, current: BackupSummary): st
     `Backup:  ${incoming.pets} friend${incoming.pets === 1 ? '' : 's'}, saved ${incoming.savedAt}`,
     `Now:     ${current.pets} friend${current.pets === 1 ? '' : 's'}`,
     '',
-    'The island on this device will be replaced. A copy of it is kept,',
-    'so this can be undone.',
+    'The island on this device will be replaced.',
   ].join('\n')
 }
 

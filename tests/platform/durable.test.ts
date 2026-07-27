@@ -351,3 +351,154 @@ describe("the save already on Juno's tablet", () => {
     expect(await store.get('p1', 'save')).toBeNull()
   })
 })
+
+describe('two saves at once — the race the barrier could not protect against', () => {
+  /**
+   * Found by review. `put` read the revision counter, then awaited three times
+   * before writing it back, so two overlapping puts both read the stale count
+   * and both wrote the SAME rev. Equal revisions tie on load, the tie goes to
+   * localStorage, and whichever landed there last won regardless of which was
+   * newer.
+   *
+   * Overlapping puts are ordinary here: refresh() persists fire-and-forget
+   * while a hatch commits and awaits. On a slow tablet the earlier one is
+   * still in flight.
+   */
+  it('never gives two concurrent saves the same revision', async () => {
+    const text = memoryText()
+    const store = createDurableStore(noProfiles, { text, idb, now: clock })
+
+    await Promise.all([
+      store.put('p1', 'save', { pets: [] }),
+      store.put('p1', 'save', { pets: ['Sheptun'] }),
+      store.put('p1', 'save', { pets: ['Sheptun', 'Bimo'] }),
+    ])
+
+    /*
+     * Three saves must have claimed three revisions. Deliberately NOT asserted
+     * by counting distinct revs in the ring — the ring is keyed BY rev, so a
+     * collision silently overwrites itself and the duplicate disappears. That
+     * first version of this test passed against the bug.
+     */
+    expect((await store.envelope('p1', 'save'))?.rev).toBe(3)
+  })
+
+  it('keeps the LAST save issued, not whichever write finished last', async () => {
+    /*
+     * The losing interleaving, in full: a stale pre-award save whose write is
+     * slow, then the award. Both used to land on rev 1 with the stale one
+     * reaching localStorage second — so reload returned the island WITHOUT
+     * the pet she had just hatched, ceremony and all, despite the awaited
+     * receipt that was supposed to make that impossible.
+     */
+    const text = memoryText()
+    /*
+     * The first write is made slow on purpose, which is what a real tablet
+     * does under load. Without it the two writes happen to interleave in the
+     * order they were issued and the bug hides.
+     */
+    let writes = 0
+    const slowFirst: IdbStore = {
+      get: (store, key) => (idb as IdbStore).get(store, key),
+      put: async (store, key, value) => {
+        if (store === DOCS && writes++ === 0) await new Promise(r => setTimeout(r, 20))
+        return (idb as IdbStore).put(store, key, value)
+      },
+      remove: (store, key) => (idb as IdbStore).remove(store, key),
+      prefix: (store, p) => (idb as IdbStore).prefix(store, p),
+    }
+    const store = createDurableStore(noProfiles, { text, idb: slowFirst, now: clock })
+
+    const stale = store.put('p1', 'save', { pets: [] })
+    const award = store.put('p1', 'save', { pets: ['Sheptun'] })
+    await Promise.all([stale, award])
+
+    const back = createDurableStore(noProfiles, { text, idb, now: clock })
+    expect(await back.get('p1', 'save')).toEqual({ pets: ['Sheptun'] })
+  })
+
+  it('serialises writes so both copies agree afterwards', async () => {
+    const text = memoryText()
+    const store = createDurableStore(noProfiles, { text, idb, now: clock })
+    await Promise.all(
+      Array.from({ length: 12 }, (_, i) => store.put('p1', 'save', { n: i })))
+
+    const local = JSON.parse(text.raw.get('petIsland.v1.p1.save') as string) as Envelope<unknown>
+    const remote = await idb?.get<Envelope<unknown>>(DOCS, 'p1/save')
+    expect(local.rev).toBe(remote?.rev)
+    expect(local.data).toEqual(remote?.data)
+  })
+})
+
+describe('exporting the right copy', () => {
+  it('exports the newer copy, not whichever localStorage happens to hold', async () => {
+    /*
+     * `browserText.write` swallows quota errors by design, so on a
+     * storage-squeezed device localStorage falls behind IndexedDB — and that
+     * is exactly the device where a backup matters. Exporting the stale copy
+     * would be discovered only after the tablet was lost.
+     */
+    const text = memoryText()
+    const store = createDurableStore(noProfiles, { text, idb, now: clock })
+    await store.put('p1', 'save', { bankedTiles: 1 })
+    await store.put('p1', 'save', { bankedTiles: 2 })
+
+    // localStorage stuck a revision behind, as a quota failure would leave it.
+    text.write('petIsland.v1.p1.save', JSON.stringify(seal({ bankedTiles: 1 }, 1, 1)))
+
+    const exported = await store.envelope('p1', 'save')
+    expect(exported?.data).toEqual({ bankedTiles: 2 })
+  })
+})
+
+describe('importing a damaged backup', () => {
+  it('refuses it rather than re-sealing it as valid', async () => {
+    /*
+     * `restore` re-seals the payload with a freshly computed checksum, so a
+     * bit-rotted-but-parseable backup would have been laundered into a
+     * perfectly valid save. The import path is the only one where the file has
+     * lived outside our storage, and it was the one place not checking.
+     */
+    const text = memoryText()
+    const store = createDurableStore(noProfiles, { text, idb, now: clock })
+    await store.put('p1', 'save', { pets: ['Bimo'] })
+
+    const rotted = { ...seal({ pets: ['Bimo'] }, 1, 1), data: { pets: [] } }
+    await expect(store.restore('p1', 'save', rotted)).rejects.toThrow()
+
+    // And nothing was changed.
+    expect(await store.get('p1', 'save')).toEqual({ pets: ['Bimo'] })
+  })
+
+  it('still accepts an intact one', async () => {
+    const text = memoryText()
+    const store = createDurableStore(noProfiles, { text, idb, now: clock })
+    await store.restore('p1', 'save', seal({ pets: ['Corbell'] }, 1, 1))
+    expect(await store.get('p1', 'save')).toEqual({ pets: ['Corbell'] })
+  })
+})
+
+describe('when the snapshot ring cannot be written', () => {
+  it('does not take the ceremony down with it', async () => {
+    /*
+     * Both primaries are written by the time the ring is appended, so the save
+     * HAS happened — but an unguarded throw rejected commitState(), and `void
+     * passed(more)` turned that into an unhandled rejection with no hatch. She
+     * would finish her fifth page, the pet would be saved, and nothing would
+     * happen. Most likely on a full device, which is where quota errors live.
+     */
+    const text = memoryText()
+    const full: IdbStore = {
+      get: async () => null,
+      put: async (store: string) => {
+        if (store === 'ring') throw new Error('QuotaExceededError')
+      },
+      remove: async () => {},
+      prefix: async () => [],
+    }
+    const store = createDurableStore(noProfiles, { text, idb: full, now: clock })
+
+    await expect(store.put('p1', 'save', { pets: ['Bimo'] })).resolves.toBeUndefined()
+    expect(await store.get('p1', 'save')).toEqual({ pets: ['Bimo'] })
+  })
+})

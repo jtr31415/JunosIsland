@@ -151,6 +151,34 @@ export function createDurableStore(
   const localKey = (profileId: string, doc: DocKey): string =>
     `${root}.${profileId}.${doc}`
 
+  /**
+   * One write at a time, per document.
+   *
+   * Found by review, and it defeats the whole barrier. `put` used to read the
+   * revision counter, then await three times before writing it back — so two
+   * overlapping puts both read the stale count and both wrote the SAME rev.
+   * Equal revisions tie on load, the tie goes to localStorage, and whichever
+   * of the two landed there last wins regardless of which was newer.
+   *
+   * Reproduced: a fire-and-forget `persist()` from refresh() still in flight
+   * when a hatch commits, both at rev 1, IndexedDB holding the new friend and
+   * localStorage holding the island without her. On reload she is gone —
+   * despite the awaited receipt that was supposed to make that impossible.
+   *
+   * Two changes, both needed. The revision is reserved SYNCHRONOUSLY, before
+   * any await, so no two writes can claim it; and writes to one document are
+   * chained, so they land in the order they were issued. Gaps in the sequence
+   * are fine — it only has to climb.
+   */
+  const queues = new Map<string, Promise<unknown>>()
+
+  const enqueue = (path: string, job: () => Promise<void>): Promise<void> => {
+    const next = (queues.get(path) ?? Promise.resolve()).then(job, job)
+    // Stored already-handled, so one failed write cannot reject the next.
+    queues.set(path, next.catch(() => {}))
+    return next
+  }
+
   const reports = new Map<string, DurableReport>()
   /** Highest rev seen per document, so writes keep climbing within a session. */
   const revs = new Map<string, number>()
@@ -170,14 +198,29 @@ export function createDurableStore(
     if (!idb) return
     const base = `${docPath(profileId, doc)}/`
     /*
-     * Zero-padded so the key order IS the revision order. Unpadded, "10" sorts
-     * before "9" and the ring evicts the wrong end — quietly keeping the eight
-     * oldest saves instead of the eight newest.
+     * A ring failure must never reach the caller.
+     *
+     * Both primaries are already written by the time this runs, so the save
+     * has happened — but an unguarded throw here rejected commitState(), which
+     * `void passed(more)` turns into an unhandled rejection, and the hatch
+     * ceremony simply never played. She would finish her fifth page, the pet
+     * would be saved, and nothing would happen: the payoff broken at the one
+     * beat that matters, and most likely on a full device, which is exactly
+     * where a quota error comes from.
      */
-    await idb.put(RING, base + String(env.rev).padStart(12, '0'), env)
-    const rows = await idb.prefix<Envelope<unknown>>(RING, base)
-    const stale = rows.map(r => r.key).sort().slice(0, Math.max(0, rows.length - RING_SIZE))
-    for (const key of stale) await idb.remove(RING, key)
+    try {
+      /*
+       * Zero-padded so the key order IS the revision order. Unpadded, "10"
+       * sorts before "9" and the ring evicts the wrong end — quietly keeping
+       * the eight oldest saves instead of the eight newest.
+       */
+      await idb.put(RING, base + String(env.rev).padStart(12, '0'), env)
+      const rows = await idb.prefix<Envelope<unknown>>(RING, base)
+      const stale = rows.map(r => r.key).sort().slice(0, Math.max(0, rows.length - RING_SIZE))
+      for (const key of stale) await idb.remove(RING, key)
+    } catch (e) {
+      log('snapshot ring append failed; the save itself is written', e)
+    }
   }
 
   async function write(
@@ -193,7 +236,6 @@ export function createDurableStore(
     }
     text.write(localKey(profileId, doc), JSON.stringify(env))
     await appendRing(profileId, doc, env)
-    revs.set(docPath(profileId, doc), env.rev)
   }
 
   return {
@@ -251,18 +293,38 @@ export function createDurableStore(
        * document, not from a clock and not from whatever we happen to have
        * read. Clocks go backwards; a read that failed would restart the count
        * and make an old save look newer than the one replacing it.
+       *
+       * Claimed here, synchronously, before anything is awaited — see the note
+       * on `queues`. Reading it and writing it back after an await is how two
+       * concurrent saves ended up sharing a revision.
        */
       const next = (revs.get(path) ?? 0) + 1
-      await write(profileId, doc, seal(value, next, now()))
+      revs.set(path, next)
+      const env = seal(value, next, now())
+      await enqueue(path, () => write(profileId, doc, env))
     },
 
     lastLoad: (profileId, doc) => reports.get(docPath(profileId, doc)),
 
     async envelope(profileId, doc) {
+      /*
+       * The SAME choice `get` makes, and for a sharp reason.
+       *
+       * This used to return the localStorage copy unconditionally. But
+       * `browserText.write` swallows quota errors by design, so on a
+       * storage-squeezed device localStorage can be revisions behind
+       * IndexedDB — and that is precisely the device where a backup matters.
+       * "Back up to a file" would have exported the stale copy while the game
+       * itself loaded the newer one, and the parent would find out only after
+       * the tablet was lost, which is the one moment it cannot be fixed.
+       */
       const local = parse(text.read(localKey(profileId, doc)))
-      if (local) return local
-      const remote = idb ? await idb.get<Envelope<unknown>>(DOCS, docPath(profileId, doc)) : null
-      return asEnvelope(remote)
+      const fromIdb = asEnvelope(idb
+        ? await idb.get<Envelope<unknown>>(DOCS, docPath(profileId, doc))
+        : null)
+      return [local, fromIdb]
+        .filter((e): e is Envelope<unknown> => e !== null)
+        .sort((a, b) => b.rev - a.rev)[0] ?? null
     },
 
     async restore(profileId, doc, env) {
@@ -271,11 +333,25 @@ export function createDurableStore(
        * one moment a grown-up can destroy an island on purpose, and being able
        * to undo a mistaken one is the difference between a feature and a trap.
        */
+      /*
+       * Verify BEFORE adopting. `restore` re-seals the payload with a freshly
+       * computed checksum, which means a bit-rotted-but-parseable backup would
+       * be laundered into a perfectly valid save — the one path where the file
+       * has lived outside our storage is the one place the checksum was not
+       * being consulted. A save that came from us and no longer matches its
+       * own checksum is refused rather than believed.
+       */
+      if (!intact(env)) {
+        log('refused an import that failed its own checksum', { rev: env.rev })
+        throw new Error('backup failed verification')
+      }
       const path = docPath(profileId, doc)
       const current = await this.envelope(profileId, doc)
       if (current) await appendRing(profileId, doc, current)
       const next = Math.max(revs.get(path) ?? 0, current?.rev ?? 0, env.rev) + 1
-      await write(profileId, doc, seal(env.data, next, now()))
+      revs.set(path, next)
+      const sealed = seal(env.data, next, now())
+      await enqueue(path, () => write(profileId, doc, sealed))
     },
 
     list: () => profiles.list(),

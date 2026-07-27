@@ -501,8 +501,16 @@ async function boot(): Promise<void> {
     const n = flow.pets.length
     const what = n === 0 ? 'this island' : `this island and ${n} friend${n === 1 ? '' : 's'}`
     if (!confirm(`Start again? This wipes ${what}.`)) return
-    try { localStorage.removeItem('petIsland.v1.' + PROFILE + '.save') } catch { /* ignore */ }
-    location.reload()
+    /*
+     * Through the store, not by reaching into localStorage.
+     *
+     * Removing the one key stopped working the moment there were two copies:
+     * the IndexedDB document survived, the next load found it, and the island
+     * came straight back. A parent-facing control that confirms a wipe and
+     * then silently does nothing is a trust problem even though it fails in
+     * the safe direction. removeProfile clears both copies and the ring.
+     */
+    void store.removeProfile(PROFILE).then(() => location.reload())
   }
 
   /**
@@ -544,9 +552,17 @@ async function boot(): Promise<void> {
       : { name: childName || 'unnamed', savedAt: '', pets: flow.pets.length }
     if (!confirm(confirmText(summary, mine))) return
 
-    // restore() snapshots what it replaces before writing, so a mistaken
-    // import is recoverable from the ring rather than final.
-    await store.restore(PROFILE, 'save', incoming)
+    /*
+     * restore() verifies the backup against its own checksum before adopting
+     * it, and throws rather than laundering a damaged file into a valid save.
+     * Caught here so a bad backup is a message, never a broken island.
+     */
+    try {
+      await store.restore(PROFILE, 'save', incoming)
+    } catch {
+      overlay.toast('That backup is damaged — nothing was changed')
+      return
+    }
     location.reload()
   }
   document.body.append(gearBtn)
