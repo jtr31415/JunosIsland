@@ -1,0 +1,229 @@
+/**
+ * The challenge stage (slice-1 spec §6): the work and its reason, side by side.
+ *
+ * The child reads on one half of the screen and watches her egg crack on the
+ * other. That adjacency IS the pedagogy — continuous cause-and-effect between
+ * an abstract page of words and a thing she owns getting closer. It matters
+ * more since the overlay started staying open across pages: without a stage
+ * she now works through five pages seeing nothing change at all.
+ *
+ * The vignette is a SEPARATE little scene rendered into a scissored corner of
+ * the same canvas. One GL context, its own lighting rig, and the egg or the
+ * growing plot re-parented onto its turntable for the duration — three.js
+ * moves an object between scenes on add(), so nothing is rebuilt or cloned and
+ * the piece the child watches is literally the one she owns.
+ *
+ * Serene-right rule (§6): NOTHING here reacts to a wrong answer. Wobble and
+ * rescue live in the challenge panel; the stage only ever moves forward.
+ */
+import * as THREE from 'three'
+import { createLighting } from './lighting'
+import type { LightingPreset } from './lighting'
+import meadowDay from './lighting/presets/meadow-day.json'
+import { balance } from './balance'
+
+/**
+ * Seconds per revolution, from balance.json.
+ *
+ * §8: "All constants live in balance.json; nothing hardcoded." This one was,
+ * and the schema already had a slot waiting for it.
+ */
+const TURN_SECONDS = balance.stage.spinSec
+
+/**
+ * How many progress dots to draw, and how many are filled.
+ *
+ * "How much longer" with no numbers (§6). Deliberately a fixed number of dots
+ * whatever the cost: a sixteen-sum tile drawn as sixteen dots is a wall of
+ * pips that reads as further away than it is, which is the opposite of
+ * encouraging. Five is enough to feel movement and few enough to take in.
+ */
+export const DOT_COUNT = 5
+
+export function dotsFilled(done: number, cost: number): number {
+  if (cost <= 0) return DOT_COUNT
+  const share = Math.max(0, Math.min(1, done / cost))
+  /*
+   * Floor, not round, with a guaranteed first dot the moment any work lands.
+   * Rounding lights the first dot before she has done anything, which reads
+   * as a lie; flooring alone leaves her at zero after real work on a long
+   * tile, which reads as being ignored.
+   */
+  if (share <= 0) return 0
+  return Math.max(1, Math.floor(share * DOT_COUNT))
+}
+
+/**
+ * A rectangle of the page, in CSS pixels, measured from the TOP-left.
+ *
+ * The layout itself belongs to CSS — the 55/45 split and the portrait flip
+ * live in challenges.css where they can be read and where media queries work.
+ * This module only asks where `.stage-slot` ended up and draws into it. An
+ * earlier version duplicated the split here in TypeScript, which was dead
+ * code the moment the CSS shipped, and its tests asserted a layout nothing
+ * consulted.
+ */
+export interface StageRect {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+export interface Stage {
+  scene: THREE.Scene
+  camera: THREE.PerspectiveCamera
+  /**
+   * Put an object on the turntable, re-parenting it out of the world.
+   *
+   * Pass null to send whatever is up there back where it came from.
+   */
+  show(object: THREE.Object3D | null, home: THREE.Object3D): void
+  /**
+   * Forget the guest WITHOUT sending it home.
+   *
+   * For when the caller is about to destroy it — a finished plot is disposed
+   * and rebuilt, and returning a corpse to the world scene, or holding a
+   * pointer to one, is how a stale hex ends up floating over the island.
+   */
+  release(): void
+  /** Is this object the one currently on the turntable? */
+  holds(object: THREE.Object3D | null): boolean
+  /** Frame the turntable for an object of roughly this size. */
+  frame(radius: number): void
+  update(dt: number, t: number): void
+  /** Draw into a scissored rect of the shared renderer. */
+  render(renderer: THREE.WebGLRenderer, rect: StageRect): void
+  dispose(): void
+}
+
+export function createStage(): Stage {
+  const scene = new THREE.Scene()
+  scene.name = 'stage'
+
+  /*
+   * Its own lighting rig, from the same preset as the world.
+   *
+   * The stage is a separate scene, so the world's lights do not reach it — an
+   * unlit egg renders as a black blob. Sharing the preset is what keeps the
+   * egg on the turntable the same egg she left on the shore; a second rig
+   * tuned by eye would drift from the lighting brief the moment either moved.
+   */
+  const lighting = createLighting(null, meadowDay as LightingPreset)
+  lighting.attach(scene)
+
+  /*
+   * Far plane BEYOND the sky dome, which the rig builds at radius 220.
+   *
+   * At the first attempt this was 60, so every dome fragment was clipped and
+   * the vignette rendered against the WebGL default clear colour: a lit egg
+   * floating in a black rectangle. The lighting brief §3 rules out a flat
+   * colour standing in for sky, and a black void is the opposite of the tone
+   * the whole game is aiming at.
+   */
+  const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 400)
+  camera.position.set(0, 1.5, 4)
+  camera.lookAt(0, 0.5, 0)
+
+  /** Everything on the stage turns together, so the piece keeps its pose. */
+  const turntable = new THREE.Group()
+  turntable.name = 'turntable'
+  scene.add(turntable)
+
+  // A small plinth, so the piece is standing on something rather than floating.
+  const plinth = new THREE.Mesh(
+    new THREE.CylinderGeometry(1.05, 1.15, 0.14, 24),
+    new THREE.MeshStandardMaterial({ color: 0xf3e7c8, metalness: 0, roughness: 1 }),
+  )
+  plinth.position.y = -0.07
+  turntable.add(plinth)
+
+  /** Scratch for the renderer's CSS-pixel size; allocated once, not per frame. */
+  const canvasSize = new THREE.Vector2()
+  let guest: THREE.Object3D | null = null
+  let guestHome: THREE.Object3D | null = null
+  let guestAt = new THREE.Vector3()
+  let spin = 0
+
+  return {
+    scene,
+    camera,
+
+    show(object, home) {
+      // Send the previous guest back exactly where it stood.
+      if (guest && guestHome) {
+        guestHome.add(guest)
+        guest.position.copy(guestAt)
+      }
+      guest = object
+      guestHome = object ? home : null
+      if (!object) return
+
+      guestAt = object.position.clone()
+      turntable.add(object)
+      object.position.set(0, 0, 0)
+    },
+
+    release() {
+      if (guest) guest.removeFromParent()
+      guest = null
+      guestHome = null
+    },
+
+    holds: object => !!object && guest === object,
+
+    frame(radius) {
+      // Pull back far enough that the piece sits inside the vignette with air
+      // around it, whatever it is — an egg and a full hex differ by 3x.
+      const distance = Math.max(2.2, radius * 3.1)
+      camera.position.set(0, distance * 0.42, distance)
+      camera.lookAt(0, radius * 0.35, 0)
+    },
+
+    update(dt, t) {
+      spin += dt * (Math.PI * 2) / TURN_SECONDS
+      turntable.rotation.y = spin
+      // A gentle bob, so the stage is alive while she is thinking.
+      turntable.position.y = Math.sin(t * 1.1) * 0.035
+      lighting.update(dt)
+    },
+
+    render(renderer, rect) {
+      if (rect.width < 8 || rect.height < 8) return
+
+      /*
+       * CSS pixels, NOT device pixels.
+       *
+       * three.js multiplies by the pixel ratio inside setViewport and
+       * setScissor. Doing it here as well squared the ratio: on a DPR-2
+       * tablet — which is the actual target device — the vignette landed
+       * mostly off-canvas and its scissored clear wiped an arbitrary strip of
+       * the world underneath. On a DPR-1 desktop the two errors cancel and it
+       * looks perfect, which is exactly how it would have shipped.
+       */
+      renderer.getSize(canvasSize)
+      // WebGL measures from the BOTTOM-left; the page measures from the top.
+      const y = canvasSize.y - rect.y - rect.height
+
+      camera.aspect = rect.width / rect.height
+      camera.updateProjectionMatrix()
+
+      renderer.setScissorTest(true)
+      renderer.setViewport(rect.x, y, rect.width, rect.height)
+      renderer.setScissor(rect.x, y, rect.width, rect.height)
+      renderer.render(scene, camera)
+
+      // Hand the whole canvas back, in the same units, or the next world
+      // frame draws into this corner.
+      renderer.setScissorTest(false)
+      renderer.setViewport(0, 0, canvasSize.x, canvasSize.y)
+      renderer.setScissor(0, 0, canvasSize.x, canvasSize.y)
+    },
+
+    dispose() {
+      if (guest && guestHome) { guestHome.add(guest); guest.position.copy(guestAt) }
+      plinth.geometry.dispose()
+      ;(plinth.material as THREE.Material).dispose()
+    },
+  }
+}

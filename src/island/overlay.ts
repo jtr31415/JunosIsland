@@ -43,11 +43,32 @@ export interface OverlayHost {
 }
 
 export interface Overlay {
-  openWordFind(picks: ReadPick[]): void
+  /**
+   * Mount a round, optionally beside the 3D vignette.
+   *
+   * `staged` is an ARGUMENT rather than a separate call, and that is the whole
+   * point: every open*() tears the previous round down first, and teardown
+   * drops the staged layout. Raising the stage as its own step before the
+   * mount therefore set a flag that was wiped microseconds later — the split
+   * view never appeared once. Passing it in makes mounting and staging a
+   * single act that cannot be sequenced wrongly.
+   */
+  openWordFind(picks: ReadPick[], staged?: boolean): void
   /** A build page: assemble one word from grapheme tiles (slice-1 spec §3). */
-  openBuild(item: BuildItem): void
-  openSum(item: SumItem): void
+  openBuild(item: BuildItem, staged?: boolean): void
+  openSum(item: SumItem, staged?: boolean): void
   close(): void
+  /**
+   * Raise or drop the split layout outside of a mount.
+   *
+   * Prefer the `staged` argument on open*(); this exists for the paths that
+   * take the vignette down without opening anything.
+   */
+  setStaged(v: boolean): void
+  /** Where the vignette should be drawn, in CSS pixels, or null if unstaged. */
+  stageRect(): { x: number; y: number; width: number; height: number } | null
+  /** "How much longer", with no numbers (§6). */
+  setDots(filled: number, total: number): void
   say(text: string, onTap?: () => void): void
   clearSay(): void
   showName(name: string): void
@@ -114,12 +135,27 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
   const panel = document.createElement('div')
   panel.id = 'words'          // the ported renderers style themselves from this
 
+  /*
+   * The slot the 3D vignette is drawn into.
+   *
+   * Deliberately EMPTY and transparent: it is a hole in the layout, not a
+   * container. The renderer scissors into the rect this element happens to
+   * occupy, which lets CSS own the responsive split (§6's 55/45, and the
+   * landscape/portrait flip) without the 3D code knowing anything about it.
+   */
+  const stageSlot = document.createElement('div')
+  stageSlot.className = 'stage-slot'
+
+  const dots = document.createElement('div')
+  dots.className = 'stage-dots'
+  stageSlot.append(dots)
+
   const controls = document.createElement('div')
   controls.className = 'overlay-controls'
   controls.append(again, back)
 
   shell.append(panel, controls)
-  layer.append(shell)
+  layer.append(shell, stageSlot)
 
   const sayEl = document.createElement('div')
   sayEl.className = 'chunk say hide'
@@ -215,6 +251,7 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
   function teardown(): void {
     if (handle) { handle.teardown(); handle = null }
     layer.classList.add('hide')
+    layer.classList.remove('staged')
     targetCard.classList.add('hide')
   }
 
@@ -269,25 +306,28 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
   }
 
   return {
-    openWordFind(picks) {
+    openWordFind(picks, staged = false) {
       teardown()
       earned = false
+      layer.classList.toggle('staged', staged)
       again.classList.remove('hide')
       layer.classList.remove('hide')
       handle = mountWordFind(picks, deps())
     },
 
-    openBuild(item) {
+    openBuild(item, staged = false) {
       teardown()
       earned = false
+      layer.classList.toggle('staged', staged)
       again.classList.remove('hide')
       layer.classList.remove('hide')
       handle = mountBuild(item, deps())
     },
 
-    openSum(item) {
+    openSum(item, staged = false) {
       teardown()
       earned = false
+      layer.classList.toggle('staged', staged)
       // A sum is on screen to be read, so there is no prompt to repeat — and
       // a button that does nothing is worse than no button.
       again.classList.add('hide')
@@ -302,6 +342,30 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
      * firing onDismissed would report the child's own completed sitting back
      * to the host as an abandonment and un-arm the opening story.
      */
+    setStaged(v) {
+      layer.classList.toggle('staged', v)
+    },
+
+    stageRect() {
+      if (!layer.classList.contains('staged')) return null
+      const r = stageSlot.getBoundingClientRect()
+      return { x: r.left, y: r.top, width: r.width, height: r.height }
+    },
+
+    setDots(filled, total) {
+      if (dots.childElementCount !== total) {
+        dots.replaceChildren()
+        for (let i = 0; i < total; i++) {
+          const d = document.createElement('span')
+          d.className = 'stage-dot'
+          dots.append(d)
+        }
+      }
+      ;[...dots.children].forEach((d, i) => {
+        d.classList.toggle('on', i < filled)
+      })
+    },
+
     close() { teardown() },
 
     askName() {

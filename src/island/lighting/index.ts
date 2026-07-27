@@ -58,14 +58,33 @@ function lerpColor(a: THREE.Color, b: THREE.Color, t: number): THREE.Color {
   return a.clone().lerp(b, t)
 }
 
-export function createLighting(
-  renderer: THREE.WebGLRenderer, initial: LightingPreset,
-): Lighting {
-  // §1 Renderer foundation. This pair is the single biggest fix for a scene
-  // that looks washed out next to everyone else's screenshots.
+/**
+ * `renderer` may be null for a SECOND scene sharing an existing renderer.
+ *
+ * The renderer settings below are global to the context, so a second rig must
+ * not re-apply them — and must certainly not be free to disagree with the
+ * first. Passing null asks for the lights alone, which is what the challenge
+ * stage needs: the same three-light rig from the same preset, so the egg on
+ * the turntable is lit like the egg on the shore.
+ */
+/**
+ * §1 Renderer foundation. This pair is the single biggest fix for a scene that
+ * looks washed out next to everyone else's screenshots. Global to the GL
+ * context, so it is applied once by whoever owns the renderer.
+ */
+function applyRendererSettings(
+  renderer: THREE.WebGLRenderer, exposure: number,
+): void {
   renderer.outputColorSpace = THREE.SRGBColorSpace
   renderer.toneMapping = THREE.ACESFilmicToneMapping
-  renderer.toneMappingExposure = initial.exposure
+  renderer.toneMappingExposure = exposure
+}
+
+export function createLighting(
+  renderer: THREE.WebGLRenderer | null, initial: LightingPreset,
+): Lighting {
+  if (renderer) applyRendererSettings(renderer, initial.exposure)
+
 
   const hemi = new THREE.HemisphereLight(
     new THREE.Color(initial.hemi.sky), new THREE.Color(initial.hemi.ground),
@@ -146,7 +165,8 @@ export function createLighting(
     fog.near = mix(p.fog.near, q.fog.near)
     fog.far = mix(p.fog.far, q.fog.far)
 
-    renderer.toneMappingExposure = mix(p.exposure, q.exposure) + bump + drift
+    // Exposure is a RENDERER setting, so only the rig that owns one sets it.
+    if (renderer) renderer.toneMappingExposure = mix(p.exposure, q.exposure) + bump + drift
   }
 
   applyNumbers(initial, 1, initial)
@@ -178,7 +198,7 @@ export function createLighting(
         tween = Math.min(1, tween + dt * tweenSpeed)
         applyNumbers(from, tween, preset)
       } else {
-        renderer.toneMappingExposure = preset.exposure + bump + drift
+        if (renderer) renderer.toneMappingExposure = preset.exposure + bump + drift
       }
     },
 

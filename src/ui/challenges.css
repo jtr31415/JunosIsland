@@ -240,3 +240,69 @@
   color: var(--ink);
 }
 .ask-name-input:focus { outline: 3px solid var(--sky); outline-offset: 2px; }
+
+/* ---------------------------------------------------------- the stage (§6)
+
+   The work and its reason side by side: challenge panel on one half, a live
+   3D vignette of her egg or her half-built tile on the other. CSS owns the
+   split entirely — the renderer only asks where .stage-slot ended up and
+   scissors into that rect — so the responsive rules live here where they can
+   be read, and the 3D code stays ignorant of layout. */
+.overlay.staged {
+  display: grid;
+  gap: 1.5vmin;
+  padding: 2vh 2vw;
+  /* Landscape: work LEFT, vignette right, roughly 55/45 (spec section 6). */
+  grid-template-columns: 55fr 45fr;
+  grid-template-rows: 1fr;
+  place-items: stretch;
+}
+
+.overlay.staged .overlay-panel {
+  width: auto;
+  max-height: none;
+  align-self: center;
+}
+
+/* A hole in the layout, not a container: the vignette is drawn INTO this
+   rectangle by the renderer, so it must not paint anything itself — and must
+   not catch taps either, or it swallows nearly half the backdrop and
+   tap-outside-to-leave stops working in exactly the mode that needs it. */
+.stage-slot { display: none; position: relative; pointer-events: none; }
+.overlay.staged .stage-slot { display: block; }
+
+/* Portrait: vignette on TOP, work below — a tablet held upright wants the
+   reading under her thumbs, not above them. */
+@media (orientation: portrait) {
+  .overlay.staged {
+    grid-template-columns: 1fr;
+    grid-template-rows: 45fr 55fr;
+  }
+  .overlay.staged .stage-slot { grid-row: 1; }
+  .overlay.staged .overlay-panel { grid-row: 2; }
+}
+
+/* "How much longer", with no numbers. */
+.stage-dots {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 1.5vmin;
+  display: flex;
+  gap: .55rem;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.stage-dot {
+  width: .62rem;
+  height: .62rem;
+  border-radius: 50%;
+  background: rgba(255, 253, 246, .38);
+  box-shadow: inset 0 0 0 2px rgba(35, 64, 79, .18);
+  transition: background .35s ease, transform .35s ease;
+}
+.stage-dot.on {
+  background: var(--sun, #ffd166);
+  transform: scale(1.18);
+}

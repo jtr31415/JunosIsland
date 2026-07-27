@@ -15,12 +15,13 @@ import { createPetField, SPECIES } from './pets'
 import { createEgg } from './egg'
 import { createFred } from './fred'
 import { createSign } from './sign'
+import { createStage, dotsFilled, DOT_COUNT } from './stage'
 import { createPropField } from './world/props'
 import { createGrowingPlot } from './world/increments'
 import type { GrowingPlot } from './world/increments'
 import { createAlbum } from './album'
-import { hatchProgress, landProgress, sumsForTile } from './flow'
-import { pageKind } from './balance'
+import { hatchProgress, landProgress, sumsForTile, pagesForEgg } from './flow'
+import { pageKind, balance } from './balance'
 import { landPaused, eggsPaused, activeGovernor, GOVERNOR_LINE } from './governors'
 import { OPENING, HATCH_LINES, fill } from './script'
 import { loadIsland, saveIsland } from './save'
@@ -106,11 +107,17 @@ async function boot(): Promise<void> {
   /** Tear a plot down now, cancelling any farewell in progress. */
   function dropPlot(): void {
     if (plotFarewell) { clearTimeout(plotFarewell); plotFarewell = null }
-    if (plot) { world.scene.remove(plot.group); plot.dispose(); plot = null }
+    if (!plot) return
+    // It may be on the stage rather than in the world. Detach from wherever
+    // it actually is, and make sure the stage is not left holding a corpse.
+    if (stage.holds(plot.group)) { stage.release(); overlay.setStaged(false) }
+    plot.group.removeFromParent()
+    plot.dispose()
+    plot = null
   }
 
-  function showPlot(): void {
-    if (!flow.plot) {
+  function showPlot(state: Flow = flow): void {
+    if (!state.plot) {
       /*
        * The plot is paid for and the tile is real. LET THE LAST STEP PLAY.
        *
@@ -124,7 +131,8 @@ async function boot(): Promise<void> {
         plot.setProgress(1, 1)
         const going = plot
         plotFarewell = setTimeout(() => {
-          world.scene.remove(going.group)
+          if (stage.holds(going.group)) stage.release()
+          going.group.removeFromParent()
           going.dispose()
           if (plot === going) plot = null
           plotFarewell = null
@@ -136,15 +144,15 @@ async function boot(): Promise<void> {
     // two hexes overlap and the farewell disposes the wrong one.
     if (plotFarewell) dropPlot()
     if (!plot) {
-      plot = createGrowingPlot(flow.plot.type, world.models.size, {
+      plot = createGrowingPlot(state.plot.type, world.models.size, {
         models: world.models,
         prop: name => props.load(name),
       })
-      const w = world.worldOf(flow.plot.at)
+      const w = world.worldOf(state.plot.at)
       plot.group.position.copy(w)
       world.scene.add(plot.group)
     }
-    plot.setProgress(flow.sumProgress, sumsForTile(flow))
+    plot.setProgress(state.sumProgress, sumsForTile(state))
   }
 
   const egg = createEgg()
@@ -163,6 +171,20 @@ async function boot(): Promise<void> {
   // Lettered once the save has been read; see below.
   const sign = createSign('')
   world.scene.add(sign.group)
+
+  /*
+   * The challenge stage (§6): the work and its reason, side by side.
+   *
+   * Its own little scene, drawn into a scissored corner of the same canvas
+   * after the world. The egg or the growing plot is RE-PARENTED onto its
+   * turntable for the duration, so the piece she watches is literally the one
+   * she owns rather than a stand-in copy.
+   */
+  const stage = createStage()
+  world.onOverlayFrame(renderer => {
+    const rect = overlay.stageRect()
+    if (rect) stage.render(renderer, rect)
+  })
 
   /* Saves. One profile for now; profiles proper arrive in M3. */
   const store = createLocalStore()
@@ -189,6 +211,7 @@ async function boot(): Promise<void> {
     speech, sfx,
     onPassed: more => { void passed(more) },
     onDismissed: () => {
+      stageFor(null)
       // Leaving costs nothing (brief section 18) — but the story must not stay
       // armed, or an unrelated hatch later would resume it out of nowhere.
       openingResumeAt = -1
@@ -218,6 +241,16 @@ async function boot(): Promise<void> {
    * it does not hop about between reloads.
    */
   function placeEgg(): void {
+    /*
+     * Not while it is on the stage.
+     *
+     * setPosition writes WORLD coordinates, and a staged egg is parented to
+     * the turntable — so re-siting mid-round flung it several units off the
+     * plinth to orbit the vignette. refresh() runs after every completed page,
+     * so this fired constantly. Its place on the island cannot change while
+     * she is looking at it anyway; it is re-sited when it comes home.
+     */
+    if (stage.holds(egg.group)) return
     const clutter = props.clutter()
     const size = world.models.size
 
@@ -391,23 +424,68 @@ async function boot(): Promise<void> {
    * Which kind comes next is derived from how many pages this egg has already
    * taken, so it is stable across a reload rather than random.
    */
+  /**
+   * Put the reason for the work on the stage, and take it off again.
+   *
+   * Reading stages the EGG, maths stages the plot under construction. Nothing
+   * is staged if there is nothing to show — a sum with no sited plot would
+   * otherwise present an empty plinth, which reads as broken.
+   */
+  function stageFor(kind: 'read' | 'sum' | null, state: Flow = flow): boolean {
+    /*
+     * Build the plot BEFORE looking for it.
+     *
+     * The ports fire before the caller has assigned `flow` — deliberately, so
+     * a handler cannot read a pre-transition phase — which means that on the
+     * very tap that sites a plot, showPlot() has not run yet and there is
+     * nothing to stage. Asking for it here, from the transitioned state, is
+     * what makes the first sum of a new tile show the ghost hex rather than
+     * an empty plinth.
+     */
+    if (kind === 'sum') showPlot(state)
+    const piece = kind === 'read' ? egg.group
+      : kind === 'sum' ? plot?.group ?? null
+        : null
+    stage.show(piece ?? null, world.scene)
+    if (!piece) { overlay.setStaged(false); return false }
+    // An egg is small and a hex is not; frame each for what it is.
+    stage.frame(kind === 'read' ? 0.55 : world.models.size)
+    refreshDots(kind, state)
+    return true
+  }
+
+  /** "How much longer", with no numbers (§6). */
+  function refreshDots(kind: 'read' | 'sum' | null, state: Flow = flow): void {
+    // §6: "optional via balance flag", and §8 wants the flag consulted.
+    if (!balance.stage.progressDots) { overlay.setDots(0, 0); return }
+    if (kind === 'read') {
+      overlay.setDots(dotsFilled(state.readProgress, pagesForEgg(state)), DOT_COUNT)
+    } else if (kind === 'sum') {
+      overlay.setDots(dotsFilled(state.sumProgress, sumsForTile(state)), DOT_COUNT)
+    }
+  }
+
   function openRead(state: Flow = flow): void {
     if (state.phase !== 'challenge' || state.challenge !== 'read') return
     overlay.clearSay()
+    // Put the egg on the turntable first, then mount the round WITH the
+    // layout — one call, so the mount's own teardown cannot drop it.
+    const staged = stageFor('read', state)
     if (pageKind(state.readProgress) === 'build') {
       generateBuild(buildStore, { rng: defaultRng, drawGreen, level: 1 })
-      overlay.openBuild(buildStore.history[buildStore.idx] as BuildItem)
-      return
+      overlay.openBuild(buildStore.history[buildStore.idx] as BuildItem, staged)
+    } else {
+      generateRead(readStore, { rng: defaultRng, drawGreen, drawRed, neigh, level: 1 })
+      overlay.openWordFind(readStore.history[readStore.idx] as ReadPick[], staged)
     }
-    generateRead(readStore, { rng: defaultRng, drawGreen, drawRed, neigh, level: 1 })
-    overlay.openWordFind(readStore.history[readStore.idx] as ReadPick[])
   }
 
   function openSum(state: Flow = flow): void {
     if (state.phase !== 'challenge' || state.challenge !== 'sum') return
     generateAdd(sumStore, defaultRng, 1)
     overlay.clearSay()
-    overlay.openSum(sumStore.history[sumStore.idx] as SumItem)
+    const staged = stageFor('sum', state)
+    overlay.openSum(sumStore.history[sumStore.idx] as SumItem, staged)
   }
 
   /**
@@ -432,7 +510,7 @@ async function boot(): Promise<void> {
       const hatched = flow.pets.length > petsBefore
 
       if (hatched) {
-        overlay.close()
+        stageFor(null); overlay.close()
         await egg.hatch()
         overlay.showName(name)
         const line = HATCH_LINES[flow.pets.length % HATCH_LINES.length] as string
@@ -454,9 +532,11 @@ async function boot(): Promise<void> {
       // refresh() applies, and that IS the feedback. No name, no promise.
       sfx.play('up')
       refresh()
+      // ...and on the stage she is watching, in view, as it happens (§6).
+      refreshDots('read')
 
       if (!more || openingResumeAt >= 0) {
-        overlay.close()
+        stageFor(null); overlay.close()
         if (openingResumeAt >= 0) {
           const at = openingResumeAt
           openingResumeAt = -1
@@ -491,7 +571,11 @@ async function boot(): Promise<void> {
       const earned = flow.island.tiles.size > tilesBefore
 
       if (earned) {
-        overlay.close()
+        // Fill the dots before the stage goes: the sum that FINISHED the tile
+        // deserves to be seen landing, and unstaging first meant the last dot
+        // never lit at all.
+        overlay.setDots(DOT_COUNT, DOT_COUNT)
+        stageFor(null); overlay.close()
         speech.speak('You counted us up some land!')
         fred.talk(2.2)
         world.lighting.celebrationBump()
@@ -511,7 +595,7 @@ async function boot(): Promise<void> {
         // No plot left to advance (it just completed, or the child left the
         // bank without siting). Going back to the island beats dealing a sum
         // that would build nothing.
-        if (next.challenge !== 'sum') { overlay.close(); return }
+        if (next.challenge !== 'sum') { stageFor(null); overlay.close(); return }
         flow = next
         openSum()
       }, PAGE_GAP_MS)
@@ -687,6 +771,7 @@ async function boot(): Promise<void> {
   })
 
   world.onFrame((dt, t) => {
+    stage.update(dt, t)
     plot?.update(dt)
     props.update(dt, t)
     egg.update(dt, t)

@@ -43,6 +43,14 @@ export interface World {
   pick(clientX: number, clientY: number): Hit | null
   worldOf(a: Axial): THREE.Vector3
   onFrame(fn: (dt: number, t: number) => void): void
+  /**
+   * Draw a second, small scene over the world after each frame.
+   *
+   * The challenge stage (§6). Handed the renderer rather than owning one, so
+   * the whole game stays on a single GL context — two contexts on a mid-range
+   * tablet is the expensive way to do this.
+   */
+  onOverlayFrame(fn: (renderer: THREE.WebGLRenderer) => void): void
   start(): void
   dispose(): void
 }
@@ -73,6 +81,7 @@ export async function createWorld(canvas: HTMLCanvasElement): Promise<World> {
   const raycaster = new THREE.Raycaster()
   const ndc = new THREE.Vector2()
   const frameFns: Array<(dt: number, t: number) => void> = []
+  const overlayFns: Array<(renderer: THREE.WebGLRenderer) => void> = []
 
   let island: Island | null = null
   let running = false
@@ -154,6 +163,8 @@ export async function createWorld(canvas: HTMLCanvasElement): Promise<World> {
 
     onFrame(fn) { frameFns.push(fn) },
 
+    onOverlayFrame(fn) { overlayFns.push(fn) },
+
     start() {
       if (running) return
       running = true
@@ -167,6 +178,8 @@ export async function createWorld(canvas: HTMLCanvasElement): Promise<World> {
         socketField.pulse(t)
         for (const fn of frameFns) fn(dt, t)
         renderer.render(scene, camera.camera)
+        // The stage draws last, into its own scissored corner of the canvas.
+        for (const fn of overlayFns) fn(renderer)
         requestAnimationFrame(tick)
       }
       requestAnimationFrame(tick)
