@@ -45,8 +45,8 @@ export type Character = 'meadow' | 'wood' | 'rocky' | 'highland'
 const CHARACTERS: Array<{ kind: Character; weight: number }> = [
   { kind: 'meadow', weight: 3 },
   { kind: 'wood', weight: 6 },
-  { kind: 'rocky', weight: 1 },
-  { kind: 'highland', weight: 3 },
+  { kind: 'rocky', weight: 2 },
+  { kind: 'highland', weight: 4 },
 ]
 
 /**
@@ -87,8 +87,15 @@ const FEATURES: Record<Character, Array<{ name: string; weight: number; big?: bo
     { name: 'rock_single_B', weight: 3 },
     { name: 'rock_single_C', weight: 2 },
     { name: 'rock_single_D', weight: 2 },
-    { name: 'hills_C', weight: 2, big: true },
-    { name: '', weight: 3 },
+    /*
+     * Stony ground gets a skyline of its own, at Joe's "a bit more use of the
+     * mountain/rock hexes". It used to be the one character with nothing tall in
+     * it but a single hill, which is what made it read as the empty one.
+     */
+    { name: 'hills_C', weight: 3, big: true },
+    { name: 'hills_C_trees', weight: 2, big: true },
+    { name: 'mountain_C_grass', weight: 2, big: true },
+    { name: '', weight: 2 },
   ],
   highland: [
     { name: 'hills_A', weight: 4, big: true },
@@ -111,11 +118,11 @@ const FEATURES: Record<Character, Array<{ name: string; weight: number; big?: bo
      * as desert on a green island. Hills carry the skyline; a mountain is the
      * exclamation mark at the end of it.
      */
-    { name: 'mountain_A_grass', weight: 1, big: true },
-    { name: 'mountain_B_grass', weight: 1, big: true },
-    { name: 'mountain_C_grass', weight: 1, big: true },
-    { name: 'mountain_A_grass_trees', weight: 1, big: true },
-    { name: 'mountain_C_grass_trees', weight: 1, big: true },
+    { name: 'mountain_A_grass', weight: 3, big: true },
+    { name: 'mountain_B_grass', weight: 3, big: true },
+    { name: 'mountain_C_grass', weight: 3, big: true },
+    { name: 'mountain_A_grass_trees', weight: 3, big: true },
+    { name: 'mountain_C_grass_trees', weight: 3, big: true },
   ],
 }
 
