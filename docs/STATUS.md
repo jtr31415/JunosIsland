@@ -9,7 +9,39 @@ game is deployed at <https://jtr31415.github.io/JunosIsland/> and **has still
 not been played by the QA department**, whose verdict outranks every document
 here (brief §18).
 
-36 commits sit on `main`, unpushed, at the time of writing.
+---
+
+## The phases were re-cut on 27 July
+
+Joe: *"item 13 is now in phase 4, hold that. and i think we shold then look at
+tilt shift, which has gone missing and the rest we move to phase 5, as we can
+ship for release after phase 4 and then patch in phase 5 after."*
+
+So the shape is now:
+
+- **Phase 3** — items 0–6. Done, bar item 6's wiring.
+- **Phase 4 — the release.** Item 13 (adaptive difficulty), then tilt-shift.
+  Ship after this.
+- **Phase 5 — the patch.** Everything else: items 7–12 and 14–17.
+
+Two things follow that need Joe rather than me.
+
+**Item 7 falls into Phase 5, so the release ships with every pet in its natural
+colours.** The variant engine works and is accepted, but item 7 is what wires it
+onto live pets — until then it exists only in the Pet-o-matic, behind a dev flag,
+in the preview channel. That is a coherent release and it may well be the right
+one; it is worth saying out loud rather than discovering at the tag.
+
+**Tilt-shift did not go missing by accident, and re-adding it is a brief
+amendment.** `docs/pet-island-lighting.md` §1 says "No post-processing stack on
+tablet", and HANDOFF §2 records a previous attempt that reworded §7 to allow a
+tilt-shift pass while §1 sat unedited three sections up — named there as
+"rationalising, not engineering". The project's own precedent for amending the
+lighting brief (§3's shadow-map amendment) requires **measured fps on the target
+tablet** plus **a settings toggle**. `?flat` already exists and is reserved for
+exactly this. Joe owns the brief and can have the effect; what he should not get
+by accident is the pass landing without the fps measurement that protects Juno's
+tablet from it.
 
 ---
 
@@ -24,17 +56,18 @@ here (brief §18).
 | **4** | Channels & flags | **Done.** Needs Joe's first release tag to mean anything. |
 | **5** | Cube-pet material autopsy | **Done.** `npm run pets:atlas`; finding in HANDOFF §6. |
 | **6** | Sets & the variant engine | **Done bar wiring.** Colours **accepted** by Joe; eye-whites and pupils in hand. |
-| 7 | Progressive album + set unlocks | **Next.** Owns wiring variants onto live pets, and now owns a **shorter ladder** — see below. |
-| 8 | Habitats, nursery, wants | Not started. |
-| 9 | Pet quests v1 | Not started. |
-| 10 | Daily visitor | Not started. |
-| 11 | Small ports | Not started — scope grew, see below. |
-| 12 | Per-item records + scheduler | Not started. |
-| 13 | Adaptive difficulty | Not started — one question to settle first, below. |
-| 14 | Biome & tile ladder | Not started. |
-| 15 | Stardust, Star Pool, first wonder | Not started. |
-| 16 | Persona simulator | Not started. |
-| 17 | Blossom enchantment I | Not started. |
+| 7 | Progressive album + set unlocks | **Phase 5.** Owns wiring variants onto live pets, and now owns a **shorter ladder** — see below. |
+| 8 | Habitats, nursery, wants | Phase 5. |
+| 9 | Pet quests v1 | Phase 5. |
+| 10 | Daily visitor | Phase 5. |
+| 11 | Small ports | Phase 5 — scope grew, see below. |
+| 12 | Per-item records + scheduler | Phase 5. |
+| **13** | Adaptive difficulty | **PHASE 4 — next.** One question to settle first, below. |
+| — | **Tilt-shift** | **PHASE 4**, after 13. Needs a lighting-brief amendment; see above. |
+| 14 | Biome & tile ladder | Phase 5. `docs/rock-hexes-proposal.md` is a down-payment on it. |
+| 15 | Stardust, Star Pool, first wonder | Phase 5. |
+| 16 | Persona simulator | Phase 5. |
+| 17 | Blossom enchantment I | Phase 5. |
 
 ---
 
