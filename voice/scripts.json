@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "about": [
+    "Every utterance in Pet Island that needs synthesizing. Per docs/pet-island-voice.md §5.1.",
+    "This is a RUNNING file: no spoken line may be added to the island without an entry here.",
+    "",
+    "Text is the TARGET wording — i.e. after the splice law of voice.md §3. Where the shipped",
+    "code still differs, the entry carries \"port\": the item that brings the code into line.",
+    "",
+    "The 2D game (src/words2d, v0/junos-words.html) is NOT covered here. It is frozen and its",
+    "speech must stay identical to v0, including the spoken child's name at v0:742. The splice",
+    "law governs the island only."
+  ],
+
+  "voices": {
+    "fred": "Warm, playful, slower. The island's host. Never speaks a dynamic name.",
+    "teacher": "One clear British voice, never varies. Owns every challenge word and every pet name — consistency is part of the listening task.",
+    "owl": "Measured, warm. Not used this phase.",
+    "dad": "Parent recordings from the sound booth. Phoneme clips and school-list imports."
+  },
+
+  "laws": [
+    "No character speaks a dynamic name mid-sentence. The child's name is print only; spoken address is 'friend'.",
+    "A slotted template and its inserts share one voice. Cross-voice splices are forbidden.",
+    "A pet's name is always the teacher's, never a character's — so a name is a line of its own, chained between character lines rather than spliced into one."
+  ],
+
+  "generated": [
+    {
+      "idPrefix": "name.",
+      "character": "teacher",
+      "count": "~1000",
+      "source": "build-time name table, one entry per {setId, speciesId}",
+      "note": "Fixed per variant and identical on every island (brief §5, voice.md §2). Graded by set: set 1 at band 1, climbing. Audited before bake; a rejected name is replaced at authoring time, never dropped."
+    },
+    {
+      "idPrefix": "word.",
+      "character": "teacher",
+      "count": "~700",
+      "source": "challenge band packs 1-8",
+      "rate": 1.0,
+      "note": "Repeat-on-tap plays the same clip at rate 0.6; grapheme-by-grapheme help plays at 0.9 (src/challenges/build.ts:83,96)."
+    },
+    {
+      "idPrefix": "phoneme.",
+      "character": "dad",
+      "count": 43,
+      "source": "the sound booth",
+      "note": "Blocked on Joe."
+    }
+  ],
+
+  "lines": [
+    { "id": "open.greet", "character": "fred", "category": "opening", "text": "Oh! Hello, friend.", "port": "item 11", "was": "Oh! Hello, [NAME]." },
+    { "id": "open.intro", "character": "fred", "category": "opening", "text": "I'm Fred. It's just me on this little rock." },
+    { "id": "open.quiet", "character": "fred", "category": "opening", "text": "It's ever so quiet out here." },
+    { "id": "open.egg", "character": "fred", "category": "opening", "text": "Ooh! Look! An egg!", "cue": "egg-arrives" },
+    { "id": "open.fromTheSea", "character": "fred", "category": "opening", "text": "Eggs come from far across the sea… and they only hatch for someone who reads to them.", "cue": "point-egg" },
+    { "id": "open.askRead", "character": "fred", "category": "opening", "text": "Will you read to it, friend?", "cue": "first-read", "port": "item 11", "was": "Will you read to it, [NAME]?" },
+
+    { "id": "open.foundName", "character": "fred", "category": "opening", "text": "You found its name!", "port": "item 11", "note": "Beat 7 is now three chained lines, not one. Fred, then the teacher announcing the name, then Fred again — a name is never in a character's mouth." },
+    { "id": "open.nameSlot", "character": "teacher", "category": "opening", "ref": "name.", "port": "item 11", "note": "Plays the pet's clip from the name table." },
+    { "id": "open.homeAtLast", "character": "fred", "category": "opening", "text": "Home at last! It was coming home all along.", "port": "item 11", "was": "You found its name! [PETNAME] has arrived." },
+
+    { "id": "open.askLand", "character": "fred", "category": "opening", "text": "Every friend you read home needs somewhere to live… can you count us up some land?", "cue": "ask-land" },
+
+    { "id": "hatch.homeAtLast", "character": "fred", "category": "ceremony", "text": "Home at last!", "port": "item 11", "note": "Follows a name. clip. Replaces '[PETNAME] has arrived!'" },
+    { "id": "hatch.isHere", "character": "fred", "category": "ceremony", "text": "Look who's here!", "port": "item 11", "note": "Follows a name. clip. Replaces '[PETNAME] is here!'" },
+    { "id": "land.counted", "character": "fred", "category": "ceremony", "text": "You counted us up some land!" },
+
+    { "id": "gov.spaceSurplus", "character": "fred", "category": "governor", "text": "We've got lots of lovely space — let's read some friends home first!" },
+    { "id": "gov.nurseryQueue", "character": "fred", "category": "governor", "text": "They need homes first!" }
+  ]
+}

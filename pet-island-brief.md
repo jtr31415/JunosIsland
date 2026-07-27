@@ -121,9 +121,20 @@ later as a special event.
   camera glides (~1.2s) to the creature and **follows it** with a damped,
   gentle chase until any tap returns to orbit. Pets waiting in the nursery
   are found there.
-- **Procedural decodable names** from the child's *taught graphemes* (reuse the
-  alien-word generator): every pet is a Bimo, a Sheptun, a Corbell. The name is
-  shown large at hatch, spoken via TTS, tappable forever after.
+- **Decodable names, fixed per variant** *(ruling, 27 Jul)*. Every pet is a
+  Bimo, a Sheptun, a Corbell — and **the same variant is always the same
+  name, on every island, forever**. The name is a property of
+  `{setId, speciesId}`, not a draw at hatch: the polar bear is Bimo for
+  every child who ever hatches one, so collections can be compared and
+  talked about. The alien-word generator therefore runs at **build time**,
+  authoring a committed one-to-one table of ~1,000 names, rather than at
+  hatch. Names are graded **by set** — set 1's twenty-four are decodable at
+  band 1 and each later set climbs — so the names she meets track her
+  reading as sets unlock, without the name ever depending on who she is.
+  Consequence: set order is a reading ladder as well as an aesthetic one,
+  and cannot be reshuffled later without reshuffling difficulty with it.
+  The name is shown large at hatch, spoken by the teacher voice, tappable
+  forever after. See `docs/pet-island-voice.md` §2.
 - **Album** = the sticker book grown up: silhouettes for undiscovered species,
   variant galleries, counts. Pets are never lost or taken.
 - **Behaviour:** simple wander on owned hexes constrained to home biome, idle

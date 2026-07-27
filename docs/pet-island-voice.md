@@ -18,7 +18,7 @@ WebGPU compatibility surface from a children's product.
 | Owl's Book lines, pings, ceremonies | ~80 lines | Build-time premium TTS | Owl (measured, warm) |
 | Praise & system lines | ~40 lines | Build-time premium TTS | Teacher voice |
 | Challenge words (band packs 1–8) | ~700 words | Build-time premium TTS, **audited** | **Teacher voice — one voice, never varies** |
-| Pet name pool | ~1,000 names | Generated → audited → baked | Teacher voice |
+| Pet name table | ~1,000 names, one per variant | Generated at build → audited → baked | Teacher voice |
 | Phoneme sounds (Fred talk) | 43 clips | **Dad, via the sound booth** | Dad |
 | School-list imports | ~10 words/week | **Dad, booth-style flow at paste time** | Dad |
 | Child's name | n/a | **Print only** — audio says "friend" (native takes) | — |
@@ -28,19 +28,31 @@ Pedagogical law: the **challenge-word voice is a single consistent clear
 British voice** — consistency is part of the listening task. Characters get
 flavour; the words themselves never do.
 
-## 2. The name pool (replaces live generation)
+## 2. The name table (replaces live generation) — *amended 27 Jul*
 
-- The alien-word generator emits candidates constrained per band tier (only
-  taught graphemes), deduplicated against real words and against the tricky
-  list; target ~1,000 names graded band 1→8 so hatch names stay decodable *at
-  the child's level*.
+**A name belongs to a variant, not to a hatch.** Every `{setId, speciesId}`
+has exactly one name, the same on every island, forever — the polar bear is
+always Bimo. Collections are therefore comparable between friends, which is
+the point of the ruling.
+
+- The alien-word generator runs **at build time**, emitting candidates
+  constrained per band tier (only taught graphemes), deduplicated against
+  real words and against the tricky list, and assigns them one-to-one across
+  the ~1,000 variants. The result is a committed data table, not a runtime
+  pool.
+- **Graded by set, not by child.** Set 1's twenty-four names sit at band 1
+  and each later set climbs toward band 8. Sets unlock over weeks, so the
+  names she meets track her reading in practice while the name itself never
+  depends on who is hatching it. Set order is consequently a reading ladder
+  and cannot be reshuffled without reshuffling difficulty.
 - Bake pass renders each with the teacher voice; an **audit pass** flags
   mispronunciations (automatic: forced-align phonemes vs expected GPCs; plus
-  a human skim of the flagged set). Rejects are dropped from the pool — the
-  pool is whatever survives audit.
-- At hatch, a pet draws an unused name from the pool for that island. Pool
-  exhaustion is ~unreachable (1,000 names vs 768 pets), but on exhaustion:
-  recycle with roman numerals unspoken ("Bimo II" shows, plays "Bimo").
+  a human skim of the flagged set). A rejected name is **replaced at
+  authoring time** — the table stays complete, and every name that can ever
+  be spoken has been audited before it ships. This is stronger than the old
+  pool, which was sampled at runtime and could only be trimmed.
+- There is no draw, no exhaustion and no recycling. A variant is owned at
+  most once, so the roman-numeral rule ("Bimo II") is retired.
 
 ## 3. Names & the splice law
 
