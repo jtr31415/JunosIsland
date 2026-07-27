@@ -34,12 +34,18 @@ import type { Surface, Ground } from './tiles'
  * hillside. That patchiness is what the KayKit reference renders have and a
  * per-tile roll cannot produce.
  */
-type Character = 'meadow' | 'wood' | 'rocky' | 'highland'
+export type Character = 'meadow' | 'wood' | 'rocky' | 'highland'
 
+/*
+ * Woods are the commonest character now, at Joe's request — "higher liklyhood
+ * of forest/trees, the environment is just a bit too flat/boring". Rocky ground
+ * is the rarest: it is the character with the least in it, so it is the one that
+ * reads as empty.
+ */
 const CHARACTERS: Array<{ kind: Character; weight: number }> = [
-  { kind: 'meadow', weight: 4 },
-  { kind: 'wood', weight: 4 },
-  { kind: 'rocky', weight: 2 },
+  { kind: 'meadow', weight: 3 },
+  { kind: 'wood', weight: 6 },
+  { kind: 'rocky', weight: 1 },
   { kind: 'highland', weight: 3 },
 ]
 
@@ -52,9 +58,17 @@ const CHARACTERS: Array<{ kind: Character; weight: number }> = [
  */
 const FEATURES: Record<Character, Array<{ name: string; weight: number; big?: boolean }>> = {
   meadow: [
-    { name: '', weight: 8 },                       // open ground: the rests
+    /*
+     * Open ground was weight 8 of 17 — nearly half of all meadow tiles grew no
+     * feature at all, which is a large part of what "too flat and boring" was
+     * describing. Still the single commonest outcome, because a landscape with
+     * no rests in it is just as tiring, but no longer the majority.
+     */
+    { name: '', weight: 4 },                       // open ground: the rests
     { name: 'tree_single_A', weight: 3 },
     { name: 'tree_single_B', weight: 3 },
+    { name: 'trees_A_small', weight: 2 },
+    { name: 'trees_B_small', weight: 2 },
     { name: 'rock_single_A', weight: 2 },
     { name: 'tree_single_A_cut', weight: 1 },
   ],
@@ -121,7 +135,7 @@ const FEATURES: Record<Character, Array<{ name: string; weight: number; big?: bo
  *
  * It has its OWN texture, not the hexagon atlas.
  */
-const COVER: Record<Character, readonly string[]> = {
+export const COVER: Record<Character, readonly string[]> = {
   meadow: [
     'Grass_1_A_Color1', 'Grass_1_B_Color1', 'Grass_1_C_Color1', 'Grass_1_D_Color1',
     'Grass_2_A_Color1', 'Grass_2_B_Color1', 'Grass_2_C_Color1', 'Grass_2_D_Color1',
@@ -154,7 +168,46 @@ const COVER: Record<Character, readonly string[]> = {
  *
  * The cheapest way to stop a wood looking planted: real woods have one.
  */
-const BARE_TREES = [
+/**
+ * The Forest Nature pack's LEAFY trees — fifteen of them, and until now not one
+ * was used.
+ *
+ * Joe: *"i'd also like to see more trees from the nature/forest kay pack. also
+ * higher liklyhood of forest/trees, the environment is just a bit too
+ * flat/boring."* Measured against the folder, he is describing an omission
+ * rather than a tuning problem: the pack ships `Tree_1_A..C`, `Tree_2_A..E`,
+ * `Tree_3_A..C` and `Tree_4_A..C`, and the only trees the island ever planted
+ * from it were the six BARE ones below, as an occasional dead trunk.
+ *
+ * They go in as COVER rather than as tile features, which is the point. A
+ * feature is one big thing per hex; cover is the five-to-nine small things
+ * scattered round it, so drawing trees from here is what makes a wood look like
+ * a wood instead of one tree standing in a field.
+ */
+export const LEAFY_TREES = [
+  'Tree_1_A_Color1', 'Tree_1_B_Color1', 'Tree_1_C_Color1',
+  'Tree_2_A_Color1', 'Tree_2_B_Color1', 'Tree_2_C_Color1',
+  'Tree_2_D_Color1', 'Tree_2_E_Color1',
+  'Tree_3_A_Color1', 'Tree_3_B_Color1', 'Tree_3_C_Color1',
+  'Tree_4_A_Color1', 'Tree_4_B_Color1', 'Tree_4_C_Color1',
+] as const
+
+/**
+ * How often a piece of ground cover is a tree instead, per character.
+ *
+ * One in N, against the five-to-nine pieces a tile scatters. A wood therefore
+ * grows two or three, which reads as woodland; a meadow gets one now and then,
+ * which reads as a meadow with a tree in it. Rocky ground stays nearly bare on
+ * purpose — the contrast is what makes the wooded tiles look wooded.
+ */
+export const TREE_EVERY: Record<Character, number> = {
+  wood: 3,
+  highland: 5,
+  meadow: 8,
+  rocky: 13,
+}
+
+export const BARE_TREES = [
   'Tree_Bare_1_A_Color1', 'Tree_Bare_1_B_Color1', 'Tree_Bare_1_C_Color1',
   'Tree_Bare_2_A_Color1', 'Tree_Bare_2_B_Color1', 'Tree_Bare_2_C_Color1',
 ]
@@ -547,9 +600,16 @@ export function createPropField(base = ''): PropField {
        * to stop a wood looking planted: real woods have one.
        */
       const bare = (character === 'wood' || character === 'highland') && dh % 23 === 0
+      /*
+       * ...and a LIVE tree rather more often than that. Checked after `bare`, so
+       * the dead trunk keeps its old rarity rather than competing with this.
+       */
+      const leafy = !bare && dh % (TREE_EVERY[character] as number) === 0
       const name = bare
         ? BARE_TREES[dh % BARE_TREES.length] as string
-        : palette[dh % palette.length] as string
+        : leafy
+          ? LEAFY_TREES[(dh >> 5) % LEAFY_TREES.length] as string
+          : palette[dh % palette.length] as string
 
       /*
        * Size it BEFORE siting it. The piece has to know how much room it
@@ -558,7 +618,8 @@ export function createPropField(base = ''): PropField {
        */
       const bit = await forestModel(name)
       // Vary per PIECE, not per tile, or a tile reads as one stamped set.
-      const [cw, ch] = bare ? FITS.bare : FITS.cover
+      // A tree gets a tree's room, live or dead; everything else is undergrowth.
+      const [cw, ch] = (bare || leafy) ? FITS.bare : FITS.cover
       const vary = 0.8 + ((dh >> 13) % 45) / 100
       fitInto(bit, cw * vary, ch * vary)
       const r = footprintOf(bit)

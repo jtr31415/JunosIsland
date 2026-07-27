@@ -88,10 +88,24 @@ export const isComplete = (sumsDone: number, cost: number): boolean =>
  * trees and rocks with Forest Nature ground cover between them; water gets
  * reeds and lilies, because a pond that sprouted a pine would be funny once.
  */
-const PALETTE: Record<TileType, readonly string[]> = {
+export const PALETTE: Record<TileType, readonly string[]> = {
   grass: [
+    /*
+     * THE SECOND PLACEMENT PATH, and the one that gets forgotten — trees inside
+     * rocks was reported twice because the first fix only touched `props.ts`
+     * (HANDOFF §6). Joe's "more trees from the nature/forest kay pack" has to
+     * land here too, or the tiles she BUILDS stay as bare as they were while the
+     * ones the island grows on its own fill up with woodland.
+     *
+     * Six of the pack's fifteen leafy trees rather than all of them: this list
+     * is sampled eight times per plot, so every name added here dilutes the
+     * undergrowth that makes a tile look inhabited. Six is enough that two plots
+     * rarely grow the same tree.
+     */
     'rock_single_A', 'rock_single_B', 'rock_single_C', 'rock_single_D',
     'tree_single_A', 'tree_single_B', 'trees_A_small', 'trees_B_small',
+    'Tree_1_A_Color1', 'Tree_2_B_Color1', 'Tree_2_E_Color1',
+    'Tree_3_A_Color1', 'Tree_4_B_Color1', 'Tree_4_C_Color1',
     'Grass_1_A_Color1', 'Grass_1_C_Color1', 'Grass_2_A_Color1', 'Grass_2_C_Color1',
     'Bush_1_A_Color1', 'Bush_2_A_Color1', 'Bush_4_A_Color1', 'Bush_3_A_Color1',
     'Rock_1_A_Color1', 'Rock_2_A_Color1', 'Rock_3_A_Color1', 'Rock_1_D_Color1',
