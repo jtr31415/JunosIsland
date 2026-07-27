@@ -50,6 +50,17 @@ export interface Flow {
   /** The type the child picked from the offer, awaiting a socket tap. */
   chosen: TileType | null
   /**
+   * The socket she tapped to ask for land, if she asked at one.
+   *
+   * Land used to be asked for by tapping any grass, so the game had no idea
+   * where she wanted it and had to ask a second question — "now choose where
+   * it goes" — after she had picked a type. Asking happens AT a socket now, so
+   * the answer is already in hand and the question is not worth asking.
+   *
+   * Transient: it lives for the length of one choice and is never saved.
+   */
+  pending: Axial | null
+  /**
    * The plot under construction: what is being built, and where.
    *
    * Spec §2 in one field. The order it prescribes is "pick 1 of 3 tile types
@@ -78,6 +89,7 @@ export function createFlow(): Flow {
     pets: [],
     bankedTiles: 0,
     chosen: null,
+    pending: null,
     plot: null,
     eggPresent: true,
     readProgress: 0,
@@ -119,10 +131,10 @@ export function tapSum(f: Flow): Flow {
  * none, it opens the bank: phase 'placing', which shows the three-type offer
  * and lights up every socket.
  */
-export function askForLand(f: Flow): Flow {
+export function askForLand(f: Flow, at: Axial | null = null): Flow {
   if (f.phase !== 'free') return f
   if (f.plot) return tapSum(f)
-  return { ...f, phase: 'placing', chosen: null }
+  return { ...f, phase: 'placing', chosen: null, pending: at }
 }
 
 export interface HatchDetails { name: string; species: string }
@@ -195,8 +207,17 @@ export function tileOffer(f: Flow): TileType[] {
   return ['grass', 'water', 'grass']
 }
 
+/**
+ * Pick a kind of land — and, if she already said where, put it there.
+ *
+ * The second question is gone. She taps a glowing socket, three kinds are
+ * offered, and the one she picks is sited on the socket she tapped. Choosing
+ * without a socket in hand still works and still waits for a tap, because the
+ * opening script asks for land on her behalf and has nowhere in mind.
+ */
 export function chooseTile(f: Flow, t: TileType): Flow {
   if (f.phase !== 'placing') return f
+  if (f.pending) return placeTile({ ...f, chosen: t }, f.pending)
   return { ...f, chosen: t }
 }
 
@@ -229,6 +250,7 @@ export function placeTile(f: Flow, a: Axial): Flow {
   const sited: Flow = {
     ...f,
     chosen: null,
+    pending: null,
     plot: { at: a, type: f.chosen },
     phase: 'free',
   }

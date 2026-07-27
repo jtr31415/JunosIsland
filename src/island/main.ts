@@ -1234,7 +1234,7 @@ async function boot(): Promise<void> {
          */
         flow = askForLand(flow)
         refresh()
-        overlay.say('Pick some land, then choose where it goes!')
+        overlay.say('Which land would you like?')
         break
       }
     }

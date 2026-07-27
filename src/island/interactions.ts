@@ -106,10 +106,10 @@ export function handleWorldTap(flow: Flow, hit: Hit | null, p: InteractionPorts)
        */
       if (flow.phase !== 'placing' || !flow.chosen) {
         if (!flow.plot && p.landPaused(flow)) { p.invite('space-surplus'); return flow }
-        const asked = askForLand(flow)
+        const asked = askForLand(flow, hit.axial)
         if (asked === flow) return flow
         if (asked.phase === 'challenge') p.openSum(asked)
-        else p.say('Pick some land, then choose where it goes!')
+        else p.say('Which land would you like?')
         return asked
       }
       const next = placeTile(flow, hit.axial)

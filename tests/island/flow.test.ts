@@ -307,3 +307,61 @@ describe('flow — work in progress is never lost', () => {
     expect(g.plot).toEqual(plot)
   })
 })
+
+describe('asking for land AT a socket', () => {
+  /**
+   * Joe: "with the outline tile selection, you can drop the question where it
+   * is supposed to go — that has already been selected."
+   *
+   * Quite so. Land used to be asked for by tapping any grass, so the game had
+   * no idea where she wanted it and had to ask a second question after she had
+   * picked a kind. Asking happens at a glowing socket now, so the answer is
+   * already in hand.
+   */
+  const socket = { q: 1, r: 0 }
+
+  it('remembers which socket she asked at', () => {
+    const f = askForLand(createFlow(), socket)
+    expect(f.phase).toBe('placing')
+    expect(f.pending).toEqual(socket)
+  })
+
+  it('sites the plot the moment she picks a kind — no second tap', () => {
+    const asked = askForLand(createFlow(), socket)
+    const sited = chooseTile(asked, 'water')
+    expect(sited.plot).toEqual({ at: socket, type: 'water' })
+    expect(sited.phase).toBe('free')
+    expect(sited.pending).toBeNull()
+    expect(sited.chosen).toBeNull()
+  })
+
+  it('still waits for a tap when nobody said where', () => {
+    /*
+     * The opening script asks for land on her behalf and has nowhere in mind,
+     * so the two-step path has to keep working — this is not a replacement,
+     * it is a shortcut for the case where the answer is already known.
+     */
+    const asked = askForLand(createFlow())
+    expect(asked.pending).toBeNull()
+    const chosen = chooseTile(asked, 'grass')
+    expect(chosen.chosen).toBe('grass')
+    expect(chosen.plot).toBeNull()
+    expect(chosen.phase).toBe('placing')
+  })
+
+  it('refuses a socket that is not one', () => {
+    // A save can be hand-edited, and the island shrinks in nobody's memory but
+    // its own. An illegal site leaves her in the offer rather than anywhere odd.
+    const asked = askForLand(createFlow(), { q: 9, r: 9 })
+    const out = chooseTile(asked, 'grass')
+    expect(out.plot).toBeNull()
+  })
+
+  it('never replaces a plot already under construction', () => {
+    // Siting over one would throw away both the spot she chose and every sum
+    // she has already spent on it.
+    const first = chooseTile(askForLand(createFlow(), socket), 'grass')
+    const again = chooseTile({ ...first, phase: 'placing', pending: { q: 0, r: 1 } }, 'water')
+    expect(again.plot).toEqual(first.plot)
+  })
+})
