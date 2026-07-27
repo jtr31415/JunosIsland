@@ -200,6 +200,26 @@ export function fitHeight(o: THREE.Object3D, target: number): void {
 }
 
 /**
+ * Scale an object so its FOOTPRINT spans a given width.
+ *
+ * The right measure for landscape. Hills and mountains are authored to sit on
+ * a hex and are already the right size; what varies between them is how tall
+ * they rise, which is the whole point of having several. Fitting them by
+ * height therefore inverts them — hills_B is 0.37 tall and 1.47 wide, so
+ * forcing it to 1.45 tall scaled it nearly fourfold into a tan slab five
+ * hexes across. Fit the part that must match the tile, and let the silhouette
+ * vary, which is what makes a range look like a range.
+ */
+export function fitWidth(o: THREE.Object3D, target: number): void {
+  o.scale.setScalar(1)
+  o.updateMatrixWorld(true)
+  const box = new THREE.Box3().setFromObject(o)
+  const width = Math.max(box.max.x - box.min.x, box.max.z - box.min.z)
+  if (!Number.isFinite(width) || width <= 1e-4) return
+  o.scale.setScalar(target / width)
+}
+
+/**
  * How tall each kind of thing stands, in world units.
  *
  * A pet is about 0.24 and Fred about 0.35, so ground cover reaching a pet's
@@ -213,8 +233,11 @@ export const HEIGHTS = {
   bare: 0.62,
   /** Single trees and small clumps: taller than a pet, shorter than a hill. */
   feature: 0.78,
-  /** Hills and mountains — the pieces that carry the skyline. */
-  big: 1.45,
+  /**
+   * Hills and mountains, as a fraction of the hex's WIDTH, not a height.
+   * A shade under one so the tile's own edge still shows around the base.
+   */
+  big: 0.94,
 } as const
 
 /** Stable per-coordinate hash, so a tile's scenery never changes. */
@@ -504,10 +527,15 @@ export function createPropField(base = ''): PropField {
         // elevation will too.
         obj.position.set(spot.x, spot.y, spot.z)
         obj.rotation.y = ((h >> 5) % 6) * (Math.PI / 3)   // snap to hex facings
-        // Fitted to a height, not multiplied by a guess. A tenth either way
-        // so a wood is not a row of identical trees.
-        fitHeight(obj, (spec.big ? HEIGHTS.big : HEIGHTS.feature)
-          * (0.9 + ((h >> 11) % 26) / 100))
+        /*
+         * Landscape is fitted by FOOTPRINT and objects by HEIGHT.
+         *
+         * A hill has to match the hex it sits on and may be any height it
+         * likes — that variation is the skyline. A tree has to stand the
+         * right height beside a pet and may be any width it likes.
+         */
+        if (spec.big) fitWidth(obj, hexSize * 2 * HEIGHTS.big * (0.94 + ((h >> 11) % 12) / 100))
+        else fitHeight(obj, HEIGHTS.feature * (0.9 + ((h >> 11) % 26) / 100))
         group.add(obj)
         placed.add(k)
         blocks.push({
