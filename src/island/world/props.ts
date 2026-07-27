@@ -167,6 +167,44 @@ const ROCKY = /rock/i
 const allows = (name: string, ground: Ground): boolean =>
   ground === 'green' || (ground === 'sand' && ROCKY.test(name))
 
+/**
+ * Scale an object so it stands a given height, whatever size it was authored.
+ *
+ * Fixed scale factors do not work across these packs and it is not close.
+ * Forest Nature's Rock_1 family alone runs from 0.54 to 4.58 units tall — a
+ * ninefold spread inside ONE family — while the hexagon pack's rock_single_A
+ * is 0.07. At a single scale the same number that made a grass tuft look
+ * right produced grey boulders taller than the hexes, dwarfing Fred.
+ *
+ * So nothing here guesses. Every piece is measured and fitted to a height
+ * chosen against a PET (~0.24 units tall), which is the only ruler that
+ * matters — and any model added later is normalised for free.
+ */
+export function fitHeight(o: THREE.Object3D, target: number): void {
+  o.scale.setScalar(1)
+  const box = new THREE.Box3().setFromObject(o)
+  const height = box.max.y - box.min.y
+  if (height > 1e-4) o.scale.setScalar(target / height)
+}
+
+/**
+ * How tall each kind of thing stands, in world units.
+ *
+ * A pet is about 0.24 and Fred about 0.35, so ground cover reaching a pet's
+ * knee registers as ground cover, and a hill needs to clear both to read as
+ * landscape rather than as an object someone left there.
+ */
+export const HEIGHTS = {
+  /** Tufts, stones, undergrowth. Ankle to shoulder of a pet. */
+  cover: 0.13,
+  /** A dead tree standing among live ones. */
+  bare: 0.62,
+  /** Single trees and small clumps: taller than a pet, shorter than a hill. */
+  feature: 0.78,
+  /** Hills and mountains — the pieces that carry the skyline. */
+  big: 1.45,
+} as const
+
 /** Stable per-coordinate hash, so a tile's scenery never changes. */
 function hash(a: Axial): number {
   let h = (a.q * 73856093) ^ (a.r * 19349663)
@@ -333,11 +371,11 @@ export function createPropField(base = ''): PropField {
       bit.position.set(x, surface.heightAt(x, z) ?? 0, z)
       bit.rotation.y = ((dh >> 11) % 360) * Math.PI / 180
       // Vary per PIECE, not per tile, or a tile reads as one stamped set.
-      const scale = (bare ? 0.7 : 0.36) + ((dh >> 13) % 34) / 100
-      bit.scale.setScalar(scale)
+      const tall = (bare ? HEIGHTS.bare : HEIGHTS.cover) * (0.8 + ((dh >> 13) % 45) / 100)
+      fitHeight(bit, tall)
       group.add(bit)
-      decor.push({ x, z, r: hexSize * 0.16 * (scale / 0.5) })
-      if (bare) blocks.push({ x, z, r: hexSize * 0.16 })
+      decor.push({ x, z, r: hexSize * 0.10 })
+      if (bare) blocks.push({ x, z, r: hexSize * 0.14 })
     }
   }
 
@@ -391,7 +429,10 @@ export function createPropField(base = ''): PropField {
             const rad = hexSize * (0.15 + ((ih >> 7) % 45) / 100)
             bit.position.set(w.x + Math.cos(ang) * rad, 0, w.z + Math.sin(ang) * rad)
             bit.rotation.y = ((ih >> 11) % 360) * Math.PI / 180
-            bit.scale.setScalar(0.55 + ((ih >> 13) % 25) / 100)
+            // Lilies are 0.02 units tall and reeds 0.25 — the same reason
+            // nothing here may use a fixed scale.
+            fitHeight(bit, (name.startsWith('waterlily') ? 0.04 : 0.22)
+              * (0.8 + ((ih >> 13) % 45) / 100))
             group.add(bit)
             decor.push({ x: bit.position.x, z: bit.position.z, r: hexSize * 0.14 })
           }
@@ -451,7 +492,10 @@ export function createPropField(base = ''): PropField {
         // elevation will too.
         obj.position.set(spot.x, spot.y, spot.z)
         obj.rotation.y = ((h >> 5) % 6) * (Math.PI / 3)   // snap to hex facings
-        obj.scale.setScalar((spec.big ? 0.72 : 0.5) + ((h >> 11) % 26) / 100)
+        // Fitted to a height, not multiplied by a guess. A tenth either way
+        // so a wood is not a row of identical trees.
+        fitHeight(obj, (spec.big ? HEIGHTS.big : HEIGHTS.feature)
+          * (0.9 + ((h >> 11) % 26) / 100))
         group.add(obj)
         placed.add(k)
         blocks.push({

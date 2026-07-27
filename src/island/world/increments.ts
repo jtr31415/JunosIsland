@@ -28,6 +28,7 @@
 import * as THREE from 'three'
 import type { TileType } from './grid'
 import type { TileModels } from './tiles'
+import { fitHeight, HEIGHTS } from './props'
 
 /**
  * The ten canonical steps, in order.
@@ -91,8 +92,18 @@ const PIECES: Record<TileType, readonly string[]> = {
 /** How solid a freshly sited plot looks. It firms up as the build advances. */
 const GHOST_OPACITY = 0.45
 
-/** Scale each piece is placed at, matching how props.ts plants them. */
-const scaleFor = (name: string): number => (/^[A-Z]/.test(name) ? 0.5 : 0.62)
+/**
+ * How tall each piece stands on the plot, matching how props.ts plants them.
+ *
+ * Measured and fitted, never a scale factor: the packs disagree about size by
+ * up to ninefold within a single family, so one multiplier that suits a grass
+ * tuft turns a rock into a boulder taller than the hex it sits on.
+ */
+const heightFor = (name: string): number =>
+  name.startsWith('waterlily') ? 0.04
+    : name.startsWith('waterplant') ? 0.22
+      : /^(Grass|Bush|Rock)/.test(name) ? HEIGHTS.cover
+        : HEIGHTS.feature
 
 export interface PlotDeps {
   /** The finished tile's own mesh, so the ghost hex IS the real hex. */
@@ -179,8 +190,8 @@ export function createGrowingPlot(
     void deps.prop(name).then(object => {
       object.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius)
       object.rotation.y = angle + i
-      object.scale.setScalar(scaleFor(name))
-      object.userData.fullScale = scaleFor(name)
+      fitHeight(object, heightFor(name))
+      object.userData.fullScale = object.scale.x
       install(i + 1, object)
     }).catch(() => { /* a missing piece leaves a gap, never a broken build */ })
   })
