@@ -8,8 +8,26 @@ const here = dirname(fileURLToPath(import.meta.url))
 /** A short, sortable stamp so a running build can be identified on sight. */
 const stamp = new Date().toISOString().slice(5, 16).replace('T', ' ')
 
+/**
+ * Which channel this build is (Phase 3 item 4).
+ *
+ * Production is what Juno's PWA pins to and is built only from a tagged
+ * release; preview is main. Anything that is not exactly 'preview' is treated
+ * as production, so a typo in the environment fails towards the safe answer
+ * rather than shipping half-built features to a six-year-old.
+ *
+ * A DEFINE rather than an env lookup, deliberately. The literal string is
+ * substituted into the bundle, so `__CHANNEL__ !== 'production'` folds to
+ * false and Rollup deletes the branch — which is what lets balance.dev.json
+ * be absent from production output rather than merely unreachable.
+ */
+const channel = process.env.ISLAND_CHANNEL === 'preview' ? 'preview' : 'production'
+
 export default defineConfig({
-  define: { __BUILD_STAMP__: JSON.stringify(stamp) },
+  define: {
+    __BUILD_STAMP__: JSON.stringify(stamp),
+    __CHANNEL__: JSON.stringify(channel),
+  },
   root: resolve(here, 'src/island'),
   base: '/JunosIsland/',
   plugins: [

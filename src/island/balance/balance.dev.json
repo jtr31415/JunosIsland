@@ -1,0 +1,23 @@
+{
+  "__devOverlayMarker": "PREVIEW_ONLY_BALANCE_OVERLAY",
+  "tile": { "base": 1, "cap": 3, "tau": 2 },
+  "egg": { "base": 1, "cap": 3, "tau": 2 },
+  "story": { "beatMinMs": 300, "beatPerCharMs": 8, "beatMaxMs": 1200 },
+  "stage": {
+    "spinSec": 9,
+    "progressDots": true,
+    "flyBackMs": 900,
+    "hatchHoldMs": 900,
+    "petLoadMs": 1200,
+    "chipMs": 700,
+    "flourishMs": 600,
+    "landHeight": 3.2,
+    "landReach": 2.4
+  },
+  "firstRun": { "tileOffer": ["grass", "grass", "water"], "egg2DelaySec": 3 },
+  "unlocks": [
+    { "type": "spring", "tiles": 2, "pets": 1 },
+    { "type": "desert", "tiles": 4, "pets": 2 },
+    { "type": "ice", "tiles": 6, "pets": 3 }
+  ]
+}

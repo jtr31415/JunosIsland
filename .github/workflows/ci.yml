@@ -26,7 +26,11 @@ jobs:
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
+      # Full history: the production build comes from the latest release TAG,
+      # and a shallow clone has no tags to find.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -68,12 +72,53 @@ jobs:
       - name: Parity against the frozen original
         run: npm run parity
 
+      # ---- the two channels (item 4) -------------------------------------
+      #
+      # Juno's PWA is installed against the site ROOT, so the root must stay
+      # production. Preview lives at /preview/ and is built from main, which
+      # is what makes it safe to deploy an unfinished feature: it is behind a
+      # flag AND behind a path she never visits.
+
+      - name: Build the PREVIEW channel from main
+        run: ISLAND_CHANNEL=preview npm run build:island
+
+      - name: Prove preview can reach the dev overlay
+        run: npm run channel -- preview
+
+      - name: Stage preview
+        run: |
+          mkdir -p _site/preview
+          cp -r dist/island/* _site/preview/
+
+      # Production comes from the newest v* tag. If there is no tag yet it
+      # falls back to main, so the site cannot break for want of a release —
+      # but until the first tag is cut, "production" simply means main.
+      - name: Check out the newest release tag
+        id: release
+        run: |
+          TAG=$(git tag --list 'v*' --sort=-v:refname | head -n1)
+          if [ -n "$TAG" ]; then
+            echo "Building production from $TAG"
+            git checkout --detach "$TAG"
+          else
+            echo "No v* tag yet — production falls back to main"
+          fi
+          echo "tag=${TAG:-main}" >> "$GITHUB_OUTPUT"
+
+      - run: npm ci
+      - run: npm run build
+
+      # The half that matters: the dev overlay must be ABSENT from production
+      # output, not merely unreachable. See tools/smoke/channel.mjs.
+      - name: Prove production cannot reach the dev overlay
+        run: npm run channel -- production
+
       - name: Assemble Pages site
         run: |
-          mkdir -p _site
           cp -r dist/island/* _site/
           mkdir -p _site/words
           cp dist/words/junos-words.html _site/words/
+          echo "root = ${{ steps.release.outputs.tag }}, /preview/ = main"
 
       - uses: actions/upload-pages-artifact@v3
         with:

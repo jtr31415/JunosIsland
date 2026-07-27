@@ -50,6 +50,37 @@ export type PageKind = 'find' | 'build'
 
 export const balance = raw as Balance
 
+/** Injected by Vite. See vite.island.config.ts and platform/flags.ts. */
+declare const __CHANNEL__: string
+
+/**
+ * Pull in the compressed-time overlay, or prove there is nothing to pull.
+ *
+ * The brief requires `balance.dev.json` to be "structurally unloadable in
+ * production", and that is stronger than a runtime check. Because
+ * `__CHANNEL__` is a build-time constant, this comparison folds to `false` in
+ * a production build and Rollup deletes the whole branch — the dynamic import
+ * with it, so the JSON is never emitted as a chunk and its contents appear
+ * nowhere in the output. `tests/island/channel.test.ts` greps the built bundle
+ * for a marker string to prove exactly that, because "I believe Rollup drops
+ * it" is not the same as knowing.
+ *
+ * It MUTATES the exported object rather than returning a new one. Every call
+ * site imports `balance` directly and reads it whenever it likes, so handing
+ * back a copy would leave most of the game reading the un-overlaid original —
+ * a tuning switch that appeared to work and mostly did not.
+ */
+export async function applyDevBalance(enabled: boolean): Promise<boolean> {
+  if (!enabled) return false
+  if (__CHANNEL__ === 'production') return false
+  const overlay = (await import('./balance.dev.json')).default as Partial<Balance>
+  for (const [key, value] of Object.entries(overlay)) {
+    if (key.startsWith('__')) continue          // the marker, not a setting
+    ;(balance as unknown as Record<string, unknown>)[key] = value
+  }
+  return true
+}
+
 /**
  * cost(n) = round(cap − (cap − base) · e^((1 − n) / tau))
  *

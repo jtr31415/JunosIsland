@@ -21,7 +21,7 @@ import { createGrowingPlot } from './world/increments'
 import type { GrowingPlot } from './world/increments'
 import { createAlbum } from './album'
 import { hatchProgress, landProgress, sumsForTile, pagesForEgg } from './flow'
-import { pageKind, balance } from './balance'
+import { pageKind, balance, applyDevBalance } from './balance'
 import { landPaused, eggsPaused, activeGovernor, GOVERNOR_LINE } from './governors'
 import { OPENING, HATCH_LINES, fill } from './script'
 import { loadIsland, saveIsland } from './save'
@@ -32,6 +32,7 @@ import { createDurableStore } from '../platform/durable'
 import { openIdb } from '../platform/idb'
 import { requestPersistence, shouldRequest } from '../platform/persistence'
 import { createClock, createAdjustableClock } from '../platform/clock'
+import { CHANNEL, isPreview, readFlags } from '../platform/flags'
 import type { AdjustableClock } from '../platform/clock'
 import type { PersistState } from '../platform/persistence'
 import {
@@ -252,7 +253,23 @@ async function boot(): Promise<void> {
    * than Date.now(), which is what makes the visitor rollover and difficulty's
    * two-distinct-days gate testable without waiting for real midnight.
    */
-  const debugging = location.search.includes('debug')
+  /*
+   * Which build this is, and what it may switch on (item 4).
+   *
+   * In production `readFlags` returns everything off and does not consult the
+   * query string at all, so no URL a child could arrive at can turn on an
+   * unfinished feature. The debug tooling rides the same switch.
+   */
+  const flags = readFlags(location.search)
+  const debugging = isPreview() && (flags.on('devClock') || location.search.includes('debug'))
+
+  /*
+   * Compressed pacing, when asked for and only in preview. Awaited before
+   * anything reads a cost, or the first tile would be priced from the real
+   * curve and the rest from the overlay.
+   */
+  const devBalance = await applyDevBalance(flags.on('devBalance')
+    && location.search.includes('fast'))
   const clock: AdjustableClock | ReturnType<typeof createClock> = debugging
     ? createAdjustableClock(Date.now())
     : createClock()
@@ -596,7 +613,10 @@ async function boot(): Promise<void> {
    */
   const stamp = document.createElement('div')
   stamp.className = 'dev-stamp'
-  stamp.textContent = BUILD_STAMP
+  // The channel is on the stamp because 'is this the build she plays?' is
+  // the first question anyone looking at a screenshot needs answered.
+  stamp.textContent = BUILD_STAMP + ' · ' + CHANNEL
+    + (devBalance ? ' · fast' : '')
   stamp.title = 'build'
   document.body.append(stamp)
 
