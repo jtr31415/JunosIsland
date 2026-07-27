@@ -101,8 +101,8 @@ So the shape is now:
   Ship after this.
 - **Phase 5 — the patch.** Juno's own first feature request is in here — she
   wants to change her mind after picking the wrong tile type, which must carry
-  her sums over rather than restart the build (brief §19). Tilt-shift FIRST,
-  packaged with a lighting rework —
+  her sums over rather than restart the build (brief §19). Tilt-shift has MOVED
+  OUT of Phase 5 to the end of Phase 4 (below) —
   Joe, 27 July: *"hold the tiltshift and pack with a lighting rework. we are not
   quite there yet. we put that in early phase 5."* Then items 7–12 and 14–17.
 
@@ -145,7 +145,7 @@ tablet from it.
 | 11 | Small ports | Phase 5 — scope grew, see below. |
 | 12 | Per-item records + scheduler | Phase 5. |
 | **13** | Adaptive difficulty | **PHASE 4 — next.** One question to settle first, below. |
-| — | **Tilt-shift** | **PHASE 5, early**, packaged with a lighting rework. Needs a brief amendment; see above. |
+| — | **Lighting review, tilt-shift, more fog, visual options menu** | **END OF PHASE 4.** Joe, 27 July: *"add to this slice lighting review and tilt shift with a bit more fog, on a visual options menu. end of ph4, not immediatly."* The MENU is the settings toggle the lighting brief's amendment precedent requires — so half the bar is met by this card's own scope. What is still missing is **measured fps on the actual tablet**, which nothing in this project has ever had. |
 | 14 | Biome & tile ladder | Phase 5. `docs/rock-hexes-proposal.md` is a down-payment on it. |
 | 15 | Stardust, Star Pool, first wonder | Phase 5. |
 | 16 | Persona simulator | Phase 5. |
