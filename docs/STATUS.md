@@ -4,12 +4,14 @@
 numbering. For the pre-Phase-3 position see the git history of this file.*
 
 The short version: **M0 and M1 are done and proven, most of slice-1 is in, and
-Phase 3 has started.** Item 0 and item 1 are complete. The game is deployed at
+Phase 3's whole P0 is complete** — items 0 through 4, the foundations
+everything later stands on. The game is deployed at
 <https://jtr31415.github.io/JunosIsland/> and **has still not been played by
 the QA department**, whose verdict outranks every document here (brief §18).
 
-Nothing is waiting on Joe. Both prior rulings are closed: **#4 formula wins**,
-**#6 tilt-shift declined**.
+Both prior rulings are closed: **#4 formula wins**, **#6 tilt-shift declined**.
+One new thing wants Joe: **the first release tag** (item 4, below). Nothing is
+blocked on it.
 
 ---
 
