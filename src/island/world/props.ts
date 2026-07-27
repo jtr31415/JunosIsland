@@ -81,9 +81,14 @@ const FEATURES: Record<Character, Array<{ name: string; weight: number; big?: bo
     { name: 'hills_B', weight: 4, big: true },
     { name: 'hills_C', weight: 3, big: true },
     { name: 'hills_C_trees', weight: 3, big: true },
-    { name: 'mountain_A', weight: 2, big: true },
-    { name: 'mountain_B', weight: 2, big: true },
-    { name: 'mountain_C', weight: 2, big: true },
+    /*
+     * The BARE mountain variants are deliberately absent.
+     *
+     * They carry no grass and sample the atlas's rock swatch, which on a
+     * green summer island reads as a sand mesa dropped in from a desert —
+     * two of them side by side looked like a bug rather than a mountain.
+     * The grass-topped variants say "mountain" without leaving the biome.
+     */
     { name: 'mountain_A_grass', weight: 3, big: true },
     { name: 'mountain_B_grass', weight: 3, big: true },
     { name: 'mountain_C_grass', weight: 3, big: true },
