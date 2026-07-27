@@ -15,6 +15,7 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { flattenImported } from '../lighting'
+import { createBlobShadow } from '../juice'
 import { toWorld } from './hex'
 import type { Axial } from './hex'
 import type { Island } from './grid'
@@ -448,8 +449,150 @@ export const FITS = {
   reed: [0.3, 0.26] as const,
 } as const
 
-/** Stable per-coordinate hash, so a tile's scenery never changes. */
-function hash(a: Axial): number {
+/**
+ * Per-piece size variation, as a multiplier on the FITS entry above.
+ *
+ * Per PIECE and never per tile, or a tile reads as one stamped set. Written
+ * down here rather than left inline because the MAXIMUM is what decides
+ * whether a piece of ground cover can ever grow big enough to cross the shadow
+ * threshold below — and a ceiling copied by hand into a comment is exactly the
+ * kind of claim this project has watched go stale. `varyMax` derives it: the
+ * largest value of `h % span` is `span - 1`.
+ *
+ * The arithmetic is unchanged from when these numbers were inline, and it has
+ * to be: `vary` feeds `fitInto`, which feeds `footprintOf`, which decides where
+ * a piece stands. A different multiplier would rearrange every tile on the
+ * island behind the child's back.
+ */
+export const VARY = {
+  /** Tufts, stones, undergrowth, dead trunks, water plants. */
+  cover: { min: 0.8, span: 45 },
+  /**
+   * Live trees start higher. Joe asked for "fewer small ones in favour of
+   * bigger ones", and raising the floor removes the small end rather than
+   * merely making it less likely.
+   */
+  tree: { min: 0.95, span: 45 },
+  /** Tile features and landscape. */
+  feature: { min: 0.88, span: 26 },
+} as const
+
+/** The largest multiplier a given variation can produce. */
+export const varyMax = (v: { min: number; span: number }): number =>
+  v.min + (v.span - 1) / 100
+
+/* ---------- which props are "larger", and therefore cast ----------
+ *
+ * Lighting brief §3 wants a blob under "every pet and loose prop", and the
+ * pets have had one for a while — so on any tile with animals on it the
+ * scenery was the only thing floating. But a tile scatters FIVE TO NINE pieces
+ * of ground cover around its one feature, and a tuft is not a prop in the sense
+ * §3 means: at the preset's 35° sun a 0.198-tall tuft measuring 0.095 across
+ * throws an ellipse 0.47 long — two and a half times its own width — starting
+ * 0.14 out from its base. Nine of those per hex is not grounding, it is litter,
+ * and it is nine more draw calls and nine more transparent quads of overdraw on
+ * a tablet.
+ *
+ * So there is a threshold, and it is taken from the measured pack rather than
+ * chosen. Every piece goes through `fitInto` before it is planted, so its size
+ * is bounded by the FITS entry it was fitted to times the per-piece variation
+ * `scatter`/`sync` apply — which makes these ceilings ARITHMETIC rather than a
+ * property of the 49 cover models that happen to be in the lists today. Every
+ * number below was measured off the `.gltf` files, at the size each piece is
+ * actually planted:
+ *
+ *                              fitted height     fitted reach (half-width)
+ *   ground cover  (5-9/tile)   0.128 .. 0.198    0.018 .. 0.260
+ *   water reeds                0.147 .. 0.322    0.065 .. 0.186
+ *   water lilies               0.032 .. 0.073    0.200 .. 0.310
+ *   grown-plot cover           0.128 .. 0.160    0.018 .. 0.210
+ *   grown-plot rock slabs      0.144 .. 0.352    0.310
+ *   grown-plot trees           0.479 .. 0.860    0.144 .. 0.310
+ *   bare trees                 0.506 .. 0.868    0.058 .. 0.279
+ *   live trees                 0.567 .. 1.460    0.173 .. 0.403
+ *   tile features              0.204 .. 1.073    0.201 .. 0.565
+ *   hills and mountains        0.337 .. 1.921    0.645 .. 0.961
+ *
+ * TWO arms, because one is provably not enough. A height-only rule loses
+ * `rock_single_A` — a slab 0.88 across and 0.20 tall, exactly the sort of thing
+ * that reads as stuck to nothing — and worse, its height straddles any line
+ * drawn near the cover ceiling, so the SAME model would gain and lose its
+ * shadow depending on the tile's hash. A reach-only rule cannot separate a
+ * bushy tuft (0.260) from a thin bare trunk (0.058).
+ *
+ * Each number is the middle of a measured GAP rather than a taste:
+ *
+ *   height  must exclude reeds at 0.322 and admit the shortest bare tree at
+ *           0.506. Gap (0.322, 0.506); 0.40 sits 24% above and 21% below.
+ *   reach   must exclude cover at 0.260 and admit a grown rock slab at 0.310
+ *           — which is FITS.grown's own half-width, so it is a constant and
+ *           not a model. Gap (0.260, 0.310); 0.29 sits 11% above and 7% below.
+ *
+ * Both edges are pinned against the FITS table by tests, so a future change to
+ * how big anything is fitted fails the suite rather than quietly putting nine
+ * shadows on every hex or taking the shadow off every boulder.
+ */
+export const SHADOW_MIN_HEIGHT = 0.4
+export const SHADOW_MIN_REACH = 0.29
+
+/**
+ * Give a piece of planted scenery its blob, if it is big enough to want one.
+ *
+ * Uses `createBlobShadow` and nothing else — the sun already lives inside it
+ * (juice.ts `castShadow` offsets by cot(elevation) and stretches along that
+ * axis), so a second mechanism here would be a second answer to a question
+ * that already has one.
+ *
+ * The blob goes in a HOLDER at the piece's feet rather than under the piece
+ * itself, for two measured reasons. `castShadow` writes `position.y =
+ * SHADOW_LIFT` in its parent's frame, so its parent has to be the ground: a
+ * blob dropped straight into the props group would sit at y = 0.02 while its
+ * tree stands on a coast ramp half a unit lower. And parenting it to the piece
+ * would scale it by that piece's fit — `fitInto` leaves scales anywhere from
+ * 0.05 to 4 — taking the lift and the soft edge with it.
+ *
+ * Returns the holder, or null when the piece is too small to bother. `into`
+ * must already be this piece's ancestor, because everything here is measured
+ * off world matrices.
+ */
+export function shadowUnder(
+  o: THREE.Object3D, into: THREE.Object3D,
+): THREE.Object3D | null {
+  o.updateMatrixWorld(true)
+  const box = new THREE.Box3().setFromObject(o)
+  if (!Number.isFinite(box.min.y)) return null
+
+  const height = box.max.y - box.min.y
+  /*
+   * Half the widest horizontal extent, exactly as `footprintOf` measures it —
+   * the FULL width, not `footprintBelow`'s walking-height slice. A canopy is
+   * not in a pet's way, but it is very much in the sun's.
+   */
+  const reach = Math.max(box.max.x - box.min.x, box.max.z - box.min.z) / 2
+  if (height < SHADOW_MIN_HEIGHT && reach < SHADOW_MIN_REACH) return null
+
+  // Where it touches down: the middle of its footprint, at the bottom of it.
+  const feet = new THREE.Vector3(
+    (box.min.x + box.max.x) / 2, box.min.y, (box.min.z + box.max.z) / 2)
+  into.updateMatrixWorld(true)
+  into.worldToLocal(feet)
+
+  const holder = new THREE.Group()
+  holder.name = 'prop-shadow'
+  holder.position.copy(feet)
+  holder.add(createBlobShadow(reach, height))
+  into.add(holder)
+  return holder
+}
+
+/**
+ * Stable per-coordinate hash, so a tile's scenery never changes.
+ *
+ * Exported so tests can drive `coverPiece` with the numbers the island really
+ * produces. UNSIGNED, which is the whole point of the `>>> 0` — and the reason
+ * every consumer of it must use `>>>` rather than `>>` when it shifts.
+ */
+export function hash(a: Axial): number {
   let h = (a.q * 73856093) ^ (a.r * 19349663)
   h = (h ^ (h >>> 13)) >>> 0
   return h
@@ -481,6 +624,52 @@ function characterOf(a: Axial): Character {
   const region = hash({ q: Math.floor(a.q / 2), r: Math.floor(a.r / 2) })
   const jitter = hash(a) % 5 === 0 ? hash({ q: a.r, r: a.q }) : 0
   return pick(CHARACTERS, (region ^ jitter) >>> 0).kind
+}
+
+/**
+ * Which piece one scattered slot grows, from that slot's own hash.
+ *
+ * Pulled out of `scatter` because it produced a MODEL NAME THAT DID NOT EXIST,
+ * and a bug that names a file wants a test that can name every file.
+ *
+ * `hash` is unsigned 32-bit, so half of all hashes have the top bit set — and
+ * `>>` is the SIGNED shift, so for those it goes negative. A negative index
+ * into `LEAFY_TREES` is `undefined`; `forestModel(undefined)` fetches
+ * `forest/undefined.gltf`; the dev server answers with index.html; GLTFLoader
+ * throws on the `<`; and the rejection escapes `sync()`, which is a loop over
+ * EVERY tile on the island. So one bad tree left every hex after it bare, and
+ * `void props.sync(...)` swallowed the reason. Found in the browser, in the
+ * network log, on an island of nineteen hexes of which exactly ONE had any
+ * scenery on it. Measured across a 13x13 field: 8.4% of scattered pieces
+ * resolved to `undefined`, in 237 of 676 tile-and-character combinations.
+ *
+ * `>>>` fixes it and moves nothing that worked: the two shifts are identical
+ * for every hash below 2^31, which is every case that was not already
+ * throwing. The other shifts in this file feed angles, rotations and size
+ * multipliers, where a negative value is survivable; this is the only one that
+ * indexes an array.
+ */
+export function coverPiece(
+  character: Character, dh: number,
+): { name: string; kind: 'cover' | 'tree' | 'bare' } {
+  /*
+   * One dead tree now and then, in woods and highlands. The cheapest way to
+   * stop a wood looking planted: real woods have one.
+   */
+  if ((character === 'wood' || character === 'highland') && dh % 23 === 0) {
+    return { name: BARE_TREES[dh % BARE_TREES.length] as string, kind: 'bare' }
+  }
+  /*
+   * ...and a LIVE tree rather more often than that. Checked after the dead
+   * trunk, so that keeps its old rarity rather than competing with this.
+   */
+  if (dh % (TREE_EVERY[character] as number) === 0) {
+    return {
+      name: LEAFY_TREES[(dh >>> 5) % LEAFY_TREES.length] as string, kind: 'tree',
+    }
+  }
+  const palette = COVER[character]
+  return { name: palette[dh % palette.length] as string, kind: 'cover' }
 }
 
 export interface PropField {
@@ -621,42 +810,35 @@ export function createPropField(base = ''): PropField {
     /** Keep everything at least this far out, leaving the middle clear. */
     innerClear = 0,
   ): Promise<void> {
-    const palette = COVER[character]
     const count = 5 + (h % 5)
     for (let d = 0; d < count; d++) {
       const dh = hash({ q: a.q * 31 + d, r: a.r * 17 - d })
-      /*
-       * One dead tree now and then, in woods and highlands. The cheapest way
-       * to stop a wood looking planted: real woods have one.
-       */
-      const bare = (character === 'wood' || character === 'highland') && dh % 23 === 0
-      /*
-       * ...and a LIVE tree rather more often than that. Checked after `bare`, so
-       * the dead trunk keeps its old rarity rather than competing with this.
-       */
-      const leafy = !bare && dh % (TREE_EVERY[character] as number) === 0
-      const name = bare
-        ? BARE_TREES[dh % BARE_TREES.length] as string
-        : leafy
-          ? LEAFY_TREES[(dh >> 5) % LEAFY_TREES.length] as string
-          : palette[dh % palette.length] as string
+      const { name, kind } = coverPiece(character, dh)
+      const bare = kind === 'bare'
+      const leafy = kind === 'tree'
 
       /*
        * Size it BEFORE siting it. The piece has to know how much room it
        * takes before it can be asked whether it fits anywhere, and fitInto
        * does not care where the object is.
+       *
+       * A piece that will not load costs a piece, not the island.
+       *
+       * The other half of the `undefined.gltf` fault above: the throw escaped
+       * `sync()`, which is a loop over every tile, so ONE unloadable model left
+       * every remaining hex bare. `increments.ts` already has this rule in as
+       * many words — "a missing piece leaves a gap, never a broken build" — and
+       * this is the path that did not. Not marked placed, so a tile that lost a
+       * piece to a flaky fetch is dressed properly on the next sync.
        */
-      const bit = await forestModel(name)
+      const bit = await forestModel(name).catch(() => null)
+      if (!bit) continue
       // Vary per PIECE, not per tile, or a tile reads as one stamped set.
       // A tree gets a tree's room, live or dead; everything else is undergrowth.
       const [cw, ch] = leafy ? FITS.tree : bare ? FITS.bare : FITS.cover
-      /*
-       * Per-PIECE variation, never per tile, or a tile reads as one stamped set.
-       * Trees start from 0.95 rather than 0.8: Joe asked for "fewer small ones
-       * in favour of bigger ones", and raising the floor is what removes the
-       * small end rather than just making it less likely.
-       */
-      const vary = (leafy ? 0.95 : 0.8) + ((dh >> 13) % 45) / 100
+      // Per-PIECE variation, never per tile — see VARY.
+      const vary = (leafy ? VARY.tree.min : VARY.cover.min)
+        + ((dh >> 13) % VARY.cover.span) / 100
       fitInto(bit, cw * vary, ch * vary)
       const r = footprintOf(bit)
 
@@ -687,6 +869,13 @@ export function createPropField(base = ''): PropField {
       bit.position.set(x, surface.heightAt(x, z) ?? 0, z)
       bit.rotation.y = ((dh >> 11) % 360) * Math.PI / 180
       group.add(bit)
+      /*
+       * The trees and the dead trunks get a shadow; the tufts and pebbles do
+       * not. `shadowUnder` decides on the MEASURED piece rather than on which
+       * branch of the `leafy`/`bare` choice above put it here, so a model that
+       * turns out bigger than its list suggests is still anchored.
+       */
+      shadowUnder(bit, group)
       decor.push({ x, z, r: hexSize * 0.10 })
       /*
        * Only the bare tree is solid enough to keep others out. Tufts and
@@ -756,9 +945,19 @@ export function createPropField(base = ''): PropField {
              * the size of a hex, sitting beside every pond.
              */
             const [ww, wh] = name.startsWith('waterlily') ? FITS.lily : FITS.reed
-            const wv = 0.8 + ((ih >> 13) % 45) / 100
+            const wv = VARY.cover.min + ((ih >> 13) % VARY.cover.span) / 100
             fitInto(bit, ww * wv, wh * wv)
             group.add(bit)
+            /*
+             * NO blob on water, deliberately, and it is not the threshold
+             * doing it — the widest lily reaches 0.310 and would clear
+             * SHADOW_MIN_REACH. A blob is a decal on the GROUND, and these
+             * pieces are placed at y = 0 while the water hex's own surface
+             * sits at -0.2, so a shadow drawn at their feet would hang a fifth
+             * of a unit above the pond it belongs to. A lily's shadow is under
+             * the lily anyway: at the preset's 35° sun a 0.05-tall pad throws
+             * its ellipse 0.036 units, which never leaves the pad.
+             */
             decor.push({ x: bit.position.x, z: bit.position.z, r: hexSize * 0.14 })
           }
           placed.add(k)
@@ -828,7 +1027,10 @@ export function createPropField(base = ''): PropField {
          * has to be given up — and a tile with nowhere green left simply grows
          * nothing, which is what a beach looks like anyway.
          */
-        const obj = await model(spec.name)
+        // Same rule as the cover above: a feature that will not load leaves
+        // this hex for the next sync rather than every hex after it bare.
+        const obj = await model(spec.name).catch(() => null)
+        if (!obj) continue
         /*
          * Landscape is fitted by FOOTPRINT and objects by HEIGHT.
          *
@@ -837,7 +1039,7 @@ export function createPropField(base = ''): PropField {
          * right height beside a pet and may be any width it likes.
          */
         const [fw, fh] = spec.big ? FITS.big : FITS.feature
-        const vary = 0.88 + ((h >> 11) % 26) / 100
+        const vary = VARY.feature.min + ((h >> 11) % VARY.feature.span) / 100
         fitInto(obj, fw * vary, fh * vary)
         const r = footprintOf(obj)
 
@@ -865,6 +1067,9 @@ export function createPropField(base = ''): PropField {
         obj.position.set(spot.x, spot.y, spot.z)
         obj.rotation.y = ((h >> 5) % 6) * (Math.PI / 3)   // snap to hex facings
         group.add(obj)
+        // Every feature clears the threshold — the smallest is a slab 0.88
+        // across — so this is one blob per dressed tile, plus its trees.
+        shadowUnder(obj, group)
         placed.add(k)
         /*
          * What a pet must walk round, MEASURED at walking height.
@@ -911,13 +1116,35 @@ export function createPropField(base = ''): PropField {
        * keep-out would sterilise the whole neighbourhood.
        */
       grown.updateMatrixWorld(true)
-      for (const child of grown.children) {
+      /*
+       * A SNAPSHOT, because the loop below adds to `grown.children` as it goes
+       * — and a shadow holder measured as a footprint would sterilise the
+       * ground its own tree is standing on.
+       */
+      const pieces = [...grown.children]
+      for (const child of pieces) {
         const box = new THREE.Box3().setFromObject(child)
         if (!Number.isFinite(box.min.x)) continue
         const size = box.getSize(new THREE.Vector3())
         const at = box.getCenter(new THREE.Vector3())
         const r = Math.max(size.x, size.z) / 2
         if (r > 1e-3) footprints.push({ x: at.x, z: at.z, r })
+        /*
+         * ...and the tiles she BUILDS get shadows too.
+         *
+         * The second placement path, and the one that gets forgotten — trees
+         * inside rocks was reported twice for exactly this reason (HANDOFF §6).
+         * Skipping it would be the worst possible split, because the tiles she
+         * would be looking at are the ones she made: hers floating, the ones
+         * the island grew on its own anchored.
+         *
+         * Here rather than in `increments.ts` on purpose. A plot HOVERS while
+         * she builds it and squashes when it lands, so a blob living inside it
+         * would be a shadow hanging in mid-air for the whole build. By the time
+         * `adopt` is called the pieces have touched down and stopped moving,
+         * which is exactly when a shadow starts being true.
+         */
+        shadowUnder(child, grown)
       }
     },
 

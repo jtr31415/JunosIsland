@@ -585,14 +585,18 @@ async function boot(): Promise<void> {
   }
 
   /**
-   * Everything a pet must walk around: the scenery, and the egg.
+   * Everything a pet must walk around: the scenery, the egg, and the sign.
    *
    * The egg was missing, so pets walked through it — the one object on the
    * island a child is meant to walk up to and tap had no substance at all.
    * Measured at walking height like the scenery, so the rule stays one rule.
+   *
+   * The signpost was the third of the same kind, carded for Phase 5. It never
+   * moves, so its keep-out is measured once inside `sign.ts` rather than asked
+   * for per frame the way Fred's is.
    */
   function publishObstacles(): void {
-    const solid = [...props.obstacles()]
+    const solid = [...props.obstacles(), sign.obstacle()]
     if (egg.group.visible && !stage.holds(egg.group)) {
       solid.push({
         x: egg.group.position.x,
