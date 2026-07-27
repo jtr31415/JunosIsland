@@ -1587,6 +1587,11 @@ async function boot(): Promise<void> {
     plot?.update(dt)
     props.update(dt, t)
     egg.update(dt, t)
+    // Before update, so a tap arriving this frame meets a target sized for the
+    // shot it is drawn in. The proxies are world-space spheres and the camera
+    // pulls back as her island grows; without this a pet's tap target falls
+    // from 47.5px to 26px on a full island (pets.ts, `pickRadiusAt`).
+    pets.setCameraDistance(world.cameraDistance())
     pets.update(dt, t, flow.island, world.models.size)
   })
 

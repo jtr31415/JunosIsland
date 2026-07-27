@@ -41,7 +41,9 @@ vi.mock('three/examples/jsm/loaders/GLTFLoader.js', async () => {
   return { GLTFLoader }
 })
 
-import { createPetField, FLYERS, TREE_HEIGHT } from '../../src/island/pets'
+import {
+  createPetField, clearOf, FLYERS, TREE_HEIGHT, WINGBEAT,
+} from '../../src/island/pets'
 import { createLighting } from '../../src/island/lighting'
 import { FITS } from '../../src/island/world/props'
 import meadowDay from '../../src/island/lighting/presets/meadow-day.json'
@@ -154,6 +156,120 @@ describe('a pet cannot walk through Fred', () => {
   })
 })
 
+describe('two keep-outs that overlap', () => {
+  /*
+   * The bug this describe exists for, and it was a real one rather than a
+   * theoretical one: `clearOf` used to clamp a pet out of each obstacle IN
+   * LIST ORDER. Where two keep-outs overlap that undoes itself — the pet is
+   * pushed onto the first circle, lands inside the second, is pushed onto the
+   * second, and THAT push puts it back inside the first. The last clamp won
+   * and the pet was left buried in the rock it had just been taken out of.
+   *
+   * It reddened "keeps the scenery solid as well, not instead" about one run
+   * in twelve, on whichever random goal directions aim the pet into the
+   * overlap — so it looked like a flaky test and was in fact a collision bug.
+   * These cases carry no randomness at all, so it cannot look like one again.
+   *
+   * The numbers are the ones from that test: a rock at the origin and Fred
+   * 0.9 away, whose keep-outs overlap by 0.03 once the pet's own radius is
+   * added to both.
+   */
+  const ROCK = { x: 0, z: 0, r: 0.5 }
+  const FRED = { x: 0.9, z: 0, r: 0.2 }
+  const SELF = PET_RADIUS
+
+  /** How far outside each keep-out's surface a point is. Negative is inside. */
+  const clearance = (p: THREE.Vector3, ob: { x: number; z: number; r: number }): number =>
+    Math.hypot(p.x - ob.x, p.z - ob.z) - (ob.r + SELF)
+
+  it('leaves the pet outside BOTH, not outside whichever came last', () => {
+    // Aimed straight into the overlap — the direction the old order lost on.
+    const p = new THREE.Vector3(0.01, 0, 0)
+    clearOf(p, [ROCK, FRED], SELF)
+    expect(clearance(p, ROCK)).toBeGreaterThanOrEqual(-1e-9)
+    expect(clearance(p, FRED)).toBeGreaterThanOrEqual(-1e-9)
+  })
+
+  it('gives the same answer whichever order they are published in', () => {
+    /*
+     * List order is an accident of how `main.ts` concatenates the scenery and
+     * the movers. It must not be what decides where a pet ends up.
+     */
+    const one = new THREE.Vector3(0.01, 0, 0)
+    const two = new THREE.Vector3(0.01, 0, 0)
+    clearOf(one, [ROCK, FRED], SELF)
+    clearOf(two, [FRED, ROCK], SELF)
+    expect(one.x).toBeCloseTo(two.x, 9)
+    expect(two.z).toBeCloseTo(Math.abs(one.z), 9)
+  })
+
+  it('gets a pet out of a keep-out it is standing dead in the middle of', () => {
+    /*
+     * A pet hatches on its tile's centre, and a rock can be sited there. There
+     * is no direction to push it in, so `clearOf` picks one — and the one it
+     * picks used to be straight at Fred, where the second clamp shoved it back
+     * into the rock.
+     */
+    const p = new THREE.Vector3(0, 0, 0)
+    clearOf(p, [ROCK, FRED], SELF)
+    expect(clearance(p, ROCK)).toBeGreaterThanOrEqual(-1e-9)
+    expect(clearance(p, FRED)).toBeGreaterThanOrEqual(-1e-9)
+  })
+
+  it('still adds the pet\'s OWN radius to both of them', () => {
+    /*
+     * HANDOFF §6: clamping a centre to a surface buries half a pet in the
+     * rock. What has to touch is the two surfaces. Resolving an overlap is no
+     * excuse for forgetting it — so this pins the actual distances, not merely
+     * that the pet is somewhere outside.
+     */
+    const p = new THREE.Vector3(0.01, 0, 0)
+    clearOf(p, [ROCK, FRED], SELF)
+    expect(Math.hypot(p.x, p.z)).toBeGreaterThanOrEqual(ROCK.r + SELF - 1e-9)
+    expect(Math.hypot(p.x - FRED.x, p.z - FRED.z))
+      .toBeGreaterThanOrEqual(FRED.r + SELF - 1e-9)
+    // And it is ON one of the two surfaces rather than flung clear of both:
+    // this is a constraint that corrects a step, not a shove.
+    expect(Math.min(Math.abs(clearance(p, ROCK)), Math.abs(clearance(p, FRED))))
+      .toBeLessThan(1e-6)
+  })
+
+  it('comes out on the side the pet walked in from', () => {
+    /*
+     * The overlap has two ways out, one either side of the line between the
+     * two keep-outs. A pet that arrived from the north must not be teleported
+     * to the south of a rock it never went round.
+     */
+    const north = new THREE.Vector3(0.05, 0, -0.02)
+    const south = new THREE.Vector3(0.05, 0, 0.02)
+    clearOf(north, [ROCK, FRED], SELF)
+    clearOf(south, [ROCK, FRED], SELF)
+    expect(north.z).toBeLessThan(0)
+    expect(south.z).toBeGreaterThan(0)
+  })
+
+  it('leaves a pet that is already clear exactly where it stands', () => {
+    const p = new THREE.Vector3(3, 0, -2)
+    clearOf(p, [ROCK, FRED], SELF)
+    expect(p.x).toBe(3)
+    expect(p.z).toBe(-2)
+  })
+
+  it('does not hang on a pocket with no way out of it at all', () => {
+    /*
+     * Three keep-outs on top of each other leave nowhere clear to stand. The
+     * answer is bounded work and the best position available — never a frame
+     * that does not end.
+     */
+    const p = new THREE.Vector3(0.01, 0, 0.01)
+    clearOf(p, [
+      { x: 0, z: 0, r: 1 }, { x: 0.1, z: 0, r: 1 }, { x: 0, z: 0.1, r: 1 },
+    ], SELF)
+    expect(Number.isFinite(p.x)).toBe(true)
+    expect(Number.isFinite(p.z)).toBe(true)
+  })
+})
+
 describe('who flies', () => {
   it('flies the bee and the parrot', () => {
     expect(FLYERS.has('animal-bee')).toBe(true)
@@ -224,12 +340,47 @@ describe('flying pets hover at tree height', () => {
   })
 
   it('beats its wings, so hovering reads as flight and not levitation', async () => {
+    /*
+     * Sampled right across ONE WINGBEAT, not at two instants a tenth of a
+     * second apart.
+     *
+     * Each pet's `phase` is `Math.random() * 2π`, and two fixed instants are
+     * two fixed points on the sine — so for the phases where those two points
+     * straddle a turning point, the difference between them collapses. It
+     * measured 0.0074 against a 0.05 threshold in one run, and flaked about 3%
+     * of the time. The wing was beating perfectly well; the sampling was
+     * asking a question two points cannot answer.
+     *
+     * A whole beat cannot hide a turning point. Eight samples spread over the
+     * period leave the peak and the trough at worst π/8 away from a sample, so
+     * the range is at least 2·cos(π/8)·0.5 = 0.92 whatever the phase — which
+     * is why this asserts a comfortable 0.5 rather than a shaved 0.05.
+     *
+     * `WINGBEAT` is imported rather than copied for the same reason
+     * `TAP_TARGET` reads the real camera: a period typed in here would go on
+     * claiming to sample a full beat long after the beat changed.
+     */
     const field = await fieldWith(pet('p', 'animal-parrot'))
     const wing = petAt(field, 'p').getObjectByName('wing-left') as THREE.Object3D
-    run(field, 1, 0)
-    const first = wing.rotation.z
-    run(field, 1, 0.11)
-    expect(Math.abs(wing.rotation.z - first)).toBeGreaterThan(0.05)
+    const beat = (Math.PI * 2) / WINGBEAT
+
+    const seen: number[] = []
+    for (let i = 0; i < 8; i++) {
+      run(field, 1, (i * beat) / 8)
+      seen.push(wing.rotation.z)
+    }
+    expect(Math.max(...seen) - Math.min(...seen)).toBeGreaterThan(0.5)
+  })
+
+  it('beats them in opposition, so it is a wingbeat and not a shrug', async () => {
+    const field = await fieldWith(pet('p', 'animal-parrot'))
+    const left = petAt(field, 'p').getObjectByName('wing-left') as THREE.Object3D
+    const right = petAt(field, 'p').getObjectByName('wing-right') as THREE.Object3D
+    const beat = (Math.PI * 2) / WINGBEAT
+    // A quarter beat in, so the pair is nowhere near the crossing point where
+    // both are zero and any pair of numbers would satisfy this.
+    run(field, 1, beat / 4)
+    expect(left.rotation.z).toBeCloseTo(-right.rotation.z, 9)
   })
 })
 
