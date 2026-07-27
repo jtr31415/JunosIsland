@@ -190,6 +190,39 @@ const STEPS = [
  */
 const wait = ms => new Promise(r => setTimeout(r, ms))
 
+/**
+ * Wait until a DOM has stopped changing of its own accord.
+ *
+ * The fix for the flake. Each step used to settle on a fixed sleep and then
+ * snapshot both DOMs — but they are two independent jsdom instances running
+ * REAL timers, so a scheduling hiccup on either one (a GC pause, a loaded
+ * machine) left one finished and the other still mid-way. That reports several
+ * steps as differing at once and then passes cleanly next run, which is
+ * exactly the signature that was seen and exactly the kind of gate people stop
+ * trusting.
+ *
+ * The nominal settle time is kept as a MINIMUM — it is part of the script's
+ * meaning, not padding — and each DOM is then polled until its own snapshot
+ * holds still. A DOM that never stops moving hits the cap and is compared
+ * anyway, turning a hang into a visible diff rather than a stuck run.
+ */
+async function quiesce(dom, { quietFor = 3, poll = 25, cap = 3000 } = {}) {
+  let last = snapshot(dom)
+  let stable = 0
+  const until = Date.now() + cap
+  while (Date.now() < until) {
+    await wait(poll)
+    const now = snapshot(dom)
+    if (now === last) {
+      if (++stable >= quietFor) return true
+    } else {
+      stable = 0
+      last = now
+    }
+  }
+  return false
+}
+
 /** Tap whichever rendered word matches the most recently spoken text. */
 function tapSpokenWord(dom) {
   const d = dom.window.document
@@ -203,9 +236,17 @@ function tapSpokenWord(dom) {
 let mismatches = 0
 console.log('step                        original vs rebuilt')
 console.log('------------------------------------------------')
+let restless = 0
 for (const [name, act, settleMs] of STEPS) {
   if (act) { act(original.dom); act(rebuilt.dom) }
   if (settleMs) await wait(settleMs)
+  /*
+   * Both, concurrently, and only then compare. Waiting for them to AGREE would
+   * mask the very differences this gate exists to find — each is waited out on
+   * its own behaviour alone.
+   */
+  const settled = await Promise.all([quiesce(original.dom), quiesce(rebuilt.dom)])
+  if (settled.includes(false)) restless++
   const a = snapshot(original.dom)
   const b = snapshot(rebuilt.dom)
   const same = a === b
@@ -215,6 +256,12 @@ for (const [name, act, settleMs] of STEPS) {
     console.log('        original: ' + a.slice(0, 220))
     console.log('        rebuilt : ' + b.slice(0, 220))
   }
+}
+
+if (restless) {
+  console.log('')
+  console.log('note: ' + restless + ' step(s) never went quiet within the cap.'
+    + ' If this is not zero, the comparisons above were read mid-flight.')
 }
 
 if (original.errors.length) console.log('\noriginal boot errors:', original.errors.join(' | '))

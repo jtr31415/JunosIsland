@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   pull_request:
+  # The parity soak only. Nightly rather than per-push: it takes minutes, and
+  # a gate that slows every commit is a gate people route around.
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -16,6 +21,9 @@ concurrency:
 
 jobs:
   build:
+    # Not on the nightly tick: that exists for the soak below, and rebuilding
+    # would redeploy Pages every night for nothing.
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -70,6 +78,30 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
+
+  # Item 3's acceptance: fifty consecutive green parity runs.
+  #
+  # The gate flaked once — four steps differing, then four clean runs — and a
+  # gate that fails at random is a gate people stop reading. The cause was two
+  # jsdom instances on real timers being snapshotted on a fixed sleep, so one
+  # could be read mid-settle; parity.mjs now waits for each to go quiet on its
+  # own. The only way to know that worked is to fail to reproduce it a lot of
+  # times in a row.
+  #
+  # Its own job, so a slow proof never blocks a deploy.
+  soak:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Fifty consecutive parity runs
+        run: npm run parity:soak
 
   deploy:
     if: github.ref == 'refs/heads/main'

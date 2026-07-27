@@ -61,9 +61,25 @@ npm run smoke                         # boots the 2D shell headlessly
 npm run parity                        # 2D shell vs frozen v0, 14 steps
 ```
 
-`parity` flaked once (reported four differing steps, then passed four times
-running). Treat a single failure as suspicious rather than conclusive, and fix
-the flakiness before trusting it on a real port question.
+And a sixth, on demand rather than per commit:
+
+```bash
+npm run parity:soak                   # 50 consecutive parity runs, ~7 minutes
+```
+
+`parity` flaked once — four differing steps, then four clean runs. The cause
+was the harness snapshotting both jsdom instances after a fixed sleep while
+they ran real timers independently, so a scheduling hiccup on either meant one
+was read mid-settle. It now waits for each DOM to go quiet on its own before
+comparing, and the soak exists to prove that: a single green run has never
+been evidence here. CI runs the soak nightly and on demand, deliberately not
+on every push, because a gate that slows every commit is one people route
+around.
+
+Fixing it also made the harness cover MORE of the game — the self-check went
+from three spoken words to four, and the score from 4 to 6, because the old
+sleep was cutting the script short. If those numbers move again, something has
+changed in the 2D game's timing and it is worth knowing why.
 
 ### Verifying in the browser
 

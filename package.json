@@ -17,7 +17,8 @@
     "build": "npm run build:words && npm run build:island",
     "golden:capture": "node tools/golden/capture.mjs",
     "smoke": "node tools/smoke/boot.mjs",
-    "parity": "node tools/smoke/parity.mjs"
+    "parity": "node tools/smoke/parity.mjs",
+    "parity:soak": "node tools/smoke/soak.mjs 50"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",
