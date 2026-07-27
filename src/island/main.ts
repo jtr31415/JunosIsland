@@ -8,6 +8,7 @@
  * and already proven identical to the game Juno plays today. This file only
  * connects them to a world.
  */
+import * as THREE from 'three'
 import { createWorld } from './scene'
 import { createOverlay } from './overlay'
 import { createPetField, SPECIES } from './pets'
@@ -653,6 +654,35 @@ async function boot(): Promise<void> {
   })
 
   world.onFrame((dt, t) => fred.update(dt, t))
+
+  /*
+   * A window onto the scene graph, for diagnosing what is actually on screen.
+   *
+   * Opt-in via ?debug, so it costs a production session nothing. Added after
+   * an afternoon spent guessing which model two mystery slabs were by
+   * changing tables and redeploying — three rounds of that is more expensive
+   * than the hook.
+   */
+  if (location.search.includes('debug')) {
+    ;(window as unknown as Record<string, unknown>).__world = {
+      scene: world.scene,
+      dump: () => {
+        const out: Array<Record<string, unknown>> = []
+        world.scene.traverse(o => {
+          const box = new THREE.Box3().setFromObject(o)
+          const size = box.getSize(new THREE.Vector3())
+          if (size.x < 0.8 && size.z < 0.8) return       // only sizeable things
+          out.push({
+            name: o.name || o.type,
+            parent: o.parent?.name ?? '',
+            at: [+o.position.x.toFixed(2), +o.position.y.toFixed(2), +o.position.z.toFixed(2)],
+            size: [+size.x.toFixed(2), +size.y.toFixed(2), +size.z.toFixed(2)],
+          })
+        })
+        return out
+      },
+    }
+  }
 
   refresh()
   world.start()
