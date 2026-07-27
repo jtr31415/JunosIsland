@@ -205,11 +205,19 @@ export function createStage(): Stage {
       // Wide enough that the horizon stays out of frame at any framing.
       ground.scale.setScalar(Math.max(24, radius * 40))
 
-      // Pull back far enough that the piece sits inside the vignette with air
-      // around it, whatever it is — an egg and a full hex differ by 3x.
+      /*
+       * Pull back far enough that the piece sits inside the vignette with air
+       * around it — an egg and a full hex differ by three times — and keep
+       * the eye NEARLY LEVEL with it.
+       *
+       * A flat plane's horizon always sits at eye height, so a camera pitched
+       * down to look at the piece pushes the horizon up and fills the frame
+       * with grass. Almost level puts sky behind the piece, which is what
+       * makes it read as standing in a place rather than on a putting green.
+       */
       const distance = Math.max(1.7, radius * 3.4)
-      camera.position.set(0, distance * 0.44, distance)
-      camera.lookAt(0, radius * 0.45, 0)
+      camera.position.set(0, radius * 1.2, distance)
+      camera.lookAt(0, radius * 0.8, 0)
     },
 
     update(dt, t) {
