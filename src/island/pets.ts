@@ -147,6 +147,29 @@ export interface PetField {
    * island.
    */
   preview(species: string): Promise<THREE.Object3D>
+  /**
+   * Fetch a species AHEAD of needing it, and keep the prototype.
+   *
+   * Joe, from playtesting: "preloaded the animal otherwise there is a render
+   * delay and disappointment." The hatch is the emotional peak — the shell
+   * breaks, the stage holds, and the plinth is empty because a ~140KB GLB is
+   * still in flight. The ceremony already starts the fetch while the egg is
+   * breaking, but ~700ms of shell only covers a model that is ALREADY cached,
+   * which is exactly the condition every local test accidentally satisfies
+   * (HANDOFF §5: a 1200ms budget passed every time locally and failed every
+   * time cold).
+   *
+   * Fire-and-forget by contract: it never rejects and never resolves to
+   * anything, so a caller cannot accidentally make a ceremony wait on it. A
+   * failed warm leaves NOTHING cached, so the hatch's own `preview` still
+   * tries — a preload that could poison the real load would be worse than no
+   * preload at all.
+   *
+   * ONE species at a time is the intended use. The 24 GLBs total 3.21MiB
+   * measured, against a 5MB budget on the target tablet, so warming the pack
+   * is not free and is not what this is for.
+   */
+  warm(species: string): Promise<void>
   /** Trees and rocks to walk around rather than through. */
   setObstacles(list: Obstacle[]): void
   /**
@@ -166,7 +189,22 @@ export function createPetField(base = ''): PetField {
   const group = new THREE.Group()
   group.name = 'pets'
   const loader = new GLTFLoader()
-  const cache = new Map<string, THREE.Group>()
+  /**
+   * Species prototypes, cached as PROMISES rather than as finished models.
+   *
+   * The promise is the load-bearing part and it is what makes preloading work
+   * at all. A cache of finished models is only consulted once a load has
+   * COMPLETED, so a warm that is still in flight is invisible: the hatch's own
+   * `preview` misses, starts a second fetch of the same file, and waits the
+   * full cold time anyway — the preload costs bandwidth and buys nothing. That
+   * is the failure mode, and it is silent, because both fetches succeed.
+   *
+   * Caching the in-flight promise means the second caller JOINS the first. It
+   * also collapses the ordinary duplicate: `sync` loading two pets of the same
+   * species in one pass used to fetch it twice, since neither had finished by
+   * the time the other started.
+   */
+  const cache = new Map<string, Promise<THREE.Group>>()
   const live = new Map<string, Live>()
   let obstacles: Obstacle[] = []
   let movers: () => readonly Obstacle[] = () => []
@@ -179,29 +217,54 @@ export function createPetField(base = ''): PetField {
     return moving.length ? [...obstacles, ...moving] : obstacles
   }
 
-  async function model(species: string): Promise<THREE.Group> {
+  /**
+   * The one shared prototype for a species: fetched at most once, ever.
+   *
+   * Returns the SAME promise to every caller, so a preload in flight and a
+   * hatch that wants the model now are one request. Nobody gets this object
+   * directly — `model` clones it — because it is the original that every pet
+   * of the species shares geometry and materials with.
+   */
+  function prototype(species: string): Promise<THREE.Group> {
     const hit = cache.get(species)
-    if (hit) return hit.clone(true)
+    if (hit) return hit
     // NOTE: these GLBs are NOT self-contained — each references an external
     // Textures/colormap.png beside it. Without that file every pet renders
     // pure white, which looks like a material bug rather than a missing asset.
-    const gltf = await loader.loadAsync(`${base}pets/${species}.glb`)
-    const root = gltf.scene
-    // Flat-colour packs often arrive metallic and render black under this rig
-    // (lighting brief §1), so clamp on the way in rather than swapping the
-    // material — Standard is what picks up the hemisphere's warm underside.
-    flattenImported(root)
+    const loading = loader.loadAsync(`${base}pets/${species}.glb`).then(gltf => {
+      const root = gltf.scene
+      // Flat-colour packs often arrive metallic and render black under this rig
+      // (lighting brief §1), so clamp on the way in rather than swapping the
+      // material — Standard is what picks up the hemisphere's warm underside.
+      flattenImported(root)
+      /*
+       * Point the face decals at the reserved swatches, ONCE, on the shared
+       * prototype — before anything clones it, and a three.js `clone()` shares
+       * geometry, so every pet of this species inherits the corrected UVs for
+       * free. `dress()` calls this too and it is idempotent; the belt and braces
+       * are deliberate, since a pet that reaches the screen unpatched shows
+       * recoloured eye-whites and that is the whole bug.
+       */
+      wearFaceUVs(root, species)
+      return root
+    })
     /*
-     * Point the face decals at the reserved swatches, ONCE, on the shared
-     * prototype — before anything clones it, and a three.js `clone()` shares
-     * geometry, so every pet of this species inherits the corrected UVs for
-     * free. `dress()` calls this too and it is idempotent; the belt and braces
-     * are deliberate, since a pet that reaches the screen unpatched shows
-     * recoloured eye-whites and that is the whole bug.
+     * A failure is NOT remembered.
+     *
+     * Caching a rejected promise would turn one dropped request on a tablet's
+     * flaky wifi into a species that can never hatch for the rest of the
+     * session — and brief §19 says nothing she owns can be lost. Evicting lets
+     * the next caller start clean. The `.catch` also means this promise always
+     * has a handler even when nobody is awaiting it, which is the normal state
+     * of a preload.
      */
-    wearFaceUVs(root, species)
-    cache.set(species, root)
-    return root.clone(true)
+    loading.catch(() => { if (cache.get(species) === loading) cache.delete(species) })
+    cache.set(species, loading)
+    return loading
+  }
+
+  async function model(species: string): Promise<THREE.Group> {
+    return (await prototype(species)).clone(true)
   }
 
   /**
@@ -304,6 +367,12 @@ export function createPetField(base = ''): PetField {
     },
 
     preview: species => model(species),
+
+    async warm(species) {
+      // Swallowed on purpose: a preload has no screen to fail on, and
+      // `prototype` has already evicted the entry so the hatch can retry.
+      try { await prototype(species) } catch { /* try again when it matters */ }
+    },
 
     bounce(id) {
       const l = live.get(id)
