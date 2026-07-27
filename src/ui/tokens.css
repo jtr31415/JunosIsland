@@ -59,6 +59,9 @@
 .chunk-grass { background: var(--grass); color: #16340a; }
 .chunk-water { background: var(--sky); color: #10384d; }
 .chunk-sand { background: var(--sand); color: #4a3406; }
+/* Mountains. Stone grey rather than a third green, so the three tile buttons
+   are told apart by colour and not only by the glyph on them. */
+.chunk-rock { background: #9aa3a8; color: #23343c; }
 
 /* The learning overlay sits above the 3D view, but never fills it entirely —
    the island should still be visible behind, so the world does not vanish. */

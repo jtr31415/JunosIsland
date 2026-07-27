@@ -116,6 +116,30 @@ export const PALETTE: Record<TileType, readonly string[]> = {
     'waterplant_A', 'waterplant_B', 'waterplant_C',
     'waterlily_A', 'waterlily_B',
   ],
+  /*
+   * Stony ground, for the tile she picked mountains for.
+   *
+   * THE SAME TRAP AS ABOVE, and it is why this key exists at all: `PALETTE` is
+   * keyed by `TileType`, so widening that union made TypeScript demand this
+   * entry — which is the only reason the second placement path did not get
+   * forgotten for a third time (HANDOFF §6). Getting a compiler error here is a
+   * gift; the grass/water pair above had to be reported twice by Joe instead.
+   *
+   * Rocks and highland cover rather than mountains. `piecesFor` samples this
+   * list eight times UNIFORMLY, so a mountain in here would grow eight of them
+   * on one hex. The mountain itself is planted by `props.ts` when the tile
+   * completes — so the plot builds a stony shoulder and the peak rises with the
+   * finished hex. `hills_C` is in the list once so some plots raise ground early
+   * and the arrival is a reveal rather than a substitution.
+   */
+  rock: [
+    'rock_single_A', 'rock_single_B', 'rock_single_C', 'rock_single_D',
+    'hills_C',
+    'Rock_1_A_Color1', 'Rock_1_D_Color1', 'Rock_1_G_Color1', 'Rock_1_K_Color1',
+    'Rock_2_A_Color1', 'Rock_2_C_Color1', 'Rock_2_F_Color1',
+    'Rock_3_A_Color1', 'Rock_3_E_Color1', 'Rock_3_J_Color1', 'Rock_3_M_Color1',
+    'Grass_1_C_Color1', 'Bush_3_B_Color1',
+  ],
 }
 
 /**

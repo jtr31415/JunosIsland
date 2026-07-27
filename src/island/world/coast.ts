@@ -20,6 +20,7 @@ import { DIRECTIONS, neighbours, key } from './hex'
 import type { Axial } from './hex'
 import { tileAt } from './grid'
 import type { Island, TileType } from './grid'
+import { isLand } from './grid'
 
 export const COAST_VARIANTS = ['A', 'B', 'C', 'D'] as const
 export type CoastVariant = typeof COAST_VARIANTS[number]
@@ -101,7 +102,7 @@ export type TileLook =
 export function waterMask(island: Island, a: Axial): number {
   let mask = 0
   neighbours(a).forEach((n, k) => {
-    if (tileAt(island, n) !== 'grass') mask |= 1 << k
+    if (!isLand(tileAt(island, n))) mask |= 1 << k
   })
   return mask
 }
@@ -420,7 +421,7 @@ function drawnAround(island: Island, a: Axial, looks: Map<string, TileLook>): Ed
     const type = tileAt(island, n)
     // Off the edge of the island is open sea, and always will be.
     if (type === undefined) return 'water' as EdgeKind
-    if (type === 'grass') return 'land' as EdgeKind
+    if (isLand(type)) return 'land' as EdgeKind
     // Our edge k meets their edge k + 3: hexes join head-on.
     return presentedBy(looks.get(key(n)) as TileLook)[(k + 3) % 6] as EdgeKind
   })
@@ -439,11 +440,11 @@ function drawnAround(island: Island, a: Axial, looks: Map<string, TileLook>): Ed
  * neighbourhoods were enumerated on.
  */
 const typesAround = (island: Island, a: Axial): EdgeKind[] =>
-  neighbours(a).map(n => (tileAt(island, n) === 'grass' ? 'land' : 'water') as EdgeKind)
+  neighbours(a).map(n => (isLand(tileAt(island, n)) ? 'land' : 'water') as EdgeKind)
 
 /** The same, over any tile lookup — so a hypothetical placement needs no copy. */
 const typesAroundVia = (at: (n: Axial) => TileType | undefined, a: Axial): EdgeKind[] =>
-  neighbours(a).map(n => (at(n) === 'grass' ? 'land' : 'water') as EdgeKind)
+  neighbours(a).map(n => (isLand(at(n)) ? 'land' : 'water') as EdgeKind)
 
 /**
  * Would putting `t` at `a` leave every coastline it touches drawable?
@@ -472,12 +473,36 @@ export function allows(island: Island, a: Axial, t: TileType): boolean {
   const ka = key(a)
   const at = (n: Axial): TileType | undefined =>
     (key(n) === ka ? t : tileAt(island, n))
+  /*
+   * Joe's rock rule, both ways round: *"they can be placed anywhere that does
+   * not neighbour water and water cannot be placed next to a mountain tile."*
+   *
+   * Only the NEW tile's own six edges can be newly created, so checking `a`
+   * against its neighbours is exhaustive — a rock two hexes away cannot gain a
+   * water neighbour from a placement here. That keeps this O(6) rather than
+   * another sweep, which matters because `buildableSockets` asks it of every
+   * socket every time the island changes.
+   *
+   * This rule is also what keeps rock out of the coastline entirely: no rock is
+   * ever beside water, so no water cell ever sees a rock edge, so the nineteen
+   * drawable neighbourhoods stay exactly as enumerated.
+   */
+  const ta = at(a)
+  for (const n of neighbours(a)) {
+    const tn = at(n)
+    if (ta === 'rock' && tn === 'water') return false
+    if (ta === 'water' && tn === 'rock') return false
+  }
   for (const c of [a, ...neighbours(a)]) {
     if (at(c) !== 'water') continue
     if (!drawableAsWater(typesAroundVia(at, c))) return false
   }
   return true
 }
+
+/** May a rock hex go here? Only where nothing of hers beside it is water. */
+export const canBeRock = (island: Island, a: Axial): boolean =>
+  allows(island, a, 'rock')
 
 /**
  * May a water tile go here at all?
@@ -550,7 +575,9 @@ export function mustBeWater(island: Island, a: Axial): boolean {
   let water = 0
   for (const n of neighbours(a)) {
     const type = tileAt(island, n)
-    if (type === 'grass') return false
+    // Rock counts as her land here too — and a rock neighbour makes water
+    // illegal outright, so forcing it would be a contradiction.
+    if (isLand(type)) return false
     if (type === 'water') water++
   }
   return water >= 2
@@ -622,11 +649,11 @@ export function mustBeWater(island: Island, a: Axial): boolean {
  */
 export const LAND_FLOOR = 3
 
-/** Her own tiles that are fields, as coordinates. */
+/** Her own tiles that are dry land — fields and rock alike — as coordinates. */
 function fields(island: Island): Axial[] {
   const out: Axial[] = []
   for (const [k, type] of island.tiles) {
-    if (type !== 'grass') continue
+    if (!isLand(type)) continue
     const parts = k.split(',').map(Number)
     out.push({ q: parts[0] as number, r: parts[1] as number })
   }
@@ -720,7 +747,9 @@ export function dryAfter(island: Island, a: Axial, t: TileType): number {
     if (t === 'water' && neighbours(s).some(n => key(n) === ka)) continue
     count++
   }
-  if (t !== 'grass') return count
+  // Rock creates ways out exactly as a field does: it is dry, and it cannot
+  // have water beside it, so every empty neighbour it gains is dry too.
+  if (!isLand(t)) return count
   for (const s of neighbours(a)) {
     const ks = key(s)
     if (known.has(ks) || tileAt(island, s) !== undefined) continue

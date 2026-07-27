@@ -10,7 +10,38 @@
 import { key, neighbours } from './hex'
 import type { Axial } from './hex'
 
-export type TileType = 'grass' | 'water'
+/**
+ * Rock arrived third, at Joe's *"it needs to be pickable in the selector after
+ * she has placed 15 tiles already"* — the rocky hexes and their pre-assembled
+ * grass and grass-plus-mountain variants.
+ *
+ * It is DRY LAND that refuses to sit near water, which is the whole of its rule
+ * set for now (Joe: *"they can be placed anywhere that does not neighbour water
+ * and water cannot be placed next to a mountain tile. we can update those rules
+ * later though"*).
+ *
+ * That one rule is worth more than it looks: because rock and water can never be
+ * neighbours, rock never takes part in a coast edge, so the nineteen drawable
+ * neighbourhoods need no new entries and no new models. A rock tile is a grass
+ * hex that is guaranteed to grow a mountain.
+ */
+export type TileType = 'grass' | 'water' | 'rock'
+
+/**
+ * Dry land, of either kind.
+ *
+ * READ THIS BEFORE ADDING A FOURTH TYPE. Almost every rule in the coastline was
+ * written when there were exactly two types, so it asks `=== 'grass'` and treats
+ * everything else as water — which is correct for two types and silently wrong
+ * for three. Widening the union does not make TypeScript find those places,
+ * because they compare values rather than switching exhaustively: rock would
+ * simply have presented open water to the coast mask and cut beaches into the
+ * middle of her island.
+ *
+ * So the land/water question goes through here, and never through `=== 'grass'`.
+ */
+export const isLand = (t: TileType | undefined): boolean =>
+  t === 'grass' || t === 'rock'
 
 export interface Island {
   readonly tiles: ReadonlyMap<string, TileType>

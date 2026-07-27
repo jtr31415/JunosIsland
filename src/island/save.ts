@@ -73,7 +73,7 @@ function readPlot(v: unknown): Flow['plot'] {
   if (!v || typeof v !== 'object') return null
   const p = v as { at?: { q?: unknown; r?: unknown }; type?: unknown }
   if (typeof p.at?.q !== 'number' || typeof p.at?.r !== 'number') return null
-  if (p.type !== 'grass' && p.type !== 'water') return null
+  if (p.type !== 'grass' && p.type !== 'water' && p.type !== 'rock') return null
   return { at: { q: p.at.q, r: p.at.r }, type: p.type }
 }
 

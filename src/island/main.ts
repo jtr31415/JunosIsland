@@ -53,6 +53,7 @@ import {
 import type { InteractionPorts } from './interactions'
 import type { Flow } from './flow'
 import type { TileType } from './world/grid'
+import { isLand } from './world/grid'
 import { toWorld } from './world/hex'
 import type { Axial } from './world/hex'
 
@@ -524,7 +525,9 @@ async function boot(): Promise<void> {
 
     const tiles: Axial[] = []
     for (const [k, type] of flow.island.tiles) {
-      if (type !== 'grass') continue
+      // Rock is somewhere a pet can be, so it is somewhere the egg can sit too.
+      // `clearOf` keeps whatever lands here out of the mountain itself.
+      if (!isLand(type)) continue
       const parts = k.split(',').map(Number)
       tiles.push({ q: parts[0] as number, r: parts[1] as number })
     }
@@ -1518,7 +1521,13 @@ async function boot(): Promise<void> {
     refresh()
   })
 
-  const TILE_FACE: Record<TileType, string> = { grass: '\u{1F33F}', water: '\u{1F30A}' }
+  const TILE_FACE: Record<TileType, string> = {
+    grass: '\u{1F33F}', water: '\u{1F30A}', rock: '\u{26F0}',
+  }
+  /** Spoken, and read by a screen reader. A six-year-old gets a word, not a glyph. */
+  const TILE_WORD: Record<TileType, string> = {
+    grass: 'grass', water: 'water', rock: 'mountain',
+  }
 
   function renderOffer(): void {
     const offer = flow.phase === 'placing' && !flow.chosen ? tileOffer(flow) : []
@@ -1540,9 +1549,9 @@ async function boot(): Promise<void> {
     }
     offer.forEach((t, i) => {
       const b = document.createElement('button')
-      b.className = `chunk chunk-button offer-tile chunk-${t === 'water' ? 'water' : 'grass'}`
+      b.className = `chunk chunk-button offer-tile chunk-${t}`
       b.textContent = TILE_FACE[t]
-      b.setAttribute('aria-label', t === 'water' ? 'water' : 'grass')
+      b.setAttribute('aria-label', TILE_WORD[t])
       b.onclick = () => {
         const next = chooseTile(flow, t)
         flow = next

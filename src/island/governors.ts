@@ -17,7 +17,7 @@
  */
 import type { Flow } from './flow'
 import { balance } from './balance'
-import { sockets } from './world/grid'
+import { sockets, isLand } from './world/grid'
 
 export type Governor = 'none' | 'space-surplus' | 'nursery-queue'
 
@@ -47,9 +47,14 @@ export function inGracePeriod(f: Flow): boolean {
 
 /** Empty habitable land beyond what the current pets need. */
 export function spaceSurplus(f: Flow): number {
-  // Every owned grass tile is somewhere a pet could live.
+  /*
+   * Every owned tile of DRY LAND is somewhere a pet could live — rock included.
+   * The rocky pre-assembles are grass-topped and pets walk on them, so counting
+   * them out would make a mountain range read to the governor as no room at all
+   * and set Fred nagging her to read on an island with space to spare.
+   */
   let habitable = 0
-  for (const type of f.island.tiles.values()) if (type === 'grass') habitable++
+  for (const type of f.island.tiles.values()) if (isLand(type)) habitable++
   return habitable - f.pets.length
 }
 

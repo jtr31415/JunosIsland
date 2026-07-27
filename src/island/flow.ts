@@ -14,7 +14,7 @@ import type { Island, TileType } from './world/grid'
 import { key } from './world/hex'
 import type { Axial } from './world/hex'
 import {
-  canBeWater, canBeGrass, mustBeWater, mustBeLand, buildableSockets,
+  canBeWater, canBeGrass, canBeRock, mustBeWater, mustBeLand, buildableSockets,
 } from './world/coast'
 
 /**
@@ -25,7 +25,7 @@ import {
  * itself, and later ones should be real work. The curve does both and
  * flattens rather than running away (slice-1 spec §4).
  */
-import { eggCost, tileCost } from './balance'
+import { eggCost, tileCost, balance } from './balance'
 
 /** Pages this egg costs. Eggs are counted by how many have already hatched. */
 export const pagesForEgg = (f: Flow): number => eggCost(f.pets.length + 1)
@@ -285,6 +285,24 @@ export function challengeFailed(f: Flow): Flow {
  * spring, desert and ice to choose from — at which point this is a genuine
  * pick-of-several rather than a pick-of-three that was really a pick-of-two.
  */
+/**
+ * Has she earned the mountains yet?
+ *
+ * Joe: *"it needs to be pickable in the selector after she has placed 15 tiles
+ * already."* Counted as tiles SHE placed, so the home hex Fred was already
+ * standing on does not count toward her fifteen — she is being asked for
+ * fifteen of her own, which is what the sentence says.
+ *
+ * The threshold lives in `balance.json` with the other unlock rungs rather than
+ * here, because every other pacing number does and a constant hidden in a
+ * predicate is one nobody finds when they want to tune it.
+ */
+export function rockUnlocked(f: Flow): boolean {
+  const rung = balance.unlocks.find(u => u.type === 'rock')
+  if (!rung) return false
+  return f.island.tiles.size - 1 >= rung.tiles
+}
+
 export function tileOffer(f: Flow): TileType[] {
   if (f.phase !== 'placing') return []
   /*
@@ -314,6 +332,16 @@ export function tileOffer(f: Flow): TileType[] {
   const kinds: TileType[] = []
   if (canBeGrass(f.island, f.pending)) kinds.push('grass')
   if (canBeWater(f.island, f.pending)) kinds.push('water')
+  /*
+   * Mountains last, so the two she has always known keep their places. A button
+   * that moves is a button she has to re-find every time.
+   *
+   * `canBeRock` is asked rather than assumed: the rule is that rock never sits
+   * beside water, so at a socket touching one of her ponds the button would be a
+   * lie — and the whole reason this function exists is that it must only ever
+   * show what `tileTypeFor` will actually do.
+   */
+  if (rockUnlocked(f) && canBeRock(f.island, f.pending)) kinds.push('rock')
   /*
    * A socket where NEITHER kind is clean should not have been offered at all —
    * `buildableSockets` keeps those from glowing. If one is reached anyway (an
@@ -374,6 +402,19 @@ export function tileOffer(f: Flow): TileType[] {
  * kind, and `buildableSockets` stops it glowing, as it already does.
  */
 export function tileTypeFor(f: Flow, a: Axial, chosen: TileType): TileType {
+  /*
+   * Rock answers FIRST, and answers only for itself.
+   *
+   * It satisfies the floor on its own terms — rock is dry land and cannot have
+   * water beside it, so a rock hex creates ways out of her fields exactly as a
+   * field does (see `dryAfter`). Asking `mustBeLand` first would answer 'grass'
+   * to a girl who asked for a mountain, in the one case where her mountain was
+   * already the right answer.
+   *
+   * Where the rules refuse it, grass — never water. She asked for land, and the
+   * gentler of the two readings of "land" is the one that keeps her fields.
+   */
+  if (chosen === 'rock') return canBeRock(f.island, a) ? 'rock' : 'grass'
   if (mustBeLand(f.island, a)) return 'grass'
   if (mustBeWater(f.island, a) && canBeWater(f.island, a)) return 'water'
   if (chosen === 'water' && !canBeWater(f.island, a)) return 'grass'

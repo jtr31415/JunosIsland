@@ -19,6 +19,7 @@ import { createBlobShadow } from '../juice'
 import { toWorld } from './hex'
 import type { Axial } from './hex'
 import type { Island } from './grid'
+import { isLand } from './grid'
 import type { Surface, Ground } from './tiles'
 
 /**
@@ -980,7 +981,9 @@ export function createPropField(base = ''): PropField {
           placed.add(k)
           continue
         }
-        if (type !== 'grass') continue
+        // Rock is dressed like any other dry hex. Skipping it here — which is
+        // what `!== 'grass'` did — left her mountains as bare green plates.
+        if (!isLand(type)) continue
         const parts = k.split(',').map(Number)
         const a: Axial = { q: parts[0] as number, r: parts[1] as number }
         const h = hash(a)
@@ -1024,7 +1027,17 @@ export function createPropField(base = ''): PropField {
          * wander in without flattening the difference between a wood and a
          * field.
          */
-        const character = characterOf(a)
+        /*
+         * A rock hex is ALWAYS highland, never rolled.
+         *
+         * That is the whole implementation of "a mountain tile": she picked
+         * mountains, so she gets mountains, rather than a hex that might roll a
+         * meadow. `highland` is the one character with no open-ground entry in
+         * its feature table, so every rock tile grows a hill or a mountain —
+         * which is exactly the pre-assembled set Joe asked for, "with gras and
+         * gras plus mountains".
+         */
+        const character = type === 'rock' ? 'highland' : characterOf(a)
         const spec = pick(FEATURES[character], h)
         const w = home
 
