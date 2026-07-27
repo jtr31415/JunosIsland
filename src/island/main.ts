@@ -18,7 +18,7 @@ import { createEgg } from './egg'
 import { createFred } from './fred'
 import { createSign } from './sign'
 import { createStage, dotsFilled, DOT_COUNT } from './stage'
-import { createPropField } from './world/props'
+import { createPropField, footprintBelow, WALKING_HEIGHT } from './world/props'
 import { createGrowingPlot } from './world/increments'
 import type { GrowingPlot } from './world/increments'
 import { createAlbum } from './album'
@@ -411,6 +411,17 @@ async function boot(): Promise<void> {
    * Deterministic: the same island always puts the egg in the same place, so
    * it does not hop about between reloads.
    */
+  /**
+   * Set once the egg has actually washed ashore.
+   *
+   * The arrival used to be fired at boot, immediately, while `placeEgg` waited
+   * on props.sync to finish loading a few dozen models. So the egg flew in at
+   * the origin — under Fred — landed there, and only then teleported to the
+   * spot it belongs in. Which looks precisely like appearing out of nowhere,
+   * which is what Joe reported twice.
+   */
+  let eggHasLanded = false
+
   function placeEgg(): void {
     /*
      * Not while it is on the stage.
@@ -449,6 +460,20 @@ async function boot(): Promise<void> {
     // The egg's own footprint, plus room for a finger either side of it.
     const NEEDED = size * 0.30
 
+    /**
+     * Put it there — and, the first time, let it wash ashore.
+     *
+     * Also republishes the obstacle list, because the egg is SOLID. Pets used
+     * to walk straight through it: `setObstacles` was given the scenery and
+     * nothing else, so the one object on the island the child is meant to walk
+     * up to and tap was the one thing with no substance.
+     */
+    const settle = (x: number, z: number): void => {
+      egg.setPosition(x, z)
+      publishObstacles()
+      if (!eggHasLanded) { eggHasLanded = true; egg.arrive() }
+    }
+
     let best: { x: number; z: number; room: number } | null = null
     for (const a of tiles) {
       const w = toWorld(a, size)
@@ -460,21 +485,40 @@ async function boot(): Promise<void> {
         const x = w.x + Math.cos(ang) * rad
         const z = w.z + Math.sin(ang) * rad
         const room = clearance(x, z)
-        if (room >= NEEDED) { egg.setPosition(x, z); return }
+        if (room >= NEEDED) { settle(x, z); return }
         if (room > 0 && (!best || room > best.room)) best = { x, z, room }
       }
     }
 
     // Nowhere roomy: take the best of a bad lot rather than none at all.
-    if (best) { egg.setPosition(best.x, best.z); return }
+    if (best) { settle(best.x, best.z); return }
     const home = toWorld({ q: 0, r: 0 }, size)
-    egg.setPosition(home.x, home.z)
+    settle(home.x, home.z)
+  }
+
+  /**
+   * Everything a pet must walk around: the scenery, and the egg.
+   *
+   * The egg was missing, so pets walked through it — the one object on the
+   * island a child is meant to walk up to and tap had no substance at all.
+   * Measured at walking height like the scenery, so the rule stays one rule.
+   */
+  function publishObstacles(): void {
+    const solid = [...props.obstacles()]
+    if (egg.group.visible && !stage.holds(egg.group)) {
+      solid.push({
+        x: egg.group.position.x,
+        z: egg.group.position.z,
+        r: footprintBelow(egg.group, WALKING_HEIGHT),
+      })
+    }
+    pets.setObstacles(solid)
   }
 
   function refresh(): void {
     world.setIsland(flow.island)
     void props.sync(flow.island, world.models.size, world.surface).then(() => {
-      pets.setObstacles(props.obstacles())
+      publishObstacles()
       // Re-site the egg now the scenery is known: obstacles() is empty until
       // the props have loaded, so the first placement cannot see the trees.
       if (flow.phase !== 'placing') placeEgg()
@@ -1369,8 +1413,13 @@ async function boot(): Promise<void> {
   }
 
   refresh()
-  // Even the very first egg washes up rather than being there already.
-  egg.arrive()
+  /*
+   * The arrival is fired by placeEgg, not here.
+   *
+   * refresh() loads a few dozen models before it can site the egg, so arriving
+   * at this point meant flying in at the origin, landing under Fred, and then
+   * teleporting to the real spot once the props resolved.
+   */
   world.start()
   document.getElementById('boot')?.remove()
 

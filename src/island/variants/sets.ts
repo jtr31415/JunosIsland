@@ -19,11 +19,12 @@
  * Joe's veto rather than anything settled. `npm run dev` with the petOMatic
  * flag shows every one of them.
  *
- * Each is a rotation away from the natural palette rather than an absolute
- * colour, because the atlas is a set of gradients and the shading has to
- * survive: see recolour.ts. The natural coats sit around hue 25, so a rotation
- * of 180 lands them in the blues, and each family below is named for where its
- * MAJORITY ends up — individual species will differ, which is the point.
+ * Each names an ABSOLUTE colour, and every species is normalised onto it —
+ * see recolour.ts. Rotations were tried first and were wrong: a rotation moves
+ * a colour around the wheel, so it does nothing at all to an animal with no
+ * hue to move, and the polar bear, panda, penguin and elephant sat out every
+ * set. Assigning the colour and keeping only each species' own light-to-dark
+ * ordering makes them all adapt equally.
  */
 import type { SetPalette } from './recolour'
 
@@ -38,9 +39,9 @@ export interface PetSet extends SetPalette {
  * Three treatments per colour family, so a family reads as a family without
  * three sets looking like one another.
  */
-const vivid = (hue: number): SetPalette => ({ hue, sat: 1.45, light: 1.05 })
-const pastel = (hue: number): SetPalette => ({ hue, sat: 0.5, light: 1.3 })
-const deep = (hue: number): SetPalette => ({ hue, sat: 1.2, light: 0.68 })
+const vivid = (hue: number): SetPalette => ({ hue, sat: 0.78, light: 1.0 })
+const pastel = (hue: number): SetPalette => ({ hue, sat: 0.28, light: 1.0 })
+const deep = (hue: number): SetPalette => ({ hue, sat: 0.85, light: 0.7 })
 
 export const SETS: readonly PetSet[] = [
   /*
@@ -49,75 +50,75 @@ export const SETS: readonly PetSet[] = [
    * friends Juno already owns are bit-identical to before this engine existed.
    * A golden test pins it.
    */
-  { id: 'natural', name: 'Natural', hue: 0, sat: 1, light: 1 },
+  { id: 'natural', name: 'Natural', hue: 0, sat: -1, light: 1 },
 
   // Yellows and golds
-  { id: 'sunshine', name: 'Sunshine', ...vivid(30) },
-  { id: 'butter', name: 'Butter', ...pastel(30) },
-  { id: 'toffee', name: 'Toffee', ...deep(30) },
+  { id: 'sunshine', name: 'Sunshine', ...vivid(45) },
+  { id: 'butter', name: 'Butter', ...pastel(45) },
+  { id: 'toffee', name: 'Toffee', ...deep(38) },
 
   // Yellow-greens
-  { id: 'lime', name: 'Lime', ...vivid(60) },
-  { id: 'pistachio', name: 'Pistachio', ...pastel(60) },
-  { id: 'olive', name: 'Olive', ...deep(60) },
+  { id: 'lime', name: 'Lime', ...vivid(75) },
+  { id: 'pistachio', name: 'Pistachio', ...pastel(75) },
+  { id: 'olive', name: 'Olive', ...deep(70) },
 
   // Greens
-  { id: 'meadow', name: 'Meadow', ...vivid(90) },
-  { id: 'mint', name: 'Mint', ...pastel(90) },
-  { id: 'moss', name: 'Moss', ...deep(90) },
+  { id: 'meadow', name: 'Meadow', ...vivid(105) },
+  { id: 'mint', name: 'Mint', ...pastel(105) },
+  { id: 'moss', name: 'Moss', ...deep(100) },
 
   // Green-teals
-  { id: 'emerald', name: 'Emerald', ...vivid(120) },
-  { id: 'seafoam', name: 'Seafoam', ...pastel(120) },
-  { id: 'pine', name: 'Pine', ...deep(120) },
+  { id: 'emerald', name: 'Emerald', ...vivid(178) },
+  { id: 'seafoam', name: 'Seafoam', ...pastel(178) },
+  { id: 'pine', name: 'Pine', ...deep(145) },
 
   // Cyans
   { id: 'turquoise', name: 'Turquoise', ...vivid(150) },
   { id: 'icicle', name: 'Icicle', ...pastel(150) },
-  { id: 'lagoon', name: 'Lagoon', ...deep(150) },
+  { id: 'lagoon', name: 'Lagoon', ...deep(185) },
 
   // Blues
-  { id: 'sky', name: 'Sky', ...vivid(180) },
-  { id: 'cloud', name: 'Cloud', ...pastel(180) },
-  { id: 'ocean', name: 'Ocean', ...deep(180) },
+  { id: 'sky', name: 'Sky', ...vivid(200) },
+  { id: 'cloud', name: 'Cloud', ...pastel(200) },
+  { id: 'ocean', name: 'Ocean', ...deep(205) },
 
   // Deeper blues
-  { id: 'bluebell', name: 'Bluebell', ...vivid(210) },
-  { id: 'forgetmenot', name: 'Forget-me-not', ...pastel(210) },
-  { id: 'denim', name: 'Denim', ...deep(210) },
+  { id: 'bluebell', name: 'Bluebell', ...vivid(218) },
+  { id: 'forgetmenot', name: 'Forget-me-not', ...pastel(218) },
+  { id: 'denim', name: 'Denim', ...deep(222) },
 
   // Indigos
-  { id: 'indigo', name: 'Indigo', ...vivid(240) },
-  { id: 'wisteria', name: 'Wisteria', ...pastel(240) },
-  { id: 'midnight', name: 'Midnight', ...deep(240) },
+  { id: 'indigo', name: 'Indigo', ...vivid(245) },
+  { id: 'wisteria', name: 'Wisteria', ...pastel(245) },
+  { id: 'midnight', name: 'Midnight', ...deep(250) },
 
   // Purples
-  { id: 'violet', name: 'Violet', ...vivid(270) },
-  { id: 'lilac', name: 'Lilac', ...pastel(270) },
-  { id: 'grape', name: 'Grape', ...deep(270) },
+  { id: 'violet', name: 'Violet', ...vivid(272) },
+  { id: 'lilac', name: 'Lilac', ...pastel(272) },
+  { id: 'grape', name: 'Grape', ...deep(278) },
 
   // Magentas
   { id: 'orchid', name: 'Orchid', ...vivid(300) },
   { id: 'candyfloss', name: 'Candyfloss', ...pastel(300) },
-  { id: 'plum', name: 'Plum', ...deep(300) },
+  { id: 'plum', name: 'Plum', ...deep(305) },
 
   // Pinks
-  { id: 'bubblegum', name: 'Bubblegum', ...vivid(330) },
-  { id: 'blossom', name: 'Blossom', ...pastel(330) },
-  { id: 'berry', name: 'Berry', ...deep(330) },
+  { id: 'bubblegum', name: 'Bubblegum', ...vivid(325) },
+  { id: 'blossom', name: 'Blossom', ...pastel(325) },
+  { id: 'berry', name: 'Berry', ...deep(332) },
 
   // Reds, back round the wheel
-  { id: 'cherry', name: 'Cherry', ...vivid(355) },
-  { id: 'coral', name: 'Coral', ...pastel(355) },
-  { id: 'ruby', name: 'Ruby', ...deep(355) },
+  { id: 'cherry', name: 'Cherry', ...vivid(0) },
+  { id: 'coral', name: 'Coral', ...pastel(14) },
+  { id: 'ruby', name: 'Ruby', ...deep(352) },
 
   /*
    * Three that are not a hue rotation at all, so the run of forty does not
    * read as one idea repeated. Saturation alone changes these.
    */
-  { id: 'storm', name: 'Storm', hue: 200, sat: 0.18, light: 0.85 },
-  { id: 'chalk', name: 'Chalk', hue: 0, sat: 0.12, light: 1.35 },
-  { id: 'sherbet', name: 'Sherbet', hue: 45, sat: 0.75, light: 1.4 },
+  { id: 'storm', name: 'Storm', hue: 210, sat: 0.10, light: 0.82 },
+  { id: 'chalk', name: 'Chalk', hue: 40, sat: 0.07, light: 1.0 },
+  { id: 'sherbet', name: 'Sherbet', hue: 20, sat: 0.42, light: 1.0 },
 ] as const
 
 /** Every creature is one of these. Saved as `{setId, speciesId}`. */

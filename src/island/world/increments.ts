@@ -110,6 +110,44 @@ const PALETTE: Record<TileType, readonly string[]> = {
  * the socket, so a given hex always grows the same thing — the island must
  * not rearrange itself between sessions — but no two hexes agree.
  */
+/**
+ * Deterministically place `names` around the plot without overlapping.
+ *
+ * The original spread them at fixed angles on a jittered radius and hoped.
+ * With eight pieces and features up to a hex wide that is not a spread, it is
+ * a pile: adjacent pieces at similar radii intersect, and a tree ends up
+ * inside a rock.
+ *
+ * Each piece keeps its derived angle — that is what makes a plot look arranged
+ * rather than scattered — and gives ground on RADIUS, trying its own first and
+ * then working outward and inward. A piece that cannot fit anywhere is
+ * dropped, exactly as props.ts drops one: a slightly barer tile looks
+ * finished, a tree growing out of a boulder looks broken.
+ */
+export function layOut(
+  names: readonly string[], seed: number, hexSize: number,
+): Array<{ angle: number; radius: number } | null> {
+  const taken: Array<{ x: number; z: number; r: number }> = []
+  return names.map((name, i) => {
+    const spin = ((seed >> (i + 3)) % 32) / 32
+    const angle = ((i + spin) / names.length) * Math.PI * 2 + 0.4
+    const wanted = hexSize * (0.22 + ((seed >> (i + 7)) % 40) / 100)
+    // Half the fitted WIDTH, which is what fitInto will bind it to.
+    const r = (fitFor(name)[0] / 2) * 0.85
+
+    for (const nudge of [0, 0.12, -0.12, 0.24, -0.2, 0.36, 0.48]) {
+      const radius = wanted + hexSize * nudge
+      if (radius < hexSize * 0.1 || radius > hexSize * 0.78) continue
+      const x = Math.cos(angle) * radius
+      const z = Math.sin(angle) * radius
+      if (taken.some(t => Math.hypot(t.x - x, t.z - z) < t.r + r)) continue
+      taken.push({ x, z, r })
+      return { angle, radius }
+    }
+    return null
+  })
+}
+
 function piecesFor(type: TileType, seed: number): string[] {
   const palette = PALETTE[type]
   const out: string[] = []
@@ -132,7 +170,7 @@ const fitFor = (name: string): readonly [number, number] =>
   name.startsWith('waterlily') ? FITS.lily
     : name.startsWith('waterplant') ? FITS.reed
       : /^(Grass|Bush|Rock)/.test(name) ? FITS.cover
-        : FITS.feature
+        : FITS.grown
 
 /**
  * How high above its socket the finished plot starts, and how far to the side.
@@ -409,12 +447,29 @@ export function createGrowingPlot(
    * bald patches, which reads as unfinished rather than natural.
    */
   const names = piecesFor(type, seed)
+
+  /*
+   * Where each piece stands, worked out UP FRONT and all together.
+   *
+   * Two reasons it cannot be done as the models arrive. The loads resolve out
+   * of order, so placement decided inside `.then` would depend on network
+   * timing — and the same hex must grow the same thing in the same place every
+   * load. And a piece cannot avoid its neighbours if its neighbours have not
+   * been decided yet, which is why Joe was still seeing trees inside rocks
+   * after props.ts was fixed: this is a SECOND placement path, and the tiles
+   * she builds herself all come through here.
+   *
+   * The keep-out radius is nominal, from `fitFor`, rather than measured off
+   * the loaded model — deliberately, because it is the only way to stay
+   * deterministic without waiting for every load first. It is the same
+   * arithmetic `firstClear` does in props.ts, on the same footprint circles.
+   */
+  const spots = layOut(names, seed, hexSize)
+
   names.forEach((name, i) => {
-    // Angle and radius jittered by the seed too, so two tiles with a piece in
-    // common still do not look like the same tile twice.
-    const spin = ((seed >> (i + 3)) % 32) / 32
-    const angle = ((i + spin) / names.length) * Math.PI * 2 + 0.4
-    const radius = hexSize * (0.22 + ((seed >> (i + 7)) % 40) / 100)
+    const spot = spots[i]
+    if (!spot) return
+    const { angle, radius } = spot
     void deps.prop(name).then(object => {
       object.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius)
       object.rotation.y = angle + i

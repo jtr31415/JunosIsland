@@ -341,6 +341,19 @@ export const FITS = {
   /** Single trees and small clumps. */
   feature: [1.0, 0.95] as const,
   /**
+   * The same pieces, GROWN on a plot rather than planted as a tile's feature.
+   *
+   * Smaller, and it has to be: props.ts plants ONE feature on a hex, while the
+   * growing plot arranges EIGHT of them on the same hex. Eight pieces a hex
+   * wide do not fit round a hex — that is arithmetic, not taste, and it is why
+   * a tree kept ending up inside a rock on the tiles she built herself.
+   *
+   * Measured rather than guessed: across four thousand seeded plots, feature
+   * pieces at full size can only be placed 74% of the time without
+   * overlapping; at this size, 94%.
+   */
+  grown: [0.62, 0.6] as const,
+  /**
    * Hills and mountains. These carry their own hex base, so at full width
    * they cover the tile and read as REPLACING it; a green rim around the base
    * is what turns a mountain back into a feature of the meadow it rose from.
@@ -788,6 +801,27 @@ export function createPropField(base = ''): PropField {
       // are the same knee-high pieces pets have always walked over.
       const w = toWorld(a, hexSize)
       decor.push({ x: w.x, z: w.z, r: hexSize * 0.55 })
+
+      /*
+       * ...and the pieces she grew are SOLID to anything planted later.
+       *
+       * The other half of the trees-inside-rocks report. A grown tile arrives
+       * here fully formed and used to register only as clutter, so when the
+       * next tile along was dressed, its own feature — a hill or a boulder,
+       * blocking half a hex — could be sited straight through the scenery she
+       * had just built. Each piece is measured where it actually stands rather
+       * than covered by one circle over the tile, because a single hex-wide
+       * keep-out would sterilise the whole neighbourhood.
+       */
+      grown.updateMatrixWorld(true)
+      for (const child of grown.children) {
+        const box = new THREE.Box3().setFromObject(child)
+        if (!Number.isFinite(box.min.x)) continue
+        const size = box.getSize(new THREE.Vector3())
+        const at = box.getCenter(new THREE.Vector3())
+        const r = Math.max(size.x, size.z) / 2
+        if (r > 1e-3) footprints.push({ x: at.x, z: at.z, r })
+      }
     },
 
     load: (name: string) => (/^[A-Z]/.test(name) ? forestModel(name) : model(name)),

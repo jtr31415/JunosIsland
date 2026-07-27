@@ -63,7 +63,7 @@ function paint(source: CanvasImageSource, w: number, h: number, set: PetSet): HT
   if (!ctx) return canvas
   ctx.drawImage(source, 0, 0)
   const data = ctx.getImageData(0, 0, w, h)
-  recolourInto(data.data, set)
+  recolourInto(data.data, set, w)
   ctx.putImageData(data, 0, 0)
   return canvas
 }

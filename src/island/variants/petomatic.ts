@@ -69,23 +69,55 @@ export async function runPetOMatic(
   /* ------------------------------------------------------------ paging --- */
 
   let at = 0
+  /*
+   * At the TOP, large, and impossible to miss.
+   *
+   * The first version was a thin strip along the bottom and Joe reported not
+   * finding the names at all — which makes the whole page useless for judging
+   * them, since a set is a name as much as a colour.
+   */
   const caption = document.createElement('div')
   caption.style.cssText = [
-    'position:fixed', 'left:0', 'right:0', 'bottom:0', 'padding:10px 16px',
-    'font:600 15px/1.4 ui-rounded,system-ui,sans-serif', 'color:#fff',
-    'background:rgba(0,0,0,.55)', 'text-align:center', 'z-index:9',
+    'position:fixed', 'left:0', 'right:0', 'top:0', 'padding:14px 18px 16px',
+    'font:700 30px/1.15 ui-rounded,system-ui,sans-serif', 'color:#fff',
+    'background:linear-gradient(rgba(0,0,0,.72),rgba(0,0,0,0))',
+    'text-align:center', 'z-index:99', 'pointer-events:none',
+    'text-shadow:0 2px 6px rgba(0,0,0,.8)',
   ].join(';')
+  const detail = document.createElement('div')
+  detail.style.cssText = 'font:600 15px/1.5 ui-rounded,system-ui,sans-serif;opacity:.9'
+  caption.append(detail)
   document.body.append(caption)
+
+  /** Which animal is where, since the grid is not labelled. */
+  const legend = document.createElement('div')
+  legend.style.cssText = [
+    'position:fixed', 'left:0', 'right:0', 'bottom:0', 'padding:8px 14px',
+    'font:500 12px/1.5 ui-monospace,monospace', 'color:#fff',
+    'background:rgba(0,0,0,.6)', 'text-align:center', 'z-index:99',
+    'pointer-events:none',
+  ].join(';')
+  legend.textContent = species
+    .map(s => s.replace('animal-', ''))
+    .reduce<string[]>((rows, name, i) => {
+      const row = Math.floor(i / COLUMNS)
+      rows[row] = (rows[row] ?? '') + name.padEnd(13)
+      return rows
+    }, [])
+    .join('   |   ')
+  document.body.append(legend)
 
   async function show(index: number): Promise<void> {
     at = (index + SETS.length) % SETS.length
     const set = SETS[at] as typeof SETS[number]
     for (const stand of stands) if (stand) await atlas.dress(stand, set.id)
-    caption.textContent =
-      `${at + 1} / ${SETS.length}  ·  ${set.name}  (${set.id})  ·  `
-      + `hue ${set.hue}  sat ${set.sat}  light ${set.light}  ·  `
+    caption.firstChild?.remove()
+    caption.prepend(`${set.name}`)
+    detail.textContent =
+      `set ${at + 1} of ${SETS.length}  ·  id “${set.id}”  ·  `
+      + `hue ${set.hue}° · sat ${set.sat} · light ${set.light}  ·  `
       + `${SETS.length * species.length} creatures  ·  `
-      + `← → sets, ↑ ↓ ten at a time, space to spin`
+      + `← → set,  ↑ ↓ ten,  space to stop spinning`
   }
 
   let spinning = true
