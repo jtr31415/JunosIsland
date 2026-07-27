@@ -25,6 +25,8 @@ import { pageKind, balance } from './balance'
 import { landPaused, eggsPaused, activeGovernor, GOVERNOR_LINE } from './governors'
 import { OPENING, HATCH_LINES, fill } from './script'
 import { loadIsland, saveIsland } from './save'
+import { commit, ceremony } from './ceremony'
+import type { Committed, Exits } from './ceremony'
 import { createLocalStore } from '../platform/storage'
 import { createFlow, tapEgg, tapSum, askForLand, challengePassed, chooseTile, tileOffer } from './flow'
 import { bindWorldTaps } from './taps'
@@ -241,7 +243,31 @@ async function boot(): Promise<void> {
   // The tab follows her name too, once she has given one (#10).
   if (childName) document.title = `${childName}'s Island`
 
-  const persist = (): void => { void saveIsland(store, PROFILE, flow, openingSeen, childName) }
+  const persist = (): Promise<void> =>
+    saveIsland(store, PROFILE, flow, openingSeen, childName)
+
+  /**
+   * Save, wait for it, and come back with proof.
+   *
+   * `persist()` was `void saveIsland(...)` — fire and forget — so "save first,
+   * celebrate second" was true in the order of the source and false in the
+   * order of events: the ceremony started while the write was still in flight,
+   * which is the window the lost-hatchling bug lived in. Awaiting it is the
+   * fix; the receipt is what makes forgetting to await it impossible.
+   */
+  const commitState = (): Promise<Committed<Flow>> => commit(flow, () => persist())
+
+  /**
+   * What every ceremony holds shut, in one place.
+   *
+   * Both sites hand-rolled this, and the hatch one had no `finally` — a throw
+   * between the lock and the close left the world busy with no overlay, every
+   * tap dead until a reload. `ceremony()` releases these however the body ends.
+   */
+  const exits: Exits = {
+    lock() { inCeremony = true; overlay.setBusy(true) },
+    unlock() { inCeremony = false; overlay.setBusy(false) },
+  }
 
   flow = loaded.flow
 
@@ -577,7 +603,7 @@ async function boot(): Promise<void> {
          * the page that earned her. Two seconds is not long unless it is the
          * single most important moment in the game (brief §19).
          */
-        persist()
+        const receipt = await commitState()
 
         /*
          * And hold the exits for the duration.
@@ -588,131 +614,129 @@ async function boot(): Promise<void> {
          * followed by a re-tap could strand the flow in a challenge with no
          * overlay, recoverable only by reloading.
          */
-        inCeremony = true
-        overlay.setBusy(true)
-
-        // If she has already left (collect-and-leave inside the win hold),
-        // there is no stage to perform on; hatch in the world as before.
-        const onStage = overlay.isOpen()
-        /*
-         * THE CEREMONY HAPPENS ON THE STAGE (§3 and §6), where she has been
-         * watching.
-         *
-         * The first version closed the stage and then hatched the egg back in
-         * the world — so the egg she had followed for five pages vanished at
-         * the exact moment it finally mattered, and the payoff played out
-         * somewhere she was not looking. Order now: burst and hatch in view,
-         * name card, spoken name, and only then does the stage dissolve and
-         * the friend arrive on the island.
-         */
-        /*
-         * Start loading the friend NOW, while the shell is still breaking.
-         *
-         * The hatch runs about 700ms, which is ample cover for a model that
-         * is usually already in the loader's cache. Waiting until after would
-         * put a visible gap between the egg breaking and anyone appearing —
-         * exactly the dead beat this change exists to fill.
-         */
-        const arriving = onStage
-          ? pets.preview(species).catch(() => null)
-          : Promise.resolve(null)
-
-        world.lighting.celebrationBump()
-        if (onStage) stage.burst()
-        // No stinger here: the word-find already played 'win' when the last
-        // word landed (v0:959), and a second one 420ms later doubles it.
-        await egg.hatch()
-
-        /*
-         * The friend takes the egg's place on the turntable.
-         *
-         * §3's order: burst -> pet pops with the name card -> name spoken ->
-         * stage dissolves -> pet hops down into the world. Without this beat
-         * the hold framed an EMPTY plinth: the shell broke and nobody came
-         * out, which is the least satisfying possible reading of a hatch.
-         */
-        /*
-         * Wait for the friend, but NOT indefinitely.
-         *
-         * The exits are locked for the ceremony, so awaiting a bare network
-         * fetch meant a stalled request soft-locked the game permanently:
-         * empty plinth, dead back button, reload the only way out. And a hang
-         * is the common failure mode for a fetch, not a rare one. Past this
-         * budget the ceremony simply goes on without the model — the same
-         * graceful path a failed load already took.
-         */
-        const friend = await Promise.race([
-          arriving,
-          wait(balance.stage.petLoadMs).then(() => null),
-        ])
-        if (onStage && friend) {
-          stage.show(null, world.scene)      // the shell has gone; send it home
+        await ceremony(receipt, exits, async () => {
+          // If she has already left (collect-and-leave inside the win hold),
+          // there is no stage to perform on; hatch in the world as before.
+          const onStage = overlay.isOpen()
           /*
-           * Reframe for a PET, not an egg.
+           * THE CEREMONY HAPPENS ON THE STAGE (§3 and §6), where she has been
+           * watching.
            *
-           * The camera was framed for a 0.55 egg, and a pet is wider than it
-           * is tall — so at the egg's framing she filled the vignette edge to
-           * edge and her feet were cropped off the bottom. Pulling back a
-           * little puts the whole friend on the plinth with air around her,
-           * which is what being introduced to someone looks like.
+           * The first version closed the stage and then hatched the egg back in
+           * the world — so the egg she had followed for five pages vanished at
+           * the exact moment it finally mattered, and the payoff played out
+           * somewhere she was not looking. Order now: burst and hatch in view,
+           * name card, spoken name, and only then does the stage dissolve and
+           * the friend arrive on the island.
            */
-          stage.frame(0.68)
-          stage.showTemp(friend, 0.44)
-        }
+          /*
+           * Start loading the friend NOW, while the shell is still breaking.
+           *
+           * The hatch runs about 700ms, which is ample cover for a model that
+           * is usually already in the loader's cache. Waiting until after would
+           * put a visible gap between the egg breaking and anyone appearing —
+           * exactly the dead beat this change exists to fill.
+           */
+          const arriving = onStage
+            ? pets.preview(species).catch(() => null)
+            : Promise.resolve(null)
 
-        overlay.showName(name)
-        fred.talk(2.4)
-        fred.hop()
+          world.lighting.celebrationBump()
+          if (onStage) stage.burst()
+          // No stinger here: the word-find already played 'win' when the last
+          // word landed (v0:959), and a second one 420ms later doubles it.
+          await egg.hatch()
 
-        /*
-         * A beat with the friend on the plinth and her name on the card,
-         * before the stage dissolves and she walks out into the world.
-         *
-         * Cut short if nobody came: holding on an empty plinth is the dead
-         * beat this whole change exists to remove, and it would be perverse
-         * to keep it as the consolation prize for a slow network.
-         */
-        await wait(friend ? HATCH_HOLD_MS : 400)
-        stage.showTemp(null)
-        stageFor(null)
-        overlay.setBusy(false)
-        overlay.close()
+          /*
+           * The friend takes the egg's place on the turntable.
+           *
+           * §3's order: burst -> pet pops with the name card -> name spoken ->
+           * stage dissolves -> pet hops down into the world. Without this beat
+           * the hold framed an EMPTY plinth: the shell broke and nobody came
+           * out, which is the least satisfying possible reading of a hatch.
+           */
+          /*
+           * Wait for the friend, but NOT indefinitely.
+           *
+           * The exits are locked for the ceremony, so awaiting a bare network
+           * fetch meant a stalled request soft-locked the game permanently:
+           * empty plinth, dead back button, reload the only way out. And a hang
+           * is the common failure mode for a fetch, not a rare one. Past this
+           * budget the ceremony simply goes on without the model — the same
+           * graceful path a failed load already took.
+           */
+          const friend = await Promise.race([
+            arriving,
+            wait(balance.stage.petLoadMs).then(() => null),
+          ])
+          if (onStage && friend) {
+            stage.show(null, world.scene)      // the shell has gone; send it home
+            /*
+             * Reframe for a PET, not an egg.
+             *
+             * The camera was framed for a 0.55 egg, and a pet is wider than it
+             * is tall — so at the egg's framing she filled the vignette edge to
+             * edge and her feet were cropped off the bottom. Pulling back a
+             * little puts the whole friend on the plinth with air around her,
+             * which is what being introduced to someone looks like.
+             */
+            stage.frame(0.68)
+            stage.showTemp(friend, 0.44)
+          }
 
-        /*
-         * The name is spoken AFTER the round closes.
-         *
-         * Closing tears the challenge down, and teardown cancels speech
-         * (v0:847, faithfully ported) — so saying it first meant the friend's
-         * name was cut off mid-word by the very act of putting the words
-         * away. This is the one line in the game that must be heard whole.
-         */
-        const line = HATCH_LINES[flow.pets.length % HATCH_LINES.length] as string
-        speech.speak(fill(line, child(), name))
-        egg.reset()
-        refresh()
+          overlay.showName(name)
+          fred.talk(2.4)
+          fred.hop()
 
-        // ...and the new friend hops in rather than simply being there,
-        // with the light lifting again for the arrival itself.
-        const arrival = flow.pets[flow.pets.length - 1]
-        if (arrival) pets.bounce(arrival.id)
-        world.lighting.celebrationBump()
+          /*
+           * A beat with the friend on the plinth and her name on the card,
+           * before the stage dissolves and she walks out into the world.
+           *
+           * Cut short if nobody came: holding on an empty plinth is the dead
+           * beat this whole change exists to remove, and it would be perverse
+           * to keep it as the consolation prize for a slow network.
+           */
+          await wait(friend ? HATCH_HOLD_MS : 400)
+          stage.showTemp(null)
+          stageFor(null)
+          overlay.setBusy(false)
+          overlay.close()
 
-        /*
-         * ...and THEN a chip flies into the album, so "where did my friend
-         * go?" has a visible answer (§3's last beat).
-         *
-         * After the arrival, not with it. §3 orders these one after the
-         * other, and for good reason: a pet bouncing in mid-island while a
-         * chip launches toward the top corner asks a six-year-old to watch
-         * two things at once, and she will watch neither.
-         */
-        setTimeout(() => {
-          // The card goes as the chip picks the name up, so the two read as
-          // one movement rather than as the name existing twice.
-          overlay.clearName()
-          overlay.flyToAlbum(name, albumBtn)
-        }, 900)
-        inCeremony = false
+          /*
+           * The name is spoken AFTER the round closes.
+           *
+           * Closing tears the challenge down, and teardown cancels speech
+           * (v0:847, faithfully ported) — so saying it first meant the friend's
+           * name was cut off mid-word by the very act of putting the words
+           * away. This is the one line in the game that must be heard whole.
+           */
+          const line = HATCH_LINES[flow.pets.length % HATCH_LINES.length] as string
+          speech.speak(fill(line, child(), name))
+          egg.reset()
+          refresh()
+
+          // ...and the new friend hops in rather than simply being there,
+          // with the light lifting again for the arrival itself.
+          const arrival = flow.pets[flow.pets.length - 1]
+          if (arrival) pets.bounce(arrival.id)
+          world.lighting.celebrationBump()
+
+          /*
+           * ...and THEN a chip flies into the album, so "where did my friend
+           * go?" has a visible answer (§3's last beat).
+           *
+           * After the arrival, not with it. §3 orders these one after the
+           * other, and for good reason: a pet bouncing in mid-island while a
+           * chip launches toward the top corner asks a six-year-old to watch
+           * two things at once, and she will watch neither.
+           */
+          setTimeout(() => {
+            // The card goes as the chip picks the name up, so the two read as
+            // one movement rather than as the name existing twice.
+            overlay.clearName()
+            overlay.flyToAlbum(name, albumBtn)
+          }, 900)
+        })
 
         if (openingResumeAt >= 0) {
           const at = openingResumeAt
@@ -784,11 +808,9 @@ async function boot(): Promise<void> {
          */
         // §19: save the finished tile BEFORE celebrating it. The hatch branch
         // learned this; closing the tab mid-ceremony must not cost her the sum.
-        persist()
+        const receipt = await commitState()
 
-        inCeremony = true
-        overlay.setBusy(true)
-        try {
+        await ceremony(receipt, exits, async () => {
           // Fill the dots first: the sum that FINISHED the tile deserves to
           // be seen landing, and unstaging first meant the last dot never lit.
           overlay.setDots(DOT_COUNT, DOT_COUNT)
@@ -852,15 +874,7 @@ async function boot(): Promise<void> {
           dropPlot()
           world.lighting.celebrationBump()   // the move-in lift (lighting §4)
           refresh()
-        } finally {
-          /*
-           * ALWAYS. refresh() walks the whole scene graph, and a throw
-           * anywhere in here used to leave the locks set — every tap dead for
-           * the rest of the session, with a reload the only way out.
-           */
-          overlay.setBusy(false)
-          inCeremony = false
-        }
+        })
         return
       }
 
