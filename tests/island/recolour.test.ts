@@ -4,8 +4,8 @@ import { inflateSync } from 'node:zlib'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
-  isSoul, rgbToHsv, hsvToRgb, shade, isNatural, recolourInto, regionOf,
-  SOUL_VALUE, BAND, RAMP_LOW, RAMP_HIGH,
+  isSoul, rgbToHsv, hsvToRgb, shade, isNatural, recolourInto, regionOf, reserved,
+  SOUL_VALUE, BAND, RAMP_LOW, RAMP_HIGH, RESERVE, RESERVE_X0, RESERVE_X1, SWATCH,
 } from '../../src/island/variants/recolour'
 import { SETS, NATURAL, setById, variantKey, totalVariants } from '../../src/island/variants/sets'
 import speciesBase from '../../src/island/variants/species-base.json'
@@ -224,6 +224,14 @@ describe('against the real colormap.png', () => {
 
     let hi = 0, lo = 1
     for (let j = 0; j < before.length; j += 4) {
+      /*
+       * The RESERVE is skipped, and skipping it is the point rather than a
+       * convenience. It holds a verbatim copy of the dark swatch — so it
+       * contains the penguin's own coat colours, deliberately frozen at the
+       * value the artist drew, because those copies are what its pupils read.
+       * Counting them here would measure the eyes and call them the coat.
+       */
+      if (reserved((j / 4) % img.w)) continue
       const key = `${before[j]},${before[j + 1]},${before[j + 2]}`
       if (!keys.has(key)) continue
       const v = Math.max(
@@ -257,6 +265,196 @@ describe('against the real colormap.png', () => {
     }
     expect(at(240, 300)).not.toBe(at(240, 460))
   })
+})
+
+describe('the reserve — the two columns a set may never touch', () => {
+  /*
+   * Joe: *"penguin pupils should stay black, panda and polar bear and cow white
+   * of eye should stay white; rest of the animal colouring slice is accepted."*
+   *
+   * The mechanism is in tools/pets/reserve.mjs and facedecals.ts: the face
+   * decals are separate geometry, so their UVs are pointed at a verbatim copy
+   * of the swatches they read, and the recolourer leaves that copy alone. This
+   * is the recolourer's half — that the copy really is left alone, in every
+   * pass, for every set. tests/island/facedecals.test.ts is the other half.
+   */
+  const img = decode(PNG)
+  const buffer = (): Uint8ClampedArray => {
+    const out = new Uint8ClampedArray(img.w * img.h * 4)
+    for (let i = 0, j = 0; i < img.px.length; i += img.bpp, j += 4) {
+      out[j] = img.px[i] as number
+      out[j + 1] = img.px[i + 1] as number
+      out[j + 2] = img.px[i + 2] as number
+      out[j + 3] = 255
+    }
+    return out
+  }
+
+  it('is two whole swatch columns, written down', () => {
+    // Moving these is a deliberate act with a failing test attached: the atlas
+    // is baked against them and every decal UV in species-face.json points at
+    // them.
+    expect([RESERVE_X0, RESERVE_X1]).toEqual([320, 383])
+    expect(RESERVE.map(([from, to]) => [from, to])).toEqual([[112, 336], [496, 368]])
+    for (const [, to] of RESERVE) {
+      expect(to - SWATCH / 2).toBeGreaterThanOrEqual(RESERVE_X0)
+      expect(to + SWATCH / 2 - 1).toBeLessThanOrEqual(RESERVE_X1)
+    }
+  })
+
+  it('knows where it starts and stops', () => {
+    expect(reserved(RESERVE_X0 - 1)).toBe(false)
+    expect(reserved(RESERVE_X0)).toBe(true)
+    expect(reserved(RESERVE_X1)).toBe(true)
+    expect(reserved(RESERVE_X1 + 1)).toBe(false)
+  })
+
+  it('holds a VERBATIM copy of the swatches the eyes read', () => {
+    /*
+     * The identity argument, and it is what lets "the eyes look exactly as they
+     * do now" be proved without modelling the bilinear filter or the colour
+     * space at all: the copy is a whole 32-wide swatch, row for row, so the 2×2
+     * neighbourhood a tap reads at the new UV is byte-identical to the one it
+     * read at the old.
+     *
+     * Stated over the shipped PNG rather than over the tool, because it is the
+     * file the game loads. A re-exported texture that dropped the reserve would
+     * fail here rather than in the Pet-o-matic.
+     */
+    const adrift: string[] = []
+    for (const [from, to] of RESERVE) {
+      for (let y = 0; y < img.h; y++) {
+        for (let i = 0; i < SWATCH; i++) {
+          const src = y * img.stride + (from - SWATCH / 2 + i) * img.bpp
+          const dst = y * img.stride + (to - SWATCH / 2 + i) * img.bpp
+          for (let c = 0; c < img.bpp; c++) {
+            if (img.px[dst + c] === img.px[src + c]) continue
+            if (adrift.length < 4) adrift.push(`swatch ${from} -> ${to}, row ${y}, byte ${i}.${c}`)
+          }
+        }
+      }
+    }
+    // Counted rather than asserted per byte: 131,072 expect() calls take four
+    // seconds and say no more than one does.
+    expect(adrift, 'run `npm run pets:reserve` and commit colormap.png').toEqual([])
+  })
+
+  it('comes through every set byte for byte, with and without a base coat', () => {
+    /*
+     * THE TEST THIS WHOLE CHANGE EXISTS FOR. Both code paths: the species-base
+     * path the game uses, and the band-histogram fallback. Without the
+     * `reserved()` skips in recolourInto, the reserved eye-whites go berry with
+     * everything else and the fix buys nothing at all.
+     */
+    const penguin = new Set((speciesBase as Record<string, string[]>)['penguin'])
+    for (const set of SETS) {
+      // `undefined` is the band-histogram fallback, a base set is the path the
+      // game takes. Two is the whole space of code paths; a third species would
+      // be a third minute of test time saying the same thing.
+      for (const base of [undefined, penguin]) {
+        const before = buffer()
+        const after = buffer()
+        recolourInto(after, set, img.w, base)
+        for (let y = 0; y < img.h; y++) {
+          for (let x = RESERVE_X0; x <= RESERVE_X1; x++) {
+            const j = (y * img.w + x) * 4
+            if (after[j] === before[j] && after[j + 1] === before[j + 1]
+              && after[j + 2] === before[j + 2]) continue
+            expect.fail(`${set.id} moved the reserve at ${x},${y}`)
+          }
+        }
+      }
+    }
+    // Fifty full recolours of a 512×512 image. Given a real budget rather than
+    // vitest's five-second default, which it trips under a loaded machine and
+    // then reports as a failure of the fix.
+  }, 30_000)
+
+  it('keeps the eye-whites WHITE and the pupils BLACK, in every set', () => {
+    /*
+     * The acceptance criteria in Joe's own terms. Located by MEASURING the
+     * reserve rather than by naming rows, so a re-exported texture that moved
+     * the gradient could not quietly make this pass by testing nothing: the
+     * counts below are asserted non-zero first.
+     *
+     * The mirror image is asserted too. The very same colours in the UNRESERVED
+     * columns 112 and 496 — which is where the coat still reads them — do go
+     * berry, and must. That contrast IS the fix: not "whites are protected",
+     * which froze half the roster, but "the eyes' copy of the whites is".
+     */
+    const before = buffer()
+    const white: number[] = [], black: number[] = []
+    const coatWhite: number[] = []
+    for (let y = 0; y < img.h; y++) {
+      for (let x = RESERVE_X0; x <= RESERVE_X1; x++) {
+        const j = (y * img.w + x) * 4
+        const [r, g, b] = [before[j] as number, before[j + 1] as number, before[j + 2] as number]
+        if (Math.min(r, g, b) > 230) white.push(j)
+        if (isSoul(r, g, b)) black.push(j)
+      }
+      for (let x = 96; x < 128; x++) {                    // the source swatch
+        const j = (y * img.w + x) * 4
+        if (Math.min(before[j] as number, before[j + 1] as number,
+          before[j + 2] as number) > 230) coatWhite.push(j)
+      }
+    }
+    expect(white.length, 'no eye-whites in the reserve at all').toBeGreaterThan(100)
+    expect(black.length, 'no pupils in the reserve at all').toBeGreaterThan(100)
+    expect(coatWhite.length).toBe(white.length)
+
+    /*
+     * Recoloured as a POLAR BEAR, which is the case that decides it: its coat
+     * and its sclera are the same near-white, so this is the one species where
+     * the two cannot be told apart by colour and the geometric rule is the only
+     * thing doing any work.
+     */
+    const polar = new Set((speciesBase as Record<string, string[]>)['polar'])
+    const spoiled: string[] = []
+    for (const set of SETS.slice(1)) {
+      const after = buffer()
+      recolourInto(after, set, img.w, polar)
+      const min = (j: number): number => Math.min(
+        after[j] as number, after[j + 1] as number, after[j + 2] as number)
+      const max = (j: number): number => Math.max(
+        after[j] as number, after[j + 1] as number, after[j + 2] as number)
+      const greyed = white.filter(j => min(j) <= 230).length
+      const lit = black.filter(j => max(j) >= SOUL_VALUE).length
+      const tinted = coatWhite.filter(j => min(j) <= 230).length
+      if (greyed) spoiled.push(`${set.id} tinted ${greyed} reserved eye-whites`)
+      if (lit) spoiled.push(`${set.id} lightened ${lit} reserved pupils`)
+      if (tinted / coatWhite.length <= 0.9) {
+        spoiled.push(`${set.id} left the white COAT white — the old bug`)
+      }
+    }
+    expect(spoiled).toEqual([])
+  }, 30_000)
+
+  it('and still recolours a whole coat — this is not a trade', () => {
+    /*
+     * The half that would catch the cheat. A recolourer that protected the eyes
+     * by refusing to change anything at all would sail through every test
+     * above. So: every atlas pixel outside the reserve that carries one of the
+     * polar bear's OWN base-coat colours must move, for every set. The polar
+     * bear because it is the animal a colour rule cannot serve — its whole coat
+     * is the same near-white as its sclera.
+     */
+    const keys = new Set((speciesBase as Record<string, string[]>)['polar'])
+    for (const set of SETS.slice(1)) {
+      const before = buffer()
+      const after = buffer()
+      recolourInto(after, set, img.w, keys)
+      let coat = 0, moved = 0
+      for (let j = 0; j < before.length; j += 4) {
+        if (reserved((j / 4) % img.w)) continue
+        if (!keys.has(`${before[j]},${before[j + 1]},${before[j + 2]}`)) continue
+        coat++
+        if (after[j] !== before[j] || after[j + 1] !== before[j + 1]
+          || after[j + 2] !== before[j + 2]) moved++
+      }
+      expect(coat, 'no polar bear coat found in the atlas').toBeGreaterThan(100)
+      expect(moved, `${set.id} left the polar bear alone`).toBe(coat)
+    }
+  }, 30_000)
 })
 
 describe('every species adapts equally — the correction', () => {

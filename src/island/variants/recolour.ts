@@ -88,21 +88,68 @@ export interface SetPalette {
 }
 
 /**
+ * THE RESERVE: two spare swatch columns that a set may never touch.
+ *
+ * Joe: *"penguin pupils should stay black, panda and polar bear and cow white
+ * of eye should stay white; rest of the animal colouring slice is accepted."*
+ *
+ * That could not be done in COLOUR, and the numbers are worth keeping because
+ * they are what closed the question off. The coat samples the identical texels
+ * the eyes do, at a different UV — 40.33% of a penguin's surface area draws
+ * from the very pixels its pupils are made of, 32.48% of a panda's, 25.25% of a
+ * polar bear's. And a rule protecting near-achromatic texels freezes 69.74% of
+ * a polar bear, 56.52% of a cow. There is no rule in texel space that separates
+ * an eye-white from a white bear.
+ *
+ * It CAN be done in UV space, because the eyes turn out to be their own
+ * geometry: a flat sheet floating in front of the head, mirrored left and
+ * right, in every one of the 24 species. tools/pets/atlas.mjs finds those 63
+ * decals from the mesh alone and tools/pets/reserve.mjs copies the two swatch
+ * columns they sample into two spare ones, verbatim. facedecals.ts then points
+ * the decal UVs at the copies. The eye reads a copy nothing recolours; the coat
+ * reads the original everything recolours; and the coat's coverage is
+ * completely unchanged — measured identical, set for set. It is not a trade.
+ *
+ * The cost is 1.19%–2.21% of each pet's surface area frozen, median 1.72%, and
+ * no extra bytes on the GPU at all: the UVs are rewritten in the shared
+ * geometry, once per species.
+ */
+export const ATLAS_WIDTH = 512
+
+/** How wide one flat swatch of the atlas is; measured, every row is 16 of them. */
+export const SWATCH = 32
+
+/** source swatch centre -> reserved swatch centre, as the atlas is baked. */
+export const RESERVE: ReadonlyArray<readonly [number, number]> = [
+  [112, 336],     // the pale column: eye whites
+  [496, 368],     // the dark column: pupils, nostrils, outlines
+]
+
+/** The reserved range of x, inclusive. Exactly one BAND wide, as it happens. */
+export const RESERVE_X0 = 320
+export const RESERVE_X1 = 383
+
+/** Is this column part of the reserve, and therefore not a set's to change? */
+export const reserved = (x: number): boolean => x >= RESERVE_X0 && x <= RESERVE_X1
+
+/**
  * Darker than this and a pixel is the SOUL — a pupil, a nostril, an outline.
  *
  * Saturation used to come into this too, and that was the mistake Joe caught
  * from the Pet-o-matic. Protecting every low-saturation pixel protects a POLAR
  * BEAR, whose entire coat is low-saturation — along with the panda, the
  * penguin, the elephant and the rest. Half the roster sat out every set. The
- * face is now defended by darkness alone.
+ * face is defended by darkness alone.
  *
- * The eye-whites are consequently recoloured with everything else, ending up
- * as a very pale tint of the set rather than pure white. A deliberate trade,
- * and a forced one: these models have no separate face mesh — measured, the
- * face is painted onto `body` — and no texel belongs only to faces, so the one
- * way to keep whites white is to keep white animals white. A faintly berry
- * sclera under a black pupil reads as a cartoon animal; a bear that refuses to
- * change colour reads as a bug.
+ * KEPT, though the reserve now does its job properly. Measured: with the
+ * reserve in place, removing the soul test leaves eye drift at 0 for all 24
+ * species and would only make the penguin slightly more colourful (5.97% of its
+ * coat area is currently frozen by darkness; every other species shifts by 0 or
+ * 1). A minimal diff and a Pet-o-matic question rather than a code one.
+ *
+ * It never could defend the eye-WHITES, which is the half of Joe's complaint
+ * this predates: a sclera at 248,248,250 is nowhere near dark. That is what the
+ * reserve is for.
  */
 export const SOUL_VALUE = 78
 
@@ -398,6 +445,10 @@ export function recolourInto(
     let changed = 0
     for (let i = 0; i < rgba.length; i += 4) {
       if (rgba[i + 3] === 0) continue
+      // The eyes' own copy of the atlas. Skipped here and in every pass below,
+      // or the reserve is recoloured along with everything else and the whole
+      // mechanism buys nothing.
+      if (reserved((i / 4) % width)) continue
       const r = rgba[i] as number, g = rgba[i + 1] as number, b = rgba[i + 2] as number
       if (isSoul(r, g, b) || !inRegion(r, g, b, region)) continue
       const v = Math.max(r, g, b) / 255
@@ -434,6 +485,10 @@ export function recolourInto(
 
   for (let i = 0; i < rgba.length; i += 4) {
     if (rgba[i + 3] === 0) continue
+    // Reserved columns are a COPY of colours that appear elsewhere in the
+    // atlas, so counting them would let the eyes vote twice on their band's
+    // base coat and on its light-to-dark range.
+    if (reserved((i / 4) % width)) continue
     const r = rgba[i] as number, g = rgba[i + 1] as number, b = rgba[i + 2] as number
     if (isSoul(r, g, b)) continue
     const k = bandOf(i)
@@ -485,6 +540,7 @@ export function recolourInto(
   const hi = new Array<number>(bands).fill(-Infinity)
   for (let i = 0; i < rgba.length; i += 4) {
     if (rgba[i + 3] === 0) continue
+    if (reserved((i / 4) % width)) continue
     const r = rgba[i] as number, g = rgba[i + 1] as number, b = rgba[i + 2] as number
     if (isSoul(r, g, b)) continue
     const k = bandOf(i)
@@ -497,6 +553,7 @@ export function recolourInto(
   let moved = 0
   for (let i = 0; i < rgba.length; i += 4) {
     if (rgba[i + 3] === 0) continue
+    if (reserved((i / 4) % width)) continue
     const r = rgba[i] as number, g = rgba[i + 1] as number, b = rgba[i + 2] as number
     if (isSoul(r, g, b)) continue
     const k = bandOf(i)
