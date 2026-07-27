@@ -19,8 +19,8 @@ Nothing is waiting on Joe. Both prior rulings are closed: **#4 formula wins**,
 |---|---|---|
 | **0** | Spec manifest | **Done.** All five documents committed (`5071e41`). |
 | **1** | Hard save & restore | **Done.** See below. |
-| 2 | Clock service | Not started. |
-| 3 | Parity gate deflake | Not started — but see the note below. |
+| **2** | Clock service | **Done.** |
+| **3** | Parity gate deflake | **Done.** 50/50 green. |
 | 4 | Channels & flags | Not started. |
 | 5 | Cube-pet material autopsy | Not started. |
 | 6 | Sets & the variant engine | Not started. |
@@ -101,6 +101,41 @@ the existing saves as v1 rather than retroactively v0, because
 `schemaVersion: 1` is literally what is on her tablet; the synthetic ladder
 test proves the framework as the brief intended.
 
+### Item 2 — clock service
+
+One clock, built in boot, asked by everything that cares what day it is: the
+store's timestamps, the grown-ups PIN, the backup filename. Adjustable only
+under `?debug`, which gains `+1d` and `+7d` buttons and a `__world.clock`
+handle. Days are **local**, not UTC — a child's day starts when she wakes up,
+not at 1am BST — and `daysBetween` parses at noon so a 23- or 25-hour day when
+the clocks change cannot round to zero or two and break difficulty's two-day
+gate. The UK's 2026 transitions are test fixtures.
+
+The challenges' `Date.now()` calls deliberately stay on real time. They are
+elapsed-time input gates, not calendar reads; on an adjustable clock, pressing
+`+7d` throws every deadline into the past, releasing every input lock at once
+and silently disabling the mash-rescue. That reasoning lives in
+`platform/clock.ts` so the next sweep is not tempted.
+
+### Item 3 — parity gate deflake
+
+**50 / 50 green in 399s, no restless steps.** Acceptance met.
+
+The flake was the harness, not the port. Each step settled on a fixed sleep
+and then snapshotted both jsdom instances, which run real timers
+independently — so a scheduling hiccup left one finished and the other
+mid-way, reporting several diffs at once and then passing cleanly. Each DOM is
+now polled until its own snapshot holds still; waiting for the two to *agree*
+would mask the differences the gate exists to find. The seeded RNG was
+investigated and cleared: each DOM gets its own injected stream.
+
+Fixing it revealed the gate had been covering less than it claimed — the
+self-check now drives four spoken words and a score of 6, against three and 4
+before, because the sleep was cutting the script short.
+
+`npm run parity:soak` is the proof, and CI runs it nightly and on demand in
+its own job rather than on every push, so a slow proof never blocks a deploy.
+
 ---
 
 ## Scope discovered during Phase 3
@@ -136,24 +171,7 @@ blocking; it wants numbers, and it gets them when item 13 starts.
 - `voice.md` §2 reasoned from "1,000 names vs 768 pets"; with ~1,000 creatures
   the pool is no longer comfortably larger than the space. Superseded by the
   fixed-name ruling, which removes exhaustion entirely.
-- **Item 3 has not been done, and the parity gate has not flaked again.** It
-  passed first time on every run today. That is not evidence it is fixed.
-
-  A read-only look while waiting on a review turned up the likely cause, so it
-  is written down here rather than rediscovered. `tools/smoke/parity.mjs:208`
-  settles each step with a fixed `await wait(settleMs)`, and the two jsdom
-  instances run REAL timers concurrently. A scheduling hiccup on either one —
-  a GC pause, a busy machine — snapshots one DOM mid-settle while the other
-  has finished, which produces several spurious diffs at once and then clean
-  runs afterwards: exactly the signature that was seen. The seeded RNG is not
-  the culprit; `seededSource` is injected into each DOM separately, so they do
-  not share a stream.
-
-  The brief's own instruction is the fix: "isolate it with an explicit
-  wait-for-condition, not a sleep." Wait for each DOM to go QUIESCENT
-  independently — its own snapshot unchanged across consecutive polls, bounded
-  by a timeout — and only then compare. Waiting until the two agree would of
-  course mask the very differences the gate exists to find.
+*(The parity note that stood here is resolved — see item 3 below.)*
 
 ---
 
