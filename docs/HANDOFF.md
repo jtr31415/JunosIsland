@@ -193,6 +193,32 @@ service worker before verifying is doing real work, not ceremony.
   Disposing a cloned pet preview would break every other pet of that species,
   including ones she already owns. `stage.showTemp` detaches, never disposes,
   and there is a test asserting exactly that.
+- **A coast model's sand ramp is WIDER than its water arc.** `COAST_CANONICAL`
+  records only the water edges, and lining that arc up with the sea puts the
+  ramp's shoulders on the edges facing her fields — green meeting sand a tenth
+  of a unit lower. `COAST_EDGES` now records all three heights per edge and is
+  re-derived from the `.gltf` files by the test. `hex_coast_E` sounds like the
+  missing beach-all-round hex and is not: measured, it has no water edge at
+  all.
+- **A coast tile's neighbours include other coast tiles.** Scoring one tile
+  against the assumption that every wet neighbour is open water cliffs about a
+  tenth of water-to-water edges — most visibly in a pond three hexes in a row.
+  `looksFor` solves the whole island to a fixed point; `lookFor` is a
+  convenience that calls it. Do not reintroduce a per-tile version: two
+  functions means a test can check something the renderer does not do.
+- **A consequence of the green-edges-first rule, unresolved:** on a jagged
+  coastline the scorer will sometimes present LAND toward open water, since
+  land-at-sea is cheaper than sand-at-grass. That is a green wall rising out
+  of the sea, and in an alternating grass/water zigzag the water tile she
+  placed draws as mostly lawn. It follows from the rule as given. If it looks
+  wrong on the tablet, the fix is the weight in `mismatch`, not the algorithm.
+- **Keep-out radii must be measured, and measured at the right height.** Every
+  one of them used to be `hexSize × a guess`, always low: a mountain measuring
+  0.9 across declared 0.58, so pets walked into it. Scenery-versus-scenery uses
+  the full footprint; pet-versus-scenery uses `footprintBelow(o,
+  WALKING_HEIGHT)`, because a pet under a tree's canopy has not clipped
+  anything. And the clamp must add the pet's OWN radius — clamping a centre to
+  a surface buries half a pet in the rock.
 - **The service worker uses `skipWaiting` + `clientsClaim`.** `autoUpdate`
   alone waits for every tab to close, which produces phantom regressions —
   fixes demonstrably in the deployed JavaScript but not in what the browser
