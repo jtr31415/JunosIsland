@@ -393,8 +393,12 @@ export function createGrowingPlot(
           const fall = t * t
           // From where it has been hovering, not from an arbitrary ceiling.
           group.position.y = FLOAT_HEIGHT * (1 - fall)
-          // ...and swing in from the side, so it arcs rather than drops.
-          group.position.x = landReach * (1 - t) * (1 - t * 0.35)
+          /*
+           * ...and it comes IN FROM THE SIDE. The lateral travel eases out
+           * while the fall accelerates, so the path flattens as it arrives —
+           * a thing flying in and settling, rather than a thing dropped.
+           */
+          group.position.x = landReach * (1 - t) * (1 - t)
           group.scale.set(1, 1, 1)
         } else {
           /*

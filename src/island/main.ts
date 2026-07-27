@@ -175,11 +175,7 @@ async function boot(): Promise<void> {
       world.scene.add(plot.group)
     }
     plot.setProgress(state.sumProgress, sumsForTile(state))
-    /*
-     * A plot under construction ALWAYS hovers over its socket, whether or not
-     * she is mid-sum. It is a thing she is making, visible on her island —
-     * walking away to poke a pet should not put it away in a drawer.
-     */
+    // Hovering, so it reads as not-yet-placed wherever it is being shown.
     plot.float(true)
   }
 
@@ -486,13 +482,20 @@ async function boot(): Promise<void> {
      * world shows through the other. Nothing is drawn into that gap: the
      * stage slot is transparent, and what she sees there IS the island.
      */
-    const piece = kind === 'read' ? egg.group : null
-    stage.show(piece, world.scene)
-
-    if (kind === 'sum') { refreshDots(kind, state); return !!plot }
+    /*
+     * Both the egg and the tile go on the turntable — which is now a
+     * TRANSPARENT container, so they read as floating freely over her island
+     * rather than sitting in a box with its own grass and sky.
+     */
+    const piece = kind === 'read' ? egg.group
+      : kind === 'sum' ? plot?.group ?? null
+        : null
+    stage.show(piece ?? null, world.scene)
     if (!piece) return false
 
-    stage.frame(0.55)
+    // An egg stands up; a tile lies flat and wants looking down on.
+    if (kind === 'read') stage.frame(0.55)
+    else stage.frame(world.models.size, 0.15, 1.0)
     refreshDots(kind, state)
     return true
   }
@@ -777,8 +780,24 @@ async function boot(): Promise<void> {
           overlay.close()
           speech.speak('You counted us up some land!')
           fred.talk(2.2)
-          finished?.land(balance.stage.flyBackMs, world.models.size * 1.4)
+          /*
+           * In from the SIDE, to the socket she chose — never the middle.
+           * The plot group already sits at its own socket, so the arc is a
+           * lateral swing into it rather than a drop from overhead.
+           */
+          finished?.land(balance.stage.flyBackMs, world.models.size * 3)
+
+          /*
+           * Load the tile's real scenery WHILE it flies.
+           *
+           * props.sync fetches models one at a time, so a newly placed tile
+           * used to stand bare and then sprout trees over the following
+           * seconds. The flight is dead time that pays for exactly that, and
+           * the tile it lands as should be the tile it stays.
+           */
+          const dressed = props.sync(flow.island, world.models.size, world.surface)
           await wait(balance.stage.flyBackMs)
+          await dressed
 
           /*
            * Touchdown. The scaffolding goes and the real tile appears in the

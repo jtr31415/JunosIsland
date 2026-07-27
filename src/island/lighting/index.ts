@@ -32,7 +32,15 @@ export interface LightingPreset {
 
 export interface Lighting {
   /** Add to the scene once. */
-  attach(scene: THREE.Scene): void
+  /**
+   * Add the rig to a scene.
+   *
+   * `withSky` false gives the three lights and NO dome or fog — for a scene
+   * that must be transparent, so whatever is drawn behind it shows through.
+   * The challenge vignette needs exactly that: the object floating free over
+   * the real island, rather than sitting in a box with its own sky.
+   */
+  attach(scene: THREE.Scene, withSky?: boolean): void
   /** Swap preset, tweening numerically over ms. Single entry point (§5). */
   applyPreset(preset: LightingPreset, tweenMs?: number): void
   /** Call per frame to advance tweens and the slow time-of-day drift. */
@@ -172,10 +180,11 @@ export function createLighting(
   applyNumbers(initial, 1, initial)
 
   return {
-    attach(scene) {
-      scene.add(hemi, sun, rim, sky)
-      scene.fog = fog
-      // No setClearColor: the dome is the background (§6.5).
+    attach(scene, withSky = true) {
+      scene.add(hemi, sun, rim)
+      // No setClearColor: the dome is the background (§6.5) — where there is
+      // one. A transparent scene has no background of its own by design.
+      if (withSky) { scene.add(sky); scene.fog = fog }
     },
 
     applyPreset(next, tweenMs = 0) {

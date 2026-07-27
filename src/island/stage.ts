@@ -160,7 +160,15 @@ export function createStage(): Stage {
    * tuned by eye would drift from the lighting brief the moment either moved.
    */
   const lighting = createLighting(null, meadowDay as LightingPreset)
-  lighting.attach(scene)
+  /*
+   * Lights only — no sky dome, no fog, no ground.
+   *
+   * Joe: "the tile / egg is in a transparent container, so it looks like it
+   * floats freely." Everything the vignette used to stand on was a box around
+   * the object, and a box is the one thing it must not have: what belongs
+   * behind it is her island, which is already being drawn there.
+   */
+  lighting.attach(scene, false)
 
   /*
    * Far plane BEYOND the sky dome, which the rig builds at radius 220.
@@ -179,39 +187,6 @@ export function createStage(): Stage {
   const turntable = new THREE.Group()
   turntable.name = 'turntable'
   scene.add(turntable)
-
-  /*
-   * A small plinth, so the piece stands on something rather than floating.
-   *
-   * SIZED TO THE GUEST, in frame(). At a fixed radius it was built for a hex,
-   * and under an egg — a third the width — it filled the lower half of the
-   * vignette and read as a beige desert the egg happened to be sitting in.
-   */
-  const plinth = new THREE.Mesh(
-    new THREE.CylinderGeometry(1, 1.08, 0.12, 24),
-    new THREE.MeshStandardMaterial({ color: 0x66b83f, metalness: 0, roughness: 1 }),
-  )
-  turntable.add(plinth)
-
-  /*
-   * A patch of ground under everything.
-   *
-   * Without one the sky dome's LOWER hemisphere fills the bottom of the
-   * vignette — in the world the sea covers that, and the stage has no sea, so
-   * the first version framed the egg against a beige desert. Grass, in the
-   * Summer atlas's own green, so the turntable reads as a corner of her
-   * island lifted up for a closer look.
-   *
-   * Outside the turntable, so it does not spin: rotating ground is a
-   * fairground ride, and this is meant to be somewhere she recognises.
-   */
-  const ground = new THREE.Mesh(
-    new THREE.CircleGeometry(1, 48),
-    new THREE.MeshStandardMaterial({ color: 0x59a43c, metalness: 0, roughness: 1 }),
-  )
-  ground.rotation.x = -Math.PI / 2
-  ground.position.y = -0.08
-  scene.add(ground)
 
   /*
    * The hatch burst, built once and replayed. Building it on demand would
@@ -300,12 +275,6 @@ export function createStage(): Stage {
 
     frame(radius, lookHeight = 0.8, eyeHeight = 1.2) {
       // A saucer just wider than the piece, never a landscape of its own.
-      const disc = Math.max(0.35, radius * 1.35)
-      plinth.scale.set(disc, 1, disc)
-      plinth.position.y = -0.06
-      // Wide enough that the horizon stays out of frame at any framing.
-      ground.scale.setScalar(Math.max(24, radius * 40))
-
       /*
        * Pull back far enough that the piece sits inside the vignette with air
        * around it — an egg and a full hex differ by three times — and keep
@@ -373,10 +342,18 @@ export function createStage(): Stage {
       camera.aspect = rect.width / rect.height
       camera.updateProjectionMatrix()
 
+      /*
+       * DO NOT CLEAR. The world was drawn a moment ago and is what belongs
+       * behind the guest; clearing would paint a rectangle of nothing over
+       * her island and put the box back.
+       */
+      const wasAutoClear = renderer.autoClear
+      renderer.autoClear = false
       renderer.setScissorTest(true)
       renderer.setViewport(rect.x, y, rect.width, rect.height)
       renderer.setScissor(rect.x, y, rect.width, rect.height)
       renderer.render(scene, camera)
+      renderer.autoClear = wasAutoClear
 
       // Hand the whole canvas back, in the same units, or the next world
       // frame draws into this corner.
@@ -388,10 +365,6 @@ export function createStage(): Stage {
     dispose() {
       if (temp) { temp.removeFromParent(); temp = null }
       if (guest && guestHome) { guestHome.add(guest); guest.position.copy(guestAt) }
-      plinth.geometry.dispose()
-      ;(plinth.material as THREE.Material).dispose()
-      ground.geometry.dispose()
-      ;(ground.material as THREE.Material).dispose()
       sparks.traverse(o => {
         const m = o as THREE.Mesh
         if (!m.isMesh) return
