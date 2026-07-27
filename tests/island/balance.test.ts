@@ -55,12 +55,34 @@ describe('the cost curve', () => {
 })
 
 describe('page kinds', () => {
-  it('alternates find and build so practice is never all one shape', () => {
-    // §3: pages alternate roughly 50/50
+  it('gives three builds to every find, at least', () => {
+    /*
+     * Joe, from playtesting: "on the reading challenges, we deff ned to have a
+     * word build to word find ratio of 3:1 or higher."
+     *
+     * This OVERRIDES slice-1 §3's "pages alternate roughly 50/50", which is what
+     * this test used to encode. Recorded rather than quietly replaced, because
+     * the spec still says 50/50 and the next person to read it deserves to know
+     * which one won. Building a word is the harder and more useful exercise;
+     * finding one is recognition.
+     *
+     * Stated as a RATIO over the whole cycle rather than as an exact sequence,
+     * so the mix can be retuned by eye without a test failing for no reason —
+     * what must not silently revert is the balance of practice.
+     */
+    const cycle = balance.pages.mix.length
+    const kinds = Array.from({ length: cycle }, (_, i) => pageKind(i))
+    const builds = kinds.filter(k => k === 'build').length
+    const finds = kinds.filter(k => k === 'find').length
+    expect(finds, 'a cycle with no find at all is not practice, it is drilling')
+      .toBeGreaterThan(0)
+    expect(builds / finds).toBeGreaterThanOrEqual(3)
+  })
+
+  it('still opens on a find, because the first egg is one scripted word', () => {
+    // §1 beat 2: the opening hands her a single word to FIND. Whatever the
+    // ratio becomes, page zero is the one page the script depends on.
     expect(pageKind(0)).toBe('find')
-    expect(pageKind(1)).toBe('build')
-    expect(pageKind(2)).toBe('find')
-    expect(pageKind(3)).toBe('build')
   })
 
   it('the first egg is a single page, so its only page is a find', () => {
