@@ -23,8 +23,8 @@ here (brief §18).
 | **3** | Parity gate deflake | **Done.** 50/50 green in 399s. |
 | **4** | Channels & flags | **Done.** Needs Joe's first release tag to mean anything. |
 | **5** | Cube-pet material autopsy | **Done.** `npm run pets:atlas`; finding in HANDOFF §6. |
-| **6** | Sets & the variant engine | **Done bar wiring**, and **wants Joe's veto**. |
-| 7 | Progressive album + set unlocks | **Next.** Owns wiring variants onto live pets. |
+| **6** | Sets & the variant engine | **Done bar wiring.** Colours **accepted** by Joe; eye-whites and pupils in hand. |
+| 7 | Progressive album + set unlocks | **Next.** Owns wiring variants onto live pets, and now owns a **shorter ladder** — see below. |
 | 8 | Habitats, nursery, wants | Not started. |
 | 9 | Pet quests v1 | Not started. |
 | 10 | Daily visitor | Not started. |
@@ -45,13 +45,16 @@ here (brief §18).
    exists production falls back to main, so the split is real in the machinery
    and not yet in what Juno plays. He has said this is 2–3 days out and to keep
    building meanwhile.
-2. **The Pet-o-matic veto.** `npm run dev` → `/?petomatic&only=petOMatic`.
-   Twelve bold colours × solid/stripy/spotty. Unjudged: whether the stripe
-   pitch reads as stripes or as noise at pet scale, and whether these are the
-   right twelve colours.
-3. **Everything visual from the last stretch is unjudged by eye** — the rebuilt
-   egg, the coast fix, one-tap tile siting, and the new grown-ups PIN keypad
-   and menu. All are tested; none has been looked at.
+2. **The Pet-o-matic veto is DONE.** Joe's verdict on 27 July: the four
+   base-coat faults are fixed and *"rest of the animal colouring slice is
+   accepted"*. The remaining eye-white and pupil work is specified and in hand.
+3. **Enclosed ponds are no longer constructible**, and that is a gameplay change
+   he should veto if it is wrong. Confining water to the 19 drawable
+   neighbourhoods is what lets the water cell carry its whole beach, which is
+   what keeps her fields from being re-cut — but it means water grows as
+   coastline and never as a hole in the middle of her island.
+4. **Still unjudged by eye:** the rebuilt egg, one-tap tile siting, and the
+   grown-ups PIN keypad and menu. Tested, never looked at.
 
 ## One question to settle before item 13
 
@@ -64,6 +67,28 @@ today's pace. Either the cost curve re-bases or session length halves. This
 wants numbers, not a decision in the abstract.
 
 ---
+
+## 27 July: the Pet-o-matic verdict, and the coast settled
+
+Three commits, each with all six gates green.
+
+**The pets take their colour properly now.** Four faults Joe reported — panda,
+bee, cow, penguin — had one cause between them, and it was the picker counting
+vertices rather than surface area (HANDOFF §6). The penguin was a second bug:
+normalising against a hue window rather than its own colours pinned it at the
+bottom of the ramp. Fixing that revealed a third, contour banding on solid sets,
+because the same normalisation amplifies a narrow-range coat 4.8×. Dots are gone
+— provably unbuildable in this atlas — the stripe pitch was chosen against the
+measured triangle span, and emerald, sky and bluebell were retuned. Verdict:
+*"rest of the animal colouring slice is accepted."*
+
+**The offer can be escaped and can be read.** A backdrop tap returns to the
+island without costing a thing. And the question was invisible the whole time the
+buttons were up, because the CSS hides the say card while any overlay is open.
+
+**The coastline is settled by placement rather than patched by scoring**, which
+is what let Joe's "never a full land tile against a coast tile" hold without
+re-cutting land she has paid for. See the limits section for what it costs.
 
 ## What the last stretch changed
 
@@ -117,19 +142,33 @@ buttons with their consequences, red buttons for the two irreversible things.
 
 ## Known limits, honestly
 
-- **The coast has a measured ceiling, not a clean win.** Walls (land in the
-  water) and cliffs (water against her grass) trade against each other: raising
-  the wall cost from 40 to 100 cuts walls 37→11 but takes cliffs 1→24. Ordinary
-  ponds are clean; an L-bend or three-hex channel keeps one fault, because no
-  model in the pack has four land edges. The measurement is in the test so the
-  next person to reach for that number sees the price first.
+- **The coast ceiling is gone, and the price is enclosed ponds.** The old trade
+  — walls against cliffs, one fault surviving on an L-bend — is retired, because
+  the shapes that caused it are no longer buildable. Exactly 19 of the 64 water
+  neighbourhoods can be drawn cleanly, and placement is now confined to those, in
+  both directions: grass that would break a neighbouring pond is refused too, and
+  a socket that admits neither kind no longer glows. A played-island test builds
+  120 islands through the real tap path and asserts not one bad joint. What it
+  costs is a pond in the middle of her fields, which cannot be made at all.
+- **The ladder is 600 creatures, not ~1,000.** The twelve spotted sets are gone:
+  every one of them rendered as stripes, and the atlas provably cannot express a
+  spot (HANDOFF §6). Twenty-five sets across 24 species is 600. Item 7 has to
+  face that rather than pad it with dilute palettes — that was the first pass and
+  Joe rejected it.
 - **Per-species textures.** Item 6 builds one texture per (set, species) on
   demand. Fine for the Pet-o-matic; **watch it on the tablet** once a child owns
   many pets across many sets. If it bites, cap the cache — do not change the
   rule.
-- **Eye-whites get faintly tinted** by a set. Forced: the models have no
-  separate face mesh and no texel belongs only to faces, so the only way to keep
-  whites white is to keep white animals white.
+- **Eye-whites and pupils — the "forced trade" was not forced.** The old claim
+  here was that whites could only stay white by keeping white animals white. That
+  is true of every rule expressed in COLOUR: protecting the shared sclera texels
+  costs a polar bear 25% of its surface, and protecting achromatic pixels costs
+  it 69.7%. It is false of rules expressed in GEOMETRY. The face decals are a
+  separate flat sheet in front of the head, selectable by topology and normal with
+  huge margins, and two of the nine unsampled atlas swatch columns can be reserved
+  for them — ~1.7% of area frozen, zero extra GPU bytes, no shader. Measured 0
+  drift across 114,975 checks. Being implemented; **not yet seen in a browser**,
+  which is its one real risk.
 - **Item 3 fixed the flake but the soak runs nightly**, not per push. A single
   green parity run has never been evidence here.
 - **`docs/nextphase.zip`** is still in the repo, uncommitted and now redundant.

@@ -329,6 +329,95 @@ service worker before verifying is doing real work, not ceremony.
   alone waits for every tab to close, which produces phantom regressions —
   fixes demonstrably in the deployed JavaScript but not in what the browser
   runs.
+- **The pack's "black" is `#4d515f`, and it is not black.** A dark blue-grey:
+  max channel 95, so it clears `SOUL_VALUE` (78); saturation 0.19, so it clears
+  `MARKING_SATURATION` (0.12). It therefore qualifies as a BASE COAT, and it is
+  also the colour of nearly every leg mesh, every hoof and every outline. Raising
+  either threshold to exclude it would stop the penguin, cat, koala and elephant
+  changing colour at all, because it is genuinely their coat.
+- **Weight a species' colours by SURFACE AREA, never by vertex count.** Fiddly
+  detail carries far more vertices per unit of visible animal than a broad coat
+  does: a panda's white torso is a handful of large quads while its black ears
+  and eye patches are many small faces, so counting vertices gave black 798 to
+  white 128 on an animal that is mostly white. Four legs and a nose likewise
+  outvoted the cow. `tools/pets/atlas.mjs` measures triangle area now and skips
+  the extremity meshes (`leg-*`, `wing-*`, `tail`). The bee is decided 53% to 46%
+  and the tool prints the margin, so a re-export that flips it is visible.
+- **The pet atlas carries no positional information, at all.** Measured over all
+  15,333 triangles in the pack: u-span is **0.00 pixels** — every triangle sits
+  inside a single column — and atlas v correlates with local vertex position at
+  r = 0.015 (x), −0.081 (y), −0.011 (z). So v is the shade the artist assigned a
+  face, not where that face is on the animal. Consequences: **spots are not
+  expressible** (the old dotty rule's x term was constant per triangle and
+  collapsed to stripes, which is why every "Spotty" set was striped), and any
+  atlas pattern is a function of SHADE, which is why stripes follow the form like
+  corrugation. Real spots need object-space in a shader, or per-part meshes.
+- **Normalising a species onto its own colour range AMPLIFIES.** It is the right
+  fix for "the penguin stays dark" — its coat occupies value 0.31–0.39 and a hue
+  window swept up the elephant's 0.90, pinning it at the bottom of the ramp. But
+  a polar bear's coat spans 0.137, so stretching it over a 0.66-wide ramp is a
+  gain of 4.8, and the atlas's own gradient steps come up with it as horizontal
+  contour banding — visible on SOLID sets, and reading as exactly the corrugation
+  the stripes were criticised for. `CONTRAST_REFERENCE` caps the gain and centres
+  the coat on the ramp instead. Centred is what makes a colour visible; stretched
+  is what makes it stripy.
+- **Stripe pitch has to be chosen against the geometry, not by taste.** Triangle
+  v-span is 16.8 atlas rows at the median and 81.5 at p90, so a pitch of 6 puts
+  1.4 cycles across a median face and reads as knitwear, while 40 puts most faces
+  inside one band and vanishes into the solid set. 14 gives a body three to five
+  broad bands. Checked by eye at all three.
+- **Eye-whites cannot be protected in texel space, and the number proves it.**
+  22–23 of 24 species share `#f8f8fb`, `#f2f2f7` and `#e6e6ef` at u=112 — plainly
+  the sclera — but freezing them costs the polar bear 25% of its surface area, the
+  cow 19% and the penguin 28% on the dark equivalents. Eyes are a few percent of
+  an animal; a quarter means the torso samples the identical texels. A colour rule
+  is worse still: achromatic area NOT on a decal is 69.7% of a polar bear. **The
+  answer is geometric, not chromatic** — the face decals are a separate flat
+  sheet 0.01 units in front of the head, selectable by "planar connected component
+  with area-weighted normal nz ≥ 0.9998", which picks exactly the 63 decals with
+  enormous margins. Nine 32-wide atlas swatch columns are sampled by nothing, so
+  two can be reserved and the decal UVs repointed at them. Costs ~1.7% of area
+  frozen and zero extra GPU bytes, because decal UVs are a fact about the SPECIES
+  and the shared geometry is patched once.
+- **Only 19 of the 64 possible water neighbourhoods can be drawn cleanly.**
+  Nought to three green edges, and the green ones forming a SINGLE contiguous arc.
+  Four or more is arithmetic — no model has four land edges — and a split arc
+  fails because every model's water is one unbroken run, so its land must be too.
+  This is why the coastline is now constrained at PLACEMENT rather than patched in
+  the scorer, and why "the coast belongs to the water" survives: confine water to
+  those 19 and the water cell always carries its whole beach, so no land tile ever
+  needs one and no field is re-cut behind her.
+- **Constraining water alone is not enough — the guard must be symmetric.**
+  Dropping GRASS beside a pond adds a green edge to a tile already drawn, and a
+  pond that was fine at three fields has no orientation at four. Two further holes
+  found the same way: `mustBeWater` short-circuiting ahead of the feasibility
+  check forced water into undrawable shapes, and sockets that admit NEITHER kind
+  fell back to grass, which was itself the violation. Those sockets no longer glow.
+- **Judge cleanliness on neighbours' TYPES and rank on how they are DRAWN.**
+  Asking whether a tile can be clean of the drawing is circular — it would depend
+  on looks chosen by asking the same question next door, which is what produced
+  "shows sand at edge 3 against land" on a played island. Types are the hard rule;
+  the old cost table survives as a tie-break over drawn edges, and that is what
+  keeps the whole-island sweep earning its place for shapes a child cannot build
+  but an edited save could still contain.
+- **Test the coastline by BUILDING islands, not by constructing them.** Three of
+  the four faults above passed every unit test that assembled a `Map` of tiles
+  directly, and only appeared when the test played 120 islands through the real
+  tap path — `askForLand`, `tileOffer`, `chooseTile`, `placeTile`, sums to
+  completion. Constructing an island tests the scorer; building one tests the
+  promise.
+- **`body:has(.overlay:not(.hide)) .say` hides the say card whenever ANY overlay
+  is open** — and the tile offer is an overlay. So copy set with `overlay.say()`
+  while the offer is up is invisible: the question "Which tile would you like?"
+  could not be read for exactly as long as the buttons asking it were on screen.
+  Measured in the browser before believing it. Anything that must be readable
+  alongside a panel belongs INSIDE the panel. The mirror also bites — dismissing
+  an overlay REVEALS whatever copy was set behind it, so a dismissal has to clear
+  it.
+- **Do not rewrite source files with Python text mode on Windows.** `open(p)` then
+  `open(p,'w')` translates LF to CRLF on write, which silently reflows the whole
+  file and broke `tests/island/barrier.test.ts`, whose assertion contains `'\n'`.
+  Write bytes (`'rb'`/`'wb'`) or pass `newline='\n'`.
 
 ---
 
