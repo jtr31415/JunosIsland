@@ -490,6 +490,21 @@ export function createPropField(base = ''): PropField {
         const h = hash(a)
 
         /*
+         * Is this tile actually THERE yet?
+         *
+         * Everything below asks the surface — a raycast against the tile
+         * meshes — where it may plant. If the tile field has not been synced
+         * with this hex, every probe says "no ground", every piece is
+         * rejected, and marking the tile done would leave it permanently
+         * bare: a tile that lost its one chance to a render-order mistake.
+         *
+         * So a tile with no ground under its own centre is simply left for
+         * next time, and the next sync dresses it properly.
+         */
+        const home = toWorld(a, hexSize)
+        if (surface.groundAt(home.x, home.z) === 'none') continue
+
+        /*
          * The home rock is DRESSED, not skipped.
          *
          * It used to grow nothing at all, so while every other tile had cover
@@ -515,7 +530,7 @@ export function createPropField(base = ''): PropField {
          */
         const character = characterOf(a)
         const spec = pick(FEATURES[character], h)
-        const w = toWorld(a, hexSize)
+        const w = home
 
         if (!spec.name) {
           placed.add(k)

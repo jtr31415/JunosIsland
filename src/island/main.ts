@@ -794,13 +794,22 @@ async function boot(): Promise<void> {
           finished?.land(balance.stage.flyBackMs, world.models.size * 3)
 
           /*
-           * Load the tile's real scenery WHILE it flies.
+           * Put the real hex on the island NOW, then dress it while it flies.
            *
-           * props.sync fetches models one at a time, so a newly placed tile
-           * used to stand bare and then sprout trees over the following
-           * seconds. The flight is dead time that pays for exactly that, and
-           * the tile it lands as should be the tile it stays.
+           * The order is the whole fix. props.sync asks the SURFACE what the
+           * ground is doing before it plants anything, and the surface is a
+           * raycast against the tile meshes — so syncing props before the
+           * tile field knew about the new hex found no ground at all,
+           * rejected every piece, and marked the tile done. It could then
+           * never grow anything: the scaffolding's props vanished with the
+           * scaffolding and nothing replaced them.
+           *
+           * Revealing the hex first is safe now that it is being flown INTO
+           * rather than dropped onto: the scaffolding descends onto its own
+           * finished tile and is removed at touchdown, which reads as
+           * settling into place rather than as a duplicate.
            */
+          world.setIsland(flow.island)
           const dressed = props.sync(flow.island, world.models.size, world.surface)
           await wait(balance.stage.flyBackMs)
           await dressed
