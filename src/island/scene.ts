@@ -109,6 +109,19 @@ export interface World {
    * on purpose. Wired to the same lock/unlock every ceremony already uses.
    */
   holdCamera(on: boolean): void
+  /**
+   * How far the camera is from the point it is looking at, in world units.
+   *
+   * The one number that says how big a world unit is on screen right now, and
+   * the only thing anyone outside `camera.ts` needs in order to size something
+   * in PIXELS. `pets.ts` sizes its tap proxies against it — a fixed world
+   * radius is a target that shrinks as `frame()` pulls back on her growing
+   * island, which is the state where she has most animals to go looking for.
+   *
+   * Read off the live camera rather than the eased goal: what she can hit has
+   * to match what she can see, including mid-pinch.
+   */
+  cameraDistance(): number
   showSockets(v: boolean): void
   pick(clientX: number, clientY: number): Hit | null
   worldOf(a: Axial): THREE.Vector3
@@ -207,6 +220,11 @@ export async function createWorld(canvas: HTMLCanvasElement): Promise<World> {
     focusOn(point: THREE.Vector3) { camera.lookAt(point) },
 
     holdCamera(on: boolean) { camera.hold(on) },
+
+    // The pivot is where the camera is pointed, so this is the distance the
+    // frustum's width is proportional to — not `position.length()`, which was
+    // the same thing only while the pivot sat at the origin for ever.
+    cameraDistance: () => camera.camera.position.distanceTo(camera.pivot()),
 
     showSockets(v: boolean) { socketField.setVisible(v) },
 

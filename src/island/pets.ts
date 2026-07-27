@@ -63,6 +63,17 @@ export const FLYERS: ReadonlySet<string> = new Set(['animal-bee', 'animal-parrot
 export const TREE_HEIGHT = Math.max(FITS.feature[1], FITS.grown[1])
 
 /**
+ * How fast a flyer's wings beat, in radians of phase per second.
+ *
+ * Fast and shallow against a bob that is small and slow — that contrast is what
+ * reads as hovering rather than floating. Exported so a test can sample a whole
+ * wingbeat rather than copy the number and drift from it: two instants picked
+ * without knowing the period can straddle a turning point and find no movement
+ * in a wing that is beating perfectly well.
+ */
+export const WINGBEAT = 14
+
+/**
  * The shot a tap target is sized against, and a real touch-target standard.
  *
  * Joe, watching her play: "the tap area for a spawn animal needs to be a bit
@@ -89,10 +100,8 @@ export const TREE_HEIGHT = Math.max(FITS.feature[1], FITS.grown[1])
  *   a test that constructs the real orbit camera and pins both, so a change of
  *   framing over there cannot silently shrink the target over here.
  *
- * A world-unit size does mean the target shrinks as the camera pulls back on a
- * growing island. That is accepted: `frame()` clamps the pull-back at 26 units
- * and she can pinch in, and a target that grew with distance would eventually
- * be wider than the hex the pet is standing on.
+ * `distance` is therefore the shot this is CALIBRATED at, not the only shot it
+ * holds at — see `pickRadiusAt`.
  */
 export const TAP_TARGET = {
   px: 48,
@@ -113,6 +122,32 @@ export const TAP_TARGET = {
 export const PICK_RADIUS =
   (TAP_TARGET.px / TAP_TARGET.viewportPx) * TAP_TARGET.distance
   * Math.tan((TAP_TARGET.fov * Math.PI) / 360)
+
+/**
+ * The same 48 pixels, in world units, at whatever distance the camera is now.
+ *
+ * A FIXED world radius is a shrinking tap target, and it shrinks exactly when
+ * she needs it most. `frame()` pulls the camera back as her island grows, and
+ * the frustum is proportional to distance, so a sphere that answers to 47.5px
+ * at the opening shot answers to 39px at fifteen tiles and **26px at the
+ * 26-unit clamp** — a whisker off the 20.5px bug the proxy was added to fix,
+ * on the late-game island that is full of animals to go looking for. Fable
+ * found it; the arithmetic is `0.357 × 26/14`.
+ *
+ * So the radius is scaled by the camera's own distance, which makes the target
+ * the same SIZE OF FINGER at every shot — which is what "48dp" meant in the
+ * first place. Zooming in shrinks it in world units too, and that is right for
+ * the same reason: 48 pixels is 48 pixels, and it stops a pinched-in pet
+ * swallowing the tile it stands on.
+ *
+ * **No cap is needed, and this is why.** At the 26-unit clamp the radius is
+ * 0.66 units, still inside the hex's own incircle (1.0 at `hexSize` 1.1545),
+ * so even at the furthest shot the game allows, a pet cannot reach across onto
+ * a neighbouring tile. The pull-back is clamped and the target is bounded by it.
+ */
+export function pickRadiusAt(cameraDistance: number): number {
+  return PICK_RADIUS * (cameraDistance / TAP_TARGET.distance)
+}
 
 /**
  * One geometry and one material for every pet's tap proxy, in the whole game.
@@ -155,11 +190,14 @@ let proxyMat: THREE.MeshBasicMaterial | undefined
  * ## Measured, then floored
  *
  * The radius is the half-diagonal of the creature's OWN measured box — so the
- * proxy always contains the pet, whatever the pack does next — or `PICK_RADIUS`
- * if that is bigger, which for all 24 species today it is. No fixed factor and
- * no single dimension anywhere in it (HANDOFF §5).
+ * proxy always contains the pet, whatever the pack does next — or a finger's
+ * width at the current shot if that is bigger, which for all 24 species at
+ * every distance the camera can reach it is. No fixed factor and no single
+ * dimension anywhere in it (HANDOFF §5).
+ *
+ * The floor MOVES, because the shot does: see `pickRadiusAt` and `sizeProxy`.
  */
-function pickProxy(body: THREE.Box3, pick: unknown): THREE.Mesh {
+function pickProxy(body: THREE.Box3, pick: unknown, cameraDistance: number): THREE.Mesh {
   proxyGeo ??= new THREE.SphereGeometry(1, 16, 12)
   proxyMat ??= new THREE.MeshBasicMaterial({
     colorWrite: false,
@@ -168,18 +206,45 @@ function pickProxy(body: THREE.Box3, pick: unknown): THREE.Mesh {
     opacity: 0,
     side: THREE.DoubleSide,
   })
-  const half = body.getSize(new THREE.Vector3()).multiplyScalar(0.5)
   const proxy = new THREE.Mesh(proxyGeo, proxyMat)
   proxy.name = 'pet-pick'
   proxy.position.copy(body.getCenter(new THREE.Vector3()))
-  proxy.scale.setScalar(Math.max(half.length(), PICK_RADIUS))
+  sizeProxy(proxy, bodyHalfOf(body), cameraDistance)
   // The same answer the holder gives, so `nearestPickable` needs no walk up.
   proxy.userData.pick = pick
+  /*
+   * And a declaration that this is a stand-in rather than a thing.
+   *
+   * `picking.ts` answers with whatever is nearest the camera, which is the
+   * right rule for objects she can SEE and the wrong one for a shell she
+   * cannot: a pet standing beside the egg puts an invisible sphere in front of
+   * it, so a tap on the egg bounced the pet instead of opening the round —
+   * on "the one thing on the island she is always meant to be able to reach".
+   * Flagged rather than sniffed out of the material, because `colorWrite`
+   * false is how it draws nothing, not what it means.
+   */
+  proxy.userData.proxy = true
   // Nothing invisible should throw anything. There are no shadow maps in this
   // game at all, but a rig that ever gains one must not find this.
   proxy.castShadow = false
   proxy.receiveShadow = false
   return proxy
+}
+
+/** The half-diagonal of a creature's own measured box. */
+function bodyHalfOf(body: THREE.Box3): number {
+  return body.getSize(new THREE.Vector3()).multiplyScalar(0.5).length()
+}
+
+/**
+ * Fit a proxy to its creature and to the shot, in that order of precedence.
+ *
+ * Separated out from `pickProxy` because it is called again every time the
+ * camera's distance changes, which on a growing island is most frames of a
+ * re-frame and every frame of a pinch.
+ */
+function sizeProxy(proxy: THREE.Mesh, bodyHalf: number, cameraDistance: number): void {
+  proxy.scale.setScalar(Math.max(bodyHalf, pickRadiusAt(cameraDistance)))
 }
 
 interface Live {
@@ -208,9 +273,59 @@ interface Live {
   flying: boolean
   /** The wing nodes, if this one has any, so a hover looks like flying. */
   wings: THREE.Object3D[]
+  /** The invisible sphere that answers taps for it. Re-sized with the shot. */
+  proxy: THREE.Mesh
+  /**
+   * Half the diagonal of the creature's own box, measured once at load.
+   *
+   * Kept so the proxy can be re-sized without re-measuring — and re-measuring
+   * is exactly what must not happen, because by then the proxy is INSIDE the
+   * box and a creature would grow its own tap target every frame.
+   */
+  bodyHalf: number
 }
 
 export interface Obstacle { x: number; z: number; r: number }
+
+/**
+ * How many times `clearOf` will re-ask before it settles for what it has.
+ *
+ * Two overlapping keep-outs are resolved exactly, in one pass, by the crossing
+ * below — the passes are headroom for three or more piled on the same spot,
+ * which the scenery does not build but an egg beside a rock beside Fred could.
+ * Bounded on purpose: a pet wedged in a corner where no clear point exists must
+ * cost one frame's arithmetic, not a hang.
+ */
+export const CLEAR_PASSES = 4
+
+/**
+ * Where two keep-out circles cross, whichever crossing is nearer `from`.
+ *
+ * Null when there is no crossing to slide to: circles that do not reach each
+ * other, or one swallowed whole by the other. Both mean the boundary of `a`
+ * has no point clear of `b`, so the caller must push out of `b` instead.
+ */
+function crossing(
+  a: Obstacle, ka: number, b: Obstacle, kb: number, fx: number, fz: number,
+): { x: number; z: number } | null {
+  const dx = b.x - a.x
+  const dz = b.z - a.z
+  const d = Math.hypot(dx, dz)
+  if (d < 1e-6 || d > ka + kb || d < Math.abs(ka - kb)) return null
+  // Standard circle-circle intersection: t along the centre line, h across it.
+  const t = (ka * ka - kb * kb + d * d) / (2 * d)
+  const h2 = ka * ka - t * t
+  if (h2 <= 0) return null
+  const h = Math.sqrt(h2)
+  const mx = a.x + (dx / d) * t
+  const mz = a.z + (dz / d) * t
+  const px = (-dz / d) * h
+  const pz = (dx / d) * h
+  const one = { x: mx + px, z: mz + pz }
+  const two = { x: mx - px, z: mz - pz }
+  return Math.hypot(one.x - fx, one.z - fz) <= Math.hypot(two.x - fx, two.z - fz)
+    ? one : two
+}
 
 /**
  * Move a point out of anything it is standing inside, onto the boundary.
@@ -230,19 +345,70 @@ export interface Obstacle { x: number; z: number; r: number }
  * clipping. Clamping a pet's centre to the surface of a rock buries half a pet
  * in the rock; what has to touch is the two surfaces, not a point and a
  * surface. Joe's rule: a hard collision on the SURFACES of any moving object.
+ *
+ * ## Overlapping keep-outs, which is where this used to lose
+ *
+ * Clamping out of each obstacle IN LIST ORDER quietly undoes itself wherever
+ * two keep-outs overlap: the pet is pushed onto the first circle, lands inside
+ * the second, is pushed onto the second — and that push puts it back inside the
+ * first. The last clamp wins and the pet is left buried in something. It fired
+ * about one run in twelve of the "keeps the scenery solid as well, not instead"
+ * test, on the random goal directions that aim the pet into the overlap.
+ *
+ * Order is therefore not list order but DEPTH: resolve whatever the pet is
+ * furthest inside. And a push that lands inside something else is not left
+ * there — the pet slides along the circle it was just put on until it reaches
+ * the point where the two boundaries CROSS, which is by construction clear of
+ * both. That is exact for two, so the ordinary case is solved rather than
+ * iterated at; the passes above are for a genuine pile-up.
+ *
+ * It is not a promise. Three or more mutually overlapping keep-outs can leave
+ * a residue, and a pet in a pocket with no clear point at all has nowhere to be
+ * put. Bounded work, best effort, and never a hang.
  */
 export function clearOf(
   pos: THREE.Vector3, obstacles: readonly Obstacle[], self = 0,
 ): void {
-  for (const ob of obstacles) {
-    const keep = ob.r + self
-    const dx = pos.x - ob.x
-    const dz = pos.z - ob.z
+  // Where it wanted to be. Every crossing is judged against this, so a pet
+  // comes out of a pinch on the side it walked in from.
+  const fx = pos.x
+  const fz = pos.z
+
+  for (let pass = 0; pass < CLEAR_PASSES; pass++) {
+    /** The obstacle the pet is deepest inside, if any. */
+    let worst: Obstacle | undefined
+    let deepest = 0
+    for (const ob of obstacles) {
+      const into = ob.r + self - Math.hypot(pos.x - ob.x, pos.z - ob.z)
+      if (into > deepest) { deepest = into; worst = ob }
+    }
+    if (!worst) return                       // standing clear of everything
+
+    const keep = worst.r + self
+    const dx = pos.x - worst.x
+    const dz = pos.z - worst.z
     const d = Math.hypot(dx, dz)
-    if (d >= keep) continue
-    if (d < 1e-4) { pos.x = ob.x + keep; continue }  // dead centre: any way out
-    pos.x = ob.x + (dx / d) * keep
-    pos.z = ob.z + (dz / d) * keep
+    if (d < 1e-4) {                          // dead centre: any way out
+      pos.x = worst.x + keep
+      pos.z = worst.z
+    } else {
+      pos.x = worst.x + (dx / d) * keep
+      pos.z = worst.z + (dz / d) * keep
+    }
+
+    // Landed inside something else? Slide round to where the two boundaries
+    // cross rather than clamping again and undoing this one.
+    let second: Obstacle | undefined
+    let over = 0
+    for (const ob of obstacles) {
+      if (ob === worst) continue
+      const into = ob.r + self - Math.hypot(pos.x - ob.x, pos.z - ob.z)
+      if (into > over) { over = into; second = ob }
+    }
+    if (second) {
+      const at = crossing(worst, keep, second, second.r + self, fx, fz)
+      if (at) { pos.x = at.x; pos.z = at.z }
+    }
   }
 }
 
@@ -293,6 +459,21 @@ export interface PetField {
   /** Trees and rocks to walk around rather than through. */
   setObstacles(list: Obstacle[]): void
   /**
+   * How far the camera is from what it is looking at, this frame.
+   *
+   * Called from the frame loop, because the answer changes with every pinch
+   * and with every tile she builds — `frame()` pulls back as the island grows.
+   * The tap proxies are re-sized so a pet stays a finger wide ON SCREEN at any
+   * shot, rather than a fixed lump of world that shrinks to 26px by the time
+   * her island is big enough to be worth walking round (`pickRadiusAt`).
+   *
+   * It re-sizes the PROXIES and nothing else. A pet's keep-out radius and the
+   * stretch of its blob are measured once in `sync`, from a box taken before
+   * the proxy is attached, and neither is touched here — a camera that pulled
+   * back must not give a chick an elephant's keep-out or a longer shadow.
+   */
+  setCameraDistance(d: number): void
+  /**
    * Things that are solid AND move, asked afresh every frame.
    *
    * Fred. He is the only one, and he was the whole of Joe's "animals can still
@@ -328,6 +509,13 @@ export function createPetField(base = ''): PetField {
   const live = new Map<string, Live>()
   let obstacles: Obstacle[] = []
   let movers: () => readonly Obstacle[] = () => []
+  /**
+   * The shot the tap targets are currently sized for.
+   *
+   * Starts at the distance `TAP_TARGET` is calibrated at, so a field nobody
+   * tells about the camera behaves exactly as it did before this existed.
+   */
+  let cameraDistance: number = TAP_TARGET.distance
   /** Bounces asked for before their pet finished loading. */
   const pendingBounce = new Set<string>()
 
@@ -465,7 +653,9 @@ export function createPetField(base = ''): PetField {
          * hand a chick an elephant's keep-out and stretch its shadow to match.
          * The creature is measured; then the target is fitted to the creature.
          */
-        holder.add(pickProxy(body, holder.userData.pick))
+        const bodyHalf = bodyHalfOf(body)
+        const proxy = pickProxy(body, holder.userData.pick, cameraDistance)
+        holder.add(proxy)
         group.add(holder)
         // The shadow is a SIBLING of the pet, not a child. Parented, it rose
         // with every hop and sank under the tile on the way down.
@@ -482,7 +672,7 @@ export function createPetField(base = ''): PetField {
           root.traverse(n => { if (/^wing-/.test(n.name)) wings.push(n) })
         }
         live.set(pet.id, {
-          pet, root: holder, shadow, radius, flying, wings,
+          pet, root: holder, shadow, radius, flying, wings, proxy, bodyHalf,
           goal: randomSpot(island, hexSize, radius),
           phase: Math.random() * Math.PI * 2,
           bounce: 0,
@@ -527,6 +717,17 @@ export function createPetField(base = ''): PetField {
           Math.hypot(l.goal.x - o.x, l.goal.z - o.z) < o.r * 1.15 + l.radius)
         if (blocked) l.restFor = 0
       }
+    },
+
+    setCameraDistance(d) {
+      // Guarded rather than trusted: `distanceTo` on a camera mid-ease is a
+      // float, and a NaN or a zero here would collapse every tap target in the
+      // game at once. Same-value calls are the normal case — the shot only
+      // changes while she is pinching or the island is growing — so the early
+      // return keeps this to one comparison on almost every frame.
+      if (!Number.isFinite(d) || d <= 0 || d === cameraDistance) return
+      cameraDistance = d
+      for (const l of live.values()) sizeProxy(l.proxy, l.bodyHalf, d)
     },
 
     setMovers(fn) { movers = fn },
@@ -628,7 +829,7 @@ export function createPetField(base = ''): PetField {
            * that contrast is what reads as hovering rather than as floating.
            */
           pos.y = TREE_HEIGHT + Math.sin(t * 1.9 + l.phase) * 0.05
-          const beat = Math.sin(t * 14 + l.phase)
+          const beat = Math.sin(t * WINGBEAT + l.phase)
           for (let i = 0; i < l.wings.length; i++) {
             const wing = l.wings[i] as THREE.Object3D
             wing.rotation.z = (i % 2 ? -1 : 1) * beat * 0.5

@@ -55,14 +55,38 @@ interface Candidate { hit: Hit; distance: number }
 
 /** The nearest pet, egg or Fred under the ray — skipping anything hidden. */
 function nearestPickable(ray: THREE.Raycaster, pickables: THREE.Object3D[]): Candidate | null {
+  /**
+   * Anything she can SEE outranks a proxy, however near the proxy is.
+   *
+   * "Nearest the camera" is the right rule between objects, because whatever
+   * is nearest is what she is looking at and therefore what she aimed for. It
+   * is the wrong rule the moment one of them is invisible: every pet carries a
+   * finger-wide sphere so a six-year-old can hit it (`pets.ts`, `pickProxy`),
+   * and a pet standing beside the egg puts that sphere in front of the egg's
+   * rim. Nearest-wins hands her a bouncing pet where she tapped an egg — and
+   * the egg is the one thing she is always meant to be able to reach.
+   *
+   * It got worse, not better, when the proxy learned to hold its size on
+   * screen: at the camera's 26-unit pull-back a finger is 1.7 world units
+   * across, which is wider than the whole egg is drawn.
+   *
+   * So a proxy is a FALLBACK. It answers for the pixels where nothing is
+   * drawn — exactly the near-miss it exists to catch — and takes nothing off
+   * anything with a surface of its own. A tap on a pet is still that pet: its
+   * own body is drawn, and it is nearer than whatever stands behind it.
+   */
+  let proxy: Candidate | null = null
   // intersectObjects returns them sorted, nearest first.
   for (const h of ray.intersectObjects(pickables, true)) {
     if (!isShowing(h.object)) continue
     let o: THREE.Object3D | null = h.object
     while (o && !o.userData.pick) o = o.parent
-    if (o?.userData.pick) return { hit: o.userData.pick as Hit, distance: h.distance }
+    if (!o?.userData.pick) continue
+    const found = { hit: o.userData.pick as Hit, distance: h.distance }
+    if (h.object.userData.proxy) { proxy ??= found; continue }
+    return found
   }
-  return null
+  return proxy
 }
 
 /** The nearest buildable socket under the ray. */
