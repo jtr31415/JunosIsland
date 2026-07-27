@@ -603,7 +603,17 @@ async function boot(): Promise<void> {
         ])
         if (onStage && friend) {
           stage.show(null, world.scene)      // the shell has gone; send it home
-          stage.showTemp(friend)
+          /*
+           * Reframe for a PET, not an egg.
+           *
+           * The camera was framed for a 0.55 egg, and a pet is wider than it
+           * is tall — so at the egg's framing she filled the vignette edge to
+           * edge and her feet were cropped off the bottom. Pulling back a
+           * little puts the whole friend on the plinth with air around her,
+           * which is what being introduced to someone looks like.
+           */
+          stage.frame(0.68)
+          stage.showTemp(friend, 0.44)
         }
 
         overlay.showName(name)
