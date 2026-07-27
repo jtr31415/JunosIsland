@@ -9,6 +9,7 @@
  * nothing in the packs carries text, and text is the entire point.
  */
 import * as THREE from 'three'
+import { footprintBelow, WALKING_HEIGHT } from './world/props'
 
 const POST = 0x8a6743
 const BOARD = 0xd8b280
@@ -53,6 +54,21 @@ export interface Sign {
   group: THREE.Group
   /** Re-letter the board, e.g. once the child has told us her name. */
   setName(name: string): void
+  /**
+   * Where the signpost stands and how much room it takes, for anything that
+   * has to walk round it.
+   *
+   * Carded for Phase 5 and the third of its kind: the egg, then Fred, now
+   * this. Each time the fault was the same shape — a hand-built object that
+   * the scenery pipeline never sees, so `props.obstacles()` knows nothing
+   * about it and `publishObstacles()` is never told, and pets walk straight
+   * through the one thing on the island with her name on it.
+   *
+   * Read afresh rather than published once, because `refresh()` in main.ts is
+   * what decides where the sign stands and it does so AFTER the sign is built.
+   * A radius handed over at construction would be a keep-out at the origin.
+   */
+  obstacle(): { x: number; z: number; r: number }
   dispose(): void
 }
 
@@ -112,8 +128,31 @@ export function createSign(name: string): Sign {
   cap.position.y = BOARD_Y + BOARD_H / 2 + 0.0125
   group.add(cap)
 
+  /*
+   * MEASURED, once, while the sign stands at the origin.
+   *
+   * Not `hexSize × a guess`, which is how every keep-out on this island came
+   * out too small — a mountain measuring 0.9 across declared 0.58, so pets
+   * walked a third of a unit into the rock face (HANDOFF §6).
+   *
+   * Measured BELOW walking height, the same rule the scenery and Fred use,
+   * and here it is not a technicality. The board is 0.52 wide and its
+   * underside sits at 0.355, well clear of a 0.24-tall pet and even of Fred at
+   * 0.35 — so the board is not in anybody's way, and a keep-out taken from the
+   * full silhouette would have pets swerving round thin air a third of a unit
+   * out while the posts they can actually hit are half that. What is solid at
+   * ankle height is the two posts, and the circle that covers both is what
+   * this returns.
+   *
+   * The caller adds the PET's own radius; clamping a centre to a surface
+   * buries half a pet in the post.
+   */
+  const KEEP_OUT = footprintBelow(group, WALKING_HEIGHT)
+
   return {
     group,
+
+    obstacle: () => ({ x: group.position.x, z: group.position.z, r: KEEP_OUT }),
 
     setName(next: string) {
       texture.dispose()

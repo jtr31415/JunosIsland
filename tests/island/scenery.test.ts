@@ -13,7 +13,9 @@ import { describe, it, expect } from 'vitest'
 import { existsSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { COVER, LEAFY_TREES, BARE_TREES, TREE_EVERY } from '../../src/island/world/props'
+import {
+  COVER, LEAFY_TREES, BARE_TREES, TREE_EVERY, coverPiece, hash,
+} from '../../src/island/world/props'
 import type { Character } from '../../src/island/world/props'
 import { PALETTE } from '../../src/island/world/increments'
 
@@ -99,5 +101,61 @@ describe('the island is not too flat — Joe, 27 July', () => {
     // The other half. Filling every hex would answer "too flat" by replacing it
     // with "too busy", and the rocky character is deliberately the sparse one.
     expect(TREE_EVERY.rocky).toBeGreaterThan(TREE_EVERY.wood * 2)
+  })
+})
+
+/**
+ * The catalogues above are only half the claim.
+ *
+ * Every name in them exists — and the island still asked for
+ * `forest/undefined.gltf`, because the CHOICE went out of range rather than
+ * the list being wrong. The dev server answers a missing file with index.html,
+ * GLTFLoader throws on the `<`, and the rejection escapes `sync()`, which is a
+ * loop over every tile — so one bad tree left every hex after it bare. Found
+ * in the browser's network log, on an island of nineteen hexes with scenery on
+ * exactly one.
+ *
+ * The cause is that `hash` is unsigned 32-bit and `>>` is the SIGNED shift, so
+ * a hash with its top bit set indexes an array with a negative number. Half of
+ * all hashes have their top bit set.
+ */
+describe('every name the island CHOOSES is a model, not just every name it lists', () => {
+  it('never picks a piece that is not in the pack', () => {
+    /*
+     * The real hash over a real field, not a sample of convenient numbers. The
+     * fault lives in the top bit, so a test that only tried small coordinates
+     * would pass while the island stayed bare.
+     */
+    const missing = new Set<string>()
+    let picked = 0
+    for (let q = -12; q <= 12; q++) {
+      for (let r = -12; r <= 12; r++) {
+        for (const c of CHARACTERS) {
+          for (let d = 0; d < 9; d++) {
+            const dh = hash({ q: q * 31 + d, r: r * 17 - d })
+            const { name } = coverPiece(c, dh)
+            picked++
+            if (typeof name !== 'string' || !exists(name)) missing.add(String(name))
+          }
+        }
+      }
+    }
+    expect(picked).toBeGreaterThan(5000)
+    expect([...missing]).toEqual([])
+  })
+
+  it('reaches the whole tree list rather than only its first half', () => {
+    // The other symptom of the signed shift, and the one nobody would report:
+    // with `>>`, the reachable indices are the negatives and 0.
+    const seen = new Set<string>()
+    for (let q = -12; q <= 12; q++) {
+      for (let r = -12; r <= 12; r++) {
+        for (let d = 0; d < 9; d++) {
+          const p = coverPiece('wood', hash({ q: q * 31 + d, r: r * 17 - d }))
+          if (p.kind === 'tree') seen.add(p.name)
+        }
+      }
+    }
+    expect(seen.size).toBe(LEAFY_TREES.length)
   })
 })

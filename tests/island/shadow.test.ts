@@ -16,11 +16,46 @@
  * STRETCHED along that same direction. Both come from the preset, so nothing
  * here hardcodes a light — which is itself a lighting-brief §7 sin.
  */
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import * as THREE from 'three'
+
+/*
+ * The loader is the only thing mocked, and it is mocked because it is I/O.
+ * Everything asserted below is read off the scene graph `props.ts` really
+ * builds — HANDOFF §5's rule, after four features that were declared, read and
+ * assigned by nothing while every mock-based test passed.
+ *
+ * The stand-in shapes match the measured ASPECT RATIOS of the packs, which is
+ * all that matters once `fitInto` has normalised the size: a forest tree is
+ * tall and thin, ground cover is low and wide, a hexagon-pack feature is about
+ * as tall as it is broad.
+ */
+vi.mock('three/examples/jsm/loaders/GLTFLoader.js', async () => {
+  const T = await import('three')
+  class GLTFLoader {
+    async loadAsync(url: string): Promise<{ scene: THREE.Group }> {
+      const name = (url.split('/').pop() ?? '').replace(/\.gltf$/, '')
+      const [w, h] = /^Tree_/.test(name) ? [0.5, 2.4]
+        : /^(Grass|Bush|Rock)_/.test(name) ? [0.9, 0.5]
+          : [1.4, 1.3]
+      const mesh = new T.Mesh(new T.BoxGeometry(w, h, w), new T.MeshStandardMaterial())
+      mesh.position.y = h / 2
+      const scene = new T.Group()
+      scene.name = name
+      scene.add(mesh)
+      return { scene }
+    }
+  }
+  return { GLTFLoader }
+})
 import { createLighting, sunShadow } from '../../src/island/lighting'
 import type { LightingPreset } from '../../src/island/lighting'
 import { createBlobShadow, castShadow, SHADOW_LIFT } from '../../src/island/juice'
+import {
+  shadowUnder, createPropField, fitInto, FITS, VARY, varyMax,
+  SHADOW_MIN_HEIGHT, SHADOW_MIN_REACH,
+} from '../../src/island/world/props'
+import type { Surface } from '../../src/island/world/tiles'
 import meadowDay from '../../src/island/lighting/presets/meadow-day.json'
 
 const MEADOW = meadowDay as LightingPreset
@@ -206,5 +241,313 @@ describe('castShadow — shape', () => {
     expect(high.scale.y).toBeLessThan(low.scale.y)
     expect((high.material as THREE.MeshBasicMaterial).opacity)
       .toBeLessThan((low.material as THREE.MeshBasicMaterial).opacity)
+  })
+})
+
+/**
+ * Joe, carded: *"shadows from larger props"*.
+ *
+ * Lighting brief §3 asks for a blob under "every pet and loose prop". The pets
+ * and Fred had one; the scenery had none, so on any tile with an animal on it
+ * the trees and boulders were the only things floating.
+ *
+ * The interesting half is the word "larger", because a tile scatters five to
+ * nine pieces of ground cover around its one feature and a blob under each is
+ * litter on the grass and nine more draw calls on a tablet. So there is a
+ * threshold, and these tests pin it against the FITS table it was derived from
+ * rather than against the models that happen to be in the lists today.
+ */
+
+/** A box of the given size standing on the ground, like a fitted prop. */
+const piece = (w: number, h: number, d = w): THREE.Object3D => {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d))
+  mesh.position.y = h / 2
+  const holder = new THREE.Group()
+  holder.add(mesh)
+  return holder
+}
+
+/** Plant it in a group and hand back whatever blob it earned. */
+const plant = (o: THREE.Object3D, at?: THREE.Vector3): {
+  group: THREE.Group; holder: THREE.Object3D | null
+} => {
+  const group = new THREE.Group()
+  if (at) o.position.copy(at)
+  group.add(o)
+  return { group, holder: shadowUnder(o, group) }
+}
+
+describe('the shadow threshold sits in the measured gaps', () => {
+  /*
+   * The assertions that stop the threshold rotting. Every ceiling below is
+   * ARITHMETIC — a FITS entry times the largest multiplier its variation can
+   * produce — so it holds for a model added to the lists next year as well as
+   * for the ones measured today.
+   */
+
+  it('cannot be reached by ground cover, however the variation rolls', () => {
+    const most = varyMax(VARY.cover)
+    expect(FITS.cover[1] * most).toBeLessThan(SHADOW_MIN_HEIGHT)
+    expect((FITS.cover[0] * most) / 2).toBeLessThan(SHADOW_MIN_REACH)
+  })
+
+  it('cannot be reached by a reed or a lily either', () => {
+    // Water pieces are not shadowed at all, but a threshold that would admit
+    // them is a threshold too low for the grass as well.
+    const most = varyMax(VARY.cover)
+    expect(FITS.reed[1] * most).toBeLessThan(SHADOW_MIN_HEIGHT)
+    expect(FITS.lily[1] * most).toBeLessThan(SHADOW_MIN_HEIGHT)
+  })
+
+  it('is cleared by the shortest dead trunk and the shortest live tree', () => {
+    // Both are fitted taller than they are wide, so height binds and the FITS
+    // entry is very nearly what they end up as. Measured minima are 0.506 and
+    // 0.567; the entry floors are what a test can hold onto.
+    expect(FITS.bare[1] * VARY.cover.min).toBeGreaterThan(SHADOW_MIN_HEIGHT)
+    expect(FITS.tree[1] * VARY.tree.min).toBeGreaterThan(SHADOW_MIN_HEIGHT)
+  })
+
+  it('is cleared by the widest thing a grown plot can plant', () => {
+    /*
+     * The tight edge, and the reason the rule has a reach arm at all. A flat
+     * boulder on a plot she built is 0.144 tall — well under the height arm —
+     * and is saved only by being FITS.grown wide. If that entry ever narrows,
+     * this fails rather than the boulder quietly starting to float.
+     */
+    expect(FITS.grown[0] / 2).toBeGreaterThanOrEqual(SHADOW_MIN_REACH)
+    expect((FITS.feature[0] * VARY.feature.min) / 2).toBeGreaterThan(SHADOW_MIN_REACH)
+    expect((FITS.big[0] * VARY.feature.min) / 2).toBeGreaterThan(SHADOW_MIN_REACH)
+  })
+})
+
+describe('shadowUnder — which props are larger', () => {
+  beforeEach(() => { createLighting(null, MEADOW) })
+
+  it('gives a tree a blob', () => {
+    const tree = piece(0.4, 1.0)
+    fitInto(tree, ...FITS.tree)
+    expect(plant(tree).holder).not.toBeNull()
+  })
+
+  it('gives a grass tuft nothing', () => {
+    /*
+     * At the preset's sun a tuft's blob would be two and a half times its own
+     * width and would start outside its base. Five to nine of those per hex is
+     * litter, not grounding.
+     */
+    const tuft = piece(0.3, 0.35)
+    fitInto(tuft, ...FITS.cover)
+    expect(plant(tuft).holder).toBeNull()
+  })
+
+  it('gives the widest tuft the variation can produce nothing either', () => {
+    const most = varyMax(VARY.cover)
+    const bush = piece(1, 0.4)
+    fitInto(bush, FITS.cover[0] * most, FITS.cover[1] * most)
+    expect(plant(bush).holder).toBeNull()
+  })
+
+  it('gives a low WIDE boulder a blob, which height alone would miss', () => {
+    /*
+     * `rock_single_A` measures 0.204 tall and 0.88 across as a tile feature —
+     * shorter than some ground cover is allowed to be, and the size of half a
+     * hex. A height-only rule would leave the biggest flat thing on the tile
+     * as the one piece stuck to nothing.
+     */
+    const slab = piece(4, 1)
+    fitInto(slab, ...FITS.feature)
+    const box = new THREE.Box3().setFromObject(slab)
+    expect(box.max.y - box.min.y).toBeLessThan(SHADOW_MIN_HEIGHT)
+    expect(plant(slab).holder).not.toBeNull()
+  })
+
+  it('shadows nothing at all that has no geometry', () => {
+    expect(plant(new THREE.Group()).holder).toBeNull()
+  })
+})
+
+describe('shadowUnder — where the blob lands', () => {
+  beforeEach(() => { createLighting(null, MEADOW) })
+
+  it('is a real blob from juice.ts, not a second mechanism', () => {
+    const tree = piece(0.4, 1.0)
+    const { holder } = plant(tree)
+    const blob = holder?.children[0] as THREE.Mesh
+    expect(blob?.name).toBe('blobShadow')
+    expect(blob.material).toBeInstanceOf(THREE.MeshBasicMaterial)
+  })
+
+  it('sits on the ground the piece stands on, not at y = 0', () => {
+    /*
+     * Props are planted at `surface.heightAt(x, z)`, and a coast ramp slopes.
+     * `castShadow` writes y = SHADOW_LIFT in its PARENT's frame, so the holder
+     * is what has to carry the ground height — a blob dropped straight into
+     * the props group would hang above every tree standing on a beach.
+     */
+    const tree = piece(0.4, 1.0)
+    const { holder } = plant(tree, new THREE.Vector3(1.4, -0.37, 2.1))
+    const blob = holder?.children[0] as THREE.Mesh
+    blob.updateMatrixWorld(true)
+    expect(blob.getWorldPosition(new THREE.Vector3()).y)
+      .toBeCloseTo(-0.37 + SHADOW_LIFT, 6)
+  })
+
+  it('agrees with the sun rather than sitting concentrically under the tree', () => {
+    const sun = sunShadow() as { x: number; z: number }
+    const tree = piece(0.4, 1.0)
+    const { holder } = plant(tree, new THREE.Vector3(1.4, 0, 2.1))
+    const blob = holder?.children[0] as THREE.Mesh
+    const off = new THREE.Vector3(blob.position.x, 0, blob.position.z)
+    expect(off.length()).toBeGreaterThan(0.1)
+    expect(off.normalize().dot(new THREE.Vector3(sun.x, 0, sun.z))).toBeCloseTo(1, 5)
+  })
+
+  it('scales the blob to the piece, not to a fixed radius', () => {
+    const small = piece(0.4, 1.0)
+    const large = piece(1.6, 1.6)
+    const a = plant(small).holder?.children[0] as THREE.Mesh
+    const b = plant(large).holder?.children[0] as THREE.Mesh
+    expect(b.userData.radius as number).toBeGreaterThan(a.userData.radius as number)
+  })
+
+  it('lands under the piece even when its model origin is off to one side', () => {
+    /*
+     * Several KayKit models are not centred on their own origin. Measuring the
+     * BOX rather than trusting `position` is what keeps the shadow under the
+     * thing rather than beside it.
+     */
+    const lopsided = new THREE.Group()
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1, 0.5))
+    mesh.position.set(0.9, 0.5, 0)
+    lopsided.add(mesh)
+    const { holder } = plant(lopsided)
+    expect(holder?.position.x).toBeCloseTo(0.9, 6)
+  })
+})
+
+describe('the tiles the island GROWS get shadows', () => {
+  /*
+   * The main path, driven end to end: a real `sync()` over a real island,
+   * planting through the real hash, `fitInto`, `firstClear` and `scatter`.
+   * Only the two loaders are stubbed, and they are the I/O.
+   */
+  const flat: Surface = { heightAt: () => 0, groundAt: () => 'green' }
+  const island = {
+    tiles: new Map<string, 'grass' | 'water'>([
+      ['0,0', 'grass'], ['1,0', 'grass'], ['0,1', 'grass'],
+      ['-1,1', 'grass'], ['1,-1', 'grass'], ['-1,0', 'grass'],
+    ]),
+  }
+
+  beforeEach(() => {
+    createLighting(null, MEADOW)
+    vi.spyOn(THREE.TextureLoader.prototype, 'loadAsync')
+      .mockResolvedValue(new THREE.Texture())
+  })
+
+  /** Every blob holder the field has planted, wherever it planted it. */
+  const blobsIn = (group: THREE.Object3D): THREE.Object3D[] => {
+    const out: THREE.Object3D[] = []
+    group.traverse(o => { if (o.name === 'prop-shadow') out.push(o) })
+    return out
+  }
+
+  it('plants blobs under the scenery it grows', async () => {
+    const props = createPropField()
+    await props.sync(island, 1.15, flat)
+    expect(blobsIn(props.group).length).toBeGreaterThan(0)
+  })
+
+  it('plants FAR fewer blobs than pieces — the tufts get none', async () => {
+    /*
+     * The whole point of the threshold. Six tiles scatter five to nine pieces
+     * of cover each on top of their features; if every one of them cast, the
+     * counts would be equal and the grass would be covered in ellipses.
+     */
+    const props = createPropField()
+    await props.sync(island, 1.15, flat)
+    const blobs = blobsIn(props.group).length
+    const pieces = props.group.children.filter(
+      c => c.name !== 'prop-shadow' && !/^cloud/.test(c.name)).length
+    expect(blobs).toBeGreaterThan(0)
+    expect(blobs).toBeLessThan(pieces / 2)
+  })
+
+  it('never puts one on a cloud', async () => {
+    // They are 15 units up and 34 out. A blob under one would be a dark disc
+    // sitting on the open sea.
+    const props = createPropField()
+    await props.sync(island, 1.15, flat)
+    for (const blob of blobsIn(props.group)) {
+      expect(blob.position.y).toBeLessThan(1)
+    }
+  })
+
+  it('leaves a pond alone', async () => {
+    /*
+     * Water pieces are placed at y = 0 while the water hex's own surface sits
+     * at -0.2, so a blob at their feet would hang above the pond. A lily's
+     * shadow is under the lily in any case.
+     */
+    const props = createPropField()
+    await props.sync({ tiles: new Map([['0,0', 'water'], ['1,0', 'water']]) }, 1.15, flat)
+    expect(blobsIn(props.group)).toHaveLength(0)
+  })
+})
+
+describe('the tiles she BUILDS get shadows too', () => {
+  beforeEach(() => { createLighting(null, MEADOW) })
+
+  /*
+   * There are two placement paths and fixing one is not fixing the other:
+   * `props.ts` dresses tiles the island grows, `world/increments.ts` grows the
+   * ones she builds. Trees-inside-rocks was reported TWICE for exactly this
+   * reason (HANDOFF §6). Shadowing only the first would be the worst possible
+   * split, because the floating tiles would be the ones she made herself.
+   *
+   * The seam is `adopt()`, which is where a grown plot stops moving and
+   * becomes that tile's own scenery. A blob living inside the plot itself
+   * would hang in mid-air for the whole build, because the plot hovers.
+   */
+  const grownPlot = (): THREE.Group => {
+    const grown = new THREE.Group()
+    grown.position.set(3.2, 0, -2.4)     // at its socket, not at the origin
+    const tree = piece(0.4, 1.0)
+    tree.position.set(0.3, 0, 0.2)
+    const tuft = piece(0.3, 0.14)
+    tuft.position.set(-0.35, 0, 0.1)
+    grown.add(tree, tuft)
+    return grown
+  }
+
+  it('shadows the pieces she grew, by the same rule', () => {
+    const props = createPropField()
+    const grown = grownPlot()
+    props.adopt({ q: 1, r: 0 }, grown, 1.15)
+    const holders = grown.children.filter(c => c.name === 'prop-shadow')
+    expect(holders).toHaveLength(1)          // the tree, not the tuft
+  })
+
+  it('does not shadow the shadows', () => {
+    /*
+     * A blob is a wide flat disc, so it clears the reach arm easily — and
+     * `adopt` adds each holder to the very list of children it is walking. A
+     * live iteration would shadow the shadow, then shadow THAT, and never
+     * return. The snapshot is what stops it and the count is what proves it.
+     */
+    const props = createPropField()
+    const grown = grownPlot()
+    props.adopt({ q: 1, r: 0 }, grown, 1.15)
+    expect(grown.children).toHaveLength(3)   // two pieces and one blob holder
+  })
+
+  it('keeps the grown shadow on the ground under its own socket', () => {
+    const props = createPropField()
+    const grown = grownPlot()
+    props.adopt({ q: 1, r: 0 }, grown, 1.15)
+    const holder = grown.children.find(c => c.name === 'prop-shadow') as THREE.Object3D
+    const blob = holder.children[0] as THREE.Mesh
+    grown.updateMatrixWorld(true)
+    expect(blob.getWorldPosition(new THREE.Vector3()).y).toBeCloseTo(SHADOW_LIFT, 6)
   })
 })
