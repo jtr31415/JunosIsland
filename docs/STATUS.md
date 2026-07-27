@@ -17,6 +17,26 @@ verdict outranks every document here (brief §18), and the notes below marked
 
 ---
 
+## Provenance of the playtest quotes
+
+Fable, reviewing the camera and preload diffs, flagged that quotes attributed to
+Joe in code comments — *"zoom to location. at the moment zoom and rotation is
+only around the origin tile"*, *"preloaded the animal otherwise there is a render
+delay and disappointment"* — appear in **no committed document**, and rightly
+refused to take them on trust.
+
+They are verbatim. Joe gave them in session on 27 July 2026, alongside the rest
+of the playtest notes: the pet tap target, the 3:1 build-to-find ratio, the
+challenge X, and the water snooker. They reached the code without ever landing in
+a file, which is exactly the gap Fable found. Recorded here so the next reviewer
+can verify them rather than having to trust a comment.
+
+The general lesson is worth keeping: **a quotation in a comment is a claim, and a
+claim nobody can check is worth less than no quotation at all.** Direction that
+arrives by chat should land in `STATUS.md` on its way to the code.
+
+---
+
 ## Fable's review of the Phase 4 plan — Joe has a decision waiting
 
 Reviewed overnight, 27 July, against the code rather than against my summary.

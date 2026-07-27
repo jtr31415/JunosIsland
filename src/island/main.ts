@@ -922,7 +922,6 @@ async function boot(): Promise<void> {
          * is not hiding a failure.
          */
         nextSpecies = drawSpecies()
-        void pets.warm(nextSpecies)
         /*
          * SAVE FIRST, celebrate second.
          *
@@ -999,6 +998,22 @@ async function boot(): Promise<void> {
             arriving,
             wait(balance.stage.petLoadMs).then(() => null),
           ])
+          /*
+           * Only NOW warm the next animal, once this one has stopped competing
+           * for the network.
+           *
+           * It used to fire the moment the species was re-drawn, which is fine
+           * in the ordinary case — the current species is already cached,
+           * because it was warmed a whole egg ago. But after a FAILED warm the
+           * two fetches race inside the same `petLoadMs` budget, and the one
+           * that matters is the one she is waiting to meet. Fable caught this
+           * reviewing the diff; the fix is ordering, not machinery.
+           *
+           * Still fire-and-forget, and it must stay that way: this runs inside a
+           * ceremony that locks the exits, and a preload nobody awaits cannot
+           * extend that lock or deadlock it. `warm` never rejects.
+           */
+          void pets.warm(nextSpecies)
           if (onStage && friend) {
             stage.show(null, world.scene)      // the shell has gone; send it home
             /*
