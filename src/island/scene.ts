@@ -15,7 +15,7 @@ import type { Lighting, LightingPreset } from './lighting'
 import meadowDay from './lighting/presets/meadow-day.json'
 import { loadTileModels, createTileField, createSocketField, createSurface } from './world/tiles'
 import type { TileModels, TileField, Surface } from './world/tiles'
-import { toWorld } from './world/hex'
+import { toWorld, key } from './world/hex'
 import type { Axial } from './world/hex'
 import type { Island } from './world/grid'
 import { buildableSockets } from './world/coast'
@@ -39,7 +39,18 @@ export interface World {
   surface: Surface
   /** Objects that want a raycast: pets, eggs, Fred. Keyed for identification. */
   pickables: THREE.Object3D[]
-  setIsland(i: Island): void
+  /**
+   * The island, and where a plot is standing if one is.
+   *
+   * The plot's own coord is EXCLUDED from the glowing sockets. Joe: "a paused
+   * land tile is giving a clipping error with the golden outline tile where its
+   * supposed to be. it should show the whole tile as golden outline." Both hexes
+   * were being drawn in the same place — the socket's outline underneath and the
+   * plot's own golden ghost hovering over it — and the plot IS that tile's
+   * outline, so the socket beneath it is a duplicate promising the same thing
+   * twice.
+   */
+  setIsland(i: Island, plotAt?: Axial | null): void
   showSockets(v: boolean): void
   pick(clientX: number, clientY: number): Hit | null
   worldOf(a: Axial): THREE.Vector3
@@ -107,12 +118,14 @@ export async function createWorld(canvas: HTMLCanvasElement): Promise<World> {
     surface,
     pickables,
 
-    setIsland(i: Island) {
+    setIsland(i: Island, plotAt: Axial | null = null) {
       island = i
       tiles.sync(i)
       // Only the sockets she can actually fill: an outline that cannot be
-      // filled is a promise the game breaks.
-      socketField.sync(buildableSockets(i, sockets(i)))
+      // filled is a promise the game breaks. And never the one a plot is
+      // already standing on — see the note on the interface.
+      const open = buildableSockets(i, sockets(i))
+      socketField.sync(plotAt ? open.filter(s => key(s) !== key(plotAt)) : open)
       // Keep the whole island in shot as it grows outward.
       let max = 0
       for (const k of i.tiles.keys()) {

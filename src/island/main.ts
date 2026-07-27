@@ -546,7 +546,8 @@ async function boot(): Promise<void> {
   }
 
   function refresh(): void {
-    world.setIsland(flow.island)
+    // The plot's coord is passed so its socket stops glowing underneath it.
+    world.setIsland(flow.island, flow.plot?.at ?? null)
     void props.sync(flow.island, world.models.size, world.surface).then(() => {
       publishObstacles()
       // Re-site the egg now the scenery is known: obstacles() is empty until
