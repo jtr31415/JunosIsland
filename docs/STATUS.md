@@ -25,7 +25,7 @@ blocked on it.
 | **3** | Parity gate deflake | **Done.** 50/50 green. |
 | **4** | Channels & flags | **Done.** One decision for Joe, below. |
 | **5** | Cube-pet material autopsy | **Done.** Finding in HANDOFF §6. |
-| 6 | Sets & the variant engine | Not started. |
+| **6** | Sets & the variant engine | **Done**, bar the wiring that belongs to item 7. **Wants Joe's veto.** |
 | 7 | Progressive album + set unlocks | Not started. |
 | 8 | Habitats, nursery, wants | Not started. |
 | 9 | Pet quests v1 | Not started. |
@@ -179,6 +179,46 @@ constant" holds by construction rather than by care.
 Both alternative routes are measured shut, and the cloning landmine is written
 up: a clone arrives with the BASE material, and a set's texture is shared by
 every pet in it, so it is cached and detached, never disposed.
+
+### Item 6 — sets and the variant engine
+
+**Forty palettes are designed and want your veto**, which is what the
+Pet-o-matic is for:
+
+```
+npm run dev   →   /?petomatic&only=petOMatic
+```
+
+All 24 species on turntables under the REAL lighting rig — a palette judged
+under different light is judged wrongly. `←` `→` pages sets, `↑` `↓` jumps ten,
+space stops the spin. Names and colours are mine to design per the brief and
+are a first pass, not a proposal I am attached to.
+
+The engine itself: a set is one recoloured 512×512 atlas shared by all 24
+species, per item 5. Recolour is hue rotation with saturation and brightness
+multipliers, applied only to chromatic pixels, so the eyes and faces are
+untouched by construction. Brightness is scaled rather than replaced, because
+the gradient down each atlas column IS the shading.
+
+Two things reading the assets caught, both of which would have looked like
+something else:
+
+- The GLBs are `doubleSided` and use glTF's default roughness. A hand-built
+  material defaults to FrontSide, so **replacing** the material would render
+  every creature with holes through it — reading as broken geometry rather
+  than a material mistake. The material is cloned and only its map changed.
+- The Pet-o-matic was being emitted into the production bundle. The flag is a
+  runtime check, so Rollup could not fold the branch: unreachable, but shipped
+  and precached, on a 5MB budget. It sits behind `__CHANNEL__` now and the
+  channel check covers both markers.
+
+**The natural set is untouched, not unchanged** — no texture is built and
+`dress` returns without touching the model, so pets she already owns are
+identical by construction rather than by comparison. That is item 6's golden
+requirement, met exactly.
+
+Not yet wired into live pets: which set a creature belongs to is item 7's
+question, since that is what owns the hatch pool and the album.
 
 ---
 
