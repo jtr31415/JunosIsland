@@ -6,9 +6,9 @@ import { fileURLToPath } from 'node:url'
 import {
   isSoul, rgbToHsv, hsvToRgb, shift, isNatural, recolourInto,
   SOUL_SATURATION, SOUL_VALUE,
-} from '../../src/island/pets/recolour'
+} from '../../src/island/variants/recolour'
 
-import { SETS, NATURAL, setById, variantKey, totalVariants } from '../../src/island/pets/sets'
+import { SETS, NATURAL, setById, variantKey, totalVariants } from '../../src/island/variants/sets'
 
 /**
  * The rule that protects the pets' faces, tested against the REAL atlas rather

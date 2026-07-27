@@ -19,8 +19,19 @@ import { fileURLToPath } from 'node:url'
 const here = dirname(fileURLToPath(import.meta.url))
 const DIST = resolve(here, '../../dist/island')
 
-/** The string that must never appear in a production build. */
-const MARKER = 'PREVIEW_ONLY_BALANCE_OVERLAY'
+/**
+ * Things that must not appear in a production build.
+ *
+ * Each sits behind a `__CHANNEL__` comparison rather than a runtime flag,
+ * which is what lets Rollup delete the branch and never emit the chunk. A
+ * runtime flag alone leaves the code shipped-but-unreachable: the Pet-o-matic,
+ * three.js scene and forty palettes and all, was precached by the service
+ * worker that way, on a tablet with a 5MB budget.
+ */
+const MARKERS = [
+  ['dev balance overlay', 'PREVIEW_ONLY_BALANCE_OVERLAY'],
+  ['Pet-o-matic', 'runPetOMatic'],
+]
 
 function everyFile(dir) {
   const out = []
@@ -49,28 +60,38 @@ const bodies = new Map(text.map(f => [f, readFileSync(f, 'utf8')]))
  */
 const channel = process.argv[2] === 'preview' ? 'preview' : 'production'
 
-const leaked = [...bodies.entries()]
-  .filter(([, body]) => body.includes(MARKER))
-  .map(([f]) => f.slice(DIST.length + 1))
-
 console.log(`channel      ${channel}`)
 console.log(`files        ${files.length} (${text.length} searchable)`)
 
-if (channel === 'production') {
-  if (leaked.length) {
-    console.error(`\nFAIL: the dev balance overlay reached a PRODUCTION build:`)
-    for (const f of leaked) console.error('  ' + f)
-    console.error('\nThe branch in balance/index.ts is meant to fold away at build time.')
-    process.exit(1)
+let bad = false
+for (const [label, marker] of MARKERS) {
+  const leaked = [...bodies.entries()]
+    .filter(([, body]) => body.includes(marker))
+    .map(([f]) => f.slice(DIST.length + 1))
+
+  if (channel === 'production') {
+    if (leaked.length) {
+      console.error(`\nFAIL: the ${label} reached a PRODUCTION build:`)
+      for (const f of leaked) console.error('  ' + f)
+      bad = true
+    } else {
+      console.log(`${label.padEnd(21)}absent, as it must be`)
+    }
+  } else if (!leaked.length) {
+    console.error(`\nFAIL: a PREVIEW build cannot reach the ${label} either.`)
+    console.error('The point of preview is that it can — check the branch folds')
+    console.error('only in production.')
+    bad = true
+  } else {
+    console.log(`${label.padEnd(21)}present`)
   }
-  console.log('overlay      absent, as it must be')
-} else {
-  if (!leaked.length) {
-    console.error('\nFAIL: a PREVIEW build cannot load the dev overlay either.')
-    console.error('The point of preview is that it can. Check the dynamic import.')
-    process.exit(1)
-  }
-  console.log('overlay      present in ' + leaked.join(', '))
+}
+
+if (bad) {
+  console.error('\nThese branches fold away at BUILD time. Guard them with')
+  console.error('__CHANNEL__, not with a runtime flag: a runtime flag leaves the')
+  console.error('code shipped-but-unreachable, which still costs the download.')
+  process.exit(1)
 }
 
 console.log('\nchannel check passed')

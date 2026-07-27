@@ -12,6 +12,8 @@ import * as THREE from 'three'
 import { createWorld } from './scene'
 import { createOverlay } from './overlay'
 import { createPetField, SPECIES } from './pets'
+import meadowDay from './lighting/presets/meadow-day.json'
+import type { LightingPreset } from './lighting'
 import { createEgg } from './egg'
 import { createFred } from './fred'
 import { createSign } from './sign'
@@ -67,6 +69,9 @@ import { petName } from '../core/names'
 declare const __BUILD_STAMP__: string
 const BUILD_STAMP = typeof __BUILD_STAMP__ === 'string' ? __BUILD_STAMP__ : 'dev'
 
+/** Injected by Vite. See vite.island.config.ts and platform/flags.ts. */
+declare const __CHANNEL__: string
+
 /**
  * How long a finished page stays up before the next one takes its place.
  *
@@ -110,6 +115,32 @@ const wait = (ms: number): Promise<void> =>
 const canvas = document.getElementById('view') as HTMLCanvasElement
 
 async function boot(): Promise<void> {
+  /*
+   * The Pet-o-matic takes over the whole page rather than sharing it.
+   *
+   * It is a judging surface, not a feature: every creature at once, under the
+   * real lighting rig, so a palette is vetoed on the same three lights the
+   * island uses. Behind the flag AND the preview channel, so the branch is not
+   * reachable in production at all — `readFlags` returns everything off there
+   * and does not consult the query string.
+   */
+  const early = readFlags(location.search)
+  /*
+   * `__CHANNEL__` first, and that ordering is the point rather than belt and
+   * braces. The flag alone is a RUNTIME check, so Rollup cannot fold the
+   * branch and the whole Pet-o-matic — three.js scene, loader, forty palettes
+   * — was emitted as a chunk in the production build and precached by the
+   * service worker. Unreachable, but shipped, on a tablet with a 5MB budget.
+   * The build-time constant folds to false and the chunk is never emitted.
+   */
+  if (__CHANNEL__ !== 'production'
+    && early.on('petOMatic') && location.search.includes('petomatic')) {
+    const { runPetOMatic } = await import('./variants/petomatic')
+    const { SPECIES: all } = await import('./pets')
+    await runPetOMatic(canvas, all, meadowDay as LightingPreset)
+    return
+  }
+
   const world = await createWorld(canvas)
   const speech = createSpeaker()
   const sfx = createSfx()
