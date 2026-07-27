@@ -277,3 +277,77 @@ describe('removing a profile', () => {
     expect(await idb?.prefix('ring', 'p1/save/')).toEqual([])
   })
 })
+
+describe("the save already on Juno's tablet", () => {
+  /**
+   * The most dangerous case in the whole item, and the one that would have
+   * shipped silently.
+   *
+   * This is byte-for-byte what `createLocalStore.put` writes today
+   * (storage.ts:71-78): a schemaVersion, an updatedAt, and the payload. No
+   * rev, no checksum, because neither existed when it was written. An envelope
+   * reader calls that "not one of ours", resolves it to null, and boots a
+   * brand new island — so upgrading the game would have wiped everything she
+   * owns. Brief §19: nothing a child owns can be lost.
+   */
+  const HER_ACTUAL_SAVE = {
+    schemaVersion: 1,
+    updatedAt: 1_753_000_000_000,
+    data: {
+      tiles: [['0,0', 'grass'], ['1,0', 'grass'], ['0,1', 'water']],
+      pets: [
+        { id: 'p1', species: 'animal-fox', name: 'Bimo', at: { q: 0, r: 0 } },
+        { id: 'p2', species: 'animal-bunny', name: 'Sheptun', at: { q: 1, r: 0 } },
+      ],
+      bankedTiles: 0, openingSeen: true, childName: 'Juno',
+      readProgress: 2, sumProgress: 3, tilesEarned: 3,
+    },
+  }
+
+  it('loads, with every friend and every tile still there', async () => {
+    const text = memoryText()
+    text.write('petIsland.v1.p1.save', JSON.stringify(HER_ACTUAL_SAVE))
+
+    const store = createDurableStore(noProfiles, { text, idb, now: clock })
+    const loaded = await store.get<Record<string, unknown>>('p1', 'save')
+
+    expect(loaded).not.toBeNull()
+    expect(loaded?.pets).toHaveLength(2)
+    expect(loaded?.tiles).toHaveLength(3)
+    expect(loaded?.childName).toBe('Juno')
+    expect(loaded?.tilesEarned).toBe(3)
+    expect(store.lastLoad('p1', 'save')?.outcome).toBe('loaded')
+  })
+
+  it('brings it up to the current schema on the way in', async () => {
+    const text = memoryText()
+    text.write('petIsland.v1.p1.save', JSON.stringify(HER_ACTUAL_SAVE))
+    const store = createDurableStore(noProfiles, { text, idb, now: clock })
+    const loaded = await store.get<Record<string, unknown>>('p1', 'save')
+    // v1 -> v2 adds the persist() answer without disturbing her progress.
+    expect(loaded?.persistGranted).toBeNull()
+    expect(loaded?.readProgress).toBe(2)
+    expect(loaded?.sumProgress).toBe(3)
+  })
+
+  it('is outranked by the first proper save written after it', async () => {
+    // Adopted at rev 0, so the next write (rev 1) wins rather than tying.
+    const text = memoryText()
+    text.write('petIsland.v1.p1.save', JSON.stringify(HER_ACTUAL_SAVE))
+    const store = createDurableStore(noProfiles, { text, idb, now: clock })
+    await store.get('p1', 'save')
+    await store.put('p1', 'save', { pets: [{ id: 'p3' }], tiles: [] })
+
+    const back = createDurableStore(noProfiles, { text, idb, now: clock })
+    const loaded = await back.get<Record<string, unknown>>('p1', 'save')
+    expect(loaded?.pets).toHaveLength(1)
+  })
+
+  it('still refuses things that are genuinely not saves', async () => {
+    // Adopting a legacy shape must not become "adopt any object at all".
+    const text = memoryText()
+    text.write('petIsland.v1.p1.save', JSON.stringify({ hello: 'world' }))
+    const store = createDurableStore(noProfiles, { text, idb, now: clock })
+    expect(await store.get('p1', 'save')).toBeNull()
+  })
+})

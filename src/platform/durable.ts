@@ -13,7 +13,9 @@
  * (brief §19), and a save that silently loads as an empty island is the worst
  * possible way to lose it — she would not even be told.
  */
-import { seal, intact, isEnvelope, migrate, SCHEMA_VERSION } from './envelope'
+import {
+  seal, intact, isEnvelope, migrate, canonical, checksum, SCHEMA_VERSION,
+} from './envelope'
 import type { Envelope } from './envelope'
 import { DOCS, RING } from './idb'
 import type { IdbStore } from './idb'
@@ -64,12 +66,43 @@ export function browserText(storage: Storage = globalThis.localStorage): TextSto
   }
 }
 
+/**
+ * A save written BEFORE any of this existed.
+ *
+ * The single most dangerous case in the whole item. What is on Juno's tablet
+ * right now was written by `createLocalStore`, which wraps the payload as
+ * `{schemaVersion, updatedAt, data}` — no rev, no checksum. Read that with an
+ * envelope reader and it is "not one of ours", which resolves to null, which
+ * boots her a brand new island. Upgrading the game would have wiped
+ * everything she owns, which is the exact thing brief §19 forbids and the
+ * exact thing this item was written to prevent.
+ *
+ * So a legacy document is ADOPTED rather than rejected. Its checksum is
+ * computed from its own contents instead of verified against a stored one:
+ * there is nothing to verify against, and refusing to trust an unchecksummed
+ * save would throw away the island it is protecting. Revision 0, so the first
+ * envelope written afterwards outranks it.
+ */
+function adoptLegacy(value: unknown): Envelope<unknown> | null {
+  if (!value || typeof value !== 'object') return null
+  const doc = value as { schemaVersion?: unknown; updatedAt?: unknown; data?: unknown }
+  if (typeof doc.schemaVersion !== 'number' || !('data' in doc)) return null
+  return {
+    schemaVersion: doc.schemaVersion,
+    rev: 0,
+    checksum: checksum(canonical(doc.data)),
+    updatedAt: typeof doc.updatedAt === 'number' ? doc.updatedAt : 0,
+    data: doc.data,
+  }
+}
+
+/** An envelope, or a pre-envelope save adopted as one, or nothing. */
+const asEnvelope = (value: unknown): Envelope<unknown> | null =>
+  isEnvelope(value) ? value : adoptLegacy(value)
+
 const parse = (raw: string | null): Envelope<unknown> | null => {
   if (!raw) return null
-  try {
-    const value: unknown = JSON.parse(raw)
-    return isEnvelope(value) ? value : null
-  } catch { return null }
+  try { return asEnvelope(JSON.parse(raw)) } catch { return null }
 }
 
 /**
@@ -168,7 +201,7 @@ export function createDurableStore(
       const path = docPath(profileId, doc)
       const local = parse(text.read(localKey(profileId, doc)))
       const remote = idb ? await idb.get<Envelope<unknown>>(DOCS, path) : null
-      const fromIdb = isEnvelope(remote) ? remote : null
+      const fromIdb = asEnvelope(remote)
 
       const report: DurableReport = { outcome: 'fresh' }
       if (local && fromIdb && local.rev !== fromIdb.rev) {
@@ -229,7 +262,7 @@ export function createDurableStore(
       const local = parse(text.read(localKey(profileId, doc)))
       if (local) return local
       const remote = idb ? await idb.get<Envelope<unknown>>(DOCS, docPath(profileId, doc)) : null
-      return isEnvelope(remote) ? remote : null
+      return asEnvelope(remote)
     },
 
     async restore(profileId, doc, env) {
