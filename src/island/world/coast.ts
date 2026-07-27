@@ -18,7 +18,7 @@
  */
 import { DIRECTIONS, neighbours, key } from './hex'
 import type { Axial } from './hex'
-import { tileAt } from './grid'
+import { tileAt, sockets } from './grid'
 import type { Island, TileType } from './grid'
 
 export const COAST_VARIANTS = ['A', 'B', 'C', 'D'] as const
@@ -521,16 +521,30 @@ export const canBeGrass = (island: Island, a: Axial): boolean =>
  *
  * ALMOST. A Fable review then found one by search, and the refuting placement is
  * exactly the kind a wall would have caught. So the honest statement is that this
- * was removed because the wall AS BUILT — refuse the socket wholesale — is
- * harmful, not because nothing could ever need it. A last-resort backstop stated
- * differently ("refuse a placement that leaves zero growable witnesses") would be
- * structural rather than empirical, and is carded.
+ * was removed because the wall AS BUILT — refuse the socket wholesale, wherever
+ * the tile would leave her sealed — is harmful, not because nothing could ever
+ * need it.
  *
- * `always leaves her a socket to tap` is what remains of it in the suite. See
+ * Most of what it was for now lives in `landedType`, stated the other way round:
+ * it refuses a KIND, so the socket keeps glowing and only the button that would
+ * end her island is missing. That is strictly better and it is where the work
+ * belongs.
+ *
+ * BUT NOT ALL OF IT, and this is the second thing measurement corrected. There is
+ * one shape where refusing a kind is not available: a socket where grass is
+ * INFEASIBLE — a pond beside it with no land edge left to give — and water would
+ * cut the last outward corridor. Nothing can go there that the island survives, so
+ * the socket does not glow. It is the narrowest form of the old wall and it is
+ * nothing like the old one at the sharp end, because `hasOutwardCorridor` proves
+ * that the corridor's own mouth is a socket, admits grass unconditionally, and is
+ * therefore still glowing right beside it. The old wall could refuse her last way
+ * out; this one cannot, and that is a proof rather than a measurement.
+ *
+ * `always leaves her a socket to tap` is what holds that in the suite. See
  * `LAND_FLOOR` for why three and not two.
  */
 export const buildableSockets = (island: Island, open: readonly Axial[]): Axial[] =>
-  open.filter(a => allows(island, a, 'grass') || allows(island, a, 'water'))
+  open.filter(a => mayBuildAt(island, a))
 
 /**
  * Must this socket be water whatever she picked?
@@ -610,15 +624,24 @@ export function mustBeWater(island: Island, a: Axial): boolean {
  * takes it to one, and the next one has nowhere to go. Set this back to 2 and
  * that test fails; it is the reason the seed range there runs as far as it does.
  *
- * At three, nothing has been found that breaks it. The suite plays two deliberate
- * strategies plus the random walk, which is what fits in the time budget; the
- * number was settled off-line against four, including one that weighs every
- * socket for the worst it can do, over some four thousand played islands.
- *
  * So three is two with the one tile of headroom that makes two hold. If Joe wants
  * the line drawn elsewhere it is this constant and nothing else — but moving it
  * back to two brings seed 160 back with it, which is why the test plays a
  * strategy rather than trusting the number.
+ *
+ * AND THREE IS NOT ENOUGH EITHER, which is the thing to know before reaching for
+ * four. This comment used to say "at three, nothing has been found that breaks
+ * it"; a Fable review then broke it, in sixty-four taps through the real tap path,
+ * and no value of this constant closes the gaps it used — a field erodes the count
+ * and is never inspected, `mustBeLand` yields where grass cannot be drawn, and once
+ * the count is nought the island lives on wet sockets this number does not model.
+ * The guarantee is `hasOutwardCorridor`, which counts nothing.
+ *
+ * What the floor is FOR, then, and it is still worth its keep: it is cheap, it
+ * fires early, and it holds the island in a shape where the dear guards below have
+ * almost nothing to do. Measured after they landed — at wetness up to 0.65 neither
+ * of them fires at all. Do not raise this to paper over a sealing bug; a sealing
+ * bug means the corridor has a hole in it, and a bigger margin will hide it.
  */
 export const LAND_FLOOR = 3
 
@@ -756,8 +779,598 @@ export function mustBeLand(island: Island, a: Axial): boolean {
   // Feasibility first. A forced field the coastline cannot draw is the fault
   // this whole file exists to prevent, and forcing is never worth causing it.
   if (!allows(island, a, 'grass')) return false
-  if (fields(island).length === 0) return false
+  if (!hasField(island)) return false
   return dryAfter(island, a, 'water') < LAND_FLOOR
+}
+
+/**
+ * Has she any fields at all? Asked instead of `fields(island).length === 0`
+ * because this runs inside the witness scan below, once per candidate socket,
+ * and building a whole array to look at its length is the cheap end of the
+ * quadratic the rest of this file is careful to avoid.
+ *
+ * Cached because the scan asks it of a HYPOTHETICAL island whose tile map is an
+ * overlay, where the iteration is a generator and correspondingly dear.
+ */
+const fieldCache = new WeakMap<Island, boolean>()
+
+function hasField(island: Island): boolean {
+  const had = fieldCache.get(island)
+  if (had !== undefined) return had
+  let found = false
+  for (const type of island.tiles.values()) if (type === 'grass') { found = true; break }
+  fieldCache.set(island, found)
+  return found
+}
+
+/**
+ * Her sockets, cached per island.
+ *
+ * `sockets` walks her whole map; the guards below ask for the list several times
+ * per tap and once per candidate placement. Same reasoning as `dryCache`, and the
+ * same safety: an `Island` is immutable and a new object per placement.
+ */
+const socketCache = new WeakMap<Island, Axial[]>()
+
+function socketsOf(island: Island): readonly Axial[] {
+  const had = socketCache.get(island)
+  if (had) return had
+  const found = sockets(island)
+  socketCache.set(island, found)
+  return found
+}
+
+/* -------------------------------------- what lands, and the last-resort wall */
+
+const KINDS: readonly TileType[] = ['grass', 'water']
+
+/**
+ * What the three placement rules make of a choice, before the backstop.
+ *
+ * This is the ordering that `flow.tileTypeFor` applies and `flow.tileOffer`
+ * advertises, and it lives HERE rather than in flow.ts for one reason: the
+ * backstop below has to ask "what would land at that socket over there?" of a
+ * hypothetical island, and a rule the flow owned could not be asked. Keeping the
+ * ordering beside the rules it orders also means the offer and the outcome are
+ * derived from one function and so cannot drift apart — see `tileOffer`.
+ *
+ * ORDER MATTERS, and the floor outranks the plug. They collide at exactly one
+ * place and it is the place that matters: the socket that CLOSES a ring, which
+ * has two of her ponds round it and none of her fields, so `mustBeWater` fires —
+ * and closing the ring is the whole fault. Ordered the other way the floor would
+ * be silent for the one tile it exists to refuse. The price is a green plug in a
+ * channel, which is a wart; the alternative is a wall round her island.
+ */
+export function settledType(island: Island, a: Axial, chosen: TileType): TileType {
+  if (mustBeLand(island, a)) return 'grass'
+  if (mustBeWater(island, a) && canBeWater(island, a)) return 'water'
+  if (chosen === 'water' && !canBeWater(island, a)) return 'grass'
+  /*
+   * And the mirror: grass that would break a pond it is placed beside becomes
+   * water instead. Dropping a field at four-fields-round a pond is the case no
+   * model can draw, and refusing to build there at all would leave a hole in her
+   * island she could never fill.
+   */
+  if (chosen === 'grass' && !canBeGrass(island, a) && canBeWater(island, a)) return 'water'
+  return chosen
+}
+
+/**
+ * A GROWABLE WITNESS: somewhere her fields could actually grow next.
+ *
+ * Four conditions, and every one of them is load-bearing:
+ *
+ *   - It is an empty socket BESIDE ONE OF HER FIELDS. Not merely a socket that
+ *     admits grass — the far shore of her lake admits grass, and land restarting
+ *     across the water is precisely the situation "walled in" describes. This is
+ *     a measure of whether HER ISLAND can grow.
+ *   - It has an EMPTY NEIGHBOUR, so filling it leaves somewhere to go afterwards.
+ *     Without this clause a hex enclosed on all six sides counts as a way to grow,
+ *     and it is not: she may fill it once and is then exactly as stuck, one tile
+ *     richer. That hollow witness is the endgame of the pinned counterexample.
+ *   - Grass is WHAT WOULD LAND there, asked of `settledType` rather than of
+ *     `canBeGrass`. Those are different questions: `mustBeWater` can override a
+ *     socket `canBeGrass` was perfectly happy with, and a socket that answers
+ *     "water" to every choice is not a place her fields can grow. This is the
+ *     gap that made the dry-socket count the wrong witness.
+ *   - It is BUILDABLE, so it glows and she can tap it. Which follows from
+ *     `canBeGrass` here: `settledType` only answers 'grass' at a socket that
+ *     refuses grass when it refuses water too, and that socket does not glow.
+ *
+ * Written as a cascade rather than a conjunction because the order is a cost
+ * order. The adjacency tests are six map lookups each, `canBeGrass` is seven cells,
+ * and `mustBeLand` walks her fields — so the expensive question is asked last and,
+ * in the overwhelming majority of sockets, never.
+ *
+ * EVEN SO IT IS NOT SUFFICIENT ON ITS OWN, and the clause above is why: it buys one
+ * ply, and the same argument then applies to the hex it leaves her. `landedType`
+ * says what it is really for.
+ */
+export function isGrowableWitness(island: Island, s: Axial): boolean {
+  if (tileAt(island, s) !== undefined) return false
+  if (!neighbours(s).some(n => tileAt(island, n) === 'grass')) return false
+  if (!neighbours(s).some(n => tileAt(island, n) === undefined)) return false
+  if (!canBeGrass(island, s)) return false
+  // Grass is allowed. It lands unless the plug rule takes the socket for water...
+  if (!mustBeWater(island, s)) return true
+  if (!canBeWater(island, s)) return true
+  // ...and even then the floor outranks the plug, so ask it before giving up.
+  return mustBeLand(island, s)
+}
+
+/**
+ * ...anywhere on the island. Cached per island for the same reason `dryCache` is:
+ * an `Island` is immutable and a new object per placement, so an entry can never
+ * go stale, and the answer is wanted several times per tap.
+ */
+const growCache = new WeakMap<Island, boolean>()
+
+export function canStillGrow(island: Island): boolean {
+  const had = growCache.get(island)
+  if (had !== undefined) return had
+  let found = false
+  for (const s of socketsOf(island)) {
+    if (isGrowableWitness(island, s)) { found = true; break }
+  }
+  growCache.set(island, found)
+  return found
+}
+
+/**
+ * The island as it would be with one more tile on it — as a VIEW, never a copy.
+ *
+ * `allows` was made non-copying because the socket outlines re-sync whenever the
+ * island changes and copying the map per candidate made the cost quadratic in
+ * island size. The backstop asks a question of a hypothetical island rather than
+ * of a hypothetical cell, so it cannot use the same override trick; it gets an
+ * overlay instead, which is O(1) to build and reads through to the real map.
+ *
+ * Being one object per hypothesis also means the `WeakMap` caches keyed on
+ * `Island` work exactly as intended: every candidate socket tested against the
+ * same hypothesis shares one `dryLandSockets` solve.
+ *
+ * THE ONE CAST IN THIS FILE, and why it is here rather than avoidable. Every
+ * member of `ReadonlyMap` is implemented, correctly, over the base map — but the
+ * lib in use types `keys`/`values`/`entries` as `MapIterator`, which carries the
+ * ES2025 iterator helpers (`map`, `filter`, `take`, ...) that a generator does not
+ * have and that nothing here calls. Satisfying it honestly would mean either
+ * copying the map, which is the cost this exists to avoid, or `Iterator.from`,
+ * which is newer than the tablet. So the shim is cast, and `the hypothetical
+ * island reads exactly like a real one` in the coast tests holds it to `place`'s
+ * behaviour on every member — including full iteration — so the cast cannot be
+ * quietly hiding a wrong answer.
+ */
+export function withTile(island: Island, a: Axial, t: TileType): Island {
+  const ka = key(a)
+  const base = island.tiles
+  const adds = !base.has(ka)
+  const entries = function* (): IterableIterator<[string, TileType]> {
+    yield* base.entries()
+    if (adds) yield [ka, t]
+  }
+  const tiles = {
+    size: base.size + (adds ? 1 : 0),
+    /*
+     * `adds` guards the override because `place` is a NO-OP on an occupied coord —
+     * nothing a child owns is overwritten — and a view that quietly disagreed with
+     * that would be a hypothetical island that cannot happen. Every caller here
+     * passes a socket, so it is unreachable rather than harmless; the pinning test
+     * found it anyway, which is the argument for the pinning test.
+     */
+    get: (k: string) => (adds && k === ka ? t : base.get(k)),
+    has: (k: string) => k === ka || base.has(k),
+    keys: function* (): IterableIterator<string> {
+      yield* base.keys()
+      if (adds) yield ka
+    },
+    values: function* (): IterableIterator<TileType> {
+      yield* base.values()
+      if (adds) yield t
+    },
+    entries,
+    [Symbol.iterator]: entries,
+    forEach: (
+      fn: (v: TileType, k: string, m: ReadonlyMap<string, TileType>) => void,
+      thisArg?: unknown,
+    ): void => {
+      for (const [k, v] of entries()) fn.call(thisArg, v, k, frozen)
+    },
+  }
+  const frozen = tiles as unknown as ReadonlyMap<string, TileType>
+  return { tiles: frozen }
+}
+
+/**
+ * Would putting `t` at `a` leave her anywhere at all to grow?
+ *
+ * Deliberately NOT `canStillGrow(withTile(...))`, which would re-derive the
+ * socket list of the hypothesis. The sockets of the island afterwards are the
+ * sockets of the island now, less the one built on, plus the empty neighbours of
+ * it — so the scan is the same size as the one `buildableSockets` already does
+ * per refresh, and no larger.
+ *
+ * The new neighbours are tried FIRST because they are where the answer usually
+ * is: a field placed at `a` gives every empty hex beside it a green neighbour and
+ * clears `mustBeWater` for all of them at a stroke, so the loop almost always
+ * exits on its first or second candidate.
+ */
+function growsAfter(island: Island, a: Axial, t: TileType): boolean {
+  const after = withTile(island, a, t)
+  const ka = key(a)
+  const beside = new Set<string>()
+  for (const s of neighbours(a)) {
+    if (tileAt(island, s) !== undefined) continue
+    beside.add(key(s))
+    if (isGrowableWitness(after, s)) return true
+  }
+  for (const s of socketsOf(island)) {
+    const ks = key(s)
+    if (ks === ka || beside.has(ks)) continue
+    if (isGrowableWitness(after, s)) return true
+  }
+  return false
+}
+
+/* ------------------------------------------------------ the outward corridor */
+
+/**
+ * DRY-EMPTY: an unbuilt hex with no pond of hers anywhere in its own six.
+ *
+ * The reason this exact set matters is the reason `dryLandSockets` counts what it
+ * counts, one step further on: with no water in its neighbourhood there is no
+ * coastline for a field to break, so `allows(island, c, 'grass')` is
+ * unconditionally true and `mustBeWater(island, c)` unconditionally false. Grass
+ * goes there today, and — the part that makes it a guarantee rather than a
+ * snapshot — still goes there after any number of tiles are placed elsewhere,
+ * because nothing but a pond beside it can ever take that away.
+ */
+const dryEmpty = (island: Island, a: Axial): boolean =>
+  tileAt(island, a) === undefined
+  && !neighbours(a).some(n => tileAt(island, n) === 'water')
+
+/** Cube radius, which is how far out a hex is however the island is placed. */
+const outFrom = (a: Axial): number =>
+  Math.max(Math.abs(a.q), Math.abs(a.r), Math.abs(a.q + a.r))
+
+/**
+ * THE OUTWARD CORRIDOR, and why it is the invariant that actually holds.
+ *
+ * The witness backstop above is one ply deep, and one ply is provably not enough:
+ * it can be walked down to a single witness that is a dead end, and then every
+ * kind at that socket ends the island and there is nothing left to refuse. The
+ * pinned counterexample does exactly that. Adding plies only moves the cliff.
+ *
+ * So this asks a topological question instead, which does not regress: is there a
+ * DRY-EMPTY hex beside one of her fields, joined to the open sea by a chain of
+ * dry-empty hexes? Call that the corridor. If it exists she can grow outward for
+ * ever, and here is the induction, which is the whole argument for this file:
+ *
+ *   - GRASS ANYWHERE PRESERVES IT. A field introduces no water, so no hex gains a
+ *     water neighbour and the dry-empty set only ever loses the hex built on. If
+ *     that hex was on the corridor, the next hex along is dry-empty and is now
+ *     beside a field — so the tail of the corridor is a corridor. If it was not,
+ *     the corridor is untouched.
+ *   - WATER CAN CUT IT, which is what there is to guard. A pond wets its six, so
+ *     it can take the mouth of the corridor or sever it midway.
+ *   - THE MOUTH IS ALWAYS BUILDABLE. It is dry-empty, so grass is feasible there
+ *     unconditionally and lands there whatever she picked; and grass preserves the
+ *     corridor, so nothing below ever refuses that socket. This is the answer to
+ *     the objection that killed the old wall in `buildableSockets` — that one
+ *     refused her last way out. This cannot: the corridor IS a way out, and it
+ *     proves one is still glowing.
+ *
+ * Fred's rock satisfies it — six dry sockets and open sea in every direction — so
+ * it holds from the first tap, and everything below only has to keep it.
+ *
+ * "OPEN SEA" is reached at cube radius three beyond her furthest tile. Every hex
+ * out there has all six of its neighbours further out than anything she owns —
+ * including a candidate placement, which is a socket and so at most one ring past
+ * her edge — so it has no owned neighbour, so it is dry-empty, and so is everything
+ * past it. Reaching that radius therefore IS reaching infinity, and it bounds the
+ * flood fill by her island rather than by the plane.
+ *
+ * ASKED OF A HYPOTHETICAL WITHOUT AN OVERLAY, which is what keeps it affordable.
+ * A pond at `a` changes the dry-empty set in exactly one way — it deletes `a` and
+ * every empty hex beside it, and touches nothing else, because dryness is a
+ * property of a hex's own six and only water can spoil it. So a candidate is a
+ * BLOCKED SET of at most seven keys over the island's own dry map, not an island of
+ * its own; and because no candidate introduces grass, no candidate can create a
+ * mouth either. Which means the expensive part — deciding which hexes are dry at
+ * all — is computed once per island and shared by every socket asked about it.
+ */
+interface DryMap {
+  /** Dryness, memoised as the fills wander rather than enumerated up front. */
+  readonly known: Map<string, boolean>
+  /** The radius at which reaching it means reaching the open sea. */
+  readonly sea: number
+  /** Dry-empty sockets beside one of her fields: where a corridor can begin. */
+  readonly mouths: readonly Axial[]
+  /**
+   * ONE KNOWN WAY OUT, kept because it answers almost every question on its own.
+   *
+   * A pond blocks seven hexes at most. If none of them is on a route that already
+   * reaches the sea, that route still reaches the sea — every hex on it is
+   * untouched, and the mouth is still a mouth — so the answer is yes without
+   * walking anything. Only a pond that lands ON the route needs a real fill.
+   *
+   * `undefined` means not yet looked for; `null` means looked for and there is
+   * none.
+   */
+  route?: readonly string[] | null
+}
+
+const dryMapCache = new WeakMap<Island, DryMap>()
+
+function dryMap(island: Island): DryMap {
+  const had = dryMapCache.get(island)
+  if (had) return had
+  let far = 0
+  for (const k of island.tiles.keys()) {
+    const parts = k.split(',').map(Number)
+    far = Math.max(far, outFrom({ q: parts[0] as number, r: parts[1] as number }))
+  }
+  const mouths: Axial[] = []
+  for (const s of socketsOf(island)) {
+    if (!dryEmpty(island, s)) continue
+    if (!neighbours(s).some(n => tileAt(island, n) === 'grass')) continue
+    mouths.push(s)
+  }
+  const made: DryMap = { known: new Map(), sea: far + 3, mouths }
+  dryMapCache.set(island, made)
+  return made
+}
+
+const isDry = (island: Island, d: DryMap, a: Axial, k: string): boolean => {
+  const had = d.known.get(k)
+  if (had !== undefined) return had
+  const now = dryEmpty(island, a)
+  d.known.set(k, now)
+  return now
+}
+
+/**
+ * A way from one of her fields out to the sea, with `blocked` held to be wet.
+ *
+ * `blocked` of `null` asks it of the island as it stands; a set asks it of the
+ * island with one pond added. Same fill either way, which is what makes the two
+ * answers impossible to get out of step with each other. Returns the hexes of a
+ * route rather than a yes, so the yes can be re-used — see `DryMap.route`.
+ */
+function findRoute(
+  island: Island, d: DryMap, blocked: Set<string> | null,
+): readonly string[] | null {
+  const from = new Map<string, string | null>()
+  const stack: Axial[] = []
+  for (const m of d.mouths) {
+    const km = key(m)
+    if (from.has(km) || blocked?.has(km)) continue
+    if (!isDry(island, d, m, km)) continue
+    from.set(km, null)
+    stack.push(m)
+  }
+  while (stack.length > 0) {
+    const a = stack.pop() as Axial
+    const ka = key(a)
+    if (outFrom(a) >= d.sea) {
+      const route: string[] = []
+      let step: string | null = ka
+      while (step !== null) {
+        route.push(step)
+        step = from.get(step) ?? null
+      }
+      return route
+    }
+    for (const n of neighbours(a)) {
+      const kn = key(n)
+      if (from.has(kn) || blocked?.has(kn)) continue
+      if (!isDry(island, d, n, kn)) continue
+      from.set(kn, ka)
+      stack.push(n)
+    }
+  }
+  return null
+}
+
+function baseRoute(island: Island, d: DryMap): readonly string[] | null {
+  if (d.route === undefined) d.route = findRoute(island, d, null)
+  return d.route
+}
+
+export function hasOutwardCorridor(island: Island): boolean {
+  return baseRoute(island, dryMap(island)) !== null
+}
+
+/**
+ * Would putting `t` at `a` leave the corridor standing?
+ *
+ * Grass is answered without looking, from the induction above — it is not an
+ * optimisation but the load-bearing half of the proof, and stating it here is what
+ * makes `buildableSockets` cheap: a socket that admits grass can never be refused,
+ * so the fill is only ever run for the few sockets that do not.
+ *
+ * And water is usually answered without a fill either, by the known route: a pond
+ * wets seven hexes at most, and out at sea away from her coast it wets none of the
+ * ones that matter. Only a pond dropped ON the route pays for a search, and the
+ * route it finds is not kept — the island it belongs to is hypothetical and will
+ * not exist unless she taps.
+ */
+function corridorAfter(island: Island, a: Axial, t: TileType): boolean {
+  if (t === 'grass') return true
+  const d = dryMap(island)
+  const blocked = new Set<string>([key(a)])
+  for (const n of neighbours(a)) {
+    if (tileAt(island, n) === undefined) blocked.add(key(n))
+  }
+  const known = baseRoute(island, d)
+  if (known !== null && !known.some(k => blocked.has(k))) return true
+  return findRoute(island, d, blocked) !== null
+}
+
+/**
+ * Is this placement one the island survives? Both guards, each one conditional on
+ * its own invariant holding NOW.
+ *
+ * That condition is not politeness, it is what stops a restored or hand-edited
+ * save from locking her out. Neither of these is a rule about what a good island
+ * looks like; each is a promise not to take away the last of something, and where
+ * the last of it has already gone there is nothing to promise and the guard falls
+ * silent rather than refusing everything.
+ */
+const keepsCorridor = (island: Island, a: Axial, t: TileType): boolean =>
+  !hasOutwardCorridor(island) || corridorAfter(island, a, t)
+
+const keepsAWitness = (island: Island, a: Axial, t: TileType): boolean =>
+  !canStillGrow(island) || growsAfter(island, a, t)
+
+/**
+ * ONE GUARD OR THE OTHER, never both, and the reason is a small proof.
+ *
+ * A CORRIDOR IMPLIES A WITNESS. Its mouth is dry-empty, so `canBeGrass` there is
+ * unconditionally true and `mustBeWater` unconditionally false, so grass is what
+ * lands; it is beside one of her fields by definition; and the corridor runs on
+ * past it, so it has an empty neighbour. That is every clause of
+ * `isGrowableWitness`. So where the corridor stands after a placement, a witness
+ * stands after it too, and asking the one-ply question as well would only ever
+ * cost time and change no answer. `a corridor is always a witness` pins it.
+ *
+ * Which leaves the witness rule doing the job it is uniquely good for: an island
+ * whose corridor has ALREADY gone. That cannot arise in play — the corridor holds
+ * of Fred's rock and everything here keeps it — but a save edited by hand, or one
+ * written before this rule existed, can arrive in that state, and there the
+ * one-ply guard is all there is and is much better than nothing.
+ *
+ * It is also what keeps this affordable. `growsAfter` scans every socket against a
+ * hypothetical island; the corridor fill walks a few hundred hexes of one map that
+ * is computed once per island. Under normal play the dear one never runs.
+ */
+const survivable = (island: Island, a: Axial, t: TileType): boolean =>
+  hasOutwardCorridor(island)
+    ? corridorAfter(island, a, t)
+    : keepsAWitness(island, a, t)
+
+/**
+ * Is there any kind at all this socket can take that keeps the corridor?
+ *
+ * THE CORRIDOR ONLY, and the asymmetry is deliberate rather than an oversight.
+ * This is the one question in the file that can stop a socket glowing, so it may
+ * only be asked of the invariant that comes with a proof that something else is
+ * still glowing. `keepsAWitness` has no such proof — it is one ply deep, and the
+ * last witness can be a dead end where every kind leaves zero. Refusing THAT
+ * socket would keep `canStillGrow` true for ever and mean nothing by it: a way out
+ * she is not allowed to take is not a way out. So the witness rule never refuses a
+ * socket, only a kind, and this only ever refuses where grass is infeasible AND
+ * water would cut the last corridor.
+ *
+ * WHICH IS WHY GRASS SHORT-CIRCUITS, and it is the same fact twice: a field admits
+ * the socket AND a field cannot cut the corridor, so a socket that takes grass is
+ * buildable with nothing further asked. That leaves the fill for the handful of
+ * sockets that refuse grass outright, and is what keeps this within a whisker of
+ * what the outlines cost before — it runs on every socket, every time the island
+ * changes, which is the budget the whole file is written against.
+ */
+const buildableCache = new WeakMap<Island, Map<string, boolean>>()
+
+export function mayBuildAt(island: Island, a: Axial): boolean {
+  /*
+   * Memoised per socket as well as per island, because `refresh()` re-syncs the
+   * outlines from a dozen call sites and most of those hand it an island that has
+   * not changed. The second sweep of an unchanged island is then free, which is
+   * more than was true before this rule existed.
+   */
+  let seen = buildableCache.get(island)
+  if (seen === undefined) { seen = new Map(); buildableCache.set(island, seen) }
+  const ka = key(a)
+  const had = seen.get(ka)
+  if (had !== undefined) return had
+  const now = allows(island, a, 'grass')
+    || (allows(island, a, 'water') && keepsCorridor(island, a, 'water'))
+  seen.set(ka, now)
+  return now
+}
+
+/**
+ * WHAT ACTUALLY LANDS: the three rules, and behind them the last-resort backstop.
+ *
+ * THE BACKSTOP: no placement may leave her unable to grow. Where the settled
+ * answer would do that, the other kind is tried, and if THAT is feasible and safe
+ * it lands instead. `survivable` is the question; `hasOutwardCorridor` is what it
+ * mostly asks, and the induction that makes it a guarantee is written out there.
+ *
+ * WHAT IT REPLACED, since the history is the argument. The dry-connection floor
+ * counts DRY sockets and was claimed to make walling-in impossible. A Fable review
+ * falsified that with a sixty-four-tap counterexample through the real tap path,
+ * ending with her fields sealed, and three gaps compounded that no value of
+ * `LAND_FLOOR` closes:
+ *
+ *   - `mustBeLand` yields when grass is infeasible, so water was still offered at
+ *     a socket where it spent the last ways out. The backstop does not care WHY
+ *     water was the settled answer, only what the island looks like afterwards.
+ *   - Grass erosion was unguarded. The floor only ever inspected water; a field on
+ *     a dry socket whose empty neighbours all touch water consumes a way out and
+ *     creates none. The backstop is symmetric in the kind.
+ *   - Dry sockets were not the real witnesses. Once the count is nought the island
+ *     survives on WET sockets where grass happens to remain drawable, a quantity
+ *     the floor never modelled — and the endgame kill was a grass tile taking the
+ *     last of those.
+ *
+ * AND THE PRESCRIBED FIX WAS NOT ENOUGH EITHER, which is the finding worth passing
+ * on. "Refuse any placement leaving zero growable witnesses" is one ply deep, and
+ * one ply can be walked down to a single witness that is a DEAD END — at that
+ * socket every kind ends the island and there is nothing left to refuse. Replayed
+ * against the witness rule alone, the counterexample reaches exactly that: at its
+ * sixty-third tap the only witness left is a hex enclosed on all six sides, and at
+ * the two taps before it grass is already INFEASIBLE at the socket being wetted,
+ * so there is no other kind to fall back on. Adding plies only moves the cliff.
+ * `isGrowableWitness` is therefore the FALLBACK here, not the guarantee — see
+ * `survivable` for exactly when each is asked.
+ *
+ * Why this does not strand her, which is the objection that rightly killed an
+ * earlier wall written into `buildableSockets`. That one refused the SOCKET, and
+ * at the sharp end the socket it refused was her last way out — it turned "walled
+ * in after one more field" into "walled in now" and took the tile off her too.
+ * Here, almost always, only a KIND is refused at a socket she may still build on.
+ * Water out at sea, away from her fields, cuts nothing and is never turned back.
+ * Where the socket itself has to be refused — grass infeasible AND water cutting
+ * the last corridor — `mayBuildAt` stops it glowing, and the corridor's own mouth
+ * is provably still glowing beside it, so she is never left with nothing.
+ *
+ * WHAT IT COSTS HER, measured over 21,600 played states rather than argued: at a
+ * wetness of 0.2 to 0.65 neither guard fires at all; at 0.8 a kind is changed once
+ * in some three thousand taps; at 1.0, where every tap asks for water, sockets are
+ * refused in 0.012% of judgements. A backstop that fires this rarely in normal play
+ * is what a backstop should be — and if a change makes it fire often, that is a new
+ * feature and it belongs in front of Joe rather than in a commit.
+ *
+ * The floor stays, and stays first. It is cheap, it fires early, and it is why the
+ * figures above are as small as they are.
+ */
+export function landedType(island: Island, a: Axial, chosen: TileType): TileType {
+  const settled = settledType(island, a, chosen)
+  if (survivable(island, a, settled)) return settled
+  const other = settled === 'grass' ? 'water' : 'grass'
+  // Feasibility first, always. A forced tile the coastline cannot draw is the
+  // fault this whole file exists to prevent, and no backstop is worth causing it.
+  if (!allows(island, a, other)) return settled
+  return survivable(island, a, other) ? other : settled
+}
+
+/**
+ * The kinds worth offering at a socket: the ones that land as themselves.
+ *
+ * Derived from `landedType` rather than restating its rules, which is the whole
+ * point. A button that does something other than what it shows is worse than no
+ * button, and the offer and the outcome used to be two lists of conditions kept
+ * in step by hand. Now the offer asks the choke point.
+ */
+export function landOffer(island: Island, a: Axial): TileType[] {
+  const kinds = KINDS.filter(k => landedType(island, a, k) === k)
+  /*
+   * Cannot happen as the rules stand — `settledType` only answers 'water' where
+   * water is feasible, so 'water' is always in the list when 'grass' is not — but
+   * an empty offer would be a panel with no buttons and no way out of it, so it
+   * degrades to the gentler kind rather than trusting that argument.
+   */
+  return kinds.length > 0 ? kinds : ['grass']
 }
 
 /**

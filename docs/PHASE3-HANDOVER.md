@@ -152,15 +152,60 @@ coast.ts
                                a pond just as water can
   canBeWater / canBeGrass      allows(), named
   mustBeWater(island, a)       2+ of her own water, none of her fields
+  mustBeLand(island, a)        the floor: water never spends her last dry
+                               connections. LAND_FLOOR of them, and see below
+  settledType(island, a, t)    those three rules, in the order they must apply
+  isGrowableWitness(island, s) a socket her FIELDS could actually grow into
+  hasOutwardCorridor(island)   is there a dry way from her fields to open sea?
+  landedType(island, a, t)     settledType, plus the two last-resort guards
+  landOffer(island, a)         the kinds that land as themselves — the buttons
   buildableSockets(island, s)  sockets where SOMETHING can go. A socket that
-                               admits neither kind no longer glows.
+                               admits neither kind no longer glows, nor does
+                               one where every kind would end her island.
   plannedLook(island, a, t)    how a tile WOULD be drawn — used by the plot
   looksFor(island)             solve every tile together
 ```
 
-`flow.tileOffer` filters the buttons by these; `flow.tileTypeFor` is the single
-choke point that decides what actually lands, because the opening script picks a
-kind before it knows the socket.
+`flow.tileTypeFor` is the single choke point that decides what actually lands,
+because the opening script picks a kind before it knows the socket. `flow.tileOffer`
+no longer restates those rules — it DERIVES the buttons from the choke point, so a
+button cannot do something other than what it shows.
+
+### She cannot wall herself in, and this is what makes that true
+
+**The dry-connection floor is a margin, not the guarantee.** `LAND_FLOOR` counts
+sockets beside her fields with no pond in their own six, and turns water back
+before the count runs out. It is cheap and fires early, and it was once claimed to
+make walling-in impossible. That claim was false: a Fable review found a
+sixty-four-tap counterexample through the real tap path, and three gaps compound
+that no value of the constant closes — grass erosion is never inspected,
+`mustBeLand` yields where grass cannot be drawn, and once the dry count is nought
+the island survives on wet sockets the floor does not model.
+
+**The guarantee is `hasOutwardCorridor`, and it is inductive rather than measured.**
+Is there an unbuilt hex beside one of her fields, with no pond in its own six,
+joined to open sea by a chain of the same? Then she can grow outward for ever. It
+holds of Fred's rock; a FIELD anywhere can never break it (a field introduces no
+water, so the chain's next hex is dry and is now beside a field); and water that
+would cut it is refused. The mouth of the corridor is always buildable and always
+takes grass, which is why refusing never leaves her with nothing — that is a proof,
+not a measurement, and it is the answer to the objection that killed an earlier
+wall in `buildableSockets`.
+
+**Two guards, and only one of them can stop a socket glowing.** `landedType` turns
+a kind into the other kind where the settled answer would cut the corridor — the
+socket still glows and only the button changes. Where grass is INFEASIBLE there as
+well, nothing can go there that the island survives, and `buildableSockets` stops
+it glowing. Measured over 21,600 played states: at wetness 0.2 to 0.65 neither
+guard fires at all; at 1.0, sockets are refused in 0.012% of judgements.
+
+**The one-ply witness rule is the fallback, not the guarantee.** "Refuse any
+placement leaving zero growable witnesses" was the prescribed fix and is not
+sufficient — it can be walked down to a single witness that is a dead end, where
+every kind ends the island and there is nothing left to refuse. It is kept for
+islands whose corridor has already gone, which play cannot reach but an edited save
+can. A corridor always implies a witness, so where the corridor stands the cheap
+question is the only one asked.
 
 **Cleanliness is judged on neighbours' TYPES; ranking is on how they are DRAWN.**
 Asking whether a tile can be clean of the *drawing* is circular. Types are the
