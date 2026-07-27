@@ -90,10 +90,20 @@ export function createEgg(): Egg {
   const CENTRE = 0.38
   const R = 0.30
   const ROWS = 2, COLS = 5
+  /**
+   * How much taller than wide the egg is — an EGG, not a ball.
+   *
+   * Every piece of the shell and the dark inside are built from spheres and
+   * stretched by this, so it is a property of the whole object rather than a
+   * number to retype. It used to be typed out at each site, and the moment one
+   * of them wrote a plain scalar instead the shell became a sphere while the
+   * inside stayed an ovoid — and the brown showed at top and bottom.
+   */
+  const STRETCH = 1.28
 
   /** The dark inside, so an opening seam reads as a crack and not a hole. */
   const inside = new THREE.Mesh(new THREE.SphereGeometry(R * 0.94, 16, 12), mat(0x6b5a41))
-  inside.scale.set(1, 1.28, 1)
+  inside.scale.set(1, STRETCH, 1)
   inside.position.y = CENTRE
   body.add(inside)
 
@@ -125,7 +135,7 @@ export function createEgg(): Egg {
           theta - 0.015, Math.PI / ROWS + 0.03),
         shellMat,
       )
-      mesh.scale.set(1, 1.28, 1)
+      mesh.scale.set(1, STRETCH, 1)
       mesh.position.y = CENTRE
 
       // Outward from the egg's centre, through the middle of this patch.
@@ -133,7 +143,7 @@ export function createEgg(): Egg {
       const midTheta = theta + Math.PI / (2 * ROWS)
       const out = new THREE.Vector3(
         Math.sin(midTheta) * Math.cos(midPhi),
-        Math.cos(midTheta) * 1.28,
+        Math.cos(midTheta) * STRETCH,
         Math.sin(midTheta) * Math.sin(midPhi),
       ).normalize()
 
@@ -147,13 +157,30 @@ export function createEgg(): Egg {
     }
   }
 
-  /** Ease the shell apart by `gap` world units, with `tumble` of rotation. */
+  /**
+   * Size one piece, keeping the egg's stretch. A shell patch is a slice of an
+   * OVOID: scale it uniformly and it becomes a slice of a ball, too short to
+   * cover the dark inside — which is what put brown at the top and bottom of
+   * every egg after the first.
+   */
+  const sizePiece = (p: Piece, s: number): void => {
+    p.mesh.scale.set(s, s * STRETCH, s)
+  }
+
+  /**
+   * Ease the shell apart by `gap` world units, with `tumble` of rotation.
+   *
+   * This is also the ONE place that puts a piece back at rest, scale included.
+   * The hatch shrinks the pieces as they fall; leaving that to be undone
+   * somewhere else is how a fresh egg inherited a hatched one's proportions.
+   */
   const openBy = (gap: number, tumble = 0): void => {
     for (const p of pieces) {
       p.mesh.position.set(
         p.out.x * gap, CENTRE + p.out.y * gap, p.out.z * gap)
       p.mesh.rotation.set(
         p.spin.x * tumble, p.spin.y * tumble, p.spin.z * tumble)
+      sizePiece(p, 1)
     }
   }
 
@@ -292,7 +319,7 @@ export function createEgg(): Egg {
             const tumble = burst * 3.2
             piece.mesh.rotation.set(
               piece.spin.x * tumble, piece.spin.y * tumble, piece.spin.z * tumble)
-            piece.mesh.scale.setScalar(1 - burst * 0.35)
+            sizePiece(piece, 1 - burst * 0.35)
           }
           inside.visible = burst < 0.45          // the dark goes with the shell
 
@@ -312,9 +339,9 @@ export function createEgg(): Egg {
       body.rotation.set(0, 0, 0)
       stage = 'intact'
       openAmount = 0
+      // Whole again: openBy(0) restores position, rotation AND size together,
+      // which is what the hatch undid.
       openBy(0, 0)
-      // The hatch shrinks and drops the pieces; a fresh egg needs them whole.
-      for (const piece of pieces) piece.mesh.scale.setScalar(1)
       inside.visible = true
     },
   }
