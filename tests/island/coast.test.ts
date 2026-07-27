@@ -538,3 +538,101 @@ describe('water meeting water', () => {
 })
 
 const LEVELS: Record<EdgeKind, number> = { land: 0, sand: 1, water: 2 }
+
+describe('no green walls in the water', () => {
+  /**
+   * Joe, from a screenshot: a wedge of land and sand running through the middle
+   * of a pond, with green poking into open water.
+   *
+   * The cost of a mismatch used to be derived from the size of the height step,
+   * which made the two directions symmetric when they are not — a green wall
+   * rising out of the sea cost 4 while a sandy lip against her fields cost 10,
+   * so on a jagged coast the scorer shoved land into the water to keep the
+   * grass edges perfect. Fable's review predicted exactly this and I recorded
+   * it as an accepted trade rather than fixing it, which was the wrong call.
+   *
+   * The costs are a table now and a wall costs 40. It cannot be pushed higher:
+   * measured across all sixty-four configurations, raising it to 100 cuts walls
+   * from 37 to 11 but takes CLIFFS — open water against her grass, the worst
+   * outcome there is — from 1 to 24, because plain water starts winning. Walls
+   * and cliffs trade against each other and cliffs matter more.
+   */
+  const ponds: Record<string, Axial[]> = {
+    'a blob of seven': [{ q: 0, r: 0 }, ...neighbours({ q: 0, r: 0 })],
+    'a big lake': [
+      { q: 0, r: 0 }, { q: 1, r: 0 }, { q: 2, r: 0 }, { q: 0, r: 1 }, { q: 1, r: 1 },
+      { q: 2, r: 1 }, { q: 0, r: 2 }, { q: 1, r: 2 }, { q: 1, r: -1 }, { q: 2, r: -1 },
+    ],
+  }
+
+  /** A field with a pond punched into it. */
+  function withPond(shape: Axial[]): Island {
+    const tiles = new Map<string, 'grass' | 'water'>()
+    for (let q = -4; q <= 5; q++) {
+      for (let r = -4; r <= 4; r++) tiles.set(key({ q, r }), 'grass')
+    }
+    for (const a of shape) tiles.set(key(a), 'water')
+    return { tiles }
+  }
+
+  /** Land standing against open water, and water standing against her grass. */
+  function faults(island: Island): { walls: number; cliffs: number } {
+    const looks = looksFor(island)
+    let walls = 0, cliffs = 0
+    for (const [k, type] of island.tiles) {
+      if (type !== 'water') continue
+      const parts = k.split(',').map(Number)
+      const a: Axial = { q: parts[0] as number, r: parts[1] as number }
+      const mine = presentedBy(looks.get(k) as TileLook)
+      neighbours(a).forEach((n, e) => {
+        const kind = island.tiles.get(key(n))
+        if (kind === 'grass' && mine[e] === 'water') cliffs++
+        if (kind !== 'water') return
+        const theirs = presentedBy(looks.get(key(n)) as TileLook)[(e + 3) % 6]
+        if (mine[e] === 'land' && theirs === 'water') walls++
+      })
+    }
+    return { walls, cliffs }
+  }
+
+  it('puts no land in the middle of an ordinary pond', () => {
+    // The shapes a child actually digs: a blob, and a lake she has widened.
+    for (const [name, shape] of Object.entries(ponds)) {
+      expect(faults(withPond(shape)), name).toEqual({ walls: 0, cliffs: 0 })
+    }
+  })
+
+  it('keeps an awkward shape down to a single fault at worst', () => {
+    /*
+     * An L bend and a three-hex channel are the shapes four coast models
+     * genuinely cannot serve: a tile with grass on four sides has no
+     * orientation that meets all of them, because no model has four land
+     * edges. Something must give, and this pins how much.
+     */
+    const awkward: Record<string, Axial[]> = {
+      'three in a row': [{ q: 0, r: 0 }, { q: 1, r: 0 }, { q: 2, r: 0 }],
+      'an L bend': [
+        { q: 0, r: 0 }, { q: 1, r: 0 }, { q: 2, r: 0 }, { q: 2, r: 1 }, { q: 2, r: 2 },
+      ],
+    }
+    for (const [name, shape] of Object.entries(awkward)) {
+      const { walls, cliffs } = faults(withPond(shape))
+      expect(walls + cliffs, name).toBeLessThanOrEqual(1)
+    }
+  })
+
+  it('still keeps her grass edges green wherever a model allows', () => {
+    // The other half: fixing the walls must not simply trade them for lips
+    // against her fields.
+    for (let start = 0; start < 6; start++) {
+      for (let length = 1; length <= 3; length++) {
+        let mask = 0
+        for (let i = 0; i < length; i++) mask |= 1 << ((start + i) % 6)
+        const shown = presented(mask)
+        for (const k of grassEdges(mask)) {
+          expect(shown[k], `run of ${length} from ${start}, edge ${k}`).toBe('land')
+        }
+      }
+    }
+  })
+})

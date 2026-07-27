@@ -72,8 +72,6 @@ export const COAST_EDGES: Record<CoastVariant, EdgeKind[]> = {
 }
 
 /** Surface height order. Green, then sand, then water — Joe's rule, as a number. */
-const LEVEL: Record<EdgeKind, number> = { land: 0, sand: 1, water: 2 }
-
 /** How a tile should be drawn. Derived per frame-of-state, never saved. */
 export type TileLook =
   | { kind: 'grass'; turns: 0 }
@@ -164,25 +162,37 @@ export function presentedBy(look: TileLook): EdgeKind[] {
  * How badly one candidate orientation misreads the tiles around it.
  *
  * Joe's rule: *"edges to green are always green, then sand, then water. Never
- * a tile edge of A against the sand or water of B."* So a mismatch on a
- * GRASS-facing edge is the thing being forbidden, and one on a sea-facing edge
- * is merely untidy — hence the order-of-magnitude weight between them. Without
- * it the two readings tie, and the tie is the whole question: align the water
- * arc to the sea and you get a watery tile with a sandy lip against her
- * fields; align the land arc to her fields and you get the band she asked for.
+ * a tile edge of A against the sand or water of B."* A mismatch on a
+ * GRASS-facing edge is the thing being forbidden; one on a sea-facing edge is
+ * milder but not free.
  *
- * Steps are squared so that one 0.2 cliff (green straight down into water)
- * always loses to two 0.1 lips. Skipping a step in the sequence is the sin;
- * taking it gently is not.
+ * The costs are stated as a table rather than derived from a step size,
+ * because the two directions are NOT symmetric and deriving them made them so.
+ * The first version charged by the size of the height step, which made a green
+ * wall rising out of the sea (4) cheaper than a sandy lip against her fields
+ * (10) — so on a jagged coast the scorer would happily shove land into the
+ * water to keep the grass edges perfect. Fable's review flagged it as a
+ * consequence and I recorded it as a known trade; Joe then saw one in a pond
+ * and it is plainly a bug, not a trade.
+ *
+ * In badness order: water against her grass is a cliff and unforgivable; land
+ * into open water is a wall in the middle of a pond and nearly as bad; a sand
+ * lip against grass is mild; sand meeting water is what a beach IS.
  */
+const COST: Record<EdgeKind, Record<EdgeKind, number>> = {
+  //         they show:  land   sand  water
+  land: { land: 0, sand: 2, water: 40 },
+  sand: { land: 10, sand: 0, water: 2 },
+  water: { land: 100, sand: 2, water: 0 },
+}
+
 function mismatch(edges: EdgeKind[], turns: number, around: EdgeKind[]): number {
   let cost = 0
   for (let k = 0; k < 6; k++) {
     // Model edge m is drawn at world edge m + turns, so world k shows k - turns.
     const mine = edges[(k - turns + 6) % 6] as EdgeKind
     const theirs = around[k] as EdgeKind
-    const step = LEVEL[mine] - LEVEL[theirs]
-    cost += (theirs === 'land' ? 10 : 1) * step * step
+    cost += (COST[mine] as Record<EdgeKind, number>)[theirs]
   }
   return cost
 }
