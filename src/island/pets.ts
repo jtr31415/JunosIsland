@@ -7,8 +7,9 @@
  */
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { createBlobShadow, castShadow, SHADOW_LIFT } from './juice'
+import { createBlobShadow, castShadow } from './juice'
 import { flattenImported } from './lighting'
+import { FITS } from './world/props'
 import { toWorld } from './world/hex'
 import type { Axial } from './world/hex'
 import type { Island } from './world/grid'
@@ -22,6 +23,43 @@ export const SPECIES = [
   'animal-koala', 'animal-lion', 'animal-monkey', 'animal-panda', 'animal-parrot',
   'animal-penguin', 'animal-pig', 'animal-polar', 'animal-tiger',
 ] as const
+
+/**
+ * Who flies, and therefore who hovers instead of bobbing along the grass.
+ *
+ * Joe: "all the animals that can fly should hover at tree height and not bob
+ * over the ground."
+ *
+ * The models do not answer this on their own. Exactly FIVE of the 24 carry
+ * `wing-left`/`wing-right` nodes — bee, chick, fish, parrot, penguin — and
+ * three of those cannot fly and would look absurd at the top of a tree. A
+ * penguin's wings are flippers and a fish's are fins; a chick has wings and
+ * spends its whole life on the ground, which is a thing six-year-olds know
+ * better than most adults. So the wing nodes are evidence, not the answer, and
+ * the list is the judgement: a bee and a parrot fly, and nothing else in the
+ * pack does.
+ *
+ * Deliberately a list rather than a rule derived from the mesh. A rule that
+ * said "has wings" would put a penguin in the canopy, and every rule anyone
+ * could write to exclude it is this list wearing a disguise.
+ */
+export const FLYERS: ReadonlySet<string> = new Set(['animal-bee', 'animal-parrot'])
+
+/**
+ * How high "tree height" is.
+ *
+ * DERIVED from the scenery rather than picked, so a flyer stays among the
+ * branches if the trees are ever resized. `FITS` is the one place the game
+ * decides how big a piece of landscape may be: `feature` is the budget a tile's
+ * own tree is fitted into and `grown` the smaller budget for the eight pieces
+ * a plot she built herself carries. The taller of the two is the canopy a bee
+ * has to clear.
+ *
+ * Measured against the real island: a tile's tree fits a 0.95-unit height
+ * budget and a pet stands about 0.25, so this is roughly four pets up — high
+ * enough to read as flight, low enough to stay in frame under the orbit camera.
+ */
+export const TREE_HEIGHT = Math.max(FITS.feature[1], FITS.grown[1])
 
 interface Live {
   pet: Pet
@@ -45,6 +83,10 @@ interface Live {
    * scenery rather than merely its centre.
    */
   radius: number
+  /** Does it fly? Settled once, at load, from FLYERS. */
+  flying: boolean
+  /** The wing nodes, if this one has any, so a hover looks like flying. */
+  wings: THREE.Object3D[]
 }
 
 export interface Obstacle { x: number; z: number; r: number }
@@ -106,6 +148,16 @@ export interface PetField {
   preview(species: string): Promise<THREE.Object3D>
   /** Trees and rocks to walk around rather than through. */
   setObstacles(list: Obstacle[]): void
+  /**
+   * Things that are solid AND move, asked afresh every frame.
+   *
+   * Fred. He is the only one, and he was the whole of Joe's "animals can still
+   * clip through the frog": scenery is published once when it grows, so
+   * `setObstacles` is the wrong door for something that potters about between
+   * hops — a circle left where he was standing a minute ago blocks empty grass
+   * and lets pets through the frog.
+   */
+  setMovers(fn: () => readonly Obstacle[]): void
   update(dt: number, t: number, island: Island, hexSize: number): void
 }
 
@@ -116,8 +168,15 @@ export function createPetField(base = ''): PetField {
   const cache = new Map<string, THREE.Group>()
   const live = new Map<string, Live>()
   let obstacles: Obstacle[] = []
+  let movers: () => readonly Obstacle[] = () => []
   /** Bounces asked for before their pet finished loading. */
   const pendingBounce = new Set<string>()
+
+  /** The solid world this frame: scenery that stays put, plus Fred. */
+  function solidNow(): readonly Obstacle[] {
+    const moving = movers()
+    return moving.length ? [...obstacles, ...moving] : obstacles
+  }
 
   async function model(species: string): Promise<THREE.Group> {
     const hit = cache.get(species)
@@ -149,6 +208,7 @@ export function createPetField(base = ''): PetField {
   function randomSpot(island: Island, hexSize: number, self = 0): THREE.Vector3 {
     const keys = [...island.tiles.keys()]
     const spot = new THREE.Vector3()
+    const solid = solidNow()
 
     for (let attempt = 0; attempt < 12; attempt++) {
       const k = keys[Math.floor(Math.random() * keys.length)] as string
@@ -158,7 +218,7 @@ export function createPetField(base = ''): PetField {
         w.x + (Math.random() - 0.5) * hexSize * 0.8, 0,
         w.z + (Math.random() - 0.5) * hexSize * 0.8,
       )
-      const blocked = obstacles.some(o =>
+      const blocked = solid.some(o =>
         Math.hypot(spot.x - o.x, spot.z - o.z) < o.r * 1.15 + self)
       if (!blocked) return spot.clone()
     }
@@ -192,16 +252,33 @@ export function createPetField(base = ''): PetField {
         const body = new THREE.Box3().setFromObject(holder)
         const radius = Math.max(
           body.max.x - body.min.x, body.max.z - body.min.z) / 2
+        /*
+         * How tall this one stands, measured for the same reason as its width:
+         * the pack runs from a 1.55-unit parrot to a 2.13-unit bunny, and the
+         * shadow a body throws under a 35° sun is proportional to its height.
+         * A single assumed height would give the elephant a bunny's shadow.
+         */
+        const standing = body.max.y - body.min.y
         const w = toWorld(pet.at as Axial, hexSize)
         holder.position.set(w.x, 0, w.z)
         holder.userData.pick = { kind: 'pet', id: pet.id }
         group.add(holder)
         // The shadow is a SIBLING of the pet, not a child. Parented, it rose
         // with every hop and sank under the tile on the way down.
-        const shadow = createBlobShadow(0.17)
+        const shadow = createBlobShadow(0.17, standing)
         group.add(shadow)
+        /*
+         * A hovering creature with rigid wings reads as levitating rather than
+         * flying, and the models come with the parts already separated out —
+         * so the wings are found once, here, and flapped in update().
+         */
+        const flying = FLYERS.has(pet.species)
+        const wings: THREE.Object3D[] = []
+        if (flying) {
+          root.traverse(n => { if (/^wing-/.test(n.name)) wings.push(n) })
+        }
         live.set(pet.id, {
-          pet, root: holder, shadow, radius,
+          pet, root: holder, shadow, radius, flying, wings,
           goal: randomSpot(island, hexSize, radius),
           phase: Math.random() * Math.PI * 2,
           bounce: 0,
@@ -242,8 +319,16 @@ export function createPetField(base = ''): PetField {
       }
     },
 
+    setMovers(fn) { movers = fn },
+
     update(dt, t, island, hexSize) {
       const others = [...live.values()]
+      /*
+       * Asked ONCE per frame rather than once per pet: Fred's position is the
+       * same fact for all of them, and on a full island this is the difference
+       * between one query and thirty.
+       */
+      const solid = solidNow()
 
       for (const l of live.values()) {
         const pos = l.root.position
@@ -287,9 +372,17 @@ export function createPetField(base = ''): PetField {
             pos.z += (dz / d) * push
           }
         }
-        // Scenery is SOLID. Applied last, after seeking and separation, so
-        // nothing downstream can push a pet back inside a tree.
-        clearOf(pos, obstacles, l.radius)
+        /*
+         * Scenery is SOLID, and so is Fred. Applied last, after seeking and
+         * separation, so nothing downstream can push a pet back inside a tree
+         * — or through the frog.
+         *
+         * ONE authority, deliberately. Fred does not check for pets on his own
+         * account: he hops where he likes and this clamp answers for it on the
+         * next frame, which is what stops two objects both correcting for the
+         * same overlap and jittering against each other.
+         */
+        clearOf(pos, solid, l.radius)
 
         /*
          * Wedged? Go somewhere else.
@@ -309,13 +402,34 @@ export function createPetField(base = ''): PetField {
           }
         } else l.stuckFor = 0
 
-        // A hop rather than a glide: squash on the ground, stretch in the air.
-        const hop = Math.abs(Math.sin(t * 3.4 + l.phase))
         const moving = dist >= 0.12
-        pos.y = moving ? hop * 0.16 : Math.sin(t * 1.6 + l.phase) * 0.03
+        let sy = 1
+        let sxz = 1
 
-        let sy = moving ? 1 + hop * 0.12 : 1
-        let sxz = moving ? 1 - hop * 0.07 : 1
+        if (l.flying) {
+          /*
+           * FLYING, not bobbing. A bee that skims the grass with a walking
+           * hop is a bee pretending to be a rabbit; up among the branches it
+           * is unmistakably a bee, and Joe asked for exactly that.
+           *
+           * No squash and stretch, because nothing is pushing off anything:
+           * what a hovering creature does is drift on the spot. The bob is
+           * small and slow next to the wingbeat, which is fast and shallow —
+           * that contrast is what reads as hovering rather than as floating.
+           */
+          pos.y = TREE_HEIGHT + Math.sin(t * 1.9 + l.phase) * 0.05
+          const beat = Math.sin(t * 14 + l.phase)
+          for (let i = 0; i < l.wings.length; i++) {
+            const wing = l.wings[i] as THREE.Object3D
+            wing.rotation.z = (i % 2 ? -1 : 1) * beat * 0.5
+          }
+        } else {
+          // A hop rather than a glide: squash on the ground, stretch in the air.
+          const hop = Math.abs(Math.sin(t * 3.4 + l.phase))
+          pos.y = moving ? hop * 0.16 : Math.sin(t * 1.6 + l.phase) * 0.03
+          sy = moving ? 1 + hop * 0.12 : 1
+          sxz = moving ? 1 - hop * 0.07 : 1
+        }
 
         if (l.bounce > 0) {
           l.bounce = Math.max(0, l.bounce - dt * 2.2)
@@ -327,9 +441,15 @@ export function createPetField(base = ''): PetField {
 
         l.root.scale.set(sxz, sy, sxz)
 
-        // The shadow follows in x and z only, and stays flat on the ground.
-        l.shadow.position.set(pos.x, SHADOW_LIFT, pos.z)
-        castShadow(l.shadow, pos.y)
+        /*
+         * The shadow stays flat on the ground beneath — but NOT directly
+         * beneath. castShadow throws it away from the sun, so the anchor it is
+         * given is where the pet touches down rather than where the blob ends
+         * up. That is Joe's third note: every blob used to be a circle drawn
+         * concentrically under its object, which is the shadow of a lamp
+         * directly overhead, and this rig's sun is at 35°.
+         */
+        castShadow(l.shadow, pos.y, pos.x, pos.z)
       }
     },
   }
