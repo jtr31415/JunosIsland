@@ -45,6 +45,7 @@ import type { ReadPick } from '../core/generators/read'
 import type { BuildItem } from '../core/generators/build'
 import type { SumItem } from '../core/generators/sums'
 import { balance } from './balance'
+import { createBreakWatch } from './governors'
 
 export interface OverlayHost {
   speech: Speaker
@@ -61,6 +62,11 @@ export interface OverlayHost {
    *
    * `more` is false when the child asked to leave with work already banked, so
    * the host collects the reward but does NOT deal another page.
+   *
+   * It is also false when a run of struggle has just ended — see
+   * `stretchDue()`. Same meaning, and deliberately the same channel: "do not
+   * deal another page" is exactly what a break suggestion needs, and it is a
+   * path that already banks everything she has done.
    */
   onPassed(more: boolean): void
   /** Fired when the overlay is dismissed without finishing. Costs nothing. */
@@ -136,6 +142,25 @@ export interface Overlay {
   askName(): Promise<string>
   toast(msg: string): void
   isOpen(): boolean
+  /**
+   * Has she just mashed her way through several pages in a row?
+   *
+   * The overlay is the only thing that sees both halves of the question: the
+   * renderers report every wrong tap through `ChallengeDeps.onWrong`, and
+   * `open*()`/`finish()` are where a page begins and ends. So the counting
+   * lives here and the JUDGEMENT lives in `governors.ts` — `createBreakWatch`,
+   * which owns the threshold and the reset rule.
+   *
+   * A plain question with no side effects, so a host that asks it twice gets
+   * the same answer. It goes false again the moment the next page is mounted,
+   * which is what makes a stale "yes" impossible: nothing has to remember to
+   * clear it, and it cannot surface a page or a ceremony later.
+   *
+   * §19: this is the whole of the mechanism. There is no lock, no cooldown and
+   * no countdown behind it — the host puts Fred's suggestion on the island and
+   * every tap still works. Nothing here can bar her from playing on.
+   */
+  stretchDue(): boolean
 }
 
 /**
@@ -264,6 +289,23 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
    * ported renderers write to it.
    */
   let inputLock = 0
+  /**
+   * The cross-page half of the mash guard (governors.ts).
+   *
+   * The renderers' own guard is PER ROUND and resets its counter the moment it
+   * fires, so nothing in the game had any memory of a bad run — three pages of
+   * mashing looked exactly like three unrelated pages. This is that memory, and
+   * it deliberately sits ABOVE the renderers: they already publish every wrong
+   * tap through `onWrong()`, so no ported file changes and `npm run parity`
+   * still compares like with like.
+   *
+   * A SESSION's memory, never persisted: a run of struggle is a fact about the
+   * last few minutes, and serving it back to her tomorrow would be a game that
+   * remembers her bad afternoon.
+   */
+  const breaks = createBreakWatch()
+  /** True from the end of a mashed run until the next page is mounted. */
+  let stretch = false
   const holds: Holds = {
     rewardUntil: () => 0,
     quietUntil: () => 0,
@@ -288,7 +330,9 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
        world itself changes. But this is also the renderer's signal that an
        answer was CORRECT, which is what makes leaving safe below. */
     flyToScore: () => { earned = true },
-    onWrong: () => {},
+    /* Every wrong tap, from all three renderers. The only thing that reads it
+       is the cross-page break watch — see `breaks` above. */
+    onWrong: () => { breaks.wrong() },
     /* For a sum, the first correct answer completes the round. */
     onAdvance: () => { finish() },
     showTarget: html => {
@@ -341,7 +385,38 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
    */
   function finish(): void {
     earned = false
-    host.onPassed(true)
+    /*
+     * Close the page's book BEFORE telling the host, because the answer decides
+     * `more`: a page that ends a run of struggle asks for no further page, so
+     * the host hands her back the island and Fred makes his suggestion there.
+     *
+     * NOTE what this does not do: interrupt. The suggestion is computed at the
+     * end of a page and delivered after it, never over the top of one. A child
+     * three wrong taps into a word she cannot hear does not need the game
+     * talking across her; and "get up and run about" is not something anyone
+     * can act on mid-page anyway.
+     *
+     * If this page HATCHED or FINISHED A TILE the host ignores `more` and plays
+     * the ceremony, and the suggestion is simply not made. That is right: she
+     * ends up on her island watching a friend arrive, which is already the
+     * break, and cutting into it would be the one genuinely unkind version of
+     * this feature. `stretch` then clears itself on the next page.
+     */
+    stretch = breaks.pageEnded()
+    host.onPassed(!stretch)
+  }
+
+  /**
+   * A fresh page is going up: the tally starts at nothing, and any suggestion
+   * from the last one is spent.
+   *
+   * Clearing it HERE rather than when the host reads it is what makes a stale
+   * suggestion unexpressible — there is no flag anyone has to remember to reset,
+   * and a line about getting up cannot surface halfway through a later sitting.
+   */
+  function startPage(): void {
+    breaks.pageStarted()
+    stretch = false
   }
 
   again.onclick = () => { handle?.sayAgain() }
@@ -375,6 +450,10 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
     // the reward lands on the island and no further page is dealt.
     const collect = earned
     earned = false
+    // Leaving is a way for a page to end too, and a child who walks out of her
+    // third mashed page in a row is the clearest case there is. Counted before
+    // the teardown, so the host can ask on the other side of it.
+    stretch = breaks.pageEnded()
     teardown()
     if (collect) host.onPassed(false)
     else host.onDismissed()
@@ -383,6 +462,7 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
   return {
     openWordFind(picks, staged = false) {
       teardown()
+      startPage()
       earned = false
       layer.classList.toggle('staged', staged)
       again.classList.remove('hide')
@@ -392,6 +472,7 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
 
     openBuild(item, staged = false) {
       teardown()
+      startPage()
       earned = false
       layer.classList.toggle('staged', staged)
       again.classList.remove('hide')
@@ -401,6 +482,7 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
 
     openSum(item, staged = false) {
       teardown()
+      startPage()
       earned = false
       layer.classList.toggle('staged', staged)
       // A sum is on screen to be read, so there is no prompt to repeat — and
@@ -569,5 +651,7 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
     toast,
 
     isOpen: () => !layer.classList.contains('hide'),
+
+    stretchDue: () => stretch,
   }
 }

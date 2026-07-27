@@ -25,7 +25,8 @@ import type { GrowingPlot } from './world/increments'
 import { createAlbum } from './album'
 import { hatchProgress, landProgress, sumsForTile, pagesForEgg } from './flow'
 import { balance, applyDevBalance } from './balance'
-import { landPaused, eggsPaused, activeGovernor, GOVERNOR_LINE } from './governors'
+import { landPaused, eggsPaused, GOVERNOR_LINE } from './governors'
+import type { Nudge } from './governors'
 import { OPENING, HATCH_LINES, TILE_QUESTION, fill } from './script'
 import { loadIsland, saveIsland } from './save'
 import { openingGate } from './opening'
@@ -473,7 +474,15 @@ async function boot(): Promise<void> {
       // armed, or an unrelated hatch later would resume it out of nowhere.
       openingResumeAt = -1
       flow = handleChallengeDismissed(flow)
-      overlay.say('Tap the egg to read it home — or tap the island for land!')
+      /*
+       * WIRING (break governor). A child who walks out of her third mashed page
+       * in a row is the clearest case the watch has, and this is the one place
+       * the island's own greeting would otherwise talk over Fred. Pinned by
+       * tests/island/stretch.test.ts.
+       */
+      if (!offerAStretch()) {
+        overlay.say('Tap the egg to read it home — or tap the island for land!')
+      }
       refresh()
     },
   })
@@ -1145,6 +1154,11 @@ async function boot(): Promise<void> {
           const at = openingResumeAt
           openingResumeAt = -1
           setTimeout(() => { void runOpening(at) }, 600)
+        } else {
+          // WIRING (break governor). Fred's story wins if it is mid-sentence —
+          // he is already talking, and the suggestion keeps until she opens
+          // another page. Pinned by tests/island/stretch.test.ts.
+          offerAStretch()
         }
         return
       }
@@ -1279,7 +1293,10 @@ async function boot(): Promise<void> {
       sfx.play('up')
       refresh()
 
-      if (!more) { overlay.close(); return }
+      // WIRING (break governor): the same handover on the maths half, because
+      // the guard is symmetric — mashing the number pad is mashing.
+      // Pinned by tests/island/stretch.test.ts.
+      if (!more) { overlay.close(); offerAStretch(); return }
 
       // Same rule for land: keep counting until the plot is finished. Each sum
       // grows the plot a little more, and refresh() has just shown that.
@@ -1536,12 +1553,43 @@ async function boot(): Promise<void> {
    * other half of the loop instead (slice-1 spec §5). The child can ignore
    * him and tap again; nothing is greyed out and nothing is refused twice.
    */
-  function invite(which: Exclude<ReturnType<typeof activeGovernor>, 'none'>): void {
+  function invite(which: Nudge): void {
     const line = GOVERNOR_LINE[which]
     overlay.say(line)
     speech.speak(line)
     fred.talk(2.6)
     fred.hop()
+  }
+
+  /**
+   * The third governor, delivered: Fred suggests getting up for a minute.
+   *
+   * Joe: *"we have a button mash guard, but repeated mashing on successive pages
+   * should lead to a suggestion for a break or to get up, run around for a
+   * minute and then come back."* The counting is in `governors.ts` and the page
+   * boundaries are in `overlay.ts`; this is only the delivery, and it is
+   * deliberately the SAME delivery the other two governors use.
+   *
+   * Called at the end of a page, on the island, with the panel already down.
+   * Both of those are load-bearing:
+   *
+   *   - AFTER the page, never over it. The suggestion is unactionable mid-page
+   *     and unkind besides.
+   *   - ON THE ISLAND, because `body:has(.overlay:not(.hide)) .say` hides Fred's
+   *     card while any overlay is open — the rule that made the tile-offer
+   *     question invisible for a day. With the panel down the card is the right
+   *     channel and the only one big enough to read; with it up there is no
+   *     channel at all, which is a second reason the suggestion waits.
+   *
+   * §19 IN ONE LINE: this returns a boolean and speaks a sentence. It sets no
+   * lock, starts no timer, and takes nothing back — everything she counted up is
+   * already banked and persisted by the refresh() above every caller. She can
+   * ignore Fred and tap the egg again on the very next frame.
+   */
+  function offerAStretch(): boolean {
+    if (!overlay.stretchDue()) return false
+    invite('wriggle-break')
+    return true
   }
 
   const ports: InteractionPorts = {
