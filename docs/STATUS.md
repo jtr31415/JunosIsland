@@ -19,6 +19,65 @@ verdict outranks every document here (brief §18), and the notes below marked
 
 ---
 
+## LATEST — 28 July, late evening. Read this first.
+
+**Live on `main` at `5520da5`, CI green, deployed.** There is still no `v*` tag,
+so the Pages root falls back to `main` — which means **whatever is on `main` is
+what is on Juno's tablet**, with no release step in between. Worth remembering
+before pushing anything half-finished.
+
+**Mountains shipped** (#14, which had been closed on only half its ask). A third
+button in the tile chooser once she has placed fifteen tiles of her own — the
+home hex does not count. Joe's rules: rock never sits beside water, water never
+beside rock; the button withholds itself where the rules would override it.
+Threshold is `balance.json`'s `{ type: 'rock', tiles: 15 }`. **979 tests.**
+
+*The feature was easy; the third VALUE was not.* Every coastline rule was written
+when `TileType` had exactly two members, so it asks `=== 'grass'` and lets
+everything else mean water — right for two, silently wrong for three, and
+invisible to `tsc` because these compare values instead of switching
+exhaustively. Rock would have presented open sea to the coast mask and cut
+beaches through the middle of her island. Eight sites now route through
+`isLand()`. **Read the note on `isLand` in `grid.ts` before adding a fourth
+type**; rock escaped needing new coast-table entries only because it can never
+touch water.
+
+### Two branches are finished, green, and NOT merged
+
+Both are committed so nothing can be lost, and both are waiting on Joe rather
+than on work:
+
+| branch | what | why it is waiting |
+|---|---|---|
+| `worktree-agent-aae322fb0f2816589` → `c7b0097` | the growable-witness backstop: an outward-corridor check that is genuinely inductive, where the one-ply witness rule was not | **needs Joe's ratification.** It reinstates a narrow socket refusal — the shape the project rejected before. It fires only where grass is infeasible *and* water would cut her last corridor (0.012% of taps at full wetness, 0% below) and provably cannot refuse her last way out, but a socket that stops glowing is product-visible. |
+| `worktree-agent-a2a932c7076ce661b` → `b1f7656` | Fred suggests a stretch after three rough pages | Fable reviewed it and said **merge**. Deferred only because Joe ran out of usage, not because anything is wrong. |
+
+Both were cut from bases behind current `main`, so each needs a merge and a fresh
+six-gate run — not a fast-forward.
+
+**Merge `b1f7656` behind a fix for #49 if you can.** The mash-guard toasts have
+never once been visible: `toastEl.className = 'chunk say hide'` reuses `.say`,
+which `tokens.css` hides whenever an overlay is open — which is exactly when a
+toast fires. The break suggestion delivers on the island with the panel down and
+so is safe, but anything routed through a toast is landing in a dead channel.
+
+### Where the ratio work got to
+
+Joe: *"for every tile, there needs to be one animal. we can be a bit more relaxed
+with that, say 3 tiles for 2 animals."* **Diagnosed, not implemented** — see #50.
+The cause is NOT the cost curves, which is where anyone looks first and where I
+wasted twenty minutes: `egg` and `tile` are the same curve to within rounding.
+The mechanism is `governors.ts` holding an ABSOLUTE difference (`tiles − pets`
+bounded to −3..4), which drives the ratio to 1:1 as the island grows. A ratio
+target cannot be expressed as a constant difference; the corridor has to become
+proportional. Roughly twenty lines, now that the cause is known.
+
+**The autonomous overnight cron was cancelled** on 28 July. It had gone stale —
+it was still naming #33, #28, #29, #30 and #31 as the next work, all of which are
+done — and Joe is rationing usage until it refreshes.
+
+---
+
 ## The overnight run, 27–28 July
 
 Joe went to bed and asked for autonomous work with Fable reviewing plans and
