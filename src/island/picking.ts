@@ -14,6 +14,14 @@ import type { Axial } from './world/hex'
 export type Hit =
   | { kind: 'tile'; axial: Axial }
   | { kind: 'socket'; axial: Axial }
+  /**
+   * The half-built plot. Its own kind rather than a `socket`, because it is not
+   * one: `scene.setIsland` deliberately removes the socket outline underneath a
+   * standing plot (#19 — the outline and the plot clipped through one another),
+   * so nothing else answers for that hex and a tap there used to fall through to
+   * the sea. Tapping it is how she changes her mind about what she is building.
+   */
+  | { kind: 'plot' }
   | { kind: 'pet'; id: string }
   | { kind: 'egg' }
   | { kind: 'fred' }
@@ -25,6 +33,8 @@ export interface PickTargets {
   socketAt(instanceId: number): Axial | undefined
   /** Things that stand up off the ground: pets, the egg, Fred. */
   pickables: THREE.Object3D[]
+  /** The growing plot, while one stands. */
+  plot?: THREE.Object3D | null
   /** The island itself. */
   tiles: THREE.Object3D
   tileAt(kind: string, instanceId: number): Axial | undefined
@@ -112,6 +122,20 @@ function nearestTile(ray: THREE.Raycaster, t: PickTargets): Candidate | null {
 }
 
 /**
+ * The growing plot, if the ray reaches it.
+ *
+ * Recursive, unlike the two above: the plot is an ordinary group of meshes that
+ * grows a piece at a time, not one instanced mesh, so its children are nested
+ * and arrive over the course of the build.
+ */
+function nearestPlot(ray: THREE.Raycaster, t: PickTargets): Candidate | null {
+  if (!t.plot || !isShowing(t.plot)) return null
+  const hits = ray.intersectObject(t.plot, true)
+  const h = hits[0]
+  return h ? { hit: { kind: 'plot' }, distance: h.distance } : null
+}
+
+/**
  * Resolve one tap.
  *
  * The precedence, and why:
@@ -135,13 +159,32 @@ function nearestTile(ray: THREE.Raycaster, t: PickTargets): Candidate | null {
  *    therefore whatever she aimed at. If a socket really is in front, tapping
  *    where it is drawn still offers the socket.
  *
- * 3. Then the island itself, then the sea.
+ * 3. **The PLOT RANKS WITH THE SOCKETS**, nearest of the two winning.
+ *
+ *    It is the same sort of thing — a place rather than an object — and the two
+ *    can never occupy the same hex, because `scene.setIsland` removes the socket
+ *    under a standing plot. But they are neighbours, and a socket hex is a whole
+ *    hex wide: from a good many camera angles one is drawn across the plot.
+ *
+ *    Ranking the plot BELOW sockets, which is how this was first written, meant
+ *    any socket under the cursor won outright and the plot could not be tapped at
+ *    all — verified in the browser, where tapping the half-built hex opened a sum
+ *    instead of the chooser. Distance is the honest test here for exactly the
+ *    reason it is with the egg: it answers with whatever she can actually see.
+ *
+ * 4. Then the island itself, then the sea.
  */
 export function pickFrom(ray: THREE.Raycaster, t: PickTargets): Hit {
   const near = nearestPickable(ray, t.pickables)
   const socket = nearestSocket(ray, t)
+  const plot = nearestPlot(ray, t)
 
-  if (socket && (!near || socket.distance <= near.distance)) return socket.hit
+  // The nearer of the two places under the ray.
+  const place = socket && plot
+    ? (plot.distance < socket.distance ? plot : socket)
+    : (socket ?? plot)
+
+  if (place && (!near || place.distance <= near.distance)) return place.hit
   if (near) return near.hit
 
   const tile = nearestTile(ray, t)

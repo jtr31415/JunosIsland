@@ -196,10 +196,6 @@ export function castShadow(
     _sunDir.applyQuaternion(_parentSpin.invert())
   }
 
-  // Where the ellipse's centre lands: the body's mid height, projected.
-  const drop = (air + body / 2) * sun.reach
-  blob.position.set(anchorX + _sunDir.x * drop, SHADOW_LIFT, anchorZ + _sunDir.z * drop)
-
   /*
    * The circle lies in the blob's local xy plane after the -90° x rotation, so
    * the in-plane spin is rotation.z and local +x maps to world (cos, 0, -sin).
@@ -216,6 +212,35 @@ export function castShadow(
    */
   const along = Math.max(sun.stretch, 1 + (body * sun.reach) / (2 * radius))
   blob.scale.set(k * along, k, 1)
+
+  /*
+   * Where the ellipse's centre lands — and it is PULLED OUT so the near edge
+   * never falls on the sun side of the thing casting it.
+   *
+   * Joe: *"shadown needs to be pulled away from the sun, most places show it
+   * staring in front of the prop. good rule may be the edge of the elipse sits
+   * on the centre of the prop."*
+   *
+   * The mid-height projection alone is `(air + body/2) * reach`, and with a
+   * semi-major of `radius + body*reach/2` that puts the near edge at
+   * `air*reach - radius`. For anything on the ground that is `-radius`: the
+   * ellipse reaches a whole caster-radius back toward the sun. That is
+   * PHYSICALLY RIGHT — a cylinder's silhouette does extend its own radius past
+   * the contact point — and it still looks wrong, because a soft blob decal is
+   * read as "the dark patch belonging to that object" rather than as a
+   * silhouette, and a dark patch creeping out in front of a tree reads as
+   * another object. Measured on a tree (body 1.0, radius 0.3): centre 0.72
+   * against a semi-major of 1.01, so 0.30 units of it sat in front.
+   *
+   * Joe's rule is the fix, and it is a READABILITY choice over a physical one —
+   * the same bargain as shrinking a shadow with hop height, which the brief
+   * already asks for in as many words (§3). Taking the MAX means it only ever
+   * pulls a shadow further out, never pulls one in: a hovering bee's shadow is
+   * already far beyond this floor and keeps its honest physical offset.
+   */
+  const semiMajor = radius * k * along
+  const drop = Math.max((air + body / 2) * sun.reach, semiMajor)
+  blob.position.set(anchorX + _sunDir.x * drop, SHADOW_LIFT, anchorZ + _sunDir.z * drop)
 
   /*
    * Fainter with height, and faster than the size falls away. A hovering pet's

@@ -551,3 +551,76 @@ describe('the tiles she BUILDS get shadows too', () => {
     expect(blob.getWorldPosition(new THREE.Vector3()).y).toBeCloseTo(SHADOW_LIFT, 6)
   })
 })
+
+describe('the shadow never starts in front of the prop — Joe, 28 July', () => {
+  /*
+   * *"shadown needs to be pulled away from the sun, most places show it staring
+   * in front of the prop. good rule may be the edge of the elipse sits on the
+   * centre of the prop."*
+   *
+   * The mid-height projection alone puts the near edge at `air*reach - radius`,
+   * so anything on the ground had a whole caster-radius of shadow reaching back
+   * toward the sun. Physically that is correct — a cylinder's silhouette does
+   * extend past its contact point — but a soft blob decal is read as the patch
+   * BELONGING to an object rather than as its silhouette, so a dark smear in
+   * front of a tree reads as a second object.
+   *
+   * The rule is therefore a readability choice, and asserted as one: the near
+   * edge sits AT OR BEYOND the anchor, and nothing that was already further out
+   * gets pulled in.
+   */
+  beforeEach(() => { createLighting(null, MEADOW) })
+
+  /** How far along the sun's ground direction the ellipse's near edge falls. */
+  const nearEdge = (blob: THREE.Mesh): number => {
+    const s = sunShadow() as { x: number; z: number }
+    const len = Math.hypot(s.x, s.z) || 1
+    // Distance of the centre along the sun direction, minus the semi-major.
+    const along = (blob.position.x * s.x + blob.position.z * s.z) / len
+    const radius = blob.userData.radius as number
+    return along - radius * blob.scale.x
+  }
+
+  it('puts the near edge at the prop centre for a tree standing on the ground', () => {
+    // The case Joe measured by eye: tall body, narrow trunk.
+    const blob = createBlobShadow(0.3, 1.0)
+    castShadow(blob, 0)
+    expect(nearEdge(blob)).toBeGreaterThan(-1e-6)
+    expect(nearEdge(blob)).toBeLessThan(0.02)
+  })
+
+  it('holds for squat and for tall casters alike', () => {
+    for (const [radius, body] of [[0.42, 0.24], [0.3, 1.0], [0.6, 1.8], [0.15, 0.5]] as const) {
+      const blob = createBlobShadow(radius, body)
+      castShadow(blob, 0)
+      expect(nearEdge(blob), `r=${radius} h=${body}`).toBeGreaterThan(-1e-6)
+    }
+  })
+
+  it('leaves a hovering caster its honest physical offset', () => {
+    /*
+     * The other half, and the reason this is a MAX rather than an assignment. A
+     * bee at tree height is already thrown far past the floor; clamping it would
+     * drag its shadow back under it and undo the flyer work.
+     */
+    const low = createBlobShadow(0.3, 0.4)
+    castShadow(low, 0)
+    const high = createBlobShadow(0.3, 0.4)
+    castShadow(high, 2.4)
+    const s = sunShadow() as { x: number; z: number; reach: number }
+    const len = Math.hypot(s.x, s.z) || 1
+    const alongOf = (b: THREE.Mesh): number =>
+      (b.position.x * s.x + b.position.z * s.z) / len
+    expect(alongOf(high)).toBeGreaterThan(alongOf(low) * 2)
+    // ...and it is the physical projection, not the floor.
+    expect(alongOf(high)).toBeCloseTo((2.4 + 0.4 / 2) * s.reach, 5)
+  })
+
+  it('still throws the shadow AWAY from the sun, not toward it', () => {
+    const blob = createBlobShadow(0.3, 1.0)
+    castShadow(blob, 0)
+    const s = sunShadow() as { x: number; z: number }
+    // Same half-plane as the sun's ground direction.
+    expect(blob.position.x * s.x + blob.position.z * s.z).toBeGreaterThan(0)
+  })
+})

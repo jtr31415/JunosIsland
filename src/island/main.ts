@@ -184,6 +184,9 @@ async function boot(): Promise<void> {
     plot.group.removeFromParent()
     plot.dispose()
     plot = null
+    // Stop offering taps on a plot that no longer exists — a stale reference here
+    // would raycast against a disposed group.
+    world.setPlotPickable(null)
   }
 
   function showPlot(state: Flow = flow): void {
@@ -231,6 +234,8 @@ async function boot(): Promise<void> {
       plot.group.position.copy(w)
       plotAt = state.plot.at
       world.scene.add(plot.group)
+      // Tappable, so she can change her mind about what is being built here.
+      world.setPlotPickable(plot.group)
     }
     plot.setProgress(state.sumProgress, sumsForTile(state))
     /*

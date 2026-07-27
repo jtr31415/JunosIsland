@@ -438,8 +438,48 @@ export function tileTypeFor(f: Flow, a: Axial, chosen: TileType): TileType {
  */
 export function chooseTile(f: Flow, t: TileType): Flow {
   if (f.phase !== 'placing') return f
+  /*
+   * She is changing her mind about a plot that is already standing.
+   *
+   * Joe, relaying the complaint while he was writing: *"she'd like to change her
+   * mind if shes picked a wrong type of tile."*
+   *
+   * NOTHING IS LOST, and that is what makes this safe rather than generous:
+   * `sumProgress` lives on the flow, not on the plot, so swapping what is being
+   * built keeps every sum she has already answered. There is therefore no reason
+   * to restrict it to a plot she has not started — a girl who has done nine sums
+   * toward the wrong tile is exactly the girl who most needs this.
+   *
+   * It cannot be routed through `placeTile`, which refuses outright when a plot
+   * stands (and must: a restored save can arrive mid-build, and siting over it
+   * would throw away the site and the work both).
+   */
+  if (f.plot && f.pending && key(f.pending) === key(f.plot.at)) {
+    return {
+      ...f,
+      phase: 'free',
+      pending: null,
+      chosen: null,
+      // Judged on the island WITHOUT the plot, exactly as the first choice was,
+      // so the rules cannot answer differently the second time.
+      plot: { ...f.plot, type: tileTypeFor(f, f.plot.at, t) },
+    }
+  }
   if (f.pending) return placeTile({ ...f, chosen: t }, f.pending)
   return { ...f, chosen: t }
+}
+
+/**
+ * Re-open the tile chooser for the plot already under construction.
+ *
+ * Entered by tapping the growing plot — she taps the thing she wants to change,
+ * which needs no new button and nothing to discover. The plot stays exactly where
+ * it is; only `phase` and `pending` move, so `tileOffer` asks the same question of
+ * the same socket it asked the first time.
+ */
+export function askToRetype(f: Flow): Flow {
+  if (!f.plot || f.phase !== 'free') return f
+  return { ...f, phase: 'placing', pending: f.plot.at, chosen: null }
 }
 
 /**

@@ -1198,9 +1198,20 @@ export function createPropField(base = ''): PropField {
         obj.position.set(spot.x, spot.y, spot.z)
         obj.rotation.y = ((h >> 5) % 6) * (Math.PI / 3)   // snap to hex facings
         group.add(obj)
-        // Every feature clears the threshold — the smallest is a slab 0.88
-        // across — so this is one blob per dressed tile, plus its trees.
-        shadowUnder(obj, group)
+        /*
+         * Every feature clears the threshold — the smallest is a slab 0.88
+         * across — so this is one blob per dressed tile, plus its trees.
+         *
+         * EXCEPT A MOUNTAIN HEX, which gets none. It is terrain rather than an
+         * object standing on terrain: the mound IS the tile, so there is no
+         * ground beside it for its own shadow to fall on. And with the offset
+         * now pulled away from the sun (Joe's rule, juice.ts), a 2.2-tall peak
+         * throws its blob more than three units out — clean off the island and
+         * onto the open sea, where a blue-grey disc floats on the water behind
+         * her range. Seen in the browser, which is the only way this sort of
+         * thing gets seen.
+         */
+        if (!rockTile) shadowUnder(obj, group)
         placed.add(k)
         /*
          * What a pet must walk round, MEASURED at walking height.

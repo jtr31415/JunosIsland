@@ -90,6 +90,15 @@ export interface World {
    */
   setIsland(i: Island, plotAt?: Axial | null): void
   /**
+   * Register the growing plot so a tap can reach it — how she changes her mind
+   * about what she is building.
+   *
+   * Needed precisely BECAUSE of `setIsland` above: with the socket outline
+   * removed from under a standing plot, nothing answered for that hex and a tap
+   * on the plot fell through to the sea. `null` when no plot stands.
+   */
+  setPlotPickable(o: THREE.Object3D | null): void
+  /**
    * Turn the island about this point — "zoom to location".
    *
    * The camera's pivot is the one point that stays put on screen, so moving it
@@ -161,6 +170,8 @@ export async function createWorld(canvas: HTMLCanvasElement): Promise<World> {
   scene.add(socketField.group)
 
   const pickables: THREE.Object3D[] = []
+  /** The growing plot, while one stands. See `setPlotPickable`. */
+  let plotPick: THREE.Object3D | null = null
   const raycaster = new THREE.Raycaster()
   const ndc = new THREE.Vector2()
   const frameFns: Array<(dt: number, t: number) => void> = []
@@ -217,6 +228,8 @@ export async function createWorld(canvas: HTMLCanvasElement): Promise<World> {
       }
     },
 
+    setPlotPickable(o: THREE.Object3D | null) { plotPick = o },
+
     focusOn(point: THREE.Vector3) { camera.lookAt(point) },
 
     holdCamera(on: boolean) { camera.hold(on) },
@@ -244,6 +257,7 @@ export async function createWorld(canvas: HTMLCanvasElement): Promise<World> {
         sockets: socketField.group,
         socketAt: id => socketField.coordOf(id),
         pickables,
+        plot: plotPick,
         tiles: tiles.group,
         tileAt: (kind, id) => tiles.coordOf(kind as RenderKind, id),
       })

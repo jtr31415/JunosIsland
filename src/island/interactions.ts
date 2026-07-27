@@ -14,7 +14,9 @@
  * placing, tap a socket with no tile chosen, finish a round that never
  * legitimately opened — assertable in a plain unit test.
  */
-import { tapEgg, tapSum, askForLand, challengePassed, challengeFailed, placeTile } from './flow'
+import {
+  tapEgg, tapSum, askForLand, challengePassed, challengeFailed, placeTile, askToRetype,
+} from './flow'
 import { TILE_QUESTION } from './script'
 import type { Flow, HatchDetails } from './flow'
 import type { Axial } from './world/hex'
@@ -102,6 +104,27 @@ export function handleWorldTap(flow: Flow, hit: Hit | null, p: InteractionPorts)
        */
       p.greetFred()
       return flow
+    }
+
+    case 'plot': {
+      /*
+       * She taps what she is building to change what it is going to be.
+       *
+       * Joe, relaying the complaint: *"she'd like to change her mind if shes
+       * picked a wrong type of tile."* Tapping the thing itself needs no new
+       * button and nothing explained — and it is the only hex on the island that
+       * has no other meaning, since the socket beneath a standing plot is
+       * removed (#19).
+       *
+       * Nothing is spent and nothing is lost: `sumProgress` lives on the flow, so
+       * every sum she has already answered still counts toward whatever she picks
+       * instead. If the offer comes back with only one kind in it, that kind is
+       * what the rules allow here and the panel says so honestly.
+       */
+      const asked = askToRetype(flow)
+      if (asked === flow) return flow
+      p.say(TILE_QUESTION)
+      return asked
     }
 
     case 'socket': {
