@@ -211,3 +211,32 @@
   font-size: clamp(.85rem, 2.2vmin, 1.05rem);
   opacity: .75;
 }
+
+/* Asking the child her name: the first thing the island ever says to her, so
+   it uses the same warm panel as a reading page rather than a system dialog. */
+.ask-name {
+  display: grid;
+  gap: 1.2rem;
+  justify-items: center;
+  padding: 2rem 2.4rem;
+  width: min(92vw, 26rem);
+}
+
+.ask-name-title {
+  font-size: clamp(1.3rem, 3.4vw, 1.9rem);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.ask-name-input {
+  font: inherit;
+  font-size: clamp(1.2rem, 3.2vw, 1.7rem);
+  text-align: center;
+  padding: .6rem 1rem;
+  width: 100%;
+  border: 2px solid rgba(35, 64, 79, .18);
+  border-radius: .8rem;
+  background: #fffdf6;
+  color: var(--ink);
+}
+.ask-name-input:focus { outline: 3px solid var(--sky); outline-offset: 2px; }

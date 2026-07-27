@@ -40,6 +40,14 @@ export interface Fred {
   group: THREE.Group
   hop(): void
   talk(seconds: number): void
+  /**
+   * The patch he is allowed to potter about on.
+   *
+   * He lives on the home rock rather than being bolted to a point on it. A
+   * frog that only ever hops on the spot reads as scenery; one that moves a
+   * little between hops reads as somebody who lives here.
+   */
+  setHome(x: number, z: number, radius: number): void
   pointAt(target: THREE.Vector3 | null): void
   update(dt: number, t: number): void
 }
@@ -184,11 +192,38 @@ export function createFred(): Fred {
   let headYaw = 0
   let headYawWant = 0
   let idleHopAt = 4 + Math.random() * 5
+  /** Where he lives, and how far he may stray from it. */
+  let home = { x: 0, z: 0, r: 0 }
+  /** Where this hop is taking him, in world units from the group origin. */
+  let travel = { x: 0, z: 0 }
 
   return {
     group,
 
-    hop() { if (hopT < 0) hopT = 0 },
+    hop() {
+      if (hopT >= 0) return
+      hopT = 0
+      /*
+       * Pick somewhere to land, biased back toward the middle of his patch so
+       * he never drifts off the edge of it over a long session.
+       */
+      if (home.r > 0) {
+        const pull = 0.55
+        const ang = Math.random() * Math.PI * 2
+        const reach = home.r * (0.25 + Math.random() * 0.55)
+        const wantX = home.x * pull + Math.cos(ang) * reach
+        const wantZ = home.z * pull + Math.sin(ang) * reach
+        travel = {
+          x: (wantX - group.position.x) * 0.5,
+          z: (wantZ - group.position.z) * 0.5,
+        }
+      } else travel = { x: 0, z: 0 }
+    },
+
+    setHome(x, z, radius) {
+      home = { x, z, r: radius }
+      if (group.position.lengthSq() === 0) group.position.set(x, 0, z)
+    },
 
     talk(seconds) { talkUntil = performance.now() / 1000 + seconds },
 
@@ -213,7 +248,11 @@ export function createFred(): Fred {
         hopT += dt * 1.7
         if (hopT >= 1) {
           hopT = -1
-          body.position.y = 0
+          // Land where the hop was aimed.
+          group.position.x += travel.x
+          group.position.z += travel.z
+          travel = { x: 0, z: 0 }
+          body.position.set(0, 0, 0)
           body.scale.setScalar(BASE)
           for (const l of hindLegs) l.rotation.x = 0
           for (const a of arms) a.rotation.x = 0
@@ -229,6 +268,15 @@ export function createFred(): Fred {
           )
           for (const l of hindLegs) l.rotation.x = -arc * 0.5
           for (const a of arms) a.rotation.x = arc * 0.7
+          // Carry him through the air rather than teleporting on landing.
+          if (travel.x || travel.z) {
+            const step = arc * 0.5
+            body.position.x = travel.x * step
+            body.position.z = travel.z * step
+            if (Math.hypot(travel.x, travel.z) > 0.01) {
+              group.rotation.y = Math.atan2(travel.x, travel.z)
+            }
+          }
         }
       } else {
         const breathe = Math.sin(t * 1.4) * 0.02

@@ -33,9 +33,16 @@ interface IslandSave {
    * site the child chose and the work she did on it (brief section 18).
    */
   plot?: { at: Axial; type: TileType } | null
+  /**
+   * What the child is called.
+   *
+   * Stays on the device (brief §17). It is only ever spoken back to her and
+   * painted on her own signpost; nothing sends it anywhere.
+   */
+  childName?: string
 }
 
-export function toSave(flow: Flow, openingSeen: boolean): IslandSave {
+export function toSave(flow: Flow, openingSeen: boolean, childName?: string): IslandSave {
   return {
     tiles: [...flow.island.tiles.entries()],
     pets: [...flow.pets],
@@ -45,6 +52,7 @@ export function toSave(flow: Flow, openingSeen: boolean): IslandSave {
     sumProgress: flow.sumProgress,
     tilesEarned: flow.tilesEarned,
     plot: flow.plot,
+    childName,
   }
 }
 
@@ -57,10 +65,12 @@ function readPlot(v: unknown): Flow['plot'] {
   return { at: { q: p.at.q, r: p.at.r }, type: p.type }
 }
 
-export function fromSave(save: IslandSave | null): { flow: Flow; openingSeen: boolean } {
+export function fromSave(
+  save: IslandSave | null,
+): { flow: Flow; openingSeen: boolean; childName: string } {
   const fresh = createFlow()
   if (!save || !Array.isArray(save.tiles) || save.tiles.length === 0) {
-    return { flow: fresh, openingSeen: false }
+    return { flow: fresh, openingSeen: false, childName: '' }
   }
   const island: Island = { tiles: new Map(save.tiles) }
   return {
@@ -103,18 +113,20 @@ export function fromSave(save: IslandSave | null): { flow: Flow; openingSeen: bo
       chosen: null,
     },
     openingSeen: save.openingSeen === true,
+    childName: typeof save.childName === 'string' ? save.childName : '',
   }
 }
 
 export async function loadIsland(
   store: SaveStore, profileId: string,
-): Promise<{ flow: Flow; openingSeen: boolean }> {
+): Promise<{ flow: Flow; openingSeen: boolean; childName: string }> {
   const raw = await store.get<IslandSave>(profileId, 'save')
   return fromSave(raw)
 }
 
 export async function saveIsland(
   store: SaveStore, profileId: string, flow: Flow, openingSeen: boolean,
+  childName?: string,
 ): Promise<void> {
-  await store.put(profileId, 'save', toSave(flow, openingSeen))
+  await store.put(profileId, 'save', toSave(flow, openingSeen, childName))
 }

@@ -51,6 +51,16 @@ export interface Overlay {
   say(text: string, onTap?: () => void): void
   clearSay(): void
   showName(name: string): void
+  /**
+   * Ask the child her name, once, before the story starts.
+   *
+   * In-page rather than window.prompt: a browser dialog is grey, system-font
+   * and frightening in a way the brief rules out (§1.2, bright never scary),
+   * and on a tablet it covers the game with an OS panel. Resolves with '' if
+   * she skips, which must always be allowed — a name prompt cannot be a wall
+   * between a child and the game.
+   */
+  askName(): Promise<string>
   toast(msg: string): void
   isOpen(): boolean
 }
@@ -293,6 +303,55 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
      * to the host as an abandonment and un-arm the opening story.
      */
     close() { teardown() },
+
+    askName() {
+      return new Promise<string>(resolve => {
+        const box = document.createElement('div')
+        box.className = 'chunk overlay-panel ask-name'
+
+        const title = document.createElement('div')
+        title.className = 'ask-name-title'
+        title.textContent = "What's your name?"
+
+        const field = document.createElement('input')
+        field.className = 'chunk ask-name-input'
+        field.type = 'text'
+        field.autocomplete = 'off'
+        // A first name, not an essay. Long enough for anyone, short enough
+        // to fit on a signpost.
+        field.maxLength = 16
+        field.setAttribute('aria-label', 'your name')
+
+        const go = document.createElement('button')
+        go.className = 'chunk chunk-button overlay-again'
+        go.textContent = "that's me!"
+
+        const skip = document.createElement('button')
+        skip.className = 'chunk chunk-button overlay-back'
+        skip.textContent = 'not now'
+
+        const row = document.createElement('div')
+        row.className = 'overlay-controls'
+        row.append(go, skip)
+        box.append(title, field, row)
+
+        const wrap = document.createElement('div')
+        wrap.className = 'overlay'
+        wrap.append(box)
+        root.append(wrap)
+        setTimeout(() => field.focus(), 60)
+
+        const done = (value: string): void => {
+          wrap.remove()
+          resolve(value.trim().slice(0, 16))
+        }
+        go.onclick = () => done(field.value)
+        skip.onclick = () => done('')
+        field.addEventListener('keydown', e => {
+          if ((e as KeyboardEvent).key === 'Enter') done(field.value)
+        })
+      })
+    },
 
     say(text, onTap) {
       sayEl.textContent = text

@@ -164,6 +164,9 @@ const WATER_PIECES = [
   'waterlily_A', 'waterlily_B', 'waterplant_A', 'waterplant_B', 'waterplant_C',
 ]
 
+/** World centre of a hex — a local alias so scatter can be called early. */
+const w0 = (a: Axial, hexSize: number): { x: number; z: number } => toWorld(a, hexSize)
+
 /** Pull q and r back out of a tile key. */
 const parts0 = (k: string): number => Number(k.split(',')[0])
 const parts1 = (k: string): number => Number(k.split(',')[1])
@@ -381,6 +384,8 @@ export function createPropField(base = ''): PropField {
   async function scatter(
     a: Axial, w: { x: number; z: number }, character: Character,
     h: number, hexSize: number, surface: Surface,
+    /** Keep everything at least this far out, leaving the middle clear. */
+    innerClear = 0,
   ): Promise<void> {
     const palette = COVER[character]
     const count = 5 + (h % 5)
@@ -396,7 +401,7 @@ export function createPropField(base = ''): PropField {
         : palette[dh % palette.length] as string
 
       const ang = ((dh >> 4) % 360) * Math.PI / 180
-      const rad = hexSize * (0.18 + ((dh >> 7) % 55) / 100)
+      const rad = hexSize * Math.max(innerClear, 0.18 + ((dh >> 7) % 55) / 100)
       const x = w.x + Math.cos(ang) * rad
       const z = w.z + Math.sin(ang) * rad
       // Tufts over the sea used to float; stones on the beach are fine.
@@ -484,8 +489,20 @@ export function createPropField(base = ''): PropField {
         const a: Axial = { q: parts[0] as number, r: parts[1] as number }
         const h = hash(a)
 
-        // The home rock stays clear: Fred, the egg and the first pet live there.
-        if (a.q === 0 && a.r === 0) { placed.add(k); continue }
+        /*
+         * The home rock is DRESSED, not skipped.
+         *
+         * It used to grow nothing at all, so while every other tile had cover
+         * the one the child looks at most was bare grass. The centre still
+         * stays clear — Fred, her signpost, the egg and the first pet all
+         * live there — but the rim gets a ring of undergrowth, which is the
+         * difference between "kept clear" and "unfinished".
+         */
+        if (a.q === 0 && a.r === 0) {
+          placed.add(k)
+          await scatter(a, w0(a, hexSize), 'meadow', hash(a), hexSize, surface, 0.62)
+          continue
+        }
 
         /*
          * What kind of place this is, and therefore what grows on it.

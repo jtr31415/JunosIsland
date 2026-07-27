@@ -14,6 +14,7 @@ import { createOverlay } from './overlay'
 import { createPetField, SPECIES } from './pets'
 import { createEgg } from './egg'
 import { createFred } from './fred'
+import { createSign } from './sign'
 import { createPropField } from './world/props'
 import { createGrowingPlot } from './world/increments'
 import type { GrowingPlot } from './world/increments'
@@ -154,14 +155,33 @@ async function boot(): Promise<void> {
   world.scene.add(fred.group)
   world.pickables.push(fred.group)
 
+  /*
+   * Her signpost, on the home tile. The one place the world says out loud
+   * that it belongs to her — and it is IN the island rather than on top of
+   * it, so she can turn the camera round it and it is still there.
+   */
+  // Lettered once the save has been read; see below.
+  const sign = createSign('')
+  world.scene.add(sign.group)
+
   /* Saves. One profile for now; profiles proper arrive in M3. */
   const store = createLocalStore()
   const PROFILE = 'juno'
-  const CHILD = 'Juno'
+  /** Her name where the script wants one, or something friendly if she skipped. */
+  const child = (): string => childName || 'friend'
   const loaded = await loadIsland(store, PROFILE)
   let openingSeen = loaded.openingSeen
+  /*
+   * What she is called. Empty until she has been asked, which happens once,
+   * just before the story. Falls back to a neutral word rather than blocking:
+   * a name prompt must never be a wall between a child and her game.
+   */
+  let childName = loaded.childName
+  sign.setName(childName || 'my')
+  // The tab follows her name too, once she has given one (#10).
+  if (childName) document.title = `${childName}'s Island`
 
-  const persist = (): void => { void saveIsland(store, PROFILE, flow, openingSeen) }
+  const persist = (): void => { void saveIsland(store, PROFILE, flow, openingSeen, childName) }
 
   flow = loaded.flow
 
@@ -260,6 +280,12 @@ async function boot(): Promise<void> {
     const home = world.worldOf({ q: 0, r: 0 })
     fred.group.position.set(home.x - world.models.size * 0.28, 0, home.z + world.models.size * 0.30)
     fred.group.rotation.y = Math.PI * 0.28      // face the default camera
+    // Beside Fred on the home rock, facing the same way, clear of the egg.
+    sign.group.position.set(home.x + world.models.size * 0.34, 0, home.z + world.models.size * 0.30)
+    sign.group.rotation.y = Math.PI * 0.28
+    // He lives on the home rock, not at a point on it.
+    fred.setHome(home.x - world.models.size * 0.22, home.z + world.models.size * 0.24,
+      world.models.size * 0.34)
     world.showSockets(flow.phase === 'placing')
     void pets.sync(flow.pets, flow.island, world.models.size)
     if (flow.phase !== 'placing') placeEgg()
@@ -410,7 +436,7 @@ async function boot(): Promise<void> {
         await egg.hatch()
         overlay.showName(name)
         const line = HATCH_LINES[flow.pets.length % HATCH_LINES.length] as string
-        speech.speak(fill(line, CHILD, name))
+        speech.speak(fill(line, child(), name))
         fred.talk(2.4)
         fred.hop()
         world.lighting.celebrationBump()
@@ -514,7 +540,7 @@ async function boot(): Promise<void> {
 
     for (let i = from; i < OPENING.length; i++) {
       const beat = OPENING[i] as typeof OPENING[number]
-      const text = fill(beat.line, CHILD, flow.pets[0]?.name ?? 'your friend')
+      const text = fill(beat.line, child(), flow.pets[0]?.name ?? 'your friend')
 
       if (beat.cue === 'egg-arrives') {
         egg.reset()
@@ -696,6 +722,21 @@ async function boot(): Promise<void> {
         return out
       },
     }
+  }
+
+  /*
+   * Ask her name once, before anything else happens.
+   *
+   * Before the opening rather than after, so Fred can use it from his first
+   * line — being greeted by name is the whole point, and a story that starts
+   * "hello friend" and switches to "hello Juno" halfway reads as a bug.
+   */
+  if (!childName && !openingSeen) {
+    childName = await overlay.askName()
+    sign.setName(childName || 'my')
+  // The tab follows her name too, once she has given one (#10).
+  if (childName) document.title = `${childName}'s Island`
+    if (childName) persist()
   }
 
   refresh()
