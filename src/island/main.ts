@@ -291,26 +291,40 @@ async function boot(): Promise<void> {
     if (land) land.style.width = Math.round(landProgress(flow) * 100) + '%'
   }
 
-  /* ---------- reset (a testing tool, not a game feature) ----------
+  /* ---------- the grown-up gear ----------
    *
-   * Deliberately plain, small and cornered: nothing a child would reach for,
-   * and it asks before it wipes. The guardrails say nothing she owns can be
-   * lost, so BEFORE Juno plays unsupervised this belongs behind the 2D game's
-   * DDMM PIN gear, not on the screen. It is here to make testing the pacing
-   * bearable while the economy is still being tuned.
+   * Everything the child owns is behind this: every pet, every name, every
+   * tile she counted up. Brief §18 says none of it can be lost, and a plain
+   * "reset island" button sitting on the play surface is one curious tap away
+   * from all of it — which is not a guardrail, it is a trap with a label.
+   *
+   * So it goes behind the same DDMM PIN the 2D game uses (v0:2095-2122): a
+   * grown-up knows today's date, a six-year-old does not reliably, and it
+   * needs no account, no server and no secret to store. The gear itself stays
+   * visible, because a hidden control a parent cannot find is its own
+   * problem.
    */
-  const resetBtn = document.createElement('button')
-  resetBtn.className = 'dev-reset'
-  resetBtn.textContent = 'reset island'
-  resetBtn.title = 'Wipe this island and start again (testing tool)'
-  resetBtn.onclick = () => {
+  const gearBtn = document.createElement('button')
+  gearBtn.className = 'dev-reset'
+  gearBtn.textContent = '⚙'
+  gearBtn.title = 'Grown-ups'
+  gearBtn.setAttribute('aria-label', 'grown-ups menu')
+  gearBtn.onclick = () => {
+    const d = new Date()
+    // DDMM, exactly as v0:1080 computes it.
+    const pin = String(d.getDate()).padStart(2, '0')
+      + String(d.getMonth() + 1).padStart(2, '0')
+    const entry = prompt('Grown-ups only — PIN please:')
+    if (entry === null) return
+    if (entry.trim() !== pin) { overlay.toast('Wrong PIN'); return }
+
     const n = flow.pets.length
     const what = n === 0 ? 'this island' : `this island and ${n} friend${n === 1 ? '' : 's'}`
     if (!confirm(`Start again? This wipes ${what}.`)) return
     try { localStorage.removeItem('petIsland.v1.' + PROFILE + '.save') } catch { /* ignore */ }
     location.reload()
   }
-  document.body.append(resetBtn)
+  document.body.append(gearBtn)
 
   /*
    * Build stamp. Tiny and dim, but it turns "is this the new build?" from a

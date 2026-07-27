@@ -256,16 +256,20 @@ body:has(.overlay:not(.hide)) .say { display: none; }
 
 .progress-row:first-child .progress-track > i { background: var(--sand); }
 
-/* A testing tool, not a game feature: plain, small, and out of the way.
-   Belongs behind the grown-up PIN before the game is left with a child. */
+/* The grown-up gear. Quiet and out of the way, but findable — a control a
+   parent cannot locate is its own problem. What is behind it is guarded by
+   the PIN, not by hiding the button. Tap target stays finger-sized. */
 .dev-reset {
   position: fixed;
   bottom: 1vh;
   right: 1vw;
   z-index: 12;
   font: inherit;
-  font-size: .74rem;
-  padding: .3rem .6rem;
+  font-size: 1.1rem;
+  line-height: 1;
+  min-width: 2.2rem;
+  min-height: 2.2rem;
+  padding: .3rem .5rem;
   border: 1px solid rgba(35, 64, 79, .25);
   border-radius: .4rem;
   background: rgba(255, 253, 246, .7);
