@@ -1390,19 +1390,48 @@ async function boot(): Promise<void> {
      * real clock, or pressing this would release every lock at once and
      * silently disable the mash-rescue (see platform/clock.ts).
      */
-    const skip = (label: string, days: number): void => {
+    /*
+     * Laid out in a ROW, because `.dev-reset` is fixed to the bottom-right
+     * corner and every one of these would otherwise sit on top of the gear —
+     * which is what the clock buttons were doing until the wipe button made it
+     * three deep and obvious.
+     */
+    let slot = 1
+    const devButton = (label: string, title: string, onClick: () => void): void => {
       const b = document.createElement('button')
       b.className = 'dev-reset'
+      b.style.right = `calc(1vw + ${slot++} * 3rem)`
       b.textContent = label
-      b.title = `Jump the calendar ${days} day${days === 1 ? '' : 's'} forward`
-      b.onclick = () => {
-        ;(clock as AdjustableClock).advanceDays(days)
-        overlay.toast(`Now ${clock.today()}`)
-      }
+      b.title = title
+      b.onclick = onClick
       document.body.append(b)
     }
-    skip('+1d', 1)
-    skip('+7d', 7)
+
+    devButton('+1d', 'Jump the calendar 1 day forward', () => {
+      ;(clock as AdjustableClock).advanceDays(1)
+      overlay.toast(`Now ${clock.today()}`)
+    })
+    devButton('+7d', 'Jump the calendar 7 days forward', () => {
+      ;(clock as AdjustableClock).advanceDays(7)
+      overlay.toast(`Now ${clock.today()}`)
+    })
+
+    /*
+     * A one-tap wipe, for developing against.
+     *
+     * The reset lives behind the grown-ups PIN and then a menu, which is right
+     * for a tablet a six-year-old holds — a plain "start again" button on the
+     * play surface is one curious tap from everything she owns. But it is
+     * needless friction when the loop being tested IS the first ten minutes,
+     * and Joe asked for the old button back.
+     *
+     * So it exists only where that reasoning does not apply: preview builds,
+     * with the debug flag on. There is no confirm either, deliberately —
+     * a confirm on a button you press forty times an afternoon is just a
+     * second button.
+     */
+    devButton('⟲', 'Wipe this island and reload (dev only)',
+      () => { void store.removeProfile(PROFILE).then(() => location.reload()) })
 
     ;(window as unknown as Record<string, unknown>).__world = {
       clock: {
