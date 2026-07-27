@@ -724,24 +724,26 @@ async function boot(): Promise<void> {
     }
   }
 
+  refresh()
+  world.start()
+  document.getElementById('boot')?.remove()
+
   /*
-   * Ask her name once, before anything else happens.
+   * Ask her name once, before the story.
    *
-   * Before the opening rather than after, so Fred can use it from his first
-   * line — being greeted by name is the whole point, and a story that starts
-   * "hello friend" and switches to "hello Juno" halfway reads as a bug.
+   * After the world is drawn, not before: asked first, she was answering into
+   * a blank blue screen. Her island should be behind the question — it is
+   * hers, and that is the whole reason for asking.
+   *
+   * Before the opening rather than after, so Fred can greet her by name in
+   * his first line. A story that starts "hello friend" and switches to "hello
+   * Juno" halfway reads as a bug.
    */
   if (!childName && !openingSeen) {
     childName = await overlay.askName()
     sign.setName(childName || 'my')
-  // The tab follows her name too, once she has given one (#10).
-  if (childName) document.title = `${childName}'s Island`
-    if (childName) persist()
+    if (childName) { document.title = `${childName}'s Island`; persist() }
   }
-
-  refresh()
-  world.start()
-  document.getElementById('boot')?.remove()
 
   if (!openingSeen) {
     void runOpening()
