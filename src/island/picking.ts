@@ -38,6 +38,13 @@ export interface PickTargets {
  * not washed ashore yet, or one hidden mid-hatch, is still sitting there
  * catching taps for the tile underneath it. Anything given precedence has to
  * be checked, or the precedence is handed to something nobody can see.
+ *
+ * **The corollary, and it has teeth: a thing that is meant to be UNSEEN but
+ * TAPPABLE cannot use `visible`.** Each pet carries an invisible sphere so a
+ * six-year-old's finger has something to hit (`pets.ts`, `pickProxy`), and
+ * hiding it the obvious way would make this function skip it — the fix would
+ * do nothing, quietly, with every test still green. Such a proxy stays
+ * `visible` and draws nothing, via `colorWrite`/`depthWrite`/`opacity`.
  */
 export function isShowing(o: THREE.Object3D | null): boolean {
   for (let n: THREE.Object3D | null = o; n; n = n.parent) if (!n.visible) return false

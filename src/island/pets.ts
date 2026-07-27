@@ -62,6 +62,126 @@ export const FLYERS: ReadonlySet<string> = new Set(['animal-bee', 'animal-parrot
  */
 export const TREE_HEIGHT = Math.max(FITS.feature[1], FITS.grown[1])
 
+/**
+ * The shot a tap target is sized against, and a real touch-target standard.
+ *
+ * Joe, watching her play: "the tap area for a spawn animal needs to be a bit
+ * larger. she wants to tap them but regularly misses and is taken to a
+ * challenge. it really frustrates her." Missing a pet is not a near-miss that
+ * does nothing — `pickFrom` answers with whatever IS under the ray, so she gets
+ * the egg's reading round, a tile offer, or a plot resuming into a sum. Three
+ * different ways of being taken somewhere she did not ask to go, during the
+ * play she chose for herself.
+ *
+ * The cause is arithmetic, not code: a pet is scaled to 0.16 and stands about
+ * a quarter of a unit against a hex circumradius of 1.15, so under the island's
+ * own framing the disc a finger can reliably land in is TWENTY pixels across,
+ * measured. A six-year-old's finger is nearer fifty. With the proxy it is 47.5.
+ *
+ * Every number here is taken from something rather than picked:
+ *
+ * - `px` is 48, Material's minimum touch target (48dp ≈ 7.7mm at baseline
+ *   density). A child's finger is bigger than an adult's target, not smaller.
+ * - `viewportPx` is the short side of a mid-range Android tablet in landscape,
+ *   which is 1280 × 800 CSS pixels on essentially all of them.
+ * - `fov` and `distance` are `camera.ts`'s own — `PerspectiveCamera(46, …)` and
+ *   `let distance = 14`, the shot the island opens on and returns to. There is
+ *   a test that constructs the real orbit camera and pins both, so a change of
+ *   framing over there cannot silently shrink the target over here.
+ *
+ * A world-unit size does mean the target shrinks as the camera pulls back on a
+ * growing island. That is accepted: `frame()` clamps the pull-back at 26 units
+ * and she can pinch in, and a target that grew with distance would eventually
+ * be wider than the hex the pet is standing on.
+ */
+export const TAP_TARGET = {
+  px: 48,
+  viewportPx: 800,
+  fov: 46,
+  distance: 14,
+} as const
+
+/**
+ * Half the tap target, in world units at that shot.
+ *
+ * The frustum is `2·d·tan(fov/2)` tall at distance d, spread over `viewportPx`
+ * pixels — so a target of `px` pixels is `px/viewportPx · 2d·tan(fov/2)` wide,
+ * and half of that is the radius. Measured out: 0.357 units, which is a sphere
+ * 0.71 across against a hex 2.31 across, so a pet owns under a third of the
+ * tile it stands on and cannot reach across a neighbour's.
+ */
+export const PICK_RADIUS =
+  (TAP_TARGET.px / TAP_TARGET.viewportPx) * TAP_TARGET.distance
+  * Math.tan((TAP_TARGET.fov * Math.PI) / 360)
+
+/**
+ * One geometry and one material for every pet's tap proxy, in the whole game.
+ *
+ * Shared for the reason the blob's falloff texture and the set atlases are
+ * shared, and NEVER disposed per pet: freeing either would blank the tap target
+ * of every other pet at once, including friends she already owns (brief §19).
+ * A unit sphere scaled per creature keeps it to one buffer.
+ */
+let proxyGeo: THREE.SphereGeometry | undefined
+let proxyMat: THREE.MeshBasicMaterial | undefined
+
+/**
+ * An invisible, finger-sized sphere that answers taps on a pet's behalf.
+ *
+ * ## It is invisible by MATERIAL, and it must stay that way
+ *
+ * The obvious `proxy.visible = false` silently undoes the whole fix, and does
+ * it without failing anything: `picking.ts`'s `isShowing()` walks the parent
+ * chain and rejects a hit on anything hidden — it has to, or the egg would
+ * catch taps before it has washed ashore. A hidden proxy is therefore skipped
+ * by the one function it exists to be found by, and the pet's tap target is the
+ * pet again.
+ *
+ * So the proxy is `visible`, and draws nothing: `colorWrite: false` puts no
+ * pixels on the screen, `depthWrite: false` keeps it from occluding anything
+ * behind it, and `opacity: 0` says the same thing a third way. It costs one
+ * no-op draw call per pet.
+ *
+ * `DoubleSide` because `Mesh.raycast` honours `material.side`, and a finger
+ * that lands inside the sphere — she can pinch right in — would otherwise find
+ * only back faces and miss the pet at point-blank range.
+ *
+ * ## Sphere, not box
+ *
+ * The holder is turned to face wherever the pet is walking, so a box would give
+ * her a target that changed size as her friend wandered about. A sphere is the
+ * same circle from every angle, concentric with what she can see.
+ *
+ * ## Measured, then floored
+ *
+ * The radius is the half-diagonal of the creature's OWN measured box — so the
+ * proxy always contains the pet, whatever the pack does next — or `PICK_RADIUS`
+ * if that is bigger, which for all 24 species today it is. No fixed factor and
+ * no single dimension anywhere in it (HANDOFF §5).
+ */
+function pickProxy(body: THREE.Box3, pick: unknown): THREE.Mesh {
+  proxyGeo ??= new THREE.SphereGeometry(1, 16, 12)
+  proxyMat ??= new THREE.MeshBasicMaterial({
+    colorWrite: false,
+    depthWrite: false,
+    transparent: true,
+    opacity: 0,
+    side: THREE.DoubleSide,
+  })
+  const half = body.getSize(new THREE.Vector3()).multiplyScalar(0.5)
+  const proxy = new THREE.Mesh(proxyGeo, proxyMat)
+  proxy.name = 'pet-pick'
+  proxy.position.copy(body.getCenter(new THREE.Vector3()))
+  proxy.scale.setScalar(Math.max(half.length(), PICK_RADIUS))
+  // The same answer the holder gives, so `nearestPickable` needs no walk up.
+  proxy.userData.pick = pick
+  // Nothing invisible should throw anything. There are no shadow maps in this
+  // game at all, but a rig that ever gains one must not find this.
+  proxy.castShadow = false
+  proxy.receiveShadow = false
+  return proxy
+}
+
 interface Live {
   pet: Pet
   root: THREE.Group
@@ -335,6 +455,17 @@ export function createPetField(base = ''): PetField {
         const w = toWorld(pet.at as Axial, hexSize)
         holder.position.set(w.x, 0, w.z)
         holder.userData.pick = { kind: 'pet', id: pet.id }
+        /*
+         * The tap target, added AFTER the two measurements above and never
+         * before them.
+         *
+         * `radius` is what keeps a pet's SURFACE out of the trees and out of
+         * Fred, and `standing` is what sizes its blob — both come from a box
+         * around the holder, so a proxy inside that box at measuring time would
+         * hand a chick an elephant's keep-out and stretch its shadow to match.
+         * The creature is measured; then the target is fitted to the creature.
+         */
+        holder.add(pickProxy(body, holder.userData.pick))
         group.add(holder)
         // The shadow is a SIBLING of the pet, not a child. Parented, it rose
         // with every hop and sank under the tile on the way down.
