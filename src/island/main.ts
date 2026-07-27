@@ -897,7 +897,7 @@ async function boot(): Promise<void> {
       fred.talk(Math.min(6, text.length * 0.06))
       if (beat.cue === 'egg-arrives') fred.hop()
 
-      await waitForTap()
+      await waitForTap(beatMs(text))
       fred.pointAt(null)
 
       // The two beats that hand over to the child.
@@ -932,8 +932,23 @@ async function boot(): Promise<void> {
     persist()
   }
 
+  /**
+   * How long to sit on one of Fred's lines before moving on unasked.
+   *
+   * Scaled to the line rather than flat. Every beat used to wait the same
+   * six and a half seconds, so "It's ever so quiet out here." held the screen
+   * exactly as long as his longest speech — which is what made the intro
+   * drag between sentences. Long enough to hear it and a beat to breathe;
+   * a tap still skips ahead at any point.
+   */
+  const beatMs = (text: string): number => Math.min(
+    balance.story.beatMaxMs,
+    Math.max(balance.story.beatMinMs,
+      balance.story.beatMinMs + text.length * balance.story.beatPerCharMs),
+  )
+
   /** Tap anywhere to advance a beat. */
-  function waitForTap(): Promise<void> {
+  function waitForTap(ms: number): Promise<void> {
     return new Promise(resolve => {
       const done = (): void => {
         window.removeEventListener('pointerdown', done, true)
@@ -941,7 +956,7 @@ async function boot(): Promise<void> {
       }
       window.addEventListener('pointerdown', done, true)
       // Never trap a child who does not tap: move on by itself.
-      setTimeout(done, 6500)
+      setTimeout(done, ms)
     })
   }
 

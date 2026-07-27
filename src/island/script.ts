@@ -28,7 +28,7 @@ export const OPENING: Beat[] = [
     cue: 'point-egg',
   },
   { line: 'Will you read to it, [NAME]?', cue: 'first-read' },
-  { line: 'You found its name! [PETNAME] was coming home all along.' },
+  { line: 'You found its name! [PETNAME] has arrived.' },
   {
     line: 'Every friend you read home needs somewhere to live… can you count us up some land?',
     cue: 'ask-land',
@@ -37,8 +37,8 @@ export const OPENING: Beat[] = [
 
 /** Spoken when an egg hatches, after the opening. Brief section 3. */
 export const HATCH_LINES = [
-  '[PETNAME]! Home at last!',
-  'Another friend, home safe!',
+  '[PETNAME] has arrived!',
+  '[PETNAME] is here!',
 ]
 
 export const fill = (s: string, name: string, petName = ''): string =>

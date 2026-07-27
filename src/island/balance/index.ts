@@ -15,6 +15,12 @@ export interface Balance {
   egg: CostCurve
   pages: { wordsPerFindPage: number; mix: PageKind[] }
   governor: { maxWaitingPets: number; maxEmptySurplus: number }
+  /**
+   * How long the opening story waits on each of Fred's lines before moving
+   * itself on. Scaled to the LINE, not flat: a flat wait makes a short line
+   * sit there as long as a long one, which is what makes an intro drag.
+   */
+  story: { beatMinMs: number; beatPerCharMs: number; beatMaxMs: number }
   stage: {
     spinSec: number; progressDots: boolean; flyBackMs: number
     /** How long the friend stands on the plinth before the stage dissolves. */
