@@ -48,8 +48,15 @@ the QA department has still not played it, and that is the highest-value action
 available. Phase 4 then schedules five features and a blocked item ahead of her
 first session. **That premise expired the same evening** — she has since played
 for an hour, and the notes marked "playtest" in the task list are what came back.
-The rest of Fable's sequencing argument still holds, particularly that the tag
-should precede her next session. Nothing in #28, #31, #33 or #30 blocks a supervised session —
+The tag half of that argument is also retired — Joe, 27 July: *"curent live
+build is v0 as its a pt"*. The live build is a PROTOTYPE, so shipping to it
+unpinned is an accepted cost, not an oversight. Stop raising it.
+
+What that does not retire: the schemaVersion rollback hazard is unchanged
+(PHASE3-HANDOVER §6) — being a prototype makes shipping FORWARD cheap, it does
+not make going backwards safe, so take a backup from the gear before any
+rollback. And her save is not a prototype: brief §19 holds whatever the build is
+called. Nothing in #28, #31, #33 or #30 blocks a supervised session —
 #33 only matters once the island has grown off-centre, and a first session starts
 at one tile. The one item that protects her first hatch is #29, because the pet
 GLBs are **not** precached (`vite.island.config.ts` has no `globPatterns`) so her
