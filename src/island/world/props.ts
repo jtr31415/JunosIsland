@@ -89,11 +89,19 @@ const FEATURES: Record<Character, Array<{ name: string; weight: number; big?: bo
      * two of them side by side looked like a bug rather than a mountain.
      * The grass-topped variants say "mountain" without leaving the biome.
      */
-    { name: 'mountain_A_grass', weight: 3, big: true },
-    { name: 'mountain_B_grass', weight: 3, big: true },
-    { name: 'mountain_C_grass', weight: 3, big: true },
-    { name: 'mountain_A_grass_trees', weight: 3, big: true },
-    { name: 'mountain_C_grass_trees', weight: 3, big: true },
+    /*
+     * Mountains are RARE, even in the highlands.
+     *
+     * A mountain on every other highland hex is not a range, it is a wall —
+     * and the Summer atlas renders their rock tan, so a cluster of them reads
+     * as desert on a green island. Hills carry the skyline; a mountain is the
+     * exclamation mark at the end of it.
+     */
+    { name: 'mountain_A_grass', weight: 1, big: true },
+    { name: 'mountain_B_grass', weight: 1, big: true },
+    { name: 'mountain_C_grass', weight: 1, big: true },
+    { name: 'mountain_A_grass_trees', weight: 1, big: true },
+    { name: 'mountain_C_grass_trees', weight: 1, big: true },
   ],
 }
 
@@ -240,9 +248,13 @@ export const HEIGHTS = {
   feature: 0.78,
   /**
    * Hills and mountains, as a fraction of the hex's WIDTH, not a height.
-   * A shade under one so the tile's own edge still shows around the base.
+   *
+   * Comfortably under one. These models carry their own hex base, so at full
+   * width they cover the tile completely and read as REPLACING it rather than
+   * standing on it. A green rim around the base is what turns a mountain back
+   * into a feature of the meadow it rose out of.
    */
-  big: 0.94,
+  big: 0.74,
 } as const
 
 /** Stable per-coordinate hash, so a tile's scenery never changes. */
