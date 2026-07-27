@@ -6,9 +6,12 @@
  * read moves it along a fixed sequence of states, so a child can see how close
  * her friend is without a number anywhere.
  *
- *   intact → hairline → crack → big cracks → wobble-and-glow → hatch
+ *   intact → hairline → crack → big cracks → wobble → hatch
  *
- * Thresholds at 25% / 50% / 75% / 90% of the egg's page cost.
+ * Thresholds at 25% / 50% / 75% / 90% of the egg's page cost. The stages are
+ * how the rest of the game talks about the egg; what the CHILD sees is a shell
+ * of ten pieces easing further apart with every page, so the progress is
+ * continuous rather than four drawn states.
  *
  * It never expires and never regresses: cracks do not heal, and a wrong answer
  * changes nothing here (brief §19, and the spec's serene-right rule).
@@ -65,57 +68,94 @@ export function createEgg(): Egg {
   const mat = (c: number): THREE.MeshStandardMaterial =>
     new THREE.MeshStandardMaterial({ color: c, metalness: 0, roughness: 1 })
 
-  // Warm and bright: it must never be mistaken for the grey rocks it now
-  // shares a tile with.
-  const shell = new THREE.Mesh(new THREE.SphereGeometry(0.30, 18, 14), mat(0xfff8e0))
-  shell.scale.set(1, 1.28, 1)
-  shell.position.y = 0.38
-
-  const spots = new THREE.Group()
-  for (let i = 0; i < 5; i++) {
-    const s = new THREE.Mesh(new THREE.SphereGeometry(0.075, 10, 8), mat(0x63c4f5))
-    const a = (i / 5) * Math.PI * 2
-    s.position.set(Math.cos(a) * 0.24, 0.38 + Math.sin(a * 1.7) * 0.16, Math.sin(a) * 0.24)
-    s.scale.set(1, 0.6, 1)
-    spots.add(s)
-  }
-
   /*
-   * Cracks are thin dark slivers laid on the shell, revealed one group at a
-   * time. Built up front and hidden rather than created on demand, so a
-   * hatching egg never stutters while geometry is allocated.
+   * A SHELL MADE OF PIECES, not a ball with cracks drawn on it.
+   *
+   * Joe's design, and it is a better idea than what it replaces: "the egg is
+   * always composed from say 10 cracked shell pieces moving in unison so they
+   * appear as one; as the challenge progresses the edges become more
+   * pronounced, looking like cracks, until the egg falls apart revealing the
+   * animal."
+   *
+   * The old egg faked the same story by toggling dark slivers on a solid
+   * ovoid, which reads as a prop that changes rather than as a shell under
+   * strain — and it could never fall apart at the end, so hatching had to hide
+   * the egg and hope.
+   *
+   * Ten lat-long patches: two rows of five. At rest they sit flush and read as
+   * one egg. Every page eases them apart, so the seams between them open into
+   * real cracks with the dark inside showing through, and the hatch is then
+   * simply the same movement continued until the pieces leave.
    */
-  const crackMat = mat(0x8a7a5c)
-  const crackGroups: THREE.Group[] = []
-  const CRACK_LAYOUT: Array<Array<[number, number, number, number]>> = [
-    // [angle, height, length, tilt] — hairline: one small sliver
-    [[0.4, 0.46, 0.11, 0.5]],
-    // crack: a longer one plus a branch
-    [[0.4, 0.40, 0.17, 0.5], [0.9, 0.52, 0.10, -0.7]],
-    // big cracks: several, spread around the shell
-    [[2.2, 0.44, 0.19, 0.4], [3.4, 0.36, 0.15, -0.5], [5.0, 0.50, 0.13, 0.8]],
-  ]
-  for (const layout of CRACK_LAYOUT) {
-    const g = new THREE.Group()
-    for (const [angle, y, len, tilt] of layout) {
-      const c = new THREE.Mesh(new THREE.BoxGeometry(0.022, len, 0.022), crackMat)
-      c.position.set(Math.cos(angle) * 0.28, y, Math.sin(angle) * 0.28)
-      c.rotation.set(tilt * 0.5, -angle, tilt)
-      g.add(c)
+  const CENTRE = 0.38
+  const R = 0.30
+  const ROWS = 2, COLS = 5
+
+  /** The dark inside, so an opening seam reads as a crack and not a hole. */
+  const inside = new THREE.Mesh(new THREE.SphereGeometry(R * 0.94, 16, 12), mat(0x6b5a41))
+  inside.scale.set(1, 1.28, 1)
+  inside.position.y = CENTRE
+  body.add(inside)
+
+  interface Piece {
+    mesh: THREE.Mesh
+    /** Which way this piece moves as the shell opens. */
+    out: THREE.Vector3
+    /** Its own tumble, so the break never looks machined. */
+    spin: THREE.Vector3
+  }
+  const pieces: Piece[] = []
+
+  // Warm and bright: it must never be mistaken for the grey rocks it shares a
+  // tile with.
+  const shellMat = mat(0xfff8e0)
+  for (let row = 0; row < ROWS; row++) {
+    for (let col = 0; col < COLS; col++) {
+      /*
+       * A hair of overlap on each patch. Butted exactly edge to edge, the
+       * seams show as dark lines even at rest — floating point and shading
+       * normals do not agree well enough for an invisible join — and an egg
+       * that starts out already cracked has nowhere to go.
+       */
+      const phi = (col / COLS) * Math.PI * 2
+      const theta = (row / ROWS) * Math.PI
+      const mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(R, 8, 6,
+          phi - 0.02, (Math.PI * 2) / COLS + 0.04,
+          theta - 0.015, Math.PI / ROWS + 0.03),
+        shellMat,
+      )
+      mesh.scale.set(1, 1.28, 1)
+      mesh.position.y = CENTRE
+
+      // Outward from the egg's centre, through the middle of this patch.
+      const midPhi = phi + Math.PI / COLS
+      const midTheta = theta + Math.PI / (2 * ROWS)
+      const out = new THREE.Vector3(
+        Math.sin(midTheta) * Math.cos(midPhi),
+        Math.cos(midTheta) * 1.28,
+        Math.sin(midTheta) * Math.sin(midPhi),
+      ).normalize()
+
+      const seed = row * COLS + col
+      const spin = new THREE.Vector3(
+        Math.sin(seed * 2.3), Math.cos(seed * 1.7), Math.sin(seed * 3.1),
+      ).multiplyScalar(0.6)
+
+      pieces.push({ mesh, out, spin })
+      body.add(mesh)
     }
-    g.visible = false
-    crackGroups.push(g)
-    body.add(g)
   }
 
-  // The glow at the last stage: warmth from inside, never a threat.
-  const glow = new THREE.Mesh(
-    new THREE.SphereGeometry(0.34, 16, 12),
-    new THREE.MeshBasicMaterial({ color: 0xffe6a0, transparent: true, opacity: 0 }),
-  )
-  glow.scale.set(1, 1.28, 1)
-  glow.position.y = 0.38
-  body.add(glow)
+  /** Ease the shell apart by `gap` world units, with `tumble` of rotation. */
+  const openBy = (gap: number, tumble = 0): void => {
+    for (const p of pieces) {
+      p.mesh.position.set(
+        p.out.x * gap, CENTRE + p.out.y * gap, p.out.z * gap)
+      p.mesh.rotation.set(
+        p.spin.x * tumble, p.spin.y * tumble, p.spin.z * tumble)
+    }
+  }
 
   /*
    * A soft ring on the ground beneath, always gently pulsing.
@@ -140,7 +180,6 @@ export function createEgg(): Egg {
   ring.position.y = SHADOW_LIFT
   group.add(ring)
 
-  body.add(shell, spots)
   group.add(createBlobShadow(0.28))
   /*
    * Sized against the pets: bigger than the friend it holds, so it reads as
@@ -151,6 +190,8 @@ export function createEgg(): Egg {
   group.userData.pick = { kind: 'egg' }
 
   let shudder = false
+  /** How far the seams currently stand open, in world units. */
+  let openAmount = 0
   /** 0..1 through the arrival, or -1 when it is not playing. */
   let arriveT = -1
   let stage: EggStage = 'intact'
@@ -164,11 +205,14 @@ export function createEgg(): Egg {
 
     setProgress(progress) {
       stage = stageFor(progress)
-      const shown =
-        stage === 'intact' ? 0 :
-        stage === 'hairline' ? 1 :
-        stage === 'crack' ? 2 : 3
-      crackGroups.forEach((g, i) => { g.visible = i < shown })
+      /*
+       * The seams open with PROGRESS, continuously, rather than snapping
+       * between drawn states. The named stages still exist because the rest of
+       * the game speaks in them, but what she sees is a shell easing apart a
+       * little further with every page she reads.
+       */
+      openAmount = Math.max(0, Math.min(1, progress)) ** 1.4 * 0.055
+      openBy(openAmount, openAmount * 6)
     },
 
     update(dt, t) {
@@ -202,23 +246,56 @@ export function createEgg(): Egg {
       const shiver = due ? Math.sin(t * 26) * 0.09 * eager : 0
       body.rotation.z = breathe + shiver
       body.rotation.x = Math.cos(t * 1.1) * 0.015
-      glow.material.opacity = stage === 'wobble'
-        ? 0.18 + Math.sin(t * 3.2) * 0.12
-        : 0
+      /*
+       * Near hatching the seams breathe, so the last stretch feels like
+       * something straining to get out rather than a static cracked prop.
+       */
+      if (stage === 'wobble') {
+        const breath = openAmount + Math.abs(Math.sin(t * 3.2)) * 0.012
+        openBy(breath, breath * 6)
+      }
       // The invitation breathes, a little more insistently near hatching.
       const ringMat = ring.material as THREE.MeshBasicMaterial
       ringMat.opacity = 0.34 + Math.sin(t * 2.1) * 0.16 + eager * 0.12
     },
 
     hatch() {
+      /*
+       * The same movement, carried through to its end.
+       *
+       * The old hatch shook a solid egg, flashed a glow and then simply turned
+       * the whole thing invisible — the shell did not break, it was removed.
+       * Now the seams that have been opening all along keep opening: the
+       * pieces push out, tumble, fall under their own gravity and fade, and
+       * what is left standing is the friend inside.
+       */
       return new Promise<void>(resolve => {
         shudder = true
+        const from = openAmount
         const start = performance.now()
         const step = (): void => {
           const p = Math.min(1, (performance.now() - start) / 700)
-          body.rotation.z = Math.sin(p * Math.PI * 9) * 0.34 * (1 - p)
-          body.scale.setScalar(1 + Math.sin(p * Math.PI) * 0.18)
-          glow.material.opacity = Math.sin(p * Math.PI) * 0.5
+
+          // A last shiver, then the break.
+          const shiver = Math.sin(p * Math.PI * 9) * 0.34 * (1 - p) * (p < 0.35 ? 1 : 0)
+          body.rotation.z = shiver
+
+          const burst = Math.max(0, (p - 0.3) / 0.7)
+          const gap = from + burst * 0.55
+          for (const piece of pieces) {
+            piece.mesh.position.set(
+              piece.out.x * gap,
+              // Out, then down: they are falling, not floating away.
+              CENTRE + piece.out.y * gap - burst * burst * 0.5,
+              piece.out.z * gap,
+            )
+            const tumble = burst * 3.2
+            piece.mesh.rotation.set(
+              piece.spin.x * tumble, piece.spin.y * tumble, piece.spin.z * tumble)
+            piece.mesh.scale.setScalar(1 - burst * 0.35)
+          }
+          inside.visible = burst < 0.45          // the dark goes with the shell
+
           if (p < 1) { requestAnimationFrame(step); return }
           group.visible = false
           shudder = false
@@ -233,9 +310,12 @@ export function createEgg(): Egg {
       arriveT = 0                     // and it arrives again, rather than pops
       body.scale.setScalar(1)
       body.rotation.set(0, 0, 0)
-      glow.material.opacity = 0
       stage = 'intact'
-      for (const g of crackGroups) g.visible = false
+      openAmount = 0
+      openBy(0, 0)
+      // The hatch shrinks and drops the pieces; a fresh egg needs them whole.
+      for (const piece of pieces) piece.mesh.scale.setScalar(1)
+      inside.visible = true
     },
   }
 }

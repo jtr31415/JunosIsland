@@ -31,3 +31,63 @@ describe('egg stages', () => {
     expect(stageFor(1)).toBe('wobble')
   })
 })
+
+describe('the shell is made of pieces (Joe’s design)', () => {
+  it('is built from ten of them', async () => {
+    /*
+     * "The egg is always composed from say 10 cracked shell pieces moving in
+     * unison so they appear as one; as the challenge progresses the edges
+     * become more pronounced, looking like cracks, until the egg falls apart
+     * revealing the animal."
+     *
+     * The old egg faked that by toggling dark slivers on a solid ovoid, which
+     * reads as a prop that changes rather than a shell under strain — and it
+     * could never fall apart, so hatching had to hide the egg and hope.
+     */
+    const { createEgg } = await import('../../src/island/egg')
+    const egg = createEgg()
+    let shells = 0
+    egg.group.traverse(o => {
+      const m = o as unknown as { isMesh?: boolean; geometry?: { type?: string } }
+      if (m.isMesh && m.geometry?.type === 'SphereGeometry') shells++
+    })
+    // Ten pieces plus the dark inside that makes a seam read as a crack.
+    expect(shells).toBe(11)
+  })
+
+  it('opens further with every page, rather than snapping between states', async () => {
+    const { createEgg } = await import('../../src/island/egg')
+    const egg = createEgg()
+    const spread = (): number => {
+      let far = 0
+      egg.group.traverse(o => {
+        const m = o as unknown as { isMesh?: boolean; position?: { length(): number } }
+        if (m.isMesh && m.position) far = Math.max(far, m.position.length())
+      })
+      return far
+    }
+    egg.setProgress(0)
+    const closed = spread()
+    egg.setProgress(0.5)
+    const half = spread()
+    egg.setProgress(0.95)
+    const nearly = spread()
+
+    expect(half).toBeGreaterThan(closed)
+    expect(nearly).toBeGreaterThan(half)
+  })
+
+  it('closes right up again when reset', async () => {
+    // A fresh egg must not inherit the last one's cracks.
+    const { createEgg } = await import('../../src/island/egg')
+    const egg = createEgg()
+    egg.setProgress(0.95)
+    egg.reset()
+    let scaled = true
+    egg.group.traverse(o => {
+      const m = o as unknown as { isMesh?: boolean; scale?: { x: number } }
+      if (m.isMesh && m.scale && Math.abs(m.scale.x - 1) > 1e-6) scaled = false
+    })
+    expect(scaled).toBe(true)
+  })
+})
