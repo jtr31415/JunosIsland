@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { INCREMENTS, incrementsShown, isComplete } from '../../src/island/world/increments'
+import * as THREE from 'three'
+import { INCREMENTS, incrementsShown, isComplete, createGrowingPlot } from '../../src/island/world/increments'
 
 describe('the increment sequence', () => {
   it('has ten steps, and puts the TILE down first', () => {
@@ -73,5 +74,138 @@ describe('the increment sequence', () => {
 
   it('treats a zero-cost tile as finished rather than dividing by zero', () => {
     expect(incrementsShown(0, 0)).toBe(10)
+  })
+})
+
+/**
+ * The fly-back (§6): "the connective payoff between abstract work and world
+ * position". The scaffolding that grew through every sum is the thing that
+ * performs the landing, so its geometry is worth pinning — a tile that never
+ * reaches the ground, or that lands 14% too wide, is a tile she cannot trust.
+ */
+describe('landing a finished plot', () => {
+  const models = {
+    size: 1.1547,
+    geometry: { grass: new THREE.BufferGeometry(), water: new THREE.BufferGeometry() },
+    material: new THREE.MeshStandardMaterial(),
+  } as never
+
+  const makePlot = (): ReturnType<typeof createGrowingPlot> =>
+    createGrowingPlot('grass', 1.1547, {
+      models,
+      prop: () => Promise.resolve(new THREE.Group()),
+    })
+
+  it('sits exactly on its socket before anything is asked of it', () => {
+    // The plot is positioned by the caller at the socket; y must start at 0
+    // or the very first frame shows the tile floating.
+    expect(makePlot().group.position.y).toBe(0)
+  })
+
+  it('lifts, falls, and comes to rest ON the ground', () => {
+    const plot = makePlot()
+    plot.land(900)
+
+    plot.update(0.016)
+    const lifted = plot.group.position.y
+    expect(lifted).toBeGreaterThan(0.5)        // it is coming from somewhere
+
+    for (let i = 0; i < 120; i++) plot.update(1 / 60)
+    expect(plot.group.position.y).toBe(0)      // and it arrives, exactly
+  })
+
+  it('leaves no squash behind once it has landed', () => {
+    /*
+     * The impact squashes the tile to sell the landing. A tile left 14% wide
+     * and 18% short would overlap its neighbours for the rest of the session
+     * — and it is the last frame of an animation, which is exactly where that
+     * sort of thing survives unnoticed.
+     */
+    const plot = makePlot()
+    plot.land(900)
+    for (let i = 0; i < 120; i++) plot.update(1 / 60)
+    expect(plot.group.scale.toArray()).toEqual([1, 1, 1])
+  })
+
+  it('ARCS in rather than dropping straight down', () => {
+    /*
+     * §6 asks for the tile to "arc across the screen to its chosen socket".
+     * A purely vertical fall is a different sentence — something dropped,
+     * not something delivered.
+     */
+    const plot = makePlot()
+    plot.land(900, 1.6)
+    plot.update(0.016)
+    expect(Math.abs(plot.group.position.x)).toBeGreaterThan(0.4)
+
+    for (let i = 0; i < 120; i++) plot.update(1 / 60)
+    expect(plot.group.position.x).toBe(0)      // and arrives over its socket
+  })
+
+  it('ACCELERATES as it falls, the way things do', () => {
+    /*
+     * The first version eased out — fastest at launch, drifting to a halt at
+     * the ground. That is a parachute, and it undercut the very impact the
+     * squash exists to sell.
+     */
+    const plot = makePlot()
+    plot.land(900)
+    const heights: number[] = []
+    for (let i = 0; i < 26; i++) { plot.update(1 / 60); heights.push(plot.group.position.y) }
+
+    const early = (heights[1] as number) - (heights[6] as number)
+    const late = (heights[18] as number) - (heights[23] as number)
+    expect(late).toBeGreaterThan(early)
+  })
+
+  it('squashes AFTER it touches down, not before', () => {
+    /*
+     * Backwards in the first version: the squash peaked in mid-air and was
+     * fully recovered by the frame the tile first met the ground, so the one
+     * thing it existed to express was over before the event it expressed.
+     */
+    const plot = makePlot()
+    plot.land(900)
+    let squashedInAir = false
+    let squashedOnGround = false
+    for (let i = 0; i < 120; i++) {
+      plot.update(1 / 60)
+      const squashed = plot.group.scale.y < 0.995
+      if (squashed && plot.group.position.y > 0.02) squashedInAir = true
+      if (squashed && plot.group.position.y <= 0.02) squashedOnGround = true
+    }
+    expect(squashedInAir).toBe(false)
+    expect(squashedOnGround).toBe(true)
+  })
+
+  it('never lets go of the ground once it is down', () => {
+    const plot = makePlot()
+    plot.land(400)
+    for (let i = 0; i < 200; i++) {
+      plot.update(1 / 60)
+      expect(plot.group.position.y).toBeGreaterThanOrEqual(0)
+    }
+    expect(plot.group.position.y).toBe(0)
+  })
+
+  it('lands in the time it was given, whatever that is', () => {
+    // The caller drives this from balance.stage.flyBackMs, and the farewell
+    // that disposes the scaffolding is derived from the same number.
+    for (const ms of [200, 900, 2000]) {
+      const plot = makePlot()
+      plot.land(ms)
+      const steps = Math.ceil((ms / 1000) * 60) + 2
+      for (let i = 0; i < steps; i++) plot.update(1 / 60)
+      expect(plot.group.position.y).toBe(0)
+    }
+  })
+
+  it('shrugs off a nonsense duration rather than dividing by it', () => {
+    const plot = makePlot()
+    plot.land(0)
+    plot.update(1 / 60)
+    expect(Number.isFinite(plot.group.position.y)).toBe(true)
+    for (let i = 0; i < 40; i++) plot.update(1 / 60)
+    expect(plot.group.position.y).toBe(0)
   })
 })

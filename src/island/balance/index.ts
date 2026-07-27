@@ -30,6 +30,11 @@ export interface Balance {
     petLoadMs: number
     /** The album chip's flight. */
     chipMs: number
+    /** How long the finished plot shows its flourish on the turntable. */
+    flourishMs: number
+    /** How high, and how far out, the fly-back arcs from. */
+    landHeight: number
+    landReach: number
   }
   firstRun: { tileOffer: string[]; egg2DelaySec: number }
   unlocks: Array<{ type: string; tiles: number; pets: number }>

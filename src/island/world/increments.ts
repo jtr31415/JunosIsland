@@ -28,6 +28,7 @@
 import * as THREE from 'three'
 import type { TileType } from './grid'
 import type { TileModels } from './tiles'
+import { balance } from '../balance'
 import { fitInto, FITS } from './props'
 
 /**
@@ -105,6 +106,20 @@ const fitFor = (name: string): readonly [number, number] =>
       : /^(Grass|Bush|Rock)/.test(name) ? FITS.cover
         : FITS.feature
 
+/**
+ * How high above its socket the finished plot starts, and how far to the side.
+ *
+ * Enough to read as arriving from somewhere; not so far that it comes in from
+ * off-screen, which looks like a mistake rather than a delivery. The lateral
+ * reach is what makes it an ARC rather than a drop — §6 asks for the tile to
+ * "arc across the screen to its chosen socket", and a purely vertical fall is
+ * a different sentence: something dropped, not something delivered.
+ */
+const LAND_HEIGHT = balance.stage.landHeight
+
+/** Where in the arc the tile meets the ground; the rest is the settle. */
+const TOUCHDOWN = 0.72
+
 export interface PlotDeps {
   /** The finished tile's own mesh, so the ghost hex IS the real hex. */
   models: TileModels
@@ -116,6 +131,21 @@ export interface GrowingPlot {
   group: THREE.Group
   /** Show the state for this many completed sums. Never regresses. */
   setProgress(sumsDone: number, cost: number): void
+  /**
+   * Drop the finished plot onto its socket with a bounce (§6's fly-back).
+   *
+   * "The connective payoff between abstract work and world position" — the
+   * spec's own phrase, and the reason this exists rather than the tile simply
+   * being there when the stage clears. She did sums on one side of the
+   * screen; the land arrives on the other; the arc is the sentence that joins
+   * them.
+   *
+   * A WORLD-SPACE arc, deliberately, not a screen-space flight from the
+   * vignette: the plot has to end up at its socket in three dimensions, and a
+   * cross-scene screen-space tween buys a nicer first second at the cost of
+   * being wrong about where the land actually is.
+   */
+  land(ms: number, reach?: number): void
   /** Ease the newly-revealed pieces in. Call per frame. */
   update(dt: number): void
   dispose(): void
@@ -141,6 +171,10 @@ export function createGrowingPlot(
     INCREMENTS.map(() => ({ object: null, shown: false, ease: 0 }))
 
   let disposed = false
+  /** 0..1 through the landing arc, or -1 when it is not playing. */
+  let landT = -1
+  let landMs = 900
+  let landReach = 1.6
 
   const install = (index: number, object: THREE.Object3D): void => {
     if (disposed) return
@@ -237,7 +271,49 @@ export function createGrowingPlot(
       tileMaterial.depthWrite = tileMaterial.opacity > 0.98
     },
 
+    land(ms, reach = balance.stage.landReach) {
+      landMs = Math.max(120, ms)
+      landReach = reach
+      landT = 0
+    },
+
     update(dt) {
+      if (landT >= 0) {
+        landT = Math.min(1, landT + dt * (1000 / landMs))
+        if (landT >= 1) {
+          landT = -1
+          group.position.set(0, 0, 0)
+          group.scale.set(1, 1, 1)
+        } else if (landT < TOUCHDOWN) {
+          /*
+           * Falling. ACCELERATING, not easing out.
+           *
+           * The first version used an ease-out — fastest at launch, drifting
+           * to a halt at the ground — which is a parachute, and it undercut
+           * the impact the squash exists to sell. Things fall the other way.
+           */
+          const t = landT / TOUCHDOWN
+          const fall = t * t
+          group.position.y = LAND_HEIGHT * (1 - fall)
+          // ...and swing in from the side, so it arcs rather than drops.
+          group.position.x = landReach * (1 - t) * (1 - t * 0.35)
+          group.scale.set(1, 1, 1)
+        } else {
+          /*
+           * Landed. Squash, then settle.
+           *
+           * AFTER touchdown, which is the whole point and was backwards: the
+           * squash used to peak in mid-air and be fully recovered by the frame
+           * the tile first touched the ground, so the one thing it existed to
+           * express was over before the event it was expressing.
+           */
+          group.position.set(0, 0, 0)
+          const settle = (landT - TOUCHDOWN) / (1 - TOUCHDOWN)
+          const impact = Math.sin(settle * Math.PI) * (1 - settle * 0.4)
+          group.scale.set(1 + impact * 0.16, 1 - impact * 0.2, 1 + impact * 0.16)
+        }
+      }
+
       for (const slot of slots) {
         if (!slot.shown || !slot.object || slot.ease >= 1) continue
         slot.ease = Math.min(1, slot.ease + dt * 3.2)

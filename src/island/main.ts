@@ -71,7 +71,15 @@ const PAGE_GAP_MS = 260
  * The tile itself is already real underneath by this point — this is purely
  * the last increment getting its moment before the scaffolding is removed.
  */
-const PLOT_FAREWELL_MS = 1400
+/**
+ * How long the scaffolding survives after the plot is finished.
+ *
+ * DERIVED from the fly-back rather than set beside it: the scaffolding is
+ * what performs the landing, so disposing it on an independent timer means
+ * the two agree only by luck, and the tile would vanish mid-air the moment
+ * either number moved.
+ */
+const PLOT_FAREWELL_MS = balance.stage.flyBackMs + 500
 
 /**
  * How long the stage holds after the shell breaks.
@@ -709,15 +717,65 @@ async function boot(): Promise<void> {
       const earned = flow.island.tiles.size > tilesBefore
 
       if (earned) {
-        // Fill the dots before the stage goes: the sum that FINISHED the tile
-        // deserves to be seen landing, and unstaging first meant the last dot
-        // never lit at all.
-        overlay.setDots(DOT_COUNT, DOT_COUNT)
-        stageFor(null); overlay.close()
-        speech.speak('You counted us up some land!')
-        fred.talk(2.2)
-        world.lighting.celebrationBump()
-        refresh()
+        /*
+         * THE FLY-BACK (§6): flourish on the turntable, then the land arrives.
+         *
+         * Spec's own words for why: "the connective payoff between abstract
+         * work and world position". She did sums on one side of the screen;
+         * the ground appears on the other; the arc is the sentence that joins
+         * them.
+         *
+         * NOTE THE ORDER. refresh() is held back until the scaffolding has
+         * touched down, because the flow machine commits the real tile the
+         * moment it is paid for — so refreshing first drew the finished hex
+         * at the socket and THEN dropped a second one into it from the sky.
+         * Duplication, not delivery, and worse than no beat at all: the two
+         * are not even the same shape, since an edge tile renders as a cut
+         * coast hex while the scaffolding is a full one. The plot IS the tile
+         * until it lands; the real one takes over as it is disposed.
+         */
+        // §18: save the finished tile BEFORE celebrating it. The hatch branch
+        // learned this; closing the tab mid-ceremony must not cost her the sum.
+        persist()
+
+        inCeremony = true
+        overlay.setBusy(true)
+        try {
+          // Fill the dots first: the sum that FINISHED the tile deserves to
+          // be seen landing, and unstaging first meant the last dot never lit.
+          overlay.setDots(DOT_COUNT, DOT_COUNT)
+          world.lighting.celebrationBump()
+
+          // The flourish plays while the plot is still on the turntable.
+          const finished = plot
+          finished?.setProgress(1, 1)
+          await wait(balance.stage.flourishMs)
+
+          // Down comes the stage, and the land arcs onto its socket.
+          stageFor(null)
+          overlay.close()
+          speech.speak('You counted us up some land!')
+          fred.talk(2.2)
+          finished?.land(balance.stage.flyBackMs, world.models.size * 1.4)
+          await wait(balance.stage.flyBackMs)
+
+          /*
+           * Touchdown. The scaffolding goes and the real tile appears in the
+           * same beat, so there is never a frame with two hexes in one place
+           * — coincident faces flicker, and she would see it.
+           */
+          dropPlot()
+          world.lighting.celebrationBump()   // the move-in lift (lighting §4)
+          refresh()
+        } finally {
+          /*
+           * ALWAYS. refresh() walks the whole scene graph, and a throw
+           * anywhere in here used to leave the locks set — every tap dead for
+           * the rest of the session, with a reload the only way out.
+           */
+          overlay.setBusy(false)
+          inCeremony = false
+        }
         return
       }
 
