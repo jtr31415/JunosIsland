@@ -14,7 +14,8 @@ import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
   COAST_CANONICAL, COAST_EDGES, COAST_VARIANTS, longestRun, waterMask, lookFor,
-  looksFor, presentedBy, canBeWater, mustBeWater, buildableSockets,
+  looksFor, presentedBy, canBeWater, canBeGrass, mustBeWater, mustBeLand,
+  buildableSockets, dryLandSockets, dryAfter, LAND_FLOOR,
 } from '../../src/island/world/coast'
 import type { CoastVariant, EdgeKind, TileLook } from '../../src/island/world/coast'
 import { createIsland, place, sockets } from '../../src/island/world/grid'
@@ -23,6 +24,7 @@ import {
   createFlow, askForLand, chooseTile, placeTile, tileOffer, tileTypeFor, tapSum,
   challengePassed,
 } from '../../src/island/flow'
+import type { Flow } from '../../src/island/flow'
 import type { Island } from '../../src/island/world/grid'
 import { DIRECTIONS, toWorld, key, distance, neighbours } from '../../src/island/world/hex'
 import type { Axial } from '../../src/island/world/hex'
@@ -690,25 +692,64 @@ describe('an island built only through the placement rules', () => {
   /**
    * Play the game: repeatedly pick a socket and a kind, and let the rules decide
    * what actually lands there. A seeded generator, so a failure is reproducible.
+   *
+   * Returns the whole FLOW, not just the island, so a caller can ask questions of
+   * the game state — "could she still put a field down?" is a question about the
+   * placement rules, not about a tile map, and answering it from a map alone is
+   * exactly the shortcut that let three coast faults through.
+   *
+   * `watch` is called with the flow before the first tile and after every one, so
+   * an invariant can be checked at every state the child would actually see
+   * rather than only at the end. `choose` is how she picks a socket, so a test can
+   * play a deliberate strategy rather than a random walk.
    */
-  function build(steps: number, seed: number, wetness: number): Island {
+  interface Strategy {
+    watch?: (f: Flow, step: number) => void
+    choose?: (open: readonly Axial[], f: Flow, rnd: () => number) => Axial
+    /**
+     * Take the OPENING SCRIPT's path instead of a tap's: pick the kind with no
+     * socket in hand, then site it.
+     *
+     * Fred asks for land on her behalf and has nowhere in mind, so nothing
+     * filters the choice and `tileTypeFor` is the only thing standing between
+     * what was picked and what lands. Which is exactly why the rules live there
+     * and not in the offer — and a test that only ever goes through the offer
+     * cannot tell the difference, because the offer would have removed the button
+     * before the choke point was ever asked.
+     */
+    viaScript?: boolean
+  }
+
+  function play(steps: number, seed: number, wetness: number, how: Strategy = {}): Flow {
+    const watch = how.watch ?? ((): void => {})
+    const choose = how.choose
+      ?? ((open: readonly Axial[], _f: Flow, rnd: () => number): Axial =>
+        open[Math.floor(rnd() * open.length)] as Axial)
     let s = seed >>> 0
     const rnd = (): number => {
       s = (s * 1664525 + 1013904223) >>> 0
       return s / 0x100000000
     }
     let f = createFlow()
+    watch(f, 0)
     for (let i = 0; i < steps; i++) {
       const open = buildableSockets(f.island, sockets(f.island))
       if (open.length === 0) break
-      const at = open[Math.floor(rnd() * open.length)] as Axial
+      const at = choose(open, f, rnd)
       const want: TileType = rnd() < wetness ? 'water' : 'grass'
-      // Exactly the path a tap takes: ask at the socket, pick, and place.
-      f = askForLand({ ...f, phase: 'free' }, at)
-      if (f.phase !== 'placing') break
-      const offered = tileOffer(f)
-      const pick = offered.includes(want) ? want : offered[0] as TileType
-      f = placeTile(chooseTile(f, pick), at)
+      if (how.viaScript) {
+        // Fred's path: a kind chosen with nowhere in mind, then a socket.
+        f = askForLand({ ...f, phase: 'free' })
+        if (f.phase !== 'placing') break
+        f = placeTile(chooseTile(f, want), at)
+      } else {
+        // Exactly the path a tap takes: ask at the socket, pick, and place.
+        f = askForLand({ ...f, phase: 'free' }, at)
+        if (f.phase !== 'placing') break
+        const offered = tileOffer(f)
+        const pick = offered.includes(want) ? want : offered[0] as TileType
+        f = placeTile(chooseTile(f, pick), at)
+      }
       /*
        * Finish the plot so the tile becomes real, then carry on. Bounded by a
        * counter rather than by watching `plot` change: an unfinished plot keeps
@@ -719,9 +760,14 @@ describe('an island built only through the placement rules', () => {
       for (let guard = 0; guard < 200 && f.plot; guard++) {
         f = challengePassed(tapSum({ ...f, phase: 'free' }))
       }
+      watch(f, i + 1)
     }
-    return f.island
+    return f
   }
+
+  /** The same, for the tests that only care what the island came out like. */
+  const build = (steps: number, seed: number, wetness: number): Island =>
+    play(steps, seed, wetness).island
 
   /*
    * An explicit timeout, generously above the ~0.5s this takes on an idle
@@ -753,6 +799,295 @@ describe('an island built only through the placement rules', () => {
     expect(total).toBeGreaterThan(300)
     expect(wet / total, 'islands came out bone dry').toBeGreaterThan(0.15)
   }, 30_000)
+
+  /**
+   * Are her FIELDS walled off from themselves — can the island she has still grow?
+   *
+   * Not "can a tile go somewhere", and the difference is the whole fault. Once a
+   * ring of ponds closes round her land, tiles can still be placed all day, and
+   * grass comes back too once the lake is a ring wider and there is a pond tile
+   * with no green edge yet — but it comes back ACROSS THE WATER. Her island is
+   * walled in permanently, because the ring tiles keep the green edge they have
+   * and any field outside would give them a second on the far side.
+   *
+   * So the question is asked only of sockets that touch her fields, and it is
+   * asked through the choke point a tap goes through, because "grass is allowed
+   * here" and "grass is what would actually land here" are different questions —
+   * `mustBeWater` can override a socket `canBeGrass` was perfectly happy with.
+   */
+  const fieldsCanStillGrow = (f: Flow): boolean =>
+    buildableSockets(f.island, sockets(f.island))
+      .some(s => neighbours(s).some(n => f.island.tiles.get(key(n)) === 'grass')
+        && tileTypeFor(f, s, 'grass') === 'grass')
+
+  /**
+   * A child who only ever wants water, and only ever puts it against her island.
+   *
+   * Joe, from playtesting: *"kids cant snooker their islands by surrounding it
+   * with just water"*. This is that child. Picking sockets at random wanders out
+   * to sea, where water is free and nothing is ever at stake; hugging her fields
+   * is what actually rings the island, so the strategy prefers a socket touching
+   * her grass and only falls back to the open sea when there is none.
+   *
+   * It matters that this is a STRATEGY and not more seeds. The random walk never
+   * once walled an island in, at any wetness, over hundreds of seeds — the fault
+   * Joe found in ten minutes of a six-year-old playing needs a player who wants
+   * water and wants it next to her island, which is what a six-year-old is.
+   */
+  const hugTheLand: Strategy['choose'] = (open, f, rnd) => {
+    const touching = open.filter(s =>
+      neighbours(s).some(n => f.island.tiles.get(key(n)) === 'grass'))
+    const from = touching.length > 0 ? touching : open
+    return from[Math.floor(rnd() * from.length)] as Axial
+  }
+
+  /**
+   * ...and a child playing to WIN at walling herself in.
+   *
+   * Not a child, obviously. It is here because the floor is a number, and a
+   * number is only as good as the worst player who meets it: this one taps
+   * whichever socket leaves her the fewest ways out, so the floor is held at its
+   * line for the whole game instead of drifting comfortably above it.
+   */
+  const worstCase: Strategy['choose'] = (open, f) => {
+    let best = open[0] as Axial
+    let fewest = Infinity
+    for (const s of open) {
+      const left = dryAfter(f.island, s, tileTypeFor(f, s, 'water'))
+      if (left < fewest) { fewest = left; best = s }
+    }
+    return best
+  }
+
+  it('never walls her island in, however much water she asks for', () => {
+    /*
+     * THE property, and it is deliberately stronger than the rule that satisfies
+     * it: it counts nothing and knows nothing about dry sockets, it only says
+     * that at no point in a played island are her fields sealed off from every
+     * place they could grow. She can reach that state unaided and there is no
+     * undo, which is what makes it worth a floor rather than a nudge.
+     *
+     * It fails without the floor at seed 1, in six taps: the home hex ringed by
+     * ponds, and nothing green can ever touch her land again. It also fails with
+     * the floor set to Joe's two rather than three, at seed 160 — which is the
+     * whole reason the seed range runs this far, and the reason this plays a
+     * strategy rather than trusting `LAND_FLOOR` to be a sensible-looking number.
+     */
+    /*
+     * The seed counts differ because the cost does: `worstCase` weighs every
+     * socket on every tap, so it buys far less coverage per second, and what it
+     * is for is the shape of the play rather than the breadth of it.
+     */
+    for (const [name, choose, seeds] of [['hugging her coast', hugTheLand, 170],
+      ['playing to lose', worstCase, 25]] as const) {
+      for (let seed = 1; seed <= seeds; seed++) {
+        play(45, seed, 1, {
+          choose,
+          watch: (f, step) => {
+            expect(fieldsCanStillGrow(f), `${name}, seed ${seed}, after ${step} tiles: `
+              + `${[...f.island.tiles].map(([k, t]) => `${k}=${t}`).join(' ')}`).toBe(true)
+          },
+        })
+      }
+    }
+  }, 30_000)
+
+  it('holds when the kind is chosen before the socket, as Fred chooses it', () => {
+    /*
+     * The same property down the opening script's path, where no offer stands
+     * between the choice and the tile. This is the one that says the rule is in
+     * the choke point and not merely in the buttons: strip `mustBeLand` out of
+     * `tileTypeFor` and leave it in `tileOffer`, and every other played-island
+     * test here still passes, because they all ask the offer what to press.
+     */
+    for (let seed = 1; seed <= 120; seed++) {
+      play(45, seed, 1, {
+        choose: hugTheLand,
+        viaScript: true,
+        watch: (f, step) => {
+          expect(fieldsCanStillGrow(f), `seed ${seed}, after ${step} tiles: `
+            + `${[...f.island.tiles].map(([k, t]) => `${k}=${t}`).join(' ')}`).toBe(true)
+        },
+      })
+    }
+  }, 30_000)
+
+  it('holds under the random walk too, at every wetness', () => {
+    for (let seed = 1; seed <= 24; seed++) {
+      for (const wetness of [0.2, 0.5, 0.8, 1]) {
+        play(45, seed, wetness, {
+          watch: (f, step) => {
+            expect(fieldsCanStillGrow(f), `seed ${seed}, wetness ${wetness}, `
+              + `after ${step} tiles`).toBe(true)
+          },
+        })
+      }
+    }
+  }, 30_000)
+
+  it('always leaves her a socket to tap — the floor never glows nothing', () => {
+    /*
+     * The other way to stop the game, and the one a floor is most likely to cause
+     * by accident: refuse enough and nothing glows at all, which is every bit as
+     * final as a moat and rather more baffling. This is here because the floor WAS
+     * once written into `buildableSockets` and did exactly that — it refused the
+     * last socket her island could have grown from, turning "walled in after one
+     * more field" into "walled in now". Nothing invents a fallback, so this has to
+     * hold on its own.
+     */
+    for (const choose of [hugTheLand, undefined]) {
+      for (let seed = 1; seed <= 24; seed++) {
+        play(45, seed, 1, {
+          choose,
+          watch: (f, step) => {
+            expect(buildableSockets(f.island, sockets(f.island)).length,
+              `seed ${seed}, after ${step} tiles`).toBeGreaterThan(0)
+          },
+        })
+      }
+    }
+  }, 30_000)
+
+  /* ------------------------------------------- the floor, close up */
+
+  it('counts the ways out of her fields the way Joe described them', () => {
+    // "land connections without water neighbours" — touching her grass, and no
+    // pond in their own six. Fred's lonely rock has all six of them.
+    expect(dryLandSockets(createIsland())).toHaveLength(6)
+
+    // A pond takes the socket it sits on and both of its neighbours out of the
+    // count; the three on the far side are untouched.
+    const dug = place(createIsland(), { q: 1, r: 0 }, 'water')
+    expect(dryLandSockets(dug)).toHaveLength(3)
+    for (const s of dryLandSockets(dug)) {
+      expect(neighbours(s).some(n => dug.tiles.get(key(n)) === 'grass')).toBe(true)
+      expect(neighbours(s).some(n => dug.tiles.get(key(n)) === 'water')).toBe(false)
+    }
+  })
+
+  it('reckons the same way out counts however it is arrived at', () => {
+    /*
+     * `dryAfter` works the count out from the one she has rather than deriving it
+     * over a copy of the island, which is the only reason it is cheap enough to
+     * ask of every socket. So it has to agree with the slow way, everywhere.
+     */
+    for (const seed of [3, 11, 19, 23]) {
+      const island = build(30, seed, 0.6)
+      for (const s of sockets(island)) {
+        for (const t of ['grass', 'water'] as TileType[]) {
+          expect(dryAfter(island, s, t), `seed ${seed}, ${key(s)} as ${t}`)
+            .toBe(dryLandSockets(place(island, s, t)).length)
+        }
+      }
+    }
+  })
+
+  it('never forces a field the coastline cannot draw', () => {
+    /*
+     * The bug `mustBeWater` shipped with, not repeated: it short-circuited ahead
+     * of the drawability check and forced water into a shape no model draws.
+     * Forcing yields to feasibility, in both directions and at every socket of a
+     * played island.
+     */
+    for (const seed of [5, 13, 29]) {
+      const island = build(35, seed, 0.85)
+      for (const s of sockets(island)) {
+        if (mustBeLand(island, s)) expect(canBeGrass(island, s), key(s)).toBe(true)
+      }
+    }
+  })
+
+  it('leaves water out at sea alone — the floor only guards her coast', () => {
+    /*
+     * A floor that turned every pond into a field would pass the property test
+     * perfectly and ruin the game. Water that touches none of her ways out costs
+     * her nothing, so it is never turned back, however tight the island is.
+     */
+    let island = createIsland()
+    // A finger of land, and a pond off the end of it with open sea beyond.
+    island = place(island, { q: 1, r: 0 }, 'grass')
+    island = place(island, { q: 2, r: 0 }, 'water')
+    const outAtSea: Axial = { q: 3, r: 0 }
+    expect(neighbours(outAtSea).some(n => island.tiles.get(key(n)) === 'grass')).toBe(false)
+    expect(mustBeLand(island, outAtSea)).toBe(false)
+
+    const f = askForLand({ ...createFlow(), island, phase: 'free' }, outAtSea)
+    expect(tileOffer(f)).toContain('water')
+    expect(tileTypeFor(f, outAtSea, 'water')).toBe('water')
+  })
+
+  it('offers one button when a field is forced, and it is the one that lands', () => {
+    /*
+     * The offer's only job is to show what `tileTypeFor` will do. A second button
+     * that quietly becomes the first is worse than no second button, especially
+     * for a child who would learn from it that the water one is broken.
+     */
+    let checked = 0
+    for (const seed of [7, 17, 160]) {
+      const island = build(35, seed, 0.9)
+      const f0 = { ...createFlow(), island }
+      for (const s of buildableSockets(island, sockets(island))) {
+        const f = askForLand({ ...f0, phase: 'free' }, s)
+        const offer = tileOffer(f)
+        expect(offer.length, key(s)).toBeGreaterThan(0)
+        // Whatever is on the buttons is what arrives when it is pressed.
+        for (const t of offer) expect(tileTypeFor(f, s, t), `${key(s)} as ${t}`).toBe(t)
+        if (mustBeLand(island, s)) { expect(offer).toEqual(['grass']); checked++ }
+      }
+    }
+    expect(checked, 'no socket in any of these islands had a field forced').toBeGreaterThan(0)
+  })
+
+  it('lets the floor outrank the green plug where the two collide', () => {
+    /*
+     * The two forcings do collide, and this is a real state of a real played
+     * island — found by playing them, not composed, because the shape is not one
+     * anybody would think to write down: twenty-eight tiles, and a socket out
+     * beyond her fields with two of her ponds beside it and none of her grass, so
+     * `mustBeWater` fires; and water there would take her below the floor, so the
+     * floor fires too.
+     *
+     * The floor wins. A green plug in a channel is a wart she can look at; a wall
+     * round her island is the end of building it, and there is no undo. Ordered
+     * the other way the floor would be silent for exactly the taps that close
+     * water round her land, which are the only ones it exists for.
+     */
+    const island: Island = {
+      tiles: new Map<string, TileType>(('0,0=grass 1,-1=water 2,-2=water -1,1=grass '
+        + '3,-3=water 1,0=water 0,1=water -1,2=grass 2,0=water 1,-2=water -2,1=grass '
+        + '-1,3=water 1,1=water 3,-4=water -2,4=water 2,-4=grass 2,-1=water 0,2=water '
+        + '-2,2=water 4,-3=water 3,-5=water -3,1=grass 2,1=water -4,1=water 0,-2=water '
+        + '3,0=water -4,2=water -1,0=grass').split(' ')
+        .map(e => e.split('=') as [string, TileType])),
+    }
+    const contested: Axial = { q: 3, r: -2 }
+
+    // It really is the plug case: two of her ponds round it, and not one field.
+    expect(mustBeWater(island, contested)).toBe(true)
+    expect(canBeWater(island, contested)).toBe(true)
+    // ...and it really would take her below the floor.
+    expect(mustBeLand(island, contested)).toBe(true)
+    expect(dryAfter(island, contested, 'water')).toBeLessThan(LAND_FLOOR)
+
+    const f = askForLand({ ...createFlow(), island, phase: 'free' }, contested)
+    expect(tileOffer(f)).toEqual(['grass'])
+    expect(tileTypeFor(f, contested, 'water')).toBe('grass')
+  })
+
+  it('is stated as a look-ahead because the count steps over the line', () => {
+    /*
+     * Why the rule asks "would this tile take her below the line" rather than "is
+     * she below it already". One pond can cost her three ways out at once, so the
+     * count does not fall THROUGH the line on its way down, it jumps clean past
+     * it — and a rule that waited for the line to be reached would never fire.
+     */
+    const island = createIsland()
+    expect(dryLandSockets(island)).toHaveLength(6)
+    expect(dryLandSockets(island).length).toBeGreaterThan(LAND_FLOOR)
+    const at = neighbours({ q: 0, r: 0 })[0] as Axial
+    // Six, and one pond takes it to three: a fall of three in a single tile.
+    expect(dryAfter(island, at, 'water')).toBe(3)
+  })
 
   it('fills a gap between two of her ponds with water, not a green plug', () => {
     // Joe: "specifically if 2 water and no land neighbours."
@@ -798,5 +1133,75 @@ describe('an island built only through the placement rules', () => {
     const hole: Axial = { q: 0, r: 0 }
     const ringed: Island = { tiles: new Map([...island.tiles].filter(([k]) => k !== key(hole))) }
     expect(canBeWater(ringed, hole)).toBe(false)
+  })
+})
+
+/**
+ * THE KNOWN LIMIT, pinned so it cannot be quietly lost.
+ *
+ * A Fable review of the dry-connection floor falsified the property the floor
+ * was written to guarantee. This is its counterexample, replayed through the
+ * real tap path — every placement matched a button the offer actually showed —
+ * and it ends with her fields sealed behind water.
+ *
+ * The test asserts the CURRENT behaviour, including that it fails. That is
+ * deliberate: it is the difference between a limitation the project knows about
+ * and one it has forgotten. When the last-resort backstop lands — refuse any
+ * placement leaving zero growable witnesses — this test should start passing,
+ * and the assertion below is what will say so.
+ *
+ * Severity, for whoever reads this next: it took a greedy anti-play harvest plus
+ * a six-ply search to find. Before the floor existed, SIX natural taps walled her
+ * in. This is a safety margin that is very large but not infinite, and the
+ * comments in flow.ts used to claim otherwise.
+ */
+describe('the floor is a margin, not a theorem', () => {
+  /** Same question the played-island suite asks, asked from out here. */
+  const fieldsCanGrow = (f: Flow): boolean =>
+    buildableSockets(f.island, sockets(f.island))
+      .some(s => neighbours(s).some(n => f.island.tiles.get(key(n)) === 'grass')
+        && tileTypeFor(f, s, 'grass') === 'grass')
+
+  const SEALED: Array<[number, number, TileType]> = [
+    [-1, 0, 'water'], [-2, 1, 'water'], [-1, -1, 'water'], [-3, 1, 'water'],
+    [-2, 2, 'water'], [-1, 1, 'grass'], [0, -2, 'water'], [-3, 3, 'water'],
+    [-2, 3, 'water'], [-4, 1, 'water'], [-2, -1, 'water'], [-4, 3, 'water'],
+    [-3, 0, 'water'], [-4, 4, 'water'], [-2, 0, 'water'], [-1, 3, 'water'],
+    [-5, 5, 'water'], [-5, 3, 'water'], [0, -1, 'grass'], [-3, 4, 'water'],
+    [1, -3, 'water'], [-6, 5, 'water'], [-7, 6, 'water'], [0, -3, 'water'],
+    [0, -4, 'water'], [2, -4, 'water'], [0, 3, 'water'], [-4, 5, 'water'],
+    [2, -3, 'water'], [-4, 2, 'water'], [1, -5, 'water'], [-1, -3, 'water'],
+    [1, 2, 'water'], [0, 1, 'grass'], [0, 2, 'grass'], [-1, 2, 'grass'],
+    [1, 3, 'water'], [-1, -2, 'water'], [1, -2, 'grass'], [-1, 4, 'water'],
+    [2, 2, 'water'], [-2, 4, 'water'], [-3, 2, 'water'], [1, -4, 'water'],
+    [3, -4, 'water'], [1, -1, 'grass'], [0, 4, 'water'], [3, -3, 'water'],
+    [2, 1, 'water'], [1, 0, 'grass'], [1, 1, 'grass'], [3, 0, 'water'],
+    [2, -1, 'grass'], [2, -2, 'grass'], [2, 0, 'grass'], [4, -3, 'water'],
+    [3, 1, 'water'], [3, -2, 'grass'], [4, -4, 'water'], [4, -1, 'water'],
+    [3, -1, 'grass'], [5, -3, 'water'], [5, -2, 'water'], [4, -2, 'grass'],
+  ]
+
+  it('can still be walled in, by a sequence no child would find', () => {
+    let f = createFlow()
+    let offeredEvery = true
+    for (const [q, r, want] of SEALED) {
+      const at: Axial = { q, r }
+      f = askForLand({ ...f, phase: 'free' }, at)
+      if (f.phase !== 'placing') break
+      // Every step must be a button she could actually have pressed.
+      if (!tileOffer(f).includes(want)) { offeredEvery = false; break }
+      f = placeTile(chooseTile(f, want), at)
+      for (let g = 0; g < 200 && f.plot; g++) {
+        f = challengePassed(tapSum({ ...f, phase: 'free' }))
+      }
+    }
+    expect(offeredEvery, 'the counterexample must stay reachable by real taps')
+      .toBe(true)
+    /*
+     * FAILS TODAY, and that is the point. Flip this to `true` when the backstop
+     * lands; if it starts passing on its own, something else fixed it and that
+     * is worth understanding rather than celebrating.
+     */
+    expect(fieldsCanGrow(f)).toBe(false)
   })
 })

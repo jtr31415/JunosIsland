@@ -13,7 +13,9 @@ import { createIsland, place, sockets, count } from './world/grid'
 import type { Island, TileType } from './world/grid'
 import { key } from './world/hex'
 import type { Axial } from './world/hex'
-import { canBeWater, canBeGrass, mustBeWater, buildableSockets } from './world/coast'
+import {
+  canBeWater, canBeGrass, mustBeWater, mustBeLand, buildableSockets,
+} from './world/coast'
 
 /**
  * How much work each reward costs — from the curve, never a constant.
@@ -248,14 +250,21 @@ export function tileOffer(f: Flow): TileType[] {
   if (!f.pending) return ['grass', 'water']
   /*
    * Never offer a kind that the socket would then override. A button that does
-   * something other than what it shows is worse than no button.
+   * something other than what it shows is worse than no button — which is also
+   * the answer to whether a ONE-BUTTON offer is honest. It is: it says what she
+   * will get. Leaving the water button up where the rules will turn it into land
+   * would teach a six-year-old that the water button is broken, and she would be
+   * right. So a forced socket offers one thing, in both directions, and the order
+   * below matches `tileTypeFor` exactly — the offer's whole job is to show what
+   * that function is going to do.
+   *
+   * Forcing yields to feasibility in both cases. `mustBeWater` used to
+   * short-circuit here, and that was a real hole: a socket with two of her ponds
+   * round it and no fields can still be a shape no model draws, and forcing water
+   * into it produced exactly the fault this rule exists to prevent. `mustBeLand`
+   * asks `allows` before it answers, for the same reason.
    */
-  /*
-   * Forcing yields to feasibility. `mustBeWater` used to short-circuit here, and
-   * that was a real hole: a socket with two of her ponds round it and no fields
-   * can still be a shape no model draws, and forcing water into it produced
-   * exactly the fault this rule exists to prevent.
-   */
+  if (mustBeLand(f.island, f.pending)) return ['grass']
   if (mustBeWater(f.island, f.pending) && canBeWater(f.island, f.pending)) return ['water']
   const kinds: TileType[] = []
   if (canBeGrass(f.island, f.pending)) kinds.push('grass')
@@ -272,8 +281,11 @@ export function tileOffer(f: Flow): TileType[] {
 /**
  * What actually goes on a socket, whatever she picked.
  *
- * Joe's two placement rules, in one place because they must never disagree:
+ * Joe's placement rules, in one place because they must never disagree:
  *
+ *   - THE FLOOR, from playtesting: water never spends her last dry way out of her
+ *     own fields. See `mustBeLand` — this is what stops her walling her island
+ *     off from itself.
  *   - Two or more of her own water tiles round a socket and none of her fields,
  *     and it is water — otherwise she plugs a channel with a green hex.
  *   - Water only where the water cell can carry its whole beach, which is what
@@ -281,11 +293,43 @@ export function tileOffer(f: Flow): TileType[] {
  *     sixty-four neighbourhoods qualify, and the rest are ruled out by the
  *     arithmetic of an asset pack with no four-land-edge model.
  *
- * Both are applied HERE rather than only in the offer, because the opening script
- * chooses a kind before it knows the socket. One choke point means the island can
- * never hold a tile the coastline cannot draw.
+ * All three are applied HERE rather than only in the offer, because the opening
+ * script chooses a kind before it knows the socket. One choke point means the
+ * island can never hold a tile the coastline cannot draw.
+ *
+ * IT DOES NOT MEAN SHE CANNOT WALL HERSELF IN — that stronger claim was made
+ * here and is FALSE. A Fable review found a 64-tap counterexample, replayed
+ * through this exact path with every placement matching an offered button, that
+ * ends with her fields sealed and every glowing socket across the water. It is
+ * pinned in `tests/island/coast.test.ts` so it cannot be lost.
+ *
+ * Three gaps compound, and no value of LAND_FLOOR closes them:
+ *   - `mustBeLand` yields when grass is infeasible, so water is still offered at
+ *     a socket where it spends the last ways out.
+ *   - Grass erosion is unguarded: a field on a dry socket whose empty neighbours
+ *     all touch water consumes a way out and creates none.
+ *   - Dry sockets are not the real witnesses. Once the count is zero the island
+ *     survives on WET sockets where grass happens to remain drawable, which the
+ *     floor never models.
+ *
+ * What the floor is, then, is an empirical safety margin and a large one: before
+ * it, six natural taps wall her in; after it, a greedy harvest plus a six-ply
+ * search was needed to find one sequence. The structural fix is a last-resort
+ * backstop — refuse any placement leaving zero growable witnesses — which is
+ * carded and deliberately not attempted here.
+ *
+ * ORDER MATTERS, and the floor outranks the plug. They collide at exactly one
+ * place and it is the place that matters: the socket that CLOSES a ring, which
+ * has two of her ponds round it and none of her fields, so `mustBeWater` fires —
+ * and closing the ring is the whole fault. Ordered the other way the floor would
+ * be silent for the one tile it exists to refuse. The price is a green plug in a
+ * channel, which is a wart; the alternative is a wall round her island, which is
+ * the end of it, and there is no undo. Where the floor turns water back and no
+ * field can be drawn there either, nothing is invented: the socket admits neither
+ * kind, and `buildableSockets` stops it glowing, as it already does.
  */
 export function tileTypeFor(f: Flow, a: Axial, chosen: TileType): TileType {
+  if (mustBeLand(f.island, a)) return 'grass'
   if (mustBeWater(f.island, a) && canBeWater(f.island, a)) return 'water'
   if (chosen === 'water' && !canBeWater(f.island, a)) return 'grass'
   /*
