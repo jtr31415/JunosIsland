@@ -120,8 +120,15 @@ export interface Stage {
    * that it happens on the thing she was working toward, not somewhere else.
    */
   burst(): void
-  /** Frame the turntable for an object of roughly this size. */
-  frame(radius: number): void
+  /**
+   * Frame the turntable for an object of roughly this size.
+   *
+   * `lookHeight` is where the eye rests, as a fraction of the radius. It
+   * defaults to something suited to a tall object like an egg; a flat one
+   * like a tile needs a lower line or it sits on the bottom edge of the frame
+   * with empty sky above it.
+   */
+  frame(radius: number, lookHeight?: number): void
   update(dt: number, t: number): void
   /** Draw into a scissored rect of the shared renderer. */
   render(renderer: THREE.WebGLRenderer, rect: StageRect): void
@@ -277,7 +284,7 @@ export function createStage(): Stage {
       sparks.visible = true
     },
 
-    frame(radius) {
+    frame(radius, lookHeight = 0.8) {
       // A saucer just wider than the piece, never a landscape of its own.
       const disc = Math.max(0.35, radius * 1.35)
       plinth.scale.set(disc, 1, disc)
@@ -296,8 +303,8 @@ export function createStage(): Stage {
        * makes it read as standing in a place rather than on a putting green.
        */
       const distance = Math.max(1.7, radius * 3.4)
-      camera.position.set(0, radius * 1.2, distance)
-      camera.lookAt(0, radius * 0.8, 0)
+      camera.position.set(0, radius * Math.max(0.5, lookHeight * 1.5), distance)
+      camera.lookAt(0, radius * lookHeight, 0)
     },
 
     update(dt, t) {

@@ -471,7 +471,13 @@ async function boot(): Promise<void> {
     stage.show(piece ?? null, world.scene)
     if (!piece) { overlay.setStaged(false); return false }
     // An egg is small and a hex is not; frame each for what it is.
-    stage.frame(kind === 'read' ? 0.55 : world.models.size)
+    /*
+     * An egg stands up and a tile lies flat, so the eye rests at a different
+     * height for each. Framing the plot like an egg put it on the bottom edge
+     * of the vignette with a screenful of empty sky above it.
+     */
+    if (kind === 'read') stage.frame(0.55)
+    else stage.frame(world.models.size, 0.22)
     refreshDots(kind, state)
     return true
   }

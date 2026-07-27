@@ -194,9 +194,11 @@ export function createGrowingPlot(
    * pieces standing among them.
    */
   const ghostMaterial = new THREE.MeshBasicMaterial({
-    color: 0xffcf5a,
+    color: 0xffc233,
     transparent: true,
-    opacity: 0.26,
+    // Faint enough to read as "not here yet", strong enough to read as GOLD.
+    // At a quarter it was a smudge on the grass rather than a promise.
+    opacity: 0.42,
     depthWrite: false,
   })
 
