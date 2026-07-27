@@ -18,6 +18,7 @@ import type { TileModels, TileField, Surface } from './world/tiles'
 import { toWorld } from './world/hex'
 import type { Axial } from './world/hex'
 import type { Island } from './world/grid'
+import { buildableSockets } from './world/coast'
 import { sockets } from './world/grid'
 
 export type Hit =
@@ -109,7 +110,9 @@ export async function createWorld(canvas: HTMLCanvasElement): Promise<World> {
     setIsland(i: Island) {
       island = i
       tiles.sync(i)
-      socketField.sync(sockets(i))
+      // Only the sockets she can actually fill: an outline that cannot be
+      // filled is a promise the game breaks.
+      socketField.sync(buildableSockets(i, sockets(i)))
       // Keep the whole island in shot as it grows outward.
       let max = 0
       for (const k of i.tiles.keys()) {

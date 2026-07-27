@@ -19,7 +19,7 @@
 import { DIRECTIONS, neighbours, key } from './hex'
 import type { Axial } from './hex'
 import { tileAt } from './grid'
-import type { Island } from './grid'
+import type { Island, TileType } from './grid'
 
 export const COAST_VARIANTS = ['A', 'B', 'C', 'D'] as const
 export type CoastVariant = typeof COAST_VARIANTS[number]
@@ -186,6 +186,66 @@ const COST: Record<EdgeKind, Record<EdgeKind, number>> = {
   water: { land: 100, sand: 2, water: 0 },
 }
 
+/**
+ * Is this orientation CLEAN — no beach against her fields, no green wall at sea?
+ *
+ * Joe's rule, hardened from a weighted cost into a hard constraint: *"we should
+ * never allow a full land tile against a coast tile"*, and its mirror, which he
+ * gave earlier — *"never a tile edge of A against the sand or water of B"*.
+ *
+ * The cost table below still exists, and still ranks the near-misses, because it
+ * is what chooses BETWEEN clean orientations and what degrades gracefully if an
+ * island ever arrives — from an edited save, say — in a shape that has none. But
+ * clean is now a yes-or-no question, and `drawableAsWater` is what stops the
+ * child creating a shape where the answer is no.
+ */
+function clean(edges: EdgeKind[], turns: number, around: EdgeKind[]): boolean {
+  for (let k = 0; k < 6; k++) {
+    const mine = edges[(k - turns + 6) % 6] as EdgeKind
+    const theirs = around[k] as EdgeKind
+    if (theirs === 'land' && mine !== 'land') return false   // beach into her field
+    if (theirs !== 'land' && mine === 'land') return false   // green wall at sea
+  }
+  return true
+}
+
+/**
+ * How long a coastline this orientation shows: its non-land edges.
+ *
+ * Joe: *"the shortest coast line option tile for the situation should be
+ * forced."* Fewest sand-and-water edges is the least the island has to be cut
+ * about to accommodate the water.
+ */
+const coastLength = (edges: EdgeKind[]): number =>
+  edges.filter(e => e !== 'land').length
+
+/**
+ * Could a water tile here be drawn without a single bad joint?
+ *
+ * This is the placement rule, and it is DERIVED from the measured edge table
+ * rather than stated as a number, so it tracks the art. Enumerated exhaustively
+ * over all 64 neighbourhoods, exactly 19 are drawable: nought, one, two or three
+ * green edges, and the green ones forming a SINGLE contiguous arc. Four or more
+ * is arithmetic — no model has four land edges — and a split arc fails because
+ * every model's water is one unbroken run, so its land must be too.
+ *
+ * Which is what makes the whole "coast belongs to the water" design hold up. If
+ * water only ever goes where this returns true, the water cell carries the
+ * entire beach and the field beside it stays a plain, flat hex — so land she has
+ * already paid for is never re-cut behind her, and no saved per-tile look or
+ * third tile type is needed. The cost is that an enclosed pond is not
+ * constructible: water grows as coastline, never as a hole in her fields.
+ */
+export function drawableAsWater(around: EdgeKind[]): boolean {
+  if (clean(ALL_WATER, 0, around)) return true
+  for (const variant of COAST_VARIANTS) {
+    for (let turns = 0; turns < 6; turns++) {
+      if (clean(COAST_EDGES[variant], turns, around)) return true
+    }
+  }
+  return false
+}
+
 function mismatch(edges: EdgeKind[], turns: number, around: EdgeKind[]): number {
   let cost = 0
   for (let k = 0; k < 6; k++) {
@@ -227,18 +287,48 @@ function mismatch(edges: EdgeKind[], turns: number, around: EdgeKind[]): number 
  *     stable: the same island always draws the same way, and nothing shimmers
  *     when a distant tile is placed.
  */
-function bestLook(around: EdgeKind[]): TileLook {
-  // Plain water is a candidate like any other, and wins out at sea, where
-  // every neighbour is water and a beach would be a sandbank from nowhere.
+function bestLook(types: EdgeKind[], drawn: EdgeKind[]): TileLook {
+  /*
+   * Ranked in three keys, in this order: CLEAN first, then the SHORTEST
+   * coastline, then the old cost as a tie-break.
+   *
+   * Clean first is Joe's hardening — a clean orientation beats an unclean one
+   * however cheap the unclean one scores, which is what retires the trade this
+   * function used to make. The cost table had land-into-water at 40 and
+   * sand-onto-grass at 10, so on a jagged coast it would shove a green wall into
+   * the sea to keep the grass edges perfect; the note about that being a known
+   * consequence is gone, because it is no longer reachable on an island the
+   * child can actually build (see `drawableAsWater`).
+   *
+   * Shortest coastline second is Joe's "the shortest coast line option tile for
+   * the situation should be forced": given two clean answers, cut the island
+   * about as little as possible. Plain water is a coastline of six and so comes
+   * last among clean options, which is right — it wins at sea, where it is the
+   * ONLY clean option, and a beach there would be a sandbank from nowhere.
+   *
+   * Cost last still decides between equals, and still keeps a pathological
+   * island — an edited save, a shape from before this rule — degrading gently
+   * rather than throwing.
+   */
   let best: TileLook = { kind: 'water', turns: 0 }
-  let bestCost = mismatch(ALL_WATER, 0, around)
+  let bestKey: [number, number, number] = [
+    clean(ALL_WATER, 0, types) ? 0 : 1,
+    coastLength(ALL_WATER),
+    mismatch(ALL_WATER, 0, drawn),
+  ]
 
   for (const variant of COAST_VARIANTS) {
     const edges = COAST_EDGES[variant]
     for (let turns = 0; turns < 6; turns++) {
-      const cost = mismatch(edges, turns, around)
-      if (cost < bestCost) {
-        bestCost = cost
+      const k: [number, number, number] = [
+        clean(edges, turns, types) ? 0 : 1,
+        coastLength(edges),
+        mismatch(edges, turns, drawn),
+      ]
+      if (k[0] < bestKey[0]
+        || (k[0] === bestKey[0] && k[1] < bestKey[1])
+        || (k[0] === bestKey[0] && k[1] === bestKey[1] && k[2] < bestKey[2])) {
+        bestKey = k
         best = { kind: 'coast', variant, turns }
       }
     }
@@ -295,18 +385,7 @@ export function looksFor(island: Island): Map<string, TileLook> {
   for (let sweep = 0; sweep < MAX_SWEEPS; sweep++) {
     let moved = false
     for (const a of waters) {
-      const around = neighbours(a).map((n, k) => {
-        const type = tileAt(island, n)
-        // Off the edge of the island is open sea, and always will be.
-        if (type === undefined) return 'water' as EdgeKind
-        if (type === 'grass') return 'land' as EdgeKind
-        /*
-         * Our edge k is their edge k + 3: hexes meet head-on, so the
-         * neighbour's opposite face is the one across the joint from ours.
-         */
-        return presentedBy(looks.get(key(n)) as TileLook)[(k + 3) % 6] as EdgeKind
-      })
-      const next = bestLook(around)
+      const next = bestLook(typesAround(island, a), drawnAround(island, a, looks))
       const now = looks.get(key(a)) as TileLook
       if (now.kind !== next.kind || now.turns !== next.turns
         || (now.kind === 'coast' && next.kind === 'coast' && now.variant !== next.variant)) {
@@ -317,6 +396,128 @@ export function looksFor(island: Island): Map<string, TileLook> {
     if (!moved) break
   }
   return looks
+}
+
+/**
+ * What the six neighbours of `a` present toward it, on the island as drawn.
+ *
+ * Shared by the sweep and by the placement rules below, so a socket is judged
+ * against exactly what the renderer will put beside it — not against an
+ * approximation that could disagree.
+ */
+/**
+ * What the six neighbours present as DRAWN, for the cost tie-break only.
+ *
+ * Cleanliness is decided on types (see `typesAround`) because asking it of the
+ * drawing is circular. But among orientations that are equally clean and equally
+ * short, the old cost table is still the best judge of which sits most happily
+ * beside what its neighbours actually became — and it is what keeps a shape the
+ * child CANNOT build, but an edited save might contain, degrading gently instead
+ * of putting a green rim against the next pond tile's open water.
+ */
+function drawnAround(island: Island, a: Axial, looks: Map<string, TileLook>): EdgeKind[] {
+  return neighbours(a).map((n, k) => {
+    const type = tileAt(island, n)
+    // Off the edge of the island is open sea, and always will be.
+    if (type === undefined) return 'water' as EdgeKind
+    if (type === 'grass') return 'land' as EdgeKind
+    // Our edge k meets their edge k + 3: hexes join head-on.
+    return presentedBy(looks.get(key(n)) as TileLook)[(k + 3) % 6] as EdgeKind
+  })
+}
+
+/**
+ * What the six neighbours of `a` present, judged from TYPES alone.
+ *
+ * Deliberately not `around`, which reads how neighbours are DRAWN. Drawability
+ * has to be decided without reference to the drawing, or the question is
+ * circular: whether this tile can be drawn cleanly would depend on looks that
+ * were themselves chosen by asking the same question next door.
+ *
+ * Her fields present land; everything else — her water, and the open sea beyond
+ * the island — presents water. Which is exactly the basis the nineteen drawable
+ * neighbourhoods were enumerated on.
+ */
+const typesAround = (island: Island, a: Axial): EdgeKind[] =>
+  neighbours(a).map(n => (tileAt(island, n) === 'grass' ? 'land' : 'water') as EdgeKind)
+
+/**
+ * Would putting `t` at `a` leave every coastline it touches drawable?
+ *
+ * SYMMETRIC, and that is the correction that made the invariant actually hold.
+ * Guarding only water placement is not enough: dropping GRASS beside an existing
+ * pond adds a green edge to a tile that was already drawn, and a pond that was
+ * fine with three fields around it has no orientation at four. Tested by building
+ * islands rather than constructing them, which is how that showed up — the
+ * water-only guard passed every unit test and still produced "shows sand at edge
+ * 3 against land" on a played island.
+ *
+ * So a placement is judged by its whole effect: the new tile and each of its six
+ * neighbours must all still be drawable afterwards.
+ */
+export function allows(island: Island, a: Axial, t: TileType): boolean {
+  const tiles = new Map(island.tiles)
+  tiles.set(key(a), t)
+  const after: Island = { tiles }
+  for (const c of [a, ...neighbours(a)]) {
+    if (tileAt(after, c) !== 'water') continue
+    if (!drawableAsWater(typesAround(after, c))) return false
+  }
+  return true
+}
+
+/**
+ * May a water tile go here at all?
+ *
+ * The guard that makes the whole design hold: water only where the water cell
+ * can carry the entire beach itself, so her fields are never cut about. See
+ * `drawableAsWater` for the enumeration and for what it costs.
+ */
+export const canBeWater = (island: Island, a: Axial): boolean =>
+  allows(island, a, 'water')
+
+/** ...and may a field? Grass can break a pond it is placed next to. */
+export const canBeGrass = (island: Island, a: Axial): boolean =>
+  allows(island, a, 'grass')
+
+/**
+ * The sockets she may actually build on.
+ *
+ * A few sockets admit NEITHER kind: four fields round them rules water out, and a
+ * pond beside them that already has its three fields rules grass out too. There
+ * is nothing that can go there, so nothing should invite her to try — a glowing
+ * outline that cannot be filled is a promise the game breaks.
+ *
+ * This is the last piece of the invariant, and the one the played-island test
+ * caught. Guarding the two kinds was not enough on its own: where both were
+ * refused the code fell back to grass, and that fallback is precisely the "beach
+ * against a full land tile" being ruled out.
+ */
+export const buildableSockets = (island: Island, open: readonly Axial[]): Axial[] =>
+  open.filter(a => allows(island, a, 'grass') || allows(island, a, 'water'))
+
+/**
+ * Must this socket be water whatever she picked?
+ *
+ * Joe: *"force a water tile if it is placed adjacent to two other water tiles
+ * only... specifically if 2 water and no land neighbours. one water and one land
+ * should continue the coastline."*
+ *
+ * So it takes two or more of her OWN water tiles and none of her fields. Open sea
+ * is not counted toward the two — every socket on the fringe touches sea, and
+ * counting it would turn the whole rim into water. A socket always touches
+ * something she owns, so "no land neighbours" means every owned neighbour is
+ * water, and dropping grass into that gap is what leaves a green plug in the
+ * middle of a channel.
+ */
+export function mustBeWater(island: Island, a: Axial): boolean {
+  let water = 0
+  for (const n of neighbours(a)) {
+    const type = tileAt(island, n)
+    if (type === 'grass') return false
+    if (type === 'water') water++
+  }
+  return water >= 2
 }
 
 /**

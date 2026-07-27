@@ -14,10 +14,15 @@ import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
   COAST_CANONICAL, COAST_EDGES, COAST_VARIANTS, longestRun, waterMask, lookFor,
-  looksFor, presentedBy,
+  looksFor, presentedBy, canBeWater, mustBeWater, buildableSockets,
 } from '../../src/island/world/coast'
 import type { CoastVariant, EdgeKind, TileLook } from '../../src/island/world/coast'
-import { createIsland, place } from '../../src/island/world/grid'
+import { createIsland, place, sockets } from '../../src/island/world/grid'
+import type { TileType } from '../../src/island/world/grid'
+import {
+  createFlow, askForLand, chooseTile, placeTile, tileOffer, tileTypeFor, tapSum,
+  challengePassed,
+} from '../../src/island/flow'
 import type { Island } from '../../src/island/world/grid'
 import { DIRECTIONS, toWorld, key, distance, neighbours } from '../../src/island/world/hex'
 import type { Axial } from '../../src/island/world/hex'
@@ -634,5 +639,156 @@ describe('no green walls in the water', () => {
         }
       }
     }
+  })
+})
+
+/**
+ * The invariant Joe actually asked for.
+ *
+ * *"we should never allow a full land tile against a coast tile"*, and then the
+ * question that decides how to get there: *"if its a clean build from the start
+ * (nothing is launched, everything can be reset) we should not end up with a
+ * beach hitting a full land tile, right?"*
+ *
+ * Right — and the way it is achieved is by restricting PLACEMENT rather than by
+ * cutting her fields. So these tests do not construct islands; they BUILD them,
+ * only ever through the rules the game applies to a tap, and then assert that no
+ * bad joint exists anywhere. That is the difference between testing the scorer
+ * and testing the promise.
+ */
+describe('an island built only through the placement rules', () => {
+  /** Every clean joint rule, over a whole island, counted. */
+  function badJoints(island: Island): string[] {
+    const looks = looksFor(island)
+    const bad: string[] = []
+    for (const [k, type] of island.tiles) {
+      const parts = k.split(',').map(Number)
+      const a: Axial = { q: parts[0] as number, r: parts[1] as number }
+      const mine = type === 'grass'
+        ? (['land', 'land', 'land', 'land', 'land', 'land'] as EdgeKind[])
+        : presentedBy(looks.get(k) as TileLook)
+      neighbours(a).forEach((n, e) => {
+        const theirType = island.tiles.get(key(n))
+        const theirs: EdgeKind = theirType === undefined
+          ? 'water'
+          : theirType === 'grass'
+            ? 'land'
+            : presentedBy(looks.get(key(n)) as TileLook)[(e + 3) % 6] as EdgeKind
+        // A beach or open water pressed against a full land tile...
+        if (theirs === 'land' && mine[e] !== 'land') {
+          bad.push(`${k} shows ${mine[e]} at edge ${e} against land`)
+        }
+        // ...and its mirror, a green wall standing in the sea.
+        if (theirs !== 'land' && mine[e] === 'land' && type === 'water') {
+          bad.push(`${k} shows land at edge ${e} against ${theirs}`)
+        }
+      })
+    }
+    return bad
+  }
+
+  /**
+   * Play the game: repeatedly pick a socket and a kind, and let the rules decide
+   * what actually lands there. A seeded generator, so a failure is reproducible.
+   */
+  function build(steps: number, seed: number, wetness: number): Island {
+    let s = seed >>> 0
+    const rnd = (): number => {
+      s = (s * 1664525 + 1013904223) >>> 0
+      return s / 0x100000000
+    }
+    let f = createFlow()
+    for (let i = 0; i < steps; i++) {
+      const open = buildableSockets(f.island, sockets(f.island))
+      if (open.length === 0) break
+      const at = open[Math.floor(rnd() * open.length)] as Axial
+      const want: TileType = rnd() < wetness ? 'water' : 'grass'
+      // Exactly the path a tap takes: ask at the socket, pick, and place.
+      f = askForLand({ ...f, phase: 'free' }, at)
+      if (f.phase !== 'placing') break
+      const offered = tileOffer(f)
+      const pick = offered.includes(want) ? want : offered[0] as TileType
+      f = placeTile(chooseTile(f, pick), at)
+      /*
+       * Finish the plot so the tile becomes real, then carry on. Bounded by a
+       * counter rather than by watching `plot` change: an unfinished plot keeps
+       * the SAME object across sums, so an identity check breaks out after one
+       * and only tiles costing a single sum ever complete — which quietly turned
+       * a forty-five-tile island into a two-tile one.
+       */
+      for (let guard = 0; guard < 200 && f.plot; guard++) {
+        f = challengePassed(tapSum({ ...f, phase: 'free' }))
+      }
+    }
+    return f.island
+  }
+
+  it('never puts a beach against a full land tile, over many seeds', () => {
+    for (let seed = 1; seed <= 40; seed++) {
+      for (const wetness of [0.2, 0.5, 0.8]) {
+        const island = build(45, seed, wetness)
+        expect(badJoints(island), `seed ${seed}, wetness ${wetness}`).toEqual([])
+      }
+    }
+  })
+
+  it('and still builds islands with real water in them', () => {
+    /*
+     * The other half, and the one that would catch the cheat: a rule that
+     * refused water everywhere would satisfy the test above perfectly.
+     */
+    let wet = 0, total = 0
+    for (let seed = 1; seed <= 40; seed++) {
+      const island = build(45, seed, 0.8)
+      for (const type of island.tiles.values()) { total++; if (type === 'water') wet++ }
+    }
+    expect(total).toBeGreaterThan(500)
+    expect(wet / total, 'islands came out bone dry').toBeGreaterThan(0.15)
+  })
+
+  it('fills a gap between two of her ponds with water, not a green plug', () => {
+    // Joe: "specifically if 2 water and no land neighbours."
+    const gap: Axial = { q: 1, r: 0 }
+    // Built as a map, not with place(): createIsland's home hex is grass and
+    // place() refuses to overwrite it, so a "pond" laid over it silently is not.
+    const island: Island = {
+      tiles: new Map<string, TileType>([
+        [key({ q: 0, r: 0 }), 'water'],
+        [key({ q: 2, r: 0 }), 'water'],
+        [key({ q: 1, r: -1 }), 'water'],
+      ]),
+    }
+    expect(mustBeWater(island, gap)).toBe(true)
+
+    let f = { ...createFlow(), island }
+    f = askForLand({ ...f, phase: 'free' }, gap)
+    expect(tileOffer(f)).toEqual(['water'])
+    // Even asking for grass outright gets water, because the offer is not the
+    // only guard — placeTile is.
+    expect(tileTypeFor(f, gap, 'grass')).toBe('water')
+  })
+
+  it('lets one water and one land neighbour continue the coastline', () => {
+    // Joe: "one water and one land should continue the coastline" — so this
+    // socket is NOT forced, and both kinds stay on the table.
+    let island = createIsland()
+    island = place(island, { q: 1, r: -1 }, 'water')
+    const at: Axial = { q: 1, r: 0 }
+    expect(mustBeWater(island, at)).toBe(false)
+    expect(canBeWater(island, at)).toBe(true)
+  })
+
+  it('refuses water where it would need a four-land-edge model', () => {
+    /*
+     * The arithmetic, stated. A socket ringed by her fields cannot hold water,
+     * because no model in the pack has four land edges — so there is no
+     * orientation that meets all of them and something would have to give.
+     */
+    let island = createIsland()
+    for (const n of neighbours({ q: 0, r: 0 })) island = place(island, n, 'grass')
+    // A hole in the middle of a field: every neighbour is grass.
+    const hole: Axial = { q: 0, r: 0 }
+    const ringed: Island = { tiles: new Map([...island.tiles].filter(([k]) => k !== key(hole))) }
+    expect(canBeWater(ringed, hole)).toBe(false)
   })
 })

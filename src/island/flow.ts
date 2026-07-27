@@ -13,6 +13,7 @@ import { createIsland, place, sockets, count } from './world/grid'
 import type { Island, TileType } from './world/grid'
 import { key } from './world/hex'
 import type { Axial } from './world/hex'
+import { canBeWater, canBeGrass, mustBeWater, buildableSockets } from './world/coast'
 
 /**
  * How much work each reward costs — from the curve, never a constant.
@@ -239,7 +240,62 @@ export function challengeFailed(f: Flow): Flow {
  */
 export function tileOffer(f: Flow): TileType[] {
   if (f.phase !== 'placing') return []
-  return ['grass', 'water']
+  /*
+   * Without a socket in hand there is nothing to judge against, so both are
+   * offered and `placeTile` settles it when she taps. That is the opening
+   * script's path — Fred asks for land on her behalf and has nowhere in mind.
+   */
+  if (!f.pending) return ['grass', 'water']
+  /*
+   * Never offer a kind that the socket would then override. A button that does
+   * something other than what it shows is worse than no button.
+   */
+  /*
+   * Forcing yields to feasibility. `mustBeWater` used to short-circuit here, and
+   * that was a real hole: a socket with two of her ponds round it and no fields
+   * can still be a shape no model draws, and forcing water into it produced
+   * exactly the fault this rule exists to prevent.
+   */
+  if (mustBeWater(f.island, f.pending) && canBeWater(f.island, f.pending)) return ['water']
+  const kinds: TileType[] = []
+  if (canBeGrass(f.island, f.pending)) kinds.push('grass')
+  if (canBeWater(f.island, f.pending)) kinds.push('water')
+  /*
+   * A socket where NEITHER kind is clean should not have been offered at all —
+   * `buildableSockets` keeps those from glowing. If one is reached anyway (an
+   * edited save, a shape from before this rule), grass is the gentler answer:
+   * her fields are never re-cut, and the scorer degrades rather than throwing.
+   */
+  return kinds.length > 0 ? kinds : ['grass']
+}
+
+/**
+ * What actually goes on a socket, whatever she picked.
+ *
+ * Joe's two placement rules, in one place because they must never disagree:
+ *
+ *   - Two or more of her own water tiles round a socket and none of her fields,
+ *     and it is water — otherwise she plugs a channel with a green hex.
+ *   - Water only where the water cell can carry its whole beach, which is what
+ *     lets her fields stay flat and uncut. See `drawableAsWater`: nineteen of the
+ *     sixty-four neighbourhoods qualify, and the rest are ruled out by the
+ *     arithmetic of an asset pack with no four-land-edge model.
+ *
+ * Both are applied HERE rather than only in the offer, because the opening script
+ * chooses a kind before it knows the socket. One choke point means the island can
+ * never hold a tile the coastline cannot draw.
+ */
+export function tileTypeFor(f: Flow, a: Axial, chosen: TileType): TileType {
+  if (mustBeWater(f.island, a) && canBeWater(f.island, a)) return 'water'
+  if (chosen === 'water' && !canBeWater(f.island, a)) return 'grass'
+  /*
+   * And the mirror: grass that would break a pond it is placed beside becomes
+   * water instead. Dropping a field at four-fields-round a pond is the case no
+   * model can draw, and refusing to build there at all would leave a hole in her
+   * island she could never fill.
+   */
+  if (chosen === 'grass' && !canBeGrass(f.island, a) && canBeWater(f.island, a)) return 'water'
+  return chosen
 }
 
 /**
@@ -279,14 +335,20 @@ export function placeTile(f: Flow, a: Axial): Flow {
    * throw away both the site she chose and every sum she has spent on it.
    */
   if (f.plot) return f
-  const legal = sockets(f.island).some(s => key(s) === key(a))
+  /*
+   * Buildable, not merely adjacent. A handful of sockets admit neither kind — see
+   * `buildableSockets` — and siting on one of those is what used to force the
+   * grass fallback that broke a neighbouring pond.
+   */
+  const legal = buildableSockets(f.island, sockets(f.island)).some(s => key(s) === key(a))
   if (!legal) return f
 
   const sited: Flow = {
     ...f,
     chosen: null,
     pending: null,
-    plot: { at: a, type: f.chosen },
+    // What the coastline can actually draw here, not merely what she tapped.
+    plot: { at: a, type: tileTypeFor(f, a, f.chosen) },
     phase: 'free',
   }
   /*
