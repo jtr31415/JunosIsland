@@ -23,12 +23,37 @@ Target device is a **mid-range Android tablet**, landscape.
 
 ## 2. The three rules that outrank everything
 
-**1. `v0/junos-words.html` is FROZEN.** Never edit it. It is the reference
-implementation and it outranks the brief on anything about how learning
-behaves. When porting from it, only *dependency injection* is permitted — you
-may inject a value the original hardcoded, but you may not restructure. Every
-DOM, timing, class-name or audio assertion in a test under `tests/challenges/`
-or `tests/platform/` must cite the v0 line it encodes, e.g. `// v0:886`.
+**1. `v0/junos-words.html` is NO LONGER FROZEN — but `golden.json` is.**
+
+Joe lifted the freeze on 27 July 2026: *"the old base can be changed. that was
+only an early guard that can be lifted now we have a working game."* He is right
+that the guard has done its job — the port is proven and the 3D game is real.
+
+What that changes, and what it must not:
+
+- **`tools/golden/golden.json` is now the regression anchor, and it is frozen.**
+  It was captured from the original's own source text under a seeded
+  `Math.random`, so it is a SNAPSHOT of behaviour rather than a pointer to a
+  file — which is exactly why it survives the freeze being lifted. Never edit it
+  to make a test pass. If a change is *meant* to alter what the learning engine
+  produces, re-capture it deliberately with `npm run golden:capture` and say so
+  in the commit; that is now a meaningful, auditable act rather than a formality.
+- **`npm run parity` changes meaning.** It used to prove the rebuild had not
+  drifted from an immovable reference. Now that both sides can move, it proves
+  the two implementations stay IN STEP with each other. That is still worth
+  having — it is what stops the 2D game and the island diverging — but it is no
+  longer evidence on its own that behaviour has not regressed. `golden.json` is.
+  A parity run that goes green because someone edited v0 to match a regression is
+  a green run that means nothing.
+- **The `// v0:886` citations now point at a moving file.** There are 54 of them
+  across `tests/challenges/` and `tests/platform/`. Keep citing v0 when you port
+  something — it is still the clearest explanation of *why* a timing or a
+  class name is what it is — but treat a stale line number as a stale comment,
+  not as a failure.
+- **v0 still outranks the brief on how learning BEHAVES**, until Joe says
+  otherwise. Lifting the freeze means the file may be edited; it does not mean
+  the pedagogy in it was wrong. Changing what a child experiences is a product
+  decision, and it goes to Joe (§7).
 
 **2. Brief §19 guardrails are non-negotiable.** Nothing a child owns can be
 lost. No timers, no expiry. Wrong answers cost nothing. Three stumbles summon

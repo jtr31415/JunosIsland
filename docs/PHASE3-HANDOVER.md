@@ -23,10 +23,13 @@ hatches eggs into named pets**, and **maths earns hex tiles she places herself**
 Target device is a mid-range Android tablet in landscape.
 
 It is the successor to `v0/junos-words.html`, a single-file 2D phonics and maths
-game she has actually been playing. **That file is FROZEN and outranks the brief
-on anything about how learning behaves.** The 2D game still ships, rebuilt from
-modules, and a parity gate proves the rebuild is identical to the frozen
-original step for step.
+game she has actually been playing. It still ships, rebuilt from modules.
+
+**The freeze on that file was lifted on 27 July 2026** — it had done its job. The
+regression anchor is now `tools/golden/golden.json`, a captured snapshot of the
+original's output under a seeded RNG, and THAT is frozen. `npm run parity`
+consequently means "the two implementations stay in step", not "the rebuild has
+not regressed". See HANDOFF §2 rule 1.
 
 ```
 src/core/          pure learning engine. No DOM, no Three.js. Golden-verified.

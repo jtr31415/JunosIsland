@@ -1,11 +1,16 @@
 /**
  * Golden-output diff — the gate that proves the port is faithful.
  *
- * tools/golden/golden.json was produced by running the FROZEN ORIGINAL's own
- * source text under a seeded Math.random. Here core/ regenerates the same
- * items and the two are compared. A mismatch means the port diverged.
+ * tools/golden/golden.json was produced by running the original's own source
+ * text under a seeded Math.random. Here core/ regenerates the same items and the
+ * two are compared. A mismatch means the learning engine's output moved.
  *
- * Never edit golden.json to match core/, and never edit v0/junos-words.html.
+ * NEVER EDIT golden.json TO MAKE A TEST PASS. It is now the project's regression
+ * anchor outright: Joe lifted the freeze on v0/junos-words.html on 27 July 2026,
+ * so the file this was captured from can change, which is precisely why the
+ * captured SNAPSHOT is what protects us and the file no longer can. If a change
+ * is meant to alter what the engine produces, re-capture deliberately with
+ * `npm run golden:capture` and say so in the commit.
  */
 import { describe, it, expect } from 'vitest'
 import golden from '../tools/golden/golden.json'
