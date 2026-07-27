@@ -181,7 +181,9 @@
 .tile:active { transform: translateY(.22rem); box-shadow: none; }
 .tile.used { opacity: .3; pointer-events: none; }
 
-/* The controls under every challenge: hear it again, or leave. */
+/* The controls under every challenge. Just "say it again" now: the way out
+   moved to the corner X, because a leave button an inch from the button a
+   struggling child taps most is a leave button she presses by accident. */
 .overlay-controls {
   display: flex;
   gap: .8rem;
@@ -192,9 +194,8 @@
 }
 
 /*
- * "Say it again" is the one a struggling child reaches for, so it is the
- * bigger and warmer of the two. Leaving is always available but never the
- * more inviting option.
+ * "Say it again" is the one a struggling child reaches for, so it is big and
+ * warm and sits under the work. It now has the control row to itself.
  */
 .overlay-again {
   background: var(--sky);
@@ -204,6 +205,53 @@
   font-size: clamp(.95rem, 2.6vmin, 1.25rem);
 }
 
+/*
+ * The way out of a round (Joe: "there should be an x button to get back to the
+ * island... too many accidental hits").
+ *
+ * Four things it has to be at once, and each rules something out:
+ *
+ *   - READABLE BY A CHILD WHO CANNOT YET READ. So an ×, not "back to the
+ *     island". It is the one control she has already met everywhere else.
+ *   - HITTABLE ON PURPOSE. 3rem at the small end, well past the 44px finger
+ *     target, because the pet tap target being too small is already a
+ *     playtest note against this build.
+ *   - NOT HITTABLE BY ACCIDENT. Fixed to the extreme corner of the SCREEN
+ *     rather than the panel, so it never drifts under the tiles, the number
+ *     pad or the word cards as a page changes shape.
+ *   - NOT THE INVITING OPTION. Paper, not coral: leaving costs her nothing,
+ *     but it is not a reward and must not look like one.
+ *
+ * The album button is HIDDEN while a round is open — `body:has(.overlay:not(.hide))
+ * .album-button` in tokens.css, the same mechanism the `.say` card already uses
+ * one rule above it. That is what stops the two stacking in this corner, and it
+ * is doing all of the work: the z-index below cannot help, because `.overlay-x`
+ * lives inside the layer's own stacking context at z-index 10, so no value here
+ * can lift it above a sibling of the layer. Said plainly because the first
+ * version of this comment credited the z-index, which would have sent the next
+ * person tuning a number that does nothing.
+ */
+.overlay-x {
+  position: fixed;
+  top: 2vh;
+  right: 2vw;
+  z-index: 13;
+  display: grid;
+  place-items: center;
+  width: clamp(3rem, 7.5vmin, 4.2rem);
+  height: clamp(3rem, 7.5vmin, 4.2rem);
+  padding: 0;
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
+  /* The glyph is a hair high in most faces; nudge it onto the optical centre. */
+  font-size: clamp(1.7rem, 4.4vmin, 2.4rem);
+  font-weight: 900;
+  line-height: 1;
+}
+
+/* Still used by the name prompt and the grown-ups panels, where a worded
+   "not now" is right — those are read by an adult, or are not a challenge. */
 .overlay-back {
   background: var(--paper);
   border-radius: 999px;
@@ -265,9 +313,14 @@
 }
 
 /* A hole in the layout, not a container: the vignette is drawn INTO this
-   rectangle by the renderer, so it must not paint anything itself — and must
-   not catch taps either, or it swallows nearly half the backdrop and
-   tap-outside-to-leave stops working in exactly the mode that needs it. */
+   rectangle by the renderer, so it must not paint anything itself.
+
+   It does not catch taps, and that fact is now what MOTIVATED removing
+   tap-outside-to-leave rather than an argument for keeping it. This slot spans
+   45% of a staged round, so while the backdrop dismissed, nearly half of what
+   she was looking at — including her own egg turning on the vignette — ended the
+   page when touched. Joe: "too many accidental hits." The way out is the corner
+   × now; the backdrop swallows taps and does nothing. */
 .stage-slot { display: none; position: relative; pointer-events: none; }
 .overlay.staged .stage-slot { display: block; }
 

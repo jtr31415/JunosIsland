@@ -1,0 +1,361 @@
+/**
+ * The X button's other half: she comes back to the SAME card.
+ *
+ * Joe, playtesting: *"there should be an x button to get back to the island
+ * when through a challenge, too many accidental hits. also resume at the same
+ * challenge card, otherwise kids can skip something they dont like."*
+ *
+ * The second sentence is the load-bearing one. A way out that re-rolled the
+ * question would be a way to skip a word she does not fancy, one tap at a time
+ * — and this build's way out re-rolled it three times over, because every
+ * `openRead`/`openSum` called a generator:
+ *
+ *   1. a different card came back;
+ *   2. `generateRead` sizes its set from `history.length` (read.ts:45), so the
+ *      SECOND look at the same page was permanently harder — and stayed harder
+ *      for every page after it;
+ *   3. each deal drew from finite word decks, so the skipped word was also
+ *      spent.
+ *
+ * These tests are written against the real generators and the real word lists,
+ * not mocks. HANDOFF §5: this project has shipped four dead features that
+ * passed a suite asserting only that a mocked port was called.
+ */
+import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import {
+  createFlow, tapEgg, tapSum, askForLand, chooseTile,
+  challengePassed, challengeFailed, sumsForTile,
+} from '../../src/island/flow'
+import type { Flow } from '../../src/island/flow'
+import { dealReading, dealSum } from '../../src/island/deal'
+import { toSave, fromSave } from '../../src/island/save'
+import { mulberry32 } from '../../src/core/rng'
+import { makeDeck } from '../../src/core/decks'
+import { GREEN, RED } from '../../src/core/wordlists'
+import { buildPool, buildNeighbours } from '../../src/core/neighbours'
+import type { ReadState } from '../../src/core/generators/read'
+import type { BuildState } from '../../src/core/generators/build'
+import type { SumState } from '../../src/core/generators/sums'
+import { plainWord } from '../../src/core/segmentation'
+import { balance } from '../../src/island/balance'
+
+/** Exactly what main.ts builds, seeded so a run is reproducible. */
+function reading(seed = 7) {
+  const rng = mulberry32(seed)
+  const stores = {
+    read: { history: [], idx: -1 } as ReadState,
+    build: { history: [], idx: -1 } as BuildState,
+  }
+  const drawGreen = makeDeck(rng, GREEN)
+  const drawRed = makeDeck(rng, RED)
+  const deps = { rng, drawGreen, drawRed, neigh: buildNeighbours(buildPool()), level: 1 }
+  return { stores, deps }
+}
+
+const sums = (seed = 11): { store: SumState; rng: () => number } =>
+  ({ store: { history: [], idx: -1 } as SumState, rng: mulberry32(seed) })
+
+/** The page index of the first FIND page and the first BUILD page in the mix. */
+const firstOf = (kind: 'find' | 'build'): number => {
+  const at = balance.pages.mix.indexOf(kind)
+  // The mix is Joe's, and it currently runs one find to three builds. If a
+  // future mix drops one of the two entirely, say so rather than test page −1.
+  expect(at, `the page mix has no "${kind}" page`).toBeGreaterThanOrEqual(0)
+  return at
+}
+
+/** A flat, comparable rendering of a reading card. */
+const asText = (c: ReturnType<typeof dealReading>): string =>
+  c.kind === 'build'
+    ? 'build:' + c.item.w + '|' + c.item.tray.join(',')
+    : 'find:' + c.picks.map(p => plainWord(p.w) + '/' + p.cls).join(',')
+
+describe('the flow holds the card she walked away from', () => {
+  it('starts holding nothing', () => {
+    const f = createFlow()
+    expect(f.readHeld).toBe(false)
+    expect(f.sumHeld).toBe(false)
+  })
+
+  it('holds a reading card when she leaves the round', () => {
+    const f = challengeFailed(tapEgg(createFlow()))
+    expect(f.readHeld).toBe(true)
+    expect(f.phase).toBe('free')
+    // §19: leaving still costs her nothing.
+    expect(f.readProgress).toBe(0)
+    expect(f.eggPresent).toBe(true)
+  })
+
+  it('lets go of it the moment she answers', () => {
+    let f = challengeFailed(tapEgg(createFlow()))
+    expect(f.readHeld).toBe(true)
+    f = challengePassed(tapEgg({ ...f, phase: 'free' }), { name: 'Bo', species: 'animal-fox' })
+    expect(f.readHeld).toBe(false)
+  })
+
+  it('holds a sum the same way', () => {
+    let f: Flow = createFlow()
+    f = chooseTile(askForLand(f, { q: 1, r: 0 }), 'grass')
+    expect(f.plot).not.toBeNull()
+    f = challengeFailed(tapSum({ ...f, phase: 'free' }))
+    expect(f.sumHeld).toBe(true)
+    // And the plot and every sum already spent on it survive, as ever.
+    expect(f.plot).not.toBeNull()
+  })
+
+  it('keeps reading and maths apart', () => {
+    /*
+     * Two decks, two bits. A finished sum used to be the obvious place to
+     * clear "the card is held" — and it would have quietly re-rolled the word
+     * she stepped away from, which is the whole fault wearing a different hat.
+     */
+    let f: Flow = createFlow()
+    f = challengeFailed(tapEgg(f))                       // holds a word
+    f = chooseTile(askForLand(f, { q: 1, r: 0 }), 'grass')
+    // The first tile costs one sum, so this both passes and finishes the plot.
+    f = challengePassed(tapSum({ ...f, phase: 'free' }))
+    expect(f.sumHeld).toBe(false)
+    expect(f.readHeld).toBe(true)
+  })
+
+  it('is not written to the save, and a reload deals fresh', () => {
+    /*
+     * The explicit decision, pinned so it is a decision rather than a
+     * discovery. Honouring the bit across a reload would mean writing the CARD
+     * into the save — a schema bump this phase is not taking — and `fromSave`
+     * refuses to restore mid-challenge anyway. The threat model is a
+     * six-year-old tapping X, not one killing a PWA tab to duck a word.
+     */
+    const held = challengeFailed(tapEgg(createFlow()))
+    const save = toSave(held, true) as unknown as Record<string, unknown>
+    expect(save).not.toHaveProperty('readHeld')
+    expect(save).not.toHaveProperty('sumHeld')
+    const back = fromSave(save as never).flow
+    expect(back.readHeld).toBe(false)
+    expect(back.sumHeld).toBe(false)
+  })
+})
+
+describe('the same reading card comes back', () => {
+  it('deals the identical word-find after an X', () => {
+    const { stores, deps } = reading()
+    const page = firstOf('find')
+
+    const first = dealReading(stores, deps, page, false)
+    expect(first.kind).toBe('find')
+
+    // She taps X. challengeFailed sets the bit; the next open passes it in.
+    const again = dealReading(stores, deps, page, true)
+
+    expect(asText(again)).toBe(asText(first))
+    // The very same object, not a lucky re-draw: history[idx], untouched.
+    expect(again).toEqual(first)
+  })
+
+  it('deals the identical build page after an X', () => {
+    const { stores, deps } = reading(3)
+    const page = firstOf('build')
+
+    const first = dealReading(stores, deps, page, false)
+    expect(first.kind).toBe('build')
+    const again = dealReading(stores, deps, page, true)
+
+    expect(asText(again)).toBe(asText(first))
+  })
+
+  it('survives leaving over and over — this is the skip she must not get', () => {
+    const { stores, deps } = reading(5)
+    const page = firstOf('find')
+    const first = asText(dealReading(stores, deps, page, false))
+    for (let i = 0; i < 12; i++) {
+      expect(asText(dealReading(stores, deps, page, true))).toBe(first)
+    }
+  })
+
+  it('deals a NEW card once she has actually answered', () => {
+    // The mirror. Holding forever would be its own trap: one word, for ever.
+    const { stores, deps } = reading(9)
+    const page = firstOf('find')
+    const first = asText(dealReading(stores, deps, page, false))
+    dealReading(stores, deps, page, true)
+    // challengePassed clears the bit.
+    const next = asText(dealReading(stores, deps, page, false))
+    expect(next).not.toBe(first)
+  })
+
+  it('keeps the find/build alternation exactly where it was', () => {
+    /*
+     * Dismissal does not touch `readProgress`, so the page index — and
+     * therefore which of the two stores is consulted — is the same on the way
+     * back in. If it were not, an X would let her flip a build she disliked
+     * into a find.
+     */
+    const { stores, deps } = reading(13)
+    const build = firstOf('build')
+    const a = dealReading(stores, deps, build, false)
+    const b = dealReading(stores, deps, build, true)
+    expect(b.kind).toBe(a.kind)
+    expect(stores.read.history).toHaveLength(0)
+  })
+})
+
+describe('leaving does not inflate the difficulty', () => {
+  it('does not grow the word-find set behind her back', () => {
+    /*
+     * The costly half of the old fault. `n = min(MAX, MIN + history.length)`
+     * — so under the old code a page dealt, dismissed and re-dealt five times
+     * arrived with five extra words on it, and every page for the rest of the
+     * game inherited the inflation.
+     */
+    const { stores, deps } = reading(21)
+    const page = firstOf('find')
+
+    const first = dealReading(stores, deps, page, false)
+    const size = first.kind === 'find' ? first.picks.length : 0
+    expect(stores.read.history).toHaveLength(1)
+
+    for (let i = 0; i < 8; i++) dealReading(stores, deps, page, true)
+
+    expect(stores.read.history).toHaveLength(1)
+    const after = dealReading(stores, deps, page, true)
+    expect(after.kind === 'find' ? after.picks.length : -1).toBe(size)
+
+    // And the page AFTER she finally answers is the second page, not the tenth.
+    const second = dealReading(stores, deps, page, false)
+    expect(stores.read.history).toHaveLength(2)
+    expect(second.kind === 'find' ? second.picks.length : -1).toBe(size + 1)
+  })
+
+  it('does not burn the word decks', () => {
+    /*
+     * `makeDeck` deals without repeating until it is exhausted, so a deal she
+     * never saw still spends the words in it. Counting draws is the only way to
+     * see that from outside — the deck has no other observable.
+     */
+    const rng = mulberry32(31)
+    let draws = 0
+    const green = makeDeck(rng, GREEN)
+    const red = makeDeck(rng, RED)
+    const stores = {
+      read: { history: [], idx: -1 } as ReadState,
+      build: { history: [], idx: -1 } as BuildState,
+    }
+    const deps = {
+      rng,
+      drawGreen: () => { draws++; return green() },
+      drawRed: () => { draws++; return red() },
+      neigh: buildNeighbours(buildPool()),
+      level: 1,
+    }
+    const page = firstOf('find')
+
+    dealReading(stores, deps, page, false)
+    const spent = draws
+    expect(spent).toBeGreaterThan(0)
+
+    for (let i = 0; i < 10; i++) dealReading(stores, deps, page, true)
+    expect(draws).toBe(spent)
+  })
+})
+
+describe('the same sum comes back', () => {
+  it('deals the identical sum after an X, and history does not grow', () => {
+    const { store, rng } = sums()
+    const first = dealSum(store, rng, 1, false)
+    expect(store.history).toHaveLength(1)
+
+    for (let i = 0; i < 6; i++) {
+      const again = dealSum(store, rng, 1, true)
+      expect(again).toEqual(first)
+    }
+    expect(store.history).toHaveLength(1)
+  })
+
+  it('deals a new one after she answers', () => {
+    const { store, rng } = sums(17)
+    dealSum(store, rng, 1, false)
+    dealSum(store, rng, 1, false)
+    expect(store.history).toHaveLength(2)
+  })
+})
+
+/**
+ * The seam nothing else can reach.
+ *
+ * `openRead`/`openSum` live in main.ts, which is composition glue with a
+ * renderer and a world attached and is not unit-testable — and HANDOFF §5
+ * names exactly this file as the four-time home of a feature that was declared,
+ * read, and wired by nothing. Every test above would stay green if main.ts
+ * called `generateRead` directly again, so this reads the source, in the manner
+ * of tests/island/barrier.test.ts and for the same reason.
+ */
+describe('main.ts opens rounds through the dealer, not the generators', () => {
+  const here = dirname(fileURLToPath(import.meta.url))
+  const source = readFileSync(resolve(here, '../../src/island/main.ts'), 'utf8')
+  const code = source.split('\n')
+    .filter(l => !/^\s*(\/\/|\/\*|\*)/.test(l))
+    .join('\n')
+
+  it('never calls a generator itself', () => {
+    for (const g of ['generateRead(', 'generateBuild(', 'generateAdd(', 'generateSub(']) {
+      expect(code, `${g} in main.ts re-rolls the card she is holding`).not.toContain(g)
+    }
+  })
+
+  it('hands the flow’s own bit to the dealer', () => {
+    // Passing a literal `false`, or forgetting the argument, is the whole bug
+    // wearing a plausible face — so the bit has to be visibly threaded through.
+    expect(code).toMatch(/dealReading\([\s\S]{0,240}state\.readHeld/)
+    expect(code).toMatch(/dealSum\([^)]*state\.sumHeld\s*\)/)
+  })
+})
+
+describe('the whole gesture, flow and card together', () => {
+  /**
+   * The sequence Joe actually described: open a round, hit X, open it again.
+   * Wired the way main.ts wires it — the flow supplies the bit, `deal` reads it
+   * — so a change to either side that broke the pairing shows up here.
+   */
+  it('gives her the same word back across an X, and holds nothing after she answers', () => {
+    const { stores, deps } = reading(41)
+    let f: Flow = createFlow()
+
+    f = tapEgg(f)
+    const dealt = asText(dealReading(stores, deps, f.readProgress, f.readHeld))
+
+    f = challengeFailed(f)
+    expect(f.phase).toBe('free')
+
+    f = tapEgg(f)
+    expect(asText(dealReading(stores, deps, f.readProgress, f.readHeld))).toBe(dealt)
+    expect(stores.read.history.length + stores.build.history.length).toBe(1)
+
+    f = challengePassed(f, { name: 'Bo', species: 'animal-fox' })
+    f = tapEgg(f)
+    expect(asText(dealReading(stores, deps, f.readProgress, f.readHeld))).not.toBe(dealt)
+  })
+
+  it('gives her the same sum back across an X, at no cost to the plot', () => {
+    const { store, rng } = sums(43)
+    let f: Flow = createFlow()
+    f = chooseTile(askForLand(f, { q: 1, r: 0 }), 'grass')
+    // A one-sum tile would finish on the spot; take an island far enough along
+    // that the plot is still standing when she leaves.
+    f = { ...f, tilesEarned: 6, sumProgress: 0 }
+    expect(sumsForTile(f)).toBeGreaterThan(1)
+
+    f = tapSum({ ...f, phase: 'free' })
+    const dealt = dealSum(store, rng, 1, f.sumHeld)
+
+    f = challengeFailed(f)
+    expect(f.plot).not.toBeNull()
+    expect(f.sumProgress).toBe(0)
+
+    f = tapSum({ ...f, phase: 'free' })
+    expect(dealSum(store, rng, 1, f.sumHeld)).toEqual(dealt)
+    expect(store.history).toHaveLength(1)
+  })
+})
