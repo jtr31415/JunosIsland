@@ -9,6 +9,7 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { createBlobShadow, castShadow } from './juice'
 import { flattenImported } from './lighting'
+import { wearFaceUVs } from './variants/facedecals'
 import { FITS } from './world/props'
 import { toWorld } from './world/hex'
 import type { Axial } from './world/hex'
@@ -190,6 +191,15 @@ export function createPetField(base = ''): PetField {
     // (lighting brief §1), so clamp on the way in rather than swapping the
     // material — Standard is what picks up the hemisphere's warm underside.
     flattenImported(root)
+    /*
+     * Point the face decals at the reserved swatches, ONCE, on the shared
+     * prototype — before anything clones it, and a three.js `clone()` shares
+     * geometry, so every pet of this species inherits the corrected UVs for
+     * free. `dress()` calls this too and it is idempotent; the belt and braces
+     * are deliberate, since a pet that reaches the screen unpatched shows
+     * recoloured eye-whites and that is the whole bug.
+     */
+    wearFaceUVs(root, species)
     cache.set(species, root)
     return root.clone(true)
   }
