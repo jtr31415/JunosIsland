@@ -8,16 +8,18 @@
  * Measuring it here means the assets and the code cannot drift apart silently.
  */
 import { describe, it, expect } from 'vitest'
+import { Matrix4, Vector3 } from 'three'
 import { readFileSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
-  COAST_CANONICAL, COAST_VARIANTS, longestRun, waterMask, lookFor,
+  COAST_CANONICAL, COAST_EDGES, COAST_VARIANTS, longestRun, waterMask, lookFor,
+  looksFor, presentedBy,
 } from '../../src/island/world/coast'
-import type { CoastVariant } from '../../src/island/world/coast'
+import type { CoastVariant, EdgeKind, TileLook } from '../../src/island/world/coast'
 import { createIsland, place } from '../../src/island/world/grid'
 import type { Island } from '../../src/island/world/grid'
-import { DIRECTIONS, toWorld, key, distance } from '../../src/island/world/hex'
+import { DIRECTIONS, toWorld, key, distance, neighbours } from '../../src/island/world/hex'
 import type { Axial } from '../../src/island/world/hex'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -106,6 +108,31 @@ const WATER_LEVEL = -0.15
  */
 const NO_GEOMETRY_IS_WATER = true
 
+/**
+ * What a model presents at each edge: land, the sand ramp, or open water.
+ *
+ * The finer measurement `COAST_EDGES` records. Land sits at 0, the ramp around
+ * -0.025 to -0.1, water at -0.2, so the bands are wide and the thresholds are
+ * nowhere near anything.
+ */
+function measureEdgeKinds(stem: string): EdgeKind[] {
+  const tris = loadTriangles(stem)
+  let minZ = Infinity, maxZ = -Infinity
+  for (const t of tris) for (const p of [t.a, t.b, t.c]) {
+    minZ = Math.min(minZ, p[2] as number); maxZ = Math.max(maxZ, p[2] as number)
+  }
+  const R = (maxZ - minZ) / 2
+  const inradius = R * Math.sqrt(3) / 2
+
+  return DIRECTIONS.map(d => {
+    const w = toWorld(d, 1)
+    const len = Math.hypot(w.x, w.z)
+    const y = heightAt(tris, (w.x / len) * inradius * 0.93, (w.z / len) * inradius * 0.93)
+    if (y === null || y < WATER_LEVEL) return 'water'
+    return y > -0.005 ? 'land' : 'sand'
+  })
+}
+
 /** Which edges of a model are water, in DIRECTIONS order. */
 function measureWaterEdges(stem: string): number[] {
   const tris = loadTriangles(stem)
@@ -142,6 +169,26 @@ describe('the coast models, measured from the assets', () => {
     const { start, length } = COAST_CANONICAL[v]
     const expected = Array.from({ length }, (_, i) => (start + i) % 6).sort((a, b) => a - b)
     expect(measured).toEqual(expected)
+  })
+
+  it.each(COAST_VARIANTS)('hex_coast_%s matches COAST_EDGES', v => {
+    expect(measureEdgeKinds(`hex_coast_${v}`)).toEqual(COAST_EDGES[v])
+  })
+
+  it('has a sand ramp WIDER than its water arc, on every model', () => {
+    /*
+     * The fact the whole of `lookFor` turns on, and the reason lining the
+     * water arc up with the sea was wrong. The ramp spills onto the edges
+     * either side of the water, so a model with two water edges has only two
+     * edges left at full land height — and if the water is aimed at the sea,
+     * those sand shoulders are aimed at her fields.
+     */
+    for (const v of COAST_VARIANTS) {
+      const edges = COAST_EDGES[v]
+      const water = edges.filter(e => e === 'water').length
+      const wet = edges.filter(e => e !== 'land').length
+      expect(wet).toBeGreaterThan(water)
+    }
   })
 
   it('covers arcs of one, two, three and four edges', () => {
@@ -265,13 +312,23 @@ describe('lookFor', () => {
     expect(['coast', 'water']).toContain(look.kind)
   })
 
-  it('draws a pond ringed entirely by field as plain water', () => {
+  it('gives a pond ringed entirely by field the best beach available', () => {
     /*
-     * There is no "beach all the way round" hex in the pack. Plain water is a
-     * clean step down at every edge, which is better than a broken one.
+     * There is still no "beach all the way round" hex in the pack — measured,
+     * hex_coast_E looks like one from its name and has no water edge at all,
+     * so it cannot stand in for a water hex.
+     *
+     * This used to draw as plain water: six green edges each dropping 0.2
+     * straight into the sea. It now spends the widest land arc there is, so
+     * five of the six edges meet her fields at grass height or on the sand
+     * ramp, and only one is left as a step. It reads as a pond, which is what
+     * she dug.
      */
     const i = pondInLand()
-    expect(lookFor(i, DIRECTIONS[0] as Axial)).toEqual({ kind: 'water', turns: 0 })
+    const look = lookFor(i, DIRECTIONS[0] as Axial)
+    expect(look.kind).toBe('coast')
+    if (look.kind !== 'coast') return
+    expect(COAST_EDGES[look.variant].filter(e => e === 'land')).toHaveLength(3)
   })
 
   it('is stable — the same island always draws the same coastline', () => {
@@ -293,3 +350,191 @@ describe('lookFor', () => {
     }
   })
 })
+
+/* --------------------------------------------------- green, sand, water */
+
+/**
+ * A water hex at the origin with grass on exactly the edges named by `mask`.
+ *
+ * Built by hand rather than through `place`, which is a no-op on an occupied
+ * coord — and the origin is Fred's rock, so the obvious construction quietly
+ * leaves a grass tile there and every measurement comes out the same.
+ */
+function waterWithGrass(mask: number): Island {
+  const tiles = new Map<string, 'grass' | 'water'>([[key({ q: 0, r: 0 }), 'water']])
+  neighbours({ q: 0, r: 0 }).forEach((n, k) => {
+    if (mask >> k & 1) tiles.set(key(n), 'grass')
+  })
+  return { tiles }
+}
+
+/** What the origin tile actually presents at each of its six edges. */
+function presented(mask: number): EdgeKind[] {
+  const look = lookFor(waterWithGrass(mask), { q: 0, r: 0 })
+  if (look.kind !== 'coast') return Array(6).fill('water') as EdgeKind[]
+  const edges = COAST_EDGES[look.variant]
+  return Array.from({ length: 6 }, (_, k) => edges[(k - look.turns + 6) % 6] as EdgeKind)
+}
+
+const grassEdges = (mask: number): number[] =>
+  [0, 1, 2, 3, 4, 5].filter(k => mask >> k & 1)
+
+describe("Joe's rule: green, then sand, then water", () => {
+  it('never drops a green edge straight into the sea', () => {
+    /*
+     * The rule as given: "edges to green are always green, then sand, then
+     * water. Never a tile edge of A against the sand or water of B."
+     *
+     * A green edge meeting water skips the sand entirely — a 0.2 cliff where
+     * there should be a beach. Across all sixty-four ways her fields can sit
+     * around a pond, that must not happen once, with the single exception
+     * below that no model in the pack can serve.
+     */
+    for (let mask = 0; mask < 63; mask++) {
+      const shown = presented(mask)
+      for (const k of grassEdges(mask)) {
+        expect(shown[k], `mask ${mask.toString(2).padStart(6, '0')} edge ${k}`)
+          .not.toBe('water')
+      }
+    }
+  })
+
+  it('is flush against her fields wherever a model can be', () => {
+    /*
+     * A run of one, two or three grass neighbours is an ordinary piece of
+     * coastline, and the pack has a land arc for each. Those edges must be at
+     * grass height exactly — not the sand ramp, which is the tenth-of-a-unit
+     * lip that prompted all this.
+     */
+    for (let start = 0; start < 6; start++) {
+      for (let length = 1; length <= 3; length++) {
+        let mask = 0
+        for (let i = 0; i < length; i++) mask |= 1 << ((start + i) % 6)
+        const shown = presented(mask)
+        for (const k of grassEdges(mask)) {
+          expect(shown[k], `run of ${length} from ${start}, edge ${k}`).toBe('land')
+        }
+      }
+    }
+  })
+
+  it('leaves open sea alone', () => {
+    // No grass anywhere near: a beach here would be a sandbank from nowhere.
+    expect(lookFor(waterWithGrass(0), { q: 0, r: 0 })).toEqual({ kind: 'water', turns: 0 })
+  })
+
+  it('spends sand on the sea side rather than the green side', () => {
+    /*
+     * Where a lip is unavoidable the scorer must put it in the water, not
+     * against her fields. Counted across every configuration: the old rule
+     * (align the water arc to the sea) left 112 sand edges and 12 cliffs
+     * facing grass; this leaves 57 and 1.
+     */
+    let lips = 0, cliffs = 0
+    for (let mask = 0; mask < 64; mask++) {
+      const shown = presented(mask)
+      for (const k of grassEdges(mask)) {
+        if (shown[k] === 'sand') lips++
+        if (shown[k] === 'water') cliffs++
+      }
+    }
+    expect(cliffs).toBe(1)          // the fully enclosed pond, and only that
+    expect(lips).toBeLessThanOrEqual(57)
+  })
+})
+
+describe('the rotation convention, against the real matrix', () => {
+  it('presents what presentedBy claims, when actually turned', () => {
+    /*
+     * The one thing the rest of this file cannot catch.
+     *
+     * `presentedBy` and every test helper above read the model with the SAME
+     * expression, `(k - turns + 6) % 6`. Flip that sign in both and all of
+     * them still pass while every coast hex in the game renders back to
+     * front — water arcs pointing inland at her fields. That is the
+     * mock-agreeing-with-the-mock failure this project has already paid for
+     * four times over.
+     *
+     * So this rotates the actual mesh with the renderer's own call —
+     * `makeRotationY(turns * PI/3)`, exactly as tiles.ts does it — and
+     * re-measures the edges off the turned geometry. Nothing here shares any
+     * arithmetic with the code under test.
+     */
+    for (const v of COAST_VARIANTS) {
+      const tris = loadTriangles(`hex_coast_${v}`)
+      let minZ = Infinity, maxZ = -Infinity
+      for (const t of tris) for (const p of [t.a, t.b, t.c]) {
+        minZ = Math.min(minZ, p[2] as number); maxZ = Math.max(maxZ, p[2] as number)
+      }
+      const inradius = ((maxZ - minZ) / 2) * Math.sqrt(3) / 2
+
+      for (let turns = 0; turns < 6; turns++) {
+        const rot = new Matrix4().makeRotationY(turns * Math.PI / 3)
+        const spun: Tri[] = tris.map(t => ({
+          a: [...new Vector3(...(t.a as [number, number, number])).applyMatrix4(rot).toArray()],
+          b: [...new Vector3(...(t.b as [number, number, number])).applyMatrix4(rot).toArray()],
+          c: [...new Vector3(...(t.c as [number, number, number])).applyMatrix4(rot).toArray()],
+        }))
+
+        const claimed = presentedBy({ kind: 'coast', variant: v, turns })
+        DIRECTIONS.forEach((d, k) => {
+          const w = toWorld(d, 1)
+          const len = Math.hypot(w.x, w.z)
+          const y = heightAt(spun, (w.x / len) * inradius * 0.93, (w.z / len) * inradius * 0.93)
+          const measured: EdgeKind = (y === null || y < WATER_LEVEL) ? 'water'
+            : y > -0.005 ? 'land' : 'sand'
+          expect(measured, `${v} turned ${turns}, edge ${k}`).toBe(claimed[k])
+        })
+      }
+    }
+  })
+})
+
+describe('water meeting water', () => {
+  /** A run of water hexes punched through a solid field. */
+  function channel(length: number): Island {
+    const tiles = new Map<string, 'grass' | 'water'>()
+    for (let q = -3; q <= 4; q++) {
+      for (let r = -3; r <= 3; r++) tiles.set(key({ q, r }), 'grass')
+    }
+    for (let i = 0; i < length; i++) tiles.set(key({ q: i, r: 0 }), 'water')
+    return { tiles }
+  }
+
+  it('never puts one pond tile\'s green rim against the next one\'s open water', () => {
+    /*
+     * Found by review, and reproducible in the simplest pond worth digging:
+     * three in a row. Scoring each tile against the ASSUMPTION that every wet
+     * neighbour is open water made the middle tile present grass-height land
+     * at the very edge where its neighbour presented water — a 0.2 cliff
+     * between two tiles she dug as water, and lopsided, because the pond's
+     * other joint came out clean.
+     */
+    for (let length = 2; length <= 5; length++) {
+      const island = channel(length)
+      const looks = looksFor(island)
+      for (const [k, type] of island.tiles) {
+        if (type !== 'water') continue
+        const parts = k.split(',').map(Number)
+        const a: Axial = { q: parts[0] as number, r: parts[1] as number }
+        const mine = presentedBy(looks.get(k) as TileLook)
+        neighbours(a).forEach((n, e) => {
+          if (island.tiles.get(key(n)) !== 'water') return
+          const theirs = presentedBy(looks.get(key(n)) as TileLook)
+          const step = Math.abs(LEVELS[mine[e] as EdgeKind] - LEVELS[theirs[(e + 3) % 6] as EdgeKind])
+          expect(step, `channel of ${length}: ${k} edge ${e} vs ${key(n)}`)
+            .toBeLessThanOrEqual(1)
+        })
+      }
+    }
+  })
+
+  it('settles — a second solve of the same island changes nothing', () => {
+    const island = channel(4)
+    const once = looksFor(island)
+    const twice = looksFor(island)
+    for (const k of once.keys()) expect(twice.get(k)).toEqual(once.get(k))
+  })
+})
+
+const LEVELS: Record<EdgeKind, number> = { land: 0, sand: 1, water: 2 }

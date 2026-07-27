@@ -14,7 +14,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { toWorld } from './hex'
 import type { Axial } from './hex'
 import type { Island } from './grid'
-import { lookFor } from './coast'
+import { lookFor, looksFor } from './coast'
 
 /**
  * The models a tile can be drawn with — NOT the same thing as a TileType.
@@ -174,10 +174,17 @@ export function createTileField(models: TileModels, capacity = 512): TileField {
        * incremental would leave stale shoreline behind the child's back.
        * A few dozen hexes is nothing; correctness is worth more here.
        */
+      /*
+       * Solved for the whole island in one go, because a coast tile's look
+       * depends on how its coast NEIGHBOURS were drawn — see looksFor(). Doing
+       * it per tile also meant re-solving the island once per tile.
+       */
+      const looks = looksFor(island)
+
       for (const k of island.tiles.keys()) {
         const parts = k.split(',').map(Number)
         const a: Axial = { q: parts[0] as number, r: parts[1] as number }
-        const look = lookFor(island, a)
+        const look = looks.get(k) ?? lookFor(island, a)
         const kind: RenderKind =
           look.kind === 'coast' ? (`coast_${look.variant}` as RenderKind) : look.kind
         coords[kind].push(a)
