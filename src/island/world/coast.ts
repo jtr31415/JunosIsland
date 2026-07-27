@@ -122,7 +122,7 @@ const MAX_COAST_ARC = 4
  *   - Arcs of five or six have no model and no sensible substitute, so they
  *     draw as whole grass with the old cliff edge. That covers Fred's lonely
  *     rock and the odd spit — and a full tile she can see is worth more than
- *     a beach that eats it (brief §18).
+ *     a beach that eats it (brief §19).
  *   - A tile with water on two OPPOSITE sides is not one arc but two, and no
  *     single model can serve both. The longer arc wins and the shorter one
  *     stays a cliff. Choosing the longest is what keeps the coastline

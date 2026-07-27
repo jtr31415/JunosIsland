@@ -11,7 +11,7 @@
  * Thresholds at 25% / 50% / 75% / 90% of the egg's page cost.
  *
  * It never expires and never regresses: cracks do not heal, and a wrong answer
- * changes nothing here (brief §18, and the spec's serene-right rule).
+ * changes nothing here (brief §19, and the spec's serene-right rule).
  */
 import * as THREE from 'three'
 import { createBlobShadow, SHADOW_LIFT } from './juice'

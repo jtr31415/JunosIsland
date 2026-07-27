@@ -238,7 +238,7 @@ export function placeTile(f: Flow, a: Axial): Flow {
    * `bankedTiles` is a CREDIT carried over from the previous flow, where a
    * finished tile could be earned and left unplaced (see save.ts). Its work
    * was done and must not be charged for again — nothing a child owns can be
-   * lost (brief §18) — so one credit finishes one plot, and commitPlot spends
+   * lost (brief §19) — so one credit finishes one plot, and commitPlot spends
    * it. Leaving the credit unspent would mint a free tile on every reload.
    */
   if (sited.bankedTiles > 0 || sited.sumProgress >= sumsForTile(sited)) {

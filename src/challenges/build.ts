@@ -10,7 +10,7 @@
  *
  * The rescue it replaces it with does the same job: the whole word again,
  * slowly, with the next tile the child needs gently highlighted. Help, not
- * shame (brief §18), and no worse audio than the prompt she already heard.
+ * shame (brief §19), and no worse audio than the prompt she already heard.
  *
  * fredTalk and FRED_SOUNDS are kept and still exported — the sequencing is
  * sound and a real recorded voice would make it excellent — but nothing calls

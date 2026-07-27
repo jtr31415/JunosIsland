@@ -140,7 +140,7 @@ describe('mountBuild', () => {
      * v0:1295-1300 locked input and had Fred sound out each grapheme. The
      * grapheme audio is retired — through a synthesiser "buh"/"tuh" is
      * genuinely unpleasant — so the rescue is now the whole word at 0.6 rate
-     * with the next slot highlighted. Still help, never shame (brief §18),
+     * with the next slot highlighted. Still help, never shame (brief §19),
      * and the input lock is unchanged.
      */
     const { d } = makeDeps(el)

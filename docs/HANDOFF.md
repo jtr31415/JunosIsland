@@ -30,7 +30,7 @@ may inject a value the original hardcoded, but you may not restructure. Every
 DOM, timing, class-name or audio assertion in a test under `tests/challenges/`
 or `tests/platform/` must cite the v0 line it encodes, e.g. `// v0:886`.
 
-**2. Brief §18 guardrails are non-negotiable.** Nothing a child owns can be
+**2. Brief §19 guardrails are non-negotiable.** Nothing a child owns can be
 lost. No timers, no expiry. Wrong answers cost nothing. Three stumbles summon
 help and never shame. UK English. Bright, never scary.
 
@@ -224,7 +224,7 @@ than guessing. Two such items are open now (`docs/STATUS.md`).
 
 Nothing here is blocked except where noted.
 
-1. **Get it in front of Juno.** Brief §17: "Ship M1 to the QA department
+1. **Get it in front of Juno.** Brief §18: "Ship M1 to the QA department
    immediately; her verdict outranks this document." That has not happened yet
    and it is the highest-value thing available.
 2. **Resolve #4 and #6** (Joe's calls — see `docs/STATUS.md`).

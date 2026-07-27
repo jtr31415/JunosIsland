@@ -116,7 +116,7 @@ export interface Stage {
    * NEVER dispose what is passed here. A preview is a clone, and a three.js
    * clone SHARES geometry and materials with the cached original — freeing
    * them would break every other pet of that species, on the stage and on the
-   * island, including friends she already owns (brief §18). Dropping the
+   * island, including friends she already owns (brief §19). Dropping the
    * scene-graph link is the whole of the cleanup, and it is enough.
    *
    * Pass null to clear.

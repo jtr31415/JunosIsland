@@ -128,7 +128,7 @@ describe('the back button', () => {
 
     q('.overlay-back').click()
 
-    // Never discard work the child has actually done (brief §18) — so this is
+    // Never discard work the child has actually done (brief §19) — so this is
     // onPassed, not onDismissed. `false` is "collect it, but let me out".
     expect(host.onPassed).toHaveBeenCalledWith(false)
     expect(host.onDismissed).not.toHaveBeenCalled()

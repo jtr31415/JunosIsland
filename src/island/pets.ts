@@ -82,7 +82,7 @@ export interface PetField {
    * The caller detaches it when done and MUST NOT dispose it: this is a
    * clone, and a three.js clone shares geometry and materials with the cached
    * original, so freeing them would break every other pet of that species —
-   * including friends she already owns (brief §18). It comes from the same
+   * including friends she already owns (brief §19). It comes from the same
    * loader and the same cache as the real thing, which is the point: the
    * friend she meets on the stage is the friend that walks out onto the
    * island.

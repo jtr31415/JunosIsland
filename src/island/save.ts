@@ -36,7 +36,7 @@ interface IslandSave {
   /**
    * What the child is called.
    *
-   * Stays on the device (brief §17). It is only ever spoken back to her and
+   * Stays on the device (brief §19). It is only ever spoken back to her and
    * painted on her own signpost; nothing sends it anywhere.
    */
   childName?: string
@@ -94,7 +94,7 @@ export function fromSave(
        *
        * A save written under the old flow may still hold a BANKED tile —
        * earned, paid for, never placed. Land she has already worked for
-       * cannot be lost (brief §18), so it resumes in 'placing': she picks a
+       * cannot be lost (brief §19), so it resumes in 'placing': she picks a
        * type and a socket, and placeTile() sees the work is already done and
        * finishes the tile on the spot rather than charging for it twice.
        */

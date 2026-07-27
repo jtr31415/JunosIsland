@@ -75,7 +75,7 @@ export interface Overlay {
    * the flow in a challenge with no overlay to finish or dismiss.
    *
    * Deliberately not a lockout of the child — nothing is greyed out, nothing
-   * is refused twice, and it lasts under two seconds (brief §18 forbids
+   * is refused twice, and it lasts under two seconds (brief §19 forbids
    * pressure, not choreography).
    */
   setBusy(v: boolean): void
@@ -307,7 +307,7 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
    *
    * The first thing anyone tries with a modal, and the backdrop was dead. It
    * takes exactly the same path as the button — which means work already
-   * earned is COLLECTED rather than thrown away (brief §18); a dismissal that
+   * earned is COLLECTED rather than thrown away (brief §19); a dismissal that
    * silently discarded a correct answer would be much worse than a dead
    * backdrop. The target check matters: without it, every tap inside the
    * panel would bubble up and close the round mid-word.

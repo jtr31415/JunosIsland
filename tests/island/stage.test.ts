@@ -275,7 +275,7 @@ describe('the turntable, as a scene graph', () => {
      * A three.js clone shares geometry and materials with the cached
      * original. Freeing them here would break every other pet of that
      * species, on the stage and on the island, including friends she already
-     * owns (brief §18). Detaching is the whole of the cleanup.
+     * owns (brief §19). Detaching is the whole of the cleanup.
      */
     const stage = createStage()
     const geometry = new THREE.BoxGeometry(1, 1, 1)

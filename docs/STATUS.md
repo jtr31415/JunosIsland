@@ -5,13 +5,13 @@
 The short version: **M0 is done and proven, M1 is done and playable, and most
 of slice-1 is in.** The game is deployed at
 <https://jtr31415.github.io/JunosIsland/> and has not yet been played by the
-QA department, whose verdict outranks both documents (brief §17).
+QA department, whose verdict outranks both documents (brief §18).
 
 Two decisions are waiting on Joe — see [Waiting on you](#waiting-on-you).
 
 ---
 
-## Against the brief's milestones (§17)
+## Against the brief's milestones (§18)
 
 | Milestone | State |
 |---|---|
@@ -21,11 +21,11 @@ Two decisions are waiting on Joe — see [Waiting on you](#waiting-on-you).
 | **M3 — The ladder** | **Not started.** |
 | **M4 — Dress & seasons** | **Not started**, though the art pass is well ahead of grey-box. |
 
-### Guardrails (§18) — all holding
+### Guardrails (§19) — all holding
 
 Nothing a child owns can be lost; no timers, no expiry; wrong answers cost
 nothing; three stumbles summon help and never shame; UK English; bright never
-scary. Several of tonight's bugs were §18 violations found and fixed —
+scary. Several of tonight's bugs were §19 violations found and fixed —
 a reset button one tap from wiping everything, a two-second window where a
 hatched pet was not yet saved, a coastline that re-cut land she already owned.
 

@@ -391,7 +391,7 @@ async function boot(): Promise<void> {
   /* ---------- the grown-up gear ----------
    *
    * Everything the child owns is behind this: every pet, every name, every
-   * tile she counted up. Brief §18 says none of it can be lost, and a plain
+   * tile she counted up. Brief §19 says none of it can be lost, and a plain
    * "reset island" button sitting on the play surface is one curious tap away
    * from all of it — which is not a guardrail, it is a trap with a label.
    *
@@ -575,7 +575,7 @@ async function boot(): Promise<void> {
          * but persist() used to run only after the ceremony — leaving a
          * two-second window in which closing the tab lost both the friend and
          * the page that earned her. Two seconds is not long unless it is the
-         * single most important moment in the game (brief §18).
+         * single most important moment in the game (brief §19).
          */
         persist()
 
@@ -782,7 +782,7 @@ async function boot(): Promise<void> {
          * coast hex while the scaffolding is a full one. The plot IS the tile
          * until it lands; the real one takes over as it is disposed.
          */
-        // §18: save the finished tile BEFORE celebrating it. The hatch branch
+        // §19: save the finished tile BEFORE celebrating it. The hatch branch
         // learned this; closing the tab mid-ceremony must not cost her the sum.
         persist()
 

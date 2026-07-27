@@ -466,7 +466,7 @@ export function createPropField(base = ''): PropField {
          * It used to be skipped entirely, which meant a child who built a
          * pond watched eight water plants grow on it during the build and
          * then saw a bare blue hex the moment it completed. Losing what she
-         * had just made is precisely what brief §18 forbids.
+         * had just made is precisely what brief §19 forbids.
          */
         if (type === 'water') {
           const wh = hash({ q: parts0(k), r: parts1(k) })

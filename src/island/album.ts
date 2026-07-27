@@ -7,7 +7,7 @@
  * never "you are missing 23".
  *
  * Portraits are RENDERED from the live models rather than drawn: hand-drawn
- * art for a 768-variant space is impossible and would drift from the models
+ * art for a ~1,000-variant space is impossible and would drift from the models
  * the moment either changed. Same code path will feed the Pet-o-matic.
  */
 import * as THREE from 'three'
