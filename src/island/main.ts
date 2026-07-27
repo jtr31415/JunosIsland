@@ -27,6 +27,7 @@ import { pageKind, balance, applyDevBalance } from './balance'
 import { landPaused, eggsPaused, activeGovernor, GOVERNOR_LINE } from './governors'
 import { OPENING, HATCH_LINES, TILE_QUESTION, fill } from './script'
 import { loadIsland, saveIsland } from './save'
+import { openingGate } from './opening'
 import { commit, ceremony } from './ceremony'
 import { askPin, askChoice, askConfirm } from './grownups'
 import type { Committed, Exits } from './ceremony'
@@ -342,7 +343,17 @@ async function boot(): Promise<void> {
     persistGranted = await requestPersistence()
     void persist()
   }
-  let openingSeen = loaded.openingSeen
+  /*
+   * Whether Fred's story has been shown to this profile — and the only thing
+   * that may answer that question.
+   *
+   * It was a `let` set on the story's LAST line, which is a line most sessions
+   * never reach: the story hands over to the child at beat six and returns, she
+   * can back out of that round, and a reload can land on any beat. All of those
+   * left the flag false, so the opening replayed on every single load. See
+   * opening.ts — the gate claims it the moment the story starts.
+   */
+  const opening = openingGate(loaded.openingSeen, () => persist())
   /*
    * What she is called. Empty until she has been asked, which happens once,
    * just before the story. Falls back to a neutral word rather than blocking:
@@ -354,7 +365,7 @@ async function boot(): Promise<void> {
   if (childName) document.title = `${childName}'s Island`
 
   const persist = (): Promise<void> =>
-    saveIsland(store, PROFILE, flow, openingSeen, childName, persistGranted)
+    saveIsland(store, PROFILE, flow, opening.seen(), childName, persistGranted)
 
   /**
    * Save, wait for it, and come back with proof.
@@ -1186,6 +1197,25 @@ async function boot(): Promise<void> {
     // half-finished word-find outright.
     if (inOpening || overlay.isOpen() || flow.phase !== 'free') return
     inOpening = true
+    /*
+     * SEEN THE MOMENT IT STARTS — before a single beat, before anything is
+     * awaited, and after the guards above so a story that never starts is never
+     * recorded as having played.
+     *
+     * It used to be recorded after the last beat, which is the one exit this
+     * loop mostly does not take: beat six hands over to the child and RETURNS,
+     * and the story only resumes if she finishes that round — dismissing it
+     * clears `openingResumeAt` and ends the story for good, with nothing
+     * written. A reload at any point did the same. So the profile stayed
+     * "never seen" and Fred started again from "Oh! Hello" on every load, which
+     * is exactly what Joe reported.
+     *
+     * Not awaited, for the reason HANDOFF §5 gives about async in this file:
+     * the beats race live input, and the claim is already staked synchronously
+     * inside the gate. The promise is the write landing, which nothing here
+     * needs to wait for.
+     */
+    void opening.begin()
     if (from === 0) egg.group.visible = false
 
     for (let i = from; i < OPENING.length; i++) {
@@ -1254,8 +1284,8 @@ async function boot(): Promise<void> {
 
     overlay.clearSay()
     inOpening = false
-    openingSeen = true
-    persist()
+    // Nothing to record here: the gate claimed it before the first beat, which
+    // is the only way every exit from this loop gets covered.
   }
 
   /**
@@ -1547,13 +1577,13 @@ async function boot(): Promise<void> {
    * his first line. A story that starts "hello friend" and switches to "hello
    * Juno" halfway reads as a bug.
    */
-  if (!childName && !openingSeen) {
+  if (!childName && !opening.seen()) {
     childName = await overlay.askName()
     sign.setName(childName || 'my')
-    if (childName) { document.title = `${childName}'s Island`; persist() }
+    if (childName) { document.title = `${childName}'s Island`; void persist() }
   }
 
-  if (!openingSeen) {
+  if (!opening.seen()) {
     void runOpening()
   } else {
     overlay.say('Tap the egg to read it home — or tap the island for land!')
