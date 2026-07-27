@@ -505,6 +505,29 @@ export const canBeGrass = (island: Island, a: Axial): boolean =>
  * caught. Guarding the two kinds was not enough on its own: where both were
  * refused the code fell back to grass, and that fallback is precisely the "beach
  * against a full land tile" being ruled out.
+ *
+ * Deliberately NOT where the moat floor lives, though it was built here first and
+ * then measured out again. A wall here — refuse any socket whose tile would leave
+ * her fields sealed in — is worse on both counts. It is dearer, because it has to
+ * look past the socket at the island beyond it and this runs every time the
+ * island changes; and at the sharp end it is simply WRONG, because the socket it
+ * ends up refusing is her last remaining way out. It turns "walled in after one
+ * more field" into "walled in now", and takes the tile off her as well.
+ *
+ * The floor in `flow.tileTypeFor` acts early enough that the question almost
+ * never arises. Measured: with the floor at three, four adversarial strategies
+ * over some four thousand played islands never reached a state where a wall here
+ * would have had anything left to do.
+ *
+ * ALMOST. A Fable review then found one by search, and the refuting placement is
+ * exactly the kind a wall would have caught. So the honest statement is that this
+ * was removed because the wall AS BUILT — refuse the socket wholesale — is
+ * harmful, not because nothing could ever need it. A last-resort backstop stated
+ * differently ("refuse a placement that leaves zero growable witnesses") would be
+ * structural rather than empirical, and is carded.
+ *
+ * `always leaves her a socket to tap` is what remains of it in the suite. See
+ * `LAND_FLOOR` for why three and not two.
  */
 export const buildableSockets = (island: Island, open: readonly Axial[]): Axial[] =>
   open.filter(a => allows(island, a, 'grass') || allows(island, a, 'water'))
@@ -531,6 +554,210 @@ export function mustBeWater(island: Island, a: Axial): boolean {
     if (type === 'water') water++
   }
   return water >= 2
+}
+
+/* ------------------------------------------------- the moat, and the floor */
+
+/**
+ * MOATED: every way out of her fields is water, and permanently so.
+ *
+ * Joe, from playtesting: *"when there are only 2 land connections without water
+ * neighbours, force a land tile so kids cant snooker their islands by surrounding
+ * it with just water."*
+ *
+ * The state he means is reachable in six taps from a new game. Ring the home hex
+ * with ponds and every socket left touches a ring tile that already shows green
+ * on its inward edge; a field outside would give that tile a second green edge on
+ * the far side, and a split arc is one of the forty-five neighbourhoods no model
+ * draws. So her island is finished at one hex.
+ *
+ * It is not a hard stop — grow the lake one ring further out and a tile with no
+ * green edge yet appears, so land can restart ACROSS the water. That is the
+ * honest description of the fault and it is still worth fixing: a six-year-old
+ * whose island has been walled off from itself, with no undo, has not been given
+ * a choice, she has been given a wall.
+ *
+ * What follows is the floor that stops it. Two things it deliberately is not:
+ *
+ *   - Not the local mirror of `mustBeWater`. That rule reads six neighbours;
+ *     being moated is a fact about the whole island, and no six-hex window can
+ *     see it. The literal mirror — two or more fields and no water, so grass —
+ *     never fires while a ring is being EXTENDED, because every extension socket
+ *     touches the previous ring tile, and it would ban digging a bay against two
+ *     fields, which is exactly the shape variant C exists to draw.
+ *   - Not a rule that outranks feasibility. `mustBeWater` had precisely that bug
+ *     — it short-circuited ahead of the drawability check and forced water into a
+ *     shape no model draws — so everything here asks `allows` first.
+ */
+
+/**
+ * How few ways out of her fields water may leave her with.
+ *
+ * THREE, AND JOE ASKED FOR TWO. That is a deliberate departure and here is the
+ * evidence for it, because a number nobody can argue with is a number nobody can
+ * correct.
+ *
+ * Two is the number of ways out he wants her never to go below, and the floor is
+ * the only thing holding it: water is turned back at the line, so under a child
+ * who only ever asks for water the count settles at exactly the line and stays
+ * there. That leaves no headroom, and headroom is needed, because a FIELD can
+ * cost her a way out too — placed where its own empty neighbours all touch water,
+ * it consumes one and makes none. Water is capped; that erosion is not.
+ *
+ * At a floor of two the played-island test walls her in: seed 160 of
+ * `an island built only through the placement rules`, thirty taps, hugging her
+ * coast and asking for water every time. The count sits at two, a forced field
+ * takes it to one, and the next one has nowhere to go. Set this back to 2 and
+ * that test fails; it is the reason the seed range there runs as far as it does.
+ *
+ * At three, nothing has been found that breaks it. The suite plays two deliberate
+ * strategies plus the random walk, which is what fits in the time budget; the
+ * number was settled off-line against four, including one that weighs every
+ * socket for the worst it can do, over some four thousand played islands.
+ *
+ * So three is two with the one tile of headroom that makes two hold. If Joe wants
+ * the line drawn elsewhere it is this constant and nothing else — but moving it
+ * back to two brings seed 160 back with it, which is why the test plays a
+ * strategy rather than trusting the number.
+ */
+export const LAND_FLOOR = 3
+
+/** Her own tiles that are fields, as coordinates. */
+function fields(island: Island): Axial[] {
+  const out: Axial[] = []
+  for (const [k, type] of island.tiles) {
+    if (type !== 'grass') continue
+    const parts = k.split(',').map(Number)
+    out.push({ q: parts[0] as number, r: parts[1] as number })
+  }
+  return out
+}
+
+/**
+ * The ways out of her fields: sockets touching her land and touching no water.
+ *
+ * Joe's phrase is *"land connections without water neighbours"*, and both halves
+ * are load-bearing:
+ *
+ *   - A LAND CONNECTION touches one of her FIELDS. That is what makes this a
+ *     measure of the fault and not of something else. Counting every socket that
+ *     admits grass would count the far shore of her lake — which is satisfied by
+ *     exactly the situation being prevented, land restarting across the water,
+ *     while her island itself stays walled in.
+ *   - WITHOUT WATER NEIGHBOURS turns it from a snapshot into a guarantee. With no
+ *     water anywhere in its own neighbourhood there is no coastline for a field to
+ *     break, so `allows(island, s, 'grass')` is unconditionally true and
+ *     `mustBeWater(island, s)` unconditionally false. Grass goes there today, and
+ *     still goes there after any number of tiles are placed elsewhere.
+ *
+ * That second half is why the floor counts these rather than the wider set of
+ * sockets that merely admit grass right now. The wider set is a snapshot: a
+ * socket is in it because some pond nearby currently has room for one more green
+ * edge, and a tile placed two hexes away can quietly take it back. A floor built
+ * on it can be walked to nothing by placements that each looked safe when they
+ * were made — which is not a theory, it is seed 160 of the played-island test,
+ * where a floor guarding only water was still moated after thirty-two tiles.
+ */
+const dryLandSocketsOf = (island: Island): Axial[] => {
+  const seen = new Set<string>()
+  const out: Axial[] = []
+  for (const g of fields(island)) {
+    for (const s of neighbours(g)) {
+      const ks = key(s)
+      if (seen.has(ks)) continue
+      seen.add(ks)
+      if (tileAt(island, s) !== undefined) continue
+      if (neighbours(s).some(n => tileAt(island, n) === 'water')) continue
+      out.push(s)
+    }
+  }
+  return out
+}
+
+/**
+ * ...cached per island, because the answer is asked of every socket at once.
+ *
+ * An `Island` is immutable and a new object per `place`, so the entry can never
+ * go stale, and a WeakMap lets a superseded island be collected with it. Without
+ * this, `buildableSockets` would walk her whole map once per socket — the same
+ * quadratic that `allows` was fixed to avoid, arrived at from the other side.
+ */
+const dryCache = new WeakMap<Island, Axial[]>()
+
+export function dryLandSockets(island: Island): readonly Axial[] {
+  const had = dryCache.get(island)
+  if (had) return had
+  const found = dryLandSocketsOf(island)
+  dryCache.set(island, found)
+  return found
+}
+
+/**
+ * How many ways out of her fields placing `t` at `a` would leave.
+ *
+ * Worked out from the ones she has rather than by re-deriving them over a copy of
+ * the island, which is what keeps this affordable enough to ask of every socket:
+ *
+ *   - The socket built on stops being a socket, so it stops being a way out.
+ *   - WATER wets its neighbours, so any way out beside it stops being dry. It can
+ *     never create one.
+ *   - A FIELD wets nothing, so every existing way out survives; and its own empty
+ *     neighbours become land connections, dry if no water is already beside them.
+ *
+ * Which gives the fact the whole design leans on: `dryAfter(a, 'grass')` is never
+ * less than `dryAfter(a, 'water')`. A field is always at least as kind to her
+ * island as a pond in the same place, so "is there a safe tile for this socket?"
+ * has the same answer as "is grass safe here?", and nothing has to enumerate.
+ */
+export function dryAfter(island: Island, a: Axial, t: TileType): number {
+  const ka = key(a)
+  const known = new Set<string>()
+  let count = 0
+  for (const s of dryLandSockets(island)) {
+    const ks = key(s)
+    known.add(ks)
+    if (ks === ka) continue
+    if (t === 'water' && neighbours(s).some(n => key(n) === ka)) continue
+    count++
+  }
+  if (t !== 'grass') return count
+  for (const s of neighbours(a)) {
+    const ks = key(s)
+    if (known.has(ks) || tileAt(island, s) !== undefined) continue
+    known.add(ks)
+    // `a` itself is the new field, so it is not one of the waters to fear.
+    if (neighbours(s).some(n => key(n) !== ka && tileAt(island, n) === 'water')) continue
+    count++
+  }
+  return count
+}
+
+/**
+ * Must this socket be a field whatever she picked?
+ *
+ * The floor, stated as a look-ahead over the placement rather than as a count of
+ * the island as it stands. It has to be: a single pond can take three ways out at
+ * once, so the number does not fall THROUGH two on its way to nothing, it steps
+ * over it. Asking "would this tile take her below the line" catches that; asking
+ * "is she below the line already" does not.
+ *
+ * It is not a veto on water. Water out at sea, or anywhere that touches none of
+ * her ways out, costs her nothing and is never turned back — she can dig as much
+ * lake as she likes, and bays against two or three fields are untouched while the
+ * island has room. It is only water spending her last way out that becomes land.
+ *
+ * With no fields at all there is nothing to moat and the floor says nothing. That
+ * cannot arise in play — the island starts with Fred's rock and land is never
+ * taken away — but an edited save or a test fixture can be all water, and a rule
+ * that answered "yes, forced" for every socket of one would leave her unable to
+ * build anywhere at all.
+ */
+export function mustBeLand(island: Island, a: Axial): boolean {
+  // Feasibility first. A forced field the coastline cannot draw is the fault
+  // this whole file exists to prevent, and forcing is never worth causing it.
+  if (!allows(island, a, 'grass')) return false
+  if (fields(island).length === 0) return false
+  return dryAfter(island, a, 'water') < LAND_FLOOR
 }
 
 /**
