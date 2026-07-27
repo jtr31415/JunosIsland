@@ -15,6 +15,44 @@ here (brief §18).
 
 ---
 
+## Fable's review of the Phase 4 plan — Joe has a decision waiting
+
+Reviewed overnight, 27 July, against the code rather than against my summary.
+Three findings that change the plan; the full reasoning is in the task cards.
+
+**1. The order is wrong, and the repo says so in three places.**
+`PHASE3-HANDOVER` §10, this file, and `HANDOFF` §8 all carry the same sentence:
+the QA department has still not played it, and that is the highest-value action
+available. Phase 4 then schedules five features and a blocked item ahead of her
+first session. Nothing in #28, #31, #33 or #30 blocks a supervised session —
+#33 only matters once the island has grown off-centre, and a first session starts
+at one tile. The one item that protects her first hatch is #29, because the pet
+GLBs are **not** precached (`vite.island.config.ts` has no `globPatterns`) so her
+first hatch is guaranteed cold-cache.
+
+Recommended: **#29 → cut the first `v*` tag → session with Juno → let her session
+reprioritise the rest.** The tag must come first regardless: production falls back
+to `main` today and the service worker is `skipWaiting` + `clientsClaim`, so every
+merge lands on her device mid-week, against an unpinned build.
+
+**2. The item I was most worried about was worth worrying about.** #30's spec as
+briefed could not achieve its goal — "cannot ring her island in water" is a global
+property, "the mirror of `mustBeWater`" is a local six-neighbour rule, and the
+local one never fires while a coastline is being *continued*. It would also have
+silently banned digging any bay, which is the shape `COAST_EDGES` variant C exists
+to draw. The agent was redirected mid-flight to a placement-time floor instead.
+
+**3. The phase named "the release" contains no release engineering** — no tag, no
+`npm run channel` against a tagged build, no on-tablet pass, no pre-session
+backup. Carded.
+
+Also unresolved and Joe's: **item 13 is blocked but sits inside the release.**
+Either v1 ships without adaptive difficulty — Fable argues it should, since
+today's fixed difficulty is the v0 behaviour she already plays — or the whole
+release inherits the block.
+
+---
+
 ## The phases were re-cut on 27 July
 
 Joe: *"item 13 is now in phase 4, hold that. and i think we shold then look at
