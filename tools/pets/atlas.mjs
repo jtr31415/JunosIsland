@@ -111,6 +111,82 @@ function uvs(g, bin) {
   return out
 }
 
+/** Any accessor, as numbers (SCALAR) or tuples. Needed for indices and positions. */
+function accessor(g, bin, i) {
+  const acc = g.accessors[i]
+  const bv = g.bufferViews[acc.bufferView]
+  const size = SIZE[acc.componentType], n = WIDE[acc.type]
+  const stride = bv.byteStride ?? size * n
+  const base = (bv.byteOffset ?? 0) + (acc.byteOffset ?? 0)
+  const read = p => acc.componentType === 5126 ? bin.readFloatLE(p)
+    : acc.componentType === 5125 ? bin.readUInt32LE(p)
+    : acc.componentType === 5123 ? bin.readUInt16LE(p)
+    : bin.readUInt8(p)
+  const out = []
+  for (let k = 0; k < acc.count; k++) {
+    const o = base + k * stride
+    if (n === 1) { out.push(read(o)); continue }
+    const tuple = []
+    for (let c = 0; c < n; c++) tuple.push(read(o + c * size))
+    out.push(tuple)
+  }
+  return out
+}
+
+/**
+ * Mesh nodes that are EXTREMITIES rather than the animal's coat.
+ *
+ * Joe: *"for the cow the white should change, not the horns and nose"*, and
+ * *"for the bee the yellow should change"*. Both were lost the same way. The
+ * pack's dark blue-grey `#4d515f` — its "black" — is the colour of nearly every
+ * leg mesh, and its max channel is 95, above SOUL_VALUE, with saturation 0.19,
+ * above MARKING_SATURATION. So it qualifies as a base coat, and four legs plus
+ * a nose outvoted the animal.
+ *
+ * A deny-list rather than an allow-list of `body`, so a species whose main mesh
+ * is named something unexpected still gets a vote. Measured across the pack the
+ * only mesh node names are body, Group, leg-*, wing-* and tail.
+ */
+const EXTREMITY = /^(leg|wing|tail)/
+
+/**
+ * Every coat triangle, with the area it covers and the UVs of its corners.
+ *
+ * Node scale is accumulated down the tree, because the parts carry their own
+ * transforms and an area comparison between differently-scaled nodes is
+ * otherwise meaningless.
+ */
+function coatTriangles(g, bin) {
+  const out = []
+  const walk = (i, s) => {
+    const node = g.nodes[i]
+    const ns = node.scale
+      ? [s[0] * node.scale[0], s[1] * node.scale[1], s[2] * node.scale[2]] : s
+    if (node.mesh !== undefined && !EXTREMITY.test(node.name ?? '')) {
+      for (const pr of g.meshes[node.mesh].primitives ?? []) {
+        if (pr.attributes.TEXCOORD_0 === undefined || pr.indices === undefined) continue
+        const uv = accessor(g, bin, pr.attributes.TEXCOORD_0)
+        const po = accessor(g, bin, pr.attributes.POSITION)
+        const ix = accessor(g, bin, pr.indices)
+        for (let k = 0; k + 2 < ix.length; k += 3) {
+          const c = [ix[k], ix[k + 1], ix[k + 2]]
+          const p = c.map(v => [po[v][0] * ns[0], po[v][1] * ns[1], po[v][2] * ns[2]])
+          const e1 = [p[1][0] - p[0][0], p[1][1] - p[0][1], p[1][2] - p[0][2]]
+          const e2 = [p[2][0] - p[0][0], p[2][1] - p[0][1], p[2][2] - p[0][2]]
+          const area = 0.5 * Math.hypot(
+            e1[1] * e2[2] - e1[2] * e2[1],
+            e1[2] * e2[0] - e1[0] * e2[2],
+            e1[0] * e2[1] - e1[1] * e2[0])
+          out.push({ area, uv: c.map(v => uv[v]) })
+        }
+      }
+    }
+    for (const child of node.children ?? []) walk(child, ns)
+  }
+  for (const root of g.scenes?.[0]?.nodes ?? []) walk(root, [1, 1, 1])
+  return out
+}
+
 /* --------------------------------------------------------------- report --- */
 
 const img = decodePng(join(PETS, 'Textures/colormap.png'))
@@ -270,9 +346,19 @@ console.log('   achromatic ones alone: the eyes and the face stay put.')
  * animal's own colours. That cannot be done at runtime — it needs the UVs out
  * of the .glb — so it is computed here and shipped as data.
  *
- * The rule per species: take the colours it actually samples, weight them by
- * how many of its vertices use them, and call the largest similar-colour
- * cluster the base. Everything else is a marking and is left alone.
+ * The rule per species: take the colours its coat meshes actually sample,
+ * weight them by the SURFACE AREA that samples them, and call the largest
+ * similar-colour cluster the base. Everything else is a marking and is left
+ * alone.
+ *
+ * AREA, not vertex count, and that is Joe's second correction to this table:
+ * *"panda — the white should change, not the black"*, *"bee — the yellow should
+ * change"*. Counting vertices values fiddly detail over broad coat: a panda's
+ * white torso is a handful of large quads while its black ears and eye patches
+ * are many small faces, so black won 798 to 128 on a bear that is mostly white.
+ * By area the panda comes out 66% pale, the bee 53% yellow, the cow 86% pale,
+ * and the penguin stays 74% dark — which is right, a penguin's coat IS the dark
+ * part.
  */
 const HUE_TOL = 40
 const PALE = 0.12
@@ -280,14 +366,16 @@ const PALE = 0.12
 function baseColoursFor(file) {
   const { json: g, bin } = readGlb(join(PETS, file))
   const tally = new Map()
-  for (const [u, v] of uvs(g, bin)) {
-    const x = Math.min(img.w - 1, Math.max(0, Math.round(u * img.w - 0.5)))
-    const y = Math.min(img.h - 1, Math.max(0, Math.round(v * img.h - 0.5)))
-    const o = y * img.stride + x * img.bpp
-    const c = [img.px[o], img.px[o + 1], img.px[o + 2]]
-    if (Math.max(...c) < 78) continue                  // soul: never a coat
-    const key = c.join(',')
-    tally.set(key, (tally.get(key) ?? 0) + 1)
+  for (const { area, uv } of coatTriangles(g, bin)) {
+    for (const [u, v] of uv) {
+      const x = Math.min(img.w - 1, Math.max(0, Math.round(u * img.w - 0.5)))
+      const y = Math.min(img.h - 1, Math.max(0, Math.round(v * img.h - 0.5)))
+      const o = y * img.stride + x * img.bpp
+      const c = [img.px[o], img.px[o + 1], img.px[o + 2]]
+      if (Math.max(...c) < 78) continue                // soul: never a coat
+      const key = c.join(',')
+      tally.set(key, (tally.get(key) ?? 0) + area / 3)
+    }
   }
 
   const hsv = ([r, g2, b]) => {
@@ -316,15 +404,41 @@ function baseColoursFor(file) {
     into.keys.push(key)
   }
   clusters.sort((a, b) => b.weight - a.weight)
-  return clusters[0] ? clusters[0].keys : []
+  const total = clusters.reduce((s, c) => s + c.weight, 0) || 1
+  /*
+   * The runner-up comes back too, purely so the report can show the MARGIN. The
+   * bee is decided 53% to 46% between its yellow and its black stripes, which is
+   * close enough that anyone re-exporting the art wants to see it rather than
+   * discover it in the Pet-o-matic.
+   */
+  return {
+    keys: clusters[0] ? clusters[0].keys : [],
+    share: clusters[0] ? clusters[0].weight / total : 0,
+    runnerUp: clusters[1] ? clusters[1].weight / total : 0,
+    label: clusters[0]
+      ? (clusters[0].pale ? 'pale' : `hue ${Math.round(clusters[0].hue)}`) : 'none',
+  }
 }
 
 const table = {}
-for (const f of files) table[f.replace('animal-', '').replace('.glb', '')] = baseColoursFor(f)
+const picks = new Map()
+for (const f of files) {
+  const name = f.replace('animal-', '').replace('.glb', '')
+  const pick = baseColoursFor(f)
+  table[name] = pick.keys
+  picks.set(name, pick)
+}
 
 const OUT = resolve(here, '../../src/island/variants/species-base.json')
 writeFileSync(OUT, JSON.stringify(table, null, 1) + '\n')
 console.log('\nwrote species-base.json')
+console.log('  species        base            share  next   colours')
 for (const [k, v] of Object.entries(table)) {
-  console.log('  ' + k.padEnd(13) + String(v.length).padStart(2) + ' base colours  ' + v.slice(0, 3).join('  '))
+  const p = picks.get(k)
+  const close = p.share - p.runnerUp < 0.15 ? '  <- close' : ''
+  console.log('  ' + k.padEnd(15)
+    + p.label.padEnd(16)
+    + `${(100 * p.share).toFixed(0)}%`.padStart(5)
+    + `${(100 * p.runnerUp).toFixed(0)}%`.padStart(6) + '   '
+    + String(v.length).padStart(2) + ' colours  ' + v.slice(0, 2).join('  ') + close)
 }

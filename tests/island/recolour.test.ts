@@ -4,10 +4,11 @@ import { inflateSync } from 'node:zlib'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
-  isSoul, rgbToHsv, hsvToRgb, shade, isNatural, recolourInto,
+  isSoul, rgbToHsv, hsvToRgb, shade, isNatural, recolourInto, regionOf,
   SOUL_VALUE, BAND, RAMP_LOW, RAMP_HIGH,
 } from '../../src/island/variants/recolour'
 import { SETS, NATURAL, setById, variantKey, totalVariants } from '../../src/island/variants/sets'
+import speciesBase from '../../src/island/variants/species-base.json'
 
 /**
  * The rule that decides what a set may change, tested against the REAL atlas
@@ -199,6 +200,48 @@ describe('against the real colormap.png', () => {
     }
   })
 
+  it('sends a DARK-coated species to the top of the ramp too', () => {
+    /*
+     * Joe, on the penguin: "the black should change and is changing, but seems
+     * to maintain the underlying black, making any colour change just very
+     * dark."
+     *
+     * The cause was normalising against every atlas pixel inside the region's
+     * HUE WINDOW rather than against the species' own colours. A penguin's coat
+     * occupies value 0.31–0.39; the window at hue 230 also caught the elephant's
+     * pale blue-grey at 0.90, so the penguin sat at t ≈ 0.07 for every set.
+     *
+     * Stated over the real atlas deliberately: a buffer holding only the
+     * penguin's own colours would pass even with the bug, because then the scan
+     * range and the species range are the same thing. It takes the whole atlas,
+     * with the elephant in it, to show the fault.
+     */
+    const keys = new Set((speciesBase as Record<string, string[]>)['penguin'])
+    expect(keys.size).toBeGreaterThan(0)
+    const before = buffer()
+    const after = buffer()
+    recolourInto(after, setById('sunshine')!, img.w, keys)
+
+    let hi = 0, lo = 1
+    for (let j = 0; j < before.length; j += 4) {
+      const key = `${before[j]},${before[j + 1]},${before[j + 2]}`
+      if (!keys.has(key)) continue
+      const v = Math.max(
+        after[j] as number, after[j + 1] as number, after[j + 2] as number) / 255
+      hi = Math.max(hi, v)
+      lo = Math.min(lo, v)
+    }
+    /*
+     * The bar is "clearly coloured", not "reaches the very top". Its coat is
+     * centred on the ramp rather than stretched across it, because stretching a
+     * 0.086-wide range over a 0.66-wide ramp amplifies the atlas's gradient steps
+     * into visible banding — see CONTRAST_REFERENCE. Centred is what fixes Joe's
+     * complaint; the whole coat has to sit well clear of the bottom.
+     */
+    expect(lo).toBeGreaterThan(RAMP_LOW * 1.5)
+    expect(hi).toBeGreaterThan(0.62)
+  })
+
   it('keeps the shading rather than flattening it', () => {
     /*
      * The light-to-dark ordering within a band IS the models' shading. Assign
@@ -278,6 +321,69 @@ describe('every species adapts equally — the correction', () => {
   })
 })
 
+describe('which colour a set changes, per species', () => {
+  /*
+   * Joe's list, from the Pet-o-matic: "panda — the white should change, not the
+   * black. bee — the yellow should change. goat [the cow] — the white should
+   * change, not the horns and nose. penguin — the black should change."
+   *
+   * All four were the same fault. The pack's "black" is `#4d515f`, a dark
+   * blue-grey whose max channel is 95 (above SOUL_VALUE 78) and whose saturation
+   * is 0.19 (above MARKING_SATURATION 0.12) — so it qualifies as a base coat.
+   * It is also the colour of nearly every leg mesh. The picker counted VERTICES,
+   * so four legs and a nose outvoted the animal: black beat white on the panda
+   * 798 to 128.
+   *
+   * The table is now weighted by SURFACE AREA and ignores the extremity meshes.
+   * These expectations are stated over the shipped `species-base.json` rather
+   * than over the tool, because it is the file the game reads, and a re-export
+   * that quietly moves it should fail here.
+   */
+  const regionFor = (name: string) => {
+    const keys = (speciesBase as Record<string, string[]>)[name]
+    expect(keys, `${name} missing from species-base.json`).toBeTruthy()
+    const region = regionOf(new Set(keys))
+    expect(region, `${name} has no base region`).toBeTruthy()
+    return region!
+  }
+
+  it('changes the WHITE on the pale black-and-white animals', () => {
+    for (const name of ['panda', 'cow', 'polar']) {
+      expect(regionFor(name).pale, `${name} should recolour its pale coat`).toBe(true)
+    }
+  })
+
+  it('changes the YELLOW on the bee, not its stripes', () => {
+    const region = regionFor('bee')
+    expect(region.pale).toBe(false)
+    // Yellow, around 37°, rather than the dark blue-grey at 229° it used to pick.
+    expect(region.hue).toBeGreaterThan(20)
+    expect(region.hue).toBeLessThan(60)
+  })
+
+  it('changes the DARK on the penguin, because that is its coat', () => {
+    const region = regionFor('penguin')
+    expect(region.pale).toBe(false)
+    expect(Math.abs(region.hue - 230)).toBeLessThan(20)
+  })
+
+  it('leaves the tiger orange rather than taking its stripes', () => {
+    const region = regionFor('tiger')
+    expect(region.pale).toBe(false)
+    expect(region.hue).toBeGreaterThan(10)
+    expect(region.hue).toBeLessThan(45)
+  })
+
+  it('records a base coat for every one of the 24 species', () => {
+    const table = speciesBase as Record<string, string[]>
+    expect(Object.keys(table).length).toBe(24)
+    for (const [name, keys] of Object.entries(table)) {
+      expect(keys.length, `${name} has no base colours`).toBeGreaterThan(0)
+      expect(regionOf(new Set(keys)), name).toBeTruthy()
+    }
+  })
+})
+
 describe('the natural set is a no-op, not merely a small one', () => {
   it('is recognised as natural', () => {
     expect(isNatural(NATURAL)).toBe(true)
@@ -309,8 +415,20 @@ describe('recolourInto', () => {
 })
 
 describe('the set list', () => {
-  it('is one natural set plus twelve colours in three patterns', () => {
-    expect(SETS.length).toBe(37)
+  it('is one natural set plus twelve colours in two patterns', () => {
+    expect(SETS.length).toBe(25)
+  })
+
+  it('has no spotted sets, because spots are not expressible in this atlas', () => {
+    /*
+     * Joe reported every dotted set rendering as stripes. Measured: all 15,333
+     * triangles in the pack have a u-span of 0.00 atlas pixels, so the checker's
+     * x term was constant per triangle and collapsed to a function of y. Pinned
+     * here so a third wearing cannot be reintroduced as a palette alone — it
+     * needs a positional signal, which this texture does not carry.
+     */
+    for (const s of SETS) expect(s.pattern, s.id).not.toBe('dotty')
+    expect(new Set(SETS.map(s => s.pattern))).toEqual(new Set(['solid', 'stripy']))
   })
 
   it('has unique ids and unique names', () => {
@@ -331,8 +449,10 @@ describe('the set list', () => {
     }
   })
 
-  it('reaches nearly nine hundred creatures across 24 species', () => {
-    expect(totalVariants(24)).toBe(888)
+  it('reaches six hundred creatures across 24 species', () => {
+    // Was 888 with the spotted twelve. Item 7's album ladder is 600 long unless
+    // a third wearing arrives with a positional signal behind it.
+    expect(totalVariants(24)).toBe(600)
   })
 
   it('has ids that are safe to save and never renamed', () => {

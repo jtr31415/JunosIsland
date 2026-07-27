@@ -35,15 +35,30 @@
  * does not.
  */
 /**
- * Solid, stripy or dotty — the same twelve colours, worn three ways.
+ * Solid or stripy — the same twelve colours, worn two ways.
  *
  * Discovered by accident: a bug that recoloured only the exact sampled rows of
  * the atlas gradient banded every animal like a deckchair, and the banding
- * looked rather good. Each face of a cube pet samples its own point on a
- * vertical gradient, so a pattern painted DOWN that gradient comes out as a
- * pattern across the model.
+ * looked rather good.
+ *
+ * SPOTS ARE NOT EXPRESSIBLE HERE, and that is measured rather than a matter of
+ * effort. Joe reported that every set marked "dotted" was striped, and the cause
+ * is that all 15,333 triangles in the pack have a u-span of 0.00 atlas pixels —
+ * every triangle sits inside a single column. The old dotty rule was
+ * `(floor(y/5) + floor(x/5)) % 3`, so its x term was CONSTANT per triangle and
+ * the whole thing collapsed to a function of y: stripes with an offset.
+ *
+ * Nor is there a positional signal to reach for instead. Atlas v correlates with
+ * local vertex position at r = 0.015 (x), −0.081 (y) and −0.011 (z) — v is the
+ * shade the artist assigned a face, not where that face is on the animal. So a
+ * pattern painted into this atlas is a function of SHADE, and any spot would
+ * land wherever the shading happened to pass through it.
+ *
+ * Real spots therefore need a positional signal the texture does not carry —
+ * object-space in a shader, or per-part meshes. Joe's call, having seen this:
+ * *"we drop the dots for now, too much work for the value it brings."*
  */
-export type Pattern = 'solid' | 'stripy' | 'dotty'
+export type Pattern = 'solid' | 'stripy'
 
 export interface SetPalette {
   /** The set's colour, in degrees. This is where the coat ends up. */
@@ -58,6 +73,18 @@ export interface SetPalette {
    * models read as solid.
    */
   light: number
+  /**
+   * Where the ramp STARTS, for a set that has to read as light.
+   *
+   * Joe: *"make the sky colour lighter"*. Dropping saturation was the first
+   * attempt and it produced a dusty teal — desaturated is not the same as light.
+   * Value is the lever, and `light` cannot raise it: the ramp already reaches
+   * RAMP_HIGH, so a multiplier above 1 only clips. Lifting the FLOOR is what
+   * lightens a set, because it narrows the ramp upward and leaves the top alone.
+   *
+   * Defaults to RAMP_LOW.
+   */
+  floor?: number
 }
 
 /**
@@ -102,6 +129,27 @@ export const BAND = 64
  */
 export const RAMP_LOW = 0.34
 export const RAMP_HIGH = 1.0
+
+/**
+ * How much of its own contrast a species must have before its coat is stretched
+ * across the whole ramp.
+ *
+ * Normalising a species onto its own light-to-dark range is what lets a penguin
+ * and a fox take a set equally. Done without a limit it also AMPLIFIES: a polar
+ * bear's coat spans 0.137 of value, so stretching it over a ramp 0.66 wide is a
+ * gain of 4.8, and the atlas's own gradient steps come up with it as horizontal
+ * contour banding — visible on solid sets, and reading as exactly the corrugation
+ * the stripes were criticised for.
+ *
+ * So the gain is capped. A species with ordinary contrast — the beaver's coat
+ * spans 0.397, half-width 0.199 — is stretched fully, as before. A species with
+ * less than that keeps its shading gentle and CENTRED on the ramp, which is
+ * still the whole point: centred means clearly coloured, whether the coat started
+ * near-white or near-black.
+ *
+ * Expressed as a half-width, to match the arithmetic that uses it.
+ */
+export const CONTRAST_REFERENCE = 0.2
 
 /**
  * How far from its band's base colour a hue may sit and still be the coat.
@@ -202,8 +250,24 @@ export function inRegion(r: number, g: number, b: number, region: Region): boole
   return d <= BASE_HUE_SPREAD
 }
 
-/** How tall a stripe is, in atlas rows. */
-export const STRIPE = 6
+/**
+ * How tall a stripe is, in atlas rows.
+ *
+ * Chosen against the measurement rather than by taste, then checked by eye at
+ * three values. A triangle's v-span is 16.8 atlas rows at the median and 81.5 at
+ * p90, so the pitch decides whether a stripe is smaller or larger than a face:
+ *
+ *   - 6 (the original) put 1.4 stripe cycles across the median face and up to
+ *     6.8 across a large one. That is finer than the geometry, and it read as
+ *     knitwear ribbing rather than as markings — the thing Joe's first
+ *     Pet-o-matic screenshot shows.
+ *   - 40 put most faces entirely inside one band. The corrugation went, and so
+ *     did the pattern: it became indistinguishable from the solid set with
+ *     slightly uneven lighting.
+ *   - 14 gives roughly one cycle across a median face, so a body carries three
+ *     to five broad bands. Bold at pet scale and legible across a room.
+ */
+export const STRIPE = 14
 
 /**
  * Push a pixel's place on the ramp light or dark, to make a pattern.
@@ -216,28 +280,25 @@ export const STRIPE = 6
  * Deliberately painted into the ramp rather than as a second hue, because a
  * face samples one point of the atlas: whatever lands there is a flat colour
  * on that face, so the pattern is made of which faces get which shade.
+ *
+ * `x` is accepted and unused. It is kept in the signature because the only
+ * pattern this atlas could ever carry is a function of y — see the note on
+ * `Pattern` — and a caller passing a position deserves to be told that by the
+ * type rather than by a surprise.
  */
 export function patterned(
-  t: number, x: number, y: number, pattern: Pattern = 'solid',
+  t: number, _x: number, y: number, pattern: Pattern = 'solid',
 ): number {
   if (pattern === 'stripy') {
     const band = Math.floor(y / STRIPE) % 2 === 0
     return Math.max(0, Math.min(1, band ? t * 0.55 : t * 0.55 + 0.45))
   }
-  if (pattern === 'dotty') {
-    /*
-     * A coarse checker rather than round dots. Faces sample scattered points,
-     * so what reads as spots on the model is a scatter in the atlas — round
-     * dots would be wasted precision.
-     */
-    const spot = (Math.floor(y / 5) + Math.floor(x / 5)) % 3 === 0
-    return Math.max(0, Math.min(1, spot ? t * 0.5 + 0.5 : t * 0.5))
-  }
   return t
 }
 
 export function shade(t: number, p: SetPalette): [number, number, number] {
-  const ramp = RAMP_LOW + (RAMP_HIGH - RAMP_LOW) * Math.max(0, Math.min(1, t))
+  const low = Math.max(0, Math.min(RAMP_HIGH, p.floor ?? RAMP_LOW))
+  const ramp = low + (RAMP_HIGH - low) * Math.max(0, Math.min(1, t))
   return hsvToRgb(
     p.hue,
     Math.max(0, Math.min(1, p.sat)),
@@ -304,11 +365,31 @@ export function recolourInto(
     const region = regionOf(base)
     if (!region) return 0
 
+    /*
+     * The light-to-dark range comes from the SPECIES' OWN colours, not from
+     * every atlas pixel that happens to share its hue.
+     *
+     * Joe, on the penguin: *"the black should change and is changing, but seems
+     * to maintain the underlying black, making any colour change just very
+     * dark."* Measured, and he is describing a normalisation bug rather than a
+     * palette one. A penguin's coat occupies value 0.31–0.39 — a narrow, dark
+     * slice. `inRegion` is a hue WINDOW, so scanning the atlas for everything
+     * within 42° of hue 230 also swept up the elephant's pale blue-grey at 0.90
+     * and the cat's and koala's greys. That set hi ≈ 0.9 against the penguin's
+     * own lo ≈ 0.31, so its coat landed at t ≈ 0.07 — the bottom of the ramp,
+     * for every set. Dark, whatever colour it was told to be.
+     *
+     * Normalising against its own 14 recorded colours stretches that slice
+     * across the whole ramp, so a penguin takes a set as fully as a fox does —
+     * the same correction as the pale animals, one level up. Pixels outside the
+     * species' own range clamp to the ends, which keeps the gradient continuous
+     * rather than tearing it; they are pixels this species does not sample, and
+     * the texture is built per species precisely so that does not matter.
+     */
     let lo = Infinity, hi = -Infinity
-    for (let i = 0; i < rgba.length; i += 4) {
-      if (rgba[i + 3] === 0) continue
-      const r = rgba[i] as number, g = rgba[i + 1] as number, b = rgba[i + 2] as number
-      if (isSoul(r, g, b) || !inRegion(r, g, b, region)) continue
+    for (const key of base) {
+      const [r, g, b] = key.split(',').map(Number) as [number, number, number]
+      if (isSoul(r, g, b)) continue
       const v = Math.max(r, g, b) / 255
       if (v < lo) lo = v
       if (v > hi) hi = v
@@ -320,7 +401,17 @@ export function recolourInto(
       const r = rgba[i] as number, g = rgba[i + 1] as number, b = rgba[i + 2] as number
       if (isSoul(r, g, b) || !inRegion(r, g, b, region)) continue
       const v = Math.max(r, g, b) / 255
-      const t = hi > lo ? (v - lo) / (hi - lo) : 0.5
+      /*
+       * Centred on the ramp, with the gain capped at CONTRAST_REFERENCE. Writing
+       * it around the CENTRE rather than the low end is what makes the cap mean
+       * something: a low-contrast coat then sits in the middle of the ramp and
+       * reads as a coloured animal, instead of being pinned to whichever end its
+       * darkest colour happened to fall on.
+       */
+      const t = hi > lo
+        ? Math.max(0, Math.min(1,
+          0.5 + (v - (lo + hi) / 2) / (2 * Math.max((hi - lo) / 2, CONTRAST_REFERENCE))))
+        : 0.5
       const px = (i / 4) % width
       const py = Math.floor((i / 4) / width)
       const [nr, ng, nb] = shade(patterned(t, px, py, p.pattern), p)

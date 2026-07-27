@@ -1,9 +1,10 @@
 /**
- * The forty sets.
+ * The twenty-five sets.
  *
  * Phase 3 item 6. Each set is 24 creatures — one per species — and one
  * recoloured atlas, which is what item 5's autopsy makes possible (HANDOFF
- * §6). Forty sets is a little over a thousand creatures.
+ * §6). Twenty-five sets is 600 creatures; the spotted twelve that would have
+ * taken it near a thousand are gone, for the measured reason recorded below.
  *
  * THE ORDER IS LOAD-BEARING, in two ways, and cannot be shuffled casually.
  *
@@ -26,7 +27,7 @@
  * set. Assigning the colour and keeping only each species' own light-to-dark
  * ordering makes them all adapt equally.
  */
-import type { SetPalette } from './recolour'
+import type { Pattern, SetPalette } from './recolour'
 
 export interface PetSet extends SetPalette {
   /** Stable identity. Saved, so it may never be renamed. */
@@ -36,11 +37,12 @@ export interface PetSet extends SetPalette {
 }
 
 /**
- * TWELVE BOLD COLOURS, worn three ways.
+ * TWELVE BOLD COLOURS, worn two ways.
  *
  * Joe, after the first pass: "there are too many samey colours. Let's go for
  * the bold ones only, say around 10-12. Then we go stripy and dotty with the
- * same colours."
+ * same colours." The dotty half then proved unbuildable in this texture and was
+ * dropped — see the note where it used to be.
  *
  * He was right — forty sets built as vivid, pastel and deep versions of
  * thirteen families gave twenty-six palettes that were mostly *dilutions* of
@@ -49,31 +51,54 @@ export interface PetSet extends SetPalette {
  * glance; the variety comes from PATTERN instead, which is a difference you
  * can see across a room.
  */
-const BOLD: ReadonlyArray<{ id: string; name: string; hue: number }> = [
+const BOLD: ReadonlyArray<
+  { id: string; name: string; hue: number; sat?: number; light?: number; floor?: number }
+> = [
   { id: 'cherry', name: 'Cherry', hue: 2 },
   { id: 'tangerine', name: 'Tangerine', hue: 28 },
   { id: 'sunshine', name: 'Sunshine', hue: 48 },
   { id: 'lime', name: 'Lime', hue: 88 },
-  { id: 'emerald', name: 'Emerald', hue: 148 },
+  /*
+   * Three of the twelve carry their own saturation or lightness, from Joe's
+   * second Pet-o-matic pass. One flat SAT and light=1 for all twelve made these
+   * three wrong in ways only the eye catches: a mid-green at full brightness
+   * reads as lime's neighbour rather than as emerald, and 198° at high
+   * saturation is a swimming-pool blue rather than a sky.
+   */
+  // "emerald needs to be a deeper green" — darker, and nudged off lime's side.
+  { id: 'emerald', name: 'Emerald', hue: 152, sat: 0.86, light: 0.74 },
   { id: 'turquoise', name: 'Turquoise', hue: 176 },
-  { id: 'sky', name: 'Sky', hue: 198 },
-  { id: 'bluebell', name: 'Bluebell', hue: 220 },
+  /*
+   * "make the sky colour lighter." Lifting the ramp FLOOR, not dropping
+   * saturation — the first attempt took sat to 0.46 and produced a dusty teal,
+   * because desaturating makes a colour greyer rather than lighter. The
+   * saturation stays near bold and the whole coat sits in the top third of the
+   * ramp.
+   */
+  { id: 'sky', name: 'Sky', hue: 200, sat: 0.58, floor: 0.8 },
+  /*
+   * "the bluebell one deeper blue, like a royal blue without moving too close to
+   * indigo." Depth comes from `light`; the hue barely moves, and stays 28° clear
+   * of indigo at 250 so the two remain telling apart at pet scale.
+   */
+  { id: 'bluebell', name: 'Bluebell', hue: 222, sat: 0.92, light: 0.76 },
   { id: 'indigo', name: 'Indigo', hue: 250 },
   { id: 'violet', name: 'Violet', hue: 278 },
   { id: 'orchid', name: 'Orchid', hue: 305 },
   { id: 'bubblegum', name: 'Bubblegum', hue: 330 },
 ]
 
-/** Bold means bold: one saturation, high, for all of them. */
+/** Bold means bold: one saturation, high, unless a colour asks for its own. */
 const SAT = 0.82
 
-const wearing = (pattern: 'solid' | 'stripy' | 'dotty', label: string): PetSet[] =>
+const wearing = (pattern: Pattern, label: string): PetSet[] =>
   BOLD.map(c => ({
     id: pattern === 'solid' ? c.id : `${c.id}${pattern}`,
     name: pattern === 'solid' ? c.name : `${label} ${c.name}`,
     hue: c.hue,
-    sat: SAT,
-    light: 1,
+    sat: c.sat ?? SAT,
+    light: c.light ?? 1,
+    ...(c.floor === undefined ? {} : { floor: c.floor }),
     pattern,
   }))
 
@@ -89,8 +114,24 @@ export const SETS: readonly PetSet[] = [
   ...wearing('solid', ''),
   // The same twelve, striped.
   ...wearing('stripy', 'Stripy'),
-  // ...and spotted.
-  ...wearing('dotty', 'Spotty'),
+
+  /*
+   * THE SPOTTED TWELVE ARE GONE, and this is where the creature count went.
+   *
+   * They were shipped as a third wearing and every one of them came out striped.
+   * The cause is measured in recolour.ts: every triangle in the pack sits inside
+   * a single atlas column, so a pattern in this texture can only ever be a
+   * function of one axis. Joe, having seen that: *"we drop the dots for now, too
+   * much work for the value it brings."*
+   *
+   * The consequence is a SHORTER LADDER: 25 sets across 24 species is 600
+   * creatures, not the ~1,000 the brief sketches. Item 7 is where that has to be
+   * faced — either a third wearing arrives with a positional signal behind it
+   * (object-space in a shader, or per-part meshes), or the album ladder is 600
+   * long and the pacing re-bases on that. It is not a gap to be quietly padded
+   * with palettes that are dilutions of each other; that was the first pass and
+   * Joe rejected it.
+   */
 
   /*
    * THE LEGENDARY TEN are deliberately absent.
