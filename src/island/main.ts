@@ -175,8 +175,14 @@ async function boot(): Promise<void> {
       world.scene.add(plot.group)
     }
     plot.setProgress(state.sumProgress, sumsForTile(state))
-    // Hovering, so it reads as not-yet-placed wherever it is being shown.
-    plot.float(true)
+    /*
+     * NOT hovering. The transparent container already says "not placed yet"
+     * — that is its whole job — and raising the plot as well lifted it clean
+     * out of the vignette's frame. The hover belonged to the world-space
+     * version this replaced; the launch height it defined is still what the
+     * fly-back falls from.
+     */
+    plot.float(false)
   }
 
   const egg = createEgg()
