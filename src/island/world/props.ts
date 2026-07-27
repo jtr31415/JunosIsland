@@ -21,55 +21,130 @@ import type { Island } from './grid'
 import type { Surface, Ground } from './tiles'
 
 /**
- * Weighted by how much each reads as "landscape" rather than "object".
+ * WHAT KIND OF PLACE a tile is.
  *
- * Big features are deliberately rare: a mountain on every third tile is a
- * mountain range, which is a busier and much less friendly place than an
- * island with one mountain on it.
+ * Tiles used to draw their feature and their ground cover from one global
+ * weighted list, which gave every hex the same even sprinkle of everything.
+ * Uniform variety is its own kind of uniform: two tiles side by side looked
+ * interchangeable, and the island read as wallpaper.
+ *
+ * A character is picked per REGION rather than per tile, so neighbours tend to
+ * agree and the island grows in patches — a wood here, a stony shoulder there,
+ * highlands rising together into a range instead of one lonely peak per
+ * hillside. That patchiness is what the KayKit reference renders have and a
+ * per-tile roll cannot produce.
  */
-const LAND_PROPS: Array<{ name: string; weight: number; big?: boolean }> = [
-  { name: 'trees_A_small', weight: 5 },
-  { name: 'trees_A_medium', weight: 4 },
-  { name: 'trees_B_small', weight: 4 },
-  { name: 'trees_B_medium', weight: 3 },
-  { name: 'trees_A_large', weight: 2 },
-  { name: 'tree_single_A', weight: 3 },
-  { name: 'tree_single_B', weight: 3 },
-  { name: 'tree_single_A_cut', weight: 1 },
-  { name: 'rock_single_A', weight: 2 },
-  { name: 'rock_single_B', weight: 2 },
-  { name: 'rock_single_C', weight: 1 },
-  { name: 'rock_single_D', weight: 1 },
-  // Elevation — the pieces that give the island a skyline.
-  { name: 'hills_A', weight: 3, big: true },
-  { name: 'hills_B', weight: 3, big: true },
-  { name: 'hills_A_trees', weight: 4, big: true },
-  { name: 'hills_C_trees', weight: 3, big: true },
-  { name: 'mountain_B_grass', weight: 1, big: true },
-  { name: 'mountain_A_grass_trees', weight: 1, big: true },
+type Character = 'meadow' | 'wood' | 'rocky' | 'highland'
+
+const CHARACTERS: Array<{ kind: Character; weight: number }> = [
+  { kind: 'meadow', weight: 4 },
+  { kind: 'wood', weight: 4 },
+  { kind: 'rocky', weight: 2 },
+  { kind: 'highland', weight: 3 },
 ]
 
 /**
- * Fine detail from the Forest Nature pack: the small stuff that makes a tile
+ * The big feature each character grows, weighted within its own kind.
+ *
+ * `big` pieces are landscape rather than objects — they sit centred, block a
+ * wider radius and carry the island's skyline. A flat plane of hexes has no
+ * silhouette under an orbit camera, and silhouette is what makes a diorama.
+ */
+const FEATURES: Record<Character, Array<{ name: string; weight: number; big?: boolean }>> = {
+  meadow: [
+    { name: '', weight: 8 },                       // open ground: the rests
+    { name: 'tree_single_A', weight: 3 },
+    { name: 'tree_single_B', weight: 3 },
+    { name: 'rock_single_A', weight: 2 },
+    { name: 'tree_single_A_cut', weight: 1 },
+  ],
+  wood: [
+    { name: 'trees_A_small', weight: 5 },
+    { name: 'trees_A_medium', weight: 4 },
+    { name: 'trees_B_small', weight: 4 },
+    { name: 'trees_B_medium', weight: 3 },
+    { name: 'trees_A_large', weight: 2 },
+    { name: 'hills_A_trees', weight: 3, big: true },
+    { name: 'hills_B_trees', weight: 3, big: true },
+    { name: '', weight: 2 },
+  ],
+  rocky: [
+    { name: 'rock_single_A', weight: 3 },
+    { name: 'rock_single_B', weight: 3 },
+    { name: 'rock_single_C', weight: 2 },
+    { name: 'rock_single_D', weight: 2 },
+    { name: 'hills_C', weight: 2, big: true },
+    { name: '', weight: 3 },
+  ],
+  highland: [
+    { name: 'hills_A', weight: 4, big: true },
+    { name: 'hills_B', weight: 4, big: true },
+    { name: 'hills_C', weight: 3, big: true },
+    { name: 'hills_C_trees', weight: 3, big: true },
+    { name: 'mountain_A', weight: 2, big: true },
+    { name: 'mountain_B', weight: 2, big: true },
+    { name: 'mountain_C', weight: 2, big: true },
+    { name: 'mountain_A_grass', weight: 3, big: true },
+    { name: 'mountain_B_grass', weight: 3, big: true },
+    { name: 'mountain_C_grass', weight: 3, big: true },
+    { name: 'mountain_A_grass_trees', weight: 3, big: true },
+    { name: 'mountain_C_grass_trees', weight: 3, big: true },
+  ],
+}
+
+/**
+ * Ground cover from the Forest Nature pack — the small stuff that makes a tile
  * look inhabited rather than decorated.
  *
- * Deliberately a SECOND layer rather than more entries in the list above. The
- * hexagon pack supplies landscape — hills, mountains, wooded slopes — and this
- * supplies ground cover, so most tiles get a big feature OR open ground, and
- * nearly all of them get a scatter of tufts and stones on top. That two-layer
- * split is what stops the island reading as a tidy arrangement of objects.
+ * Deliberately a SECOND layer over the features above: the hexagon pack
+ * supplies landscape, this supplies undergrowth, and nearly every tile gets
+ * some. That two-layer split is what stops the island reading as a tidy
+ * arrangement of objects.
+ *
+ * The pack ships 105 models and this used to place EIGHT of them, so every
+ * tile drew its cover from the same handful and the repetition was obvious
+ * across any two hexes. The lists below are per character, so a rocky
+ * shoulder is stony and a meadow is grassy rather than both being an even mix.
  *
  * It has its OWN texture, not the hexagon atlas.
  */
-const FOREST_DETAIL = [
-  'Grass_1_A_Color1', 'Grass_2_A_Color1',
-  'Bush_1_A_Color1', 'Bush_2_A_Color1', 'Bush_4_A_Color1',
-  'Rock_1_A_Color1', 'Rock_2_A_Color1', 'Rock_3_A_Color1',
-  'Tree_1_A_Color1', 'Tree_2_A_Color1', 'Tree_3_A_Color1', 'Tree_4_A_Color1',
-]
+const COVER: Record<Character, readonly string[]> = {
+  meadow: [
+    'Grass_1_A_Color1', 'Grass_1_B_Color1', 'Grass_1_C_Color1', 'Grass_1_D_Color1',
+    'Grass_2_A_Color1', 'Grass_2_B_Color1', 'Grass_2_C_Color1', 'Grass_2_D_Color1',
+    'Bush_1_A_Color1', 'Bush_1_C_Color1', 'Bush_2_B_Color1', 'Bush_3_A_Color1',
+    'Rock_1_C_Color1', 'Rock_2_D_Color1',
+  ],
+  wood: [
+    'Bush_1_A_Color1', 'Bush_1_B_Color1', 'Bush_1_D_Color1', 'Bush_1_F_Color1',
+    'Bush_2_A_Color1', 'Bush_2_C_Color1', 'Bush_2_E_Color1',
+    'Bush_4_A_Color1', 'Bush_4_C_Color1', 'Bush_4_E_Color1',
+    'Grass_1_B_Color1', 'Grass_2_C_Color1',
+    'Rock_1_H_Color1', 'Rock_3_D_Color1',
+  ],
+  rocky: [
+    'Rock_1_A_Color1', 'Rock_1_D_Color1', 'Rock_1_G_Color1', 'Rock_1_K_Color1',
+    'Rock_1_N_Color1', 'Rock_2_A_Color1', 'Rock_2_C_Color1', 'Rock_2_F_Color1',
+    'Rock_3_A_Color1', 'Rock_3_E_Color1', 'Rock_3_J_Color1', 'Rock_3_M_Color1',
+    'Rock_3_Q_Color1', 'Grass_1_C_Color1', 'Bush_3_B_Color1',
+  ],
+  highland: [
+    'Rock_1_B_Color1', 'Rock_1_I_Color1', 'Rock_1_P_Color1',
+    'Rock_2_B_Color1', 'Rock_2_G_Color1', 'Rock_3_C_Color1', 'Rock_3_H_Color1',
+    'Rock_3_O_Color1', 'Grass_1_D_Color1', 'Grass_2_B_Color1',
+    'Bush_3_C_Color1', 'Bush_4_F_Color1',
+  ],
+}
 
-/** Only the small pieces scatter; trees are placed as features. */
-const DETAIL_SMALL = FOREST_DETAIL.slice(0, 8)
+/**
+ * A dead tree among live ones, occasionally.
+ *
+ * The cheapest way to stop a wood looking planted: real woods have one.
+ */
+const BARE_TREES = [
+  'Tree_Bare_1_A_Color1', 'Tree_Bare_1_B_Color1', 'Tree_Bare_1_C_Color1',
+  'Tree_Bare_2_A_Color1', 'Tree_Bare_2_B_Color1', 'Tree_Bare_2_C_Color1',
+]
 
 /** What grows on water. The same set the growing plot builds a pond from. */
 const WATER_PIECES = [
@@ -92,22 +167,39 @@ const ROCKY = /rock/i
 const allows = (name: string, ground: Ground): boolean =>
   ground === 'green' || (ground === 'sand' && ROCKY.test(name))
 
-const TOTAL_WEIGHT = LAND_PROPS.reduce((n, p) => n + p.weight, 0)
-
-function pickProp(h: number): typeof LAND_PROPS[number] {
-  let r = h % TOTAL_WEIGHT
-  for (const p of LAND_PROPS) {
-    r -= p.weight
-    if (r < 0) return p
-  }
-  return LAND_PROPS[0] as typeof LAND_PROPS[number]
-}
-
 /** Stable per-coordinate hash, so a tile's scenery never changes. */
 function hash(a: Axial): number {
   let h = (a.q * 73856093) ^ (a.r * 19349663)
   h = (h ^ (h >>> 13)) >>> 0
   return h
+}
+
+/** Weighted choice from a list, driven by a hash rather than by chance. */
+function pick<T extends { weight: number }>(list: readonly T[], h: number): T {
+  const total = list.reduce((n, x) => n + x.weight, 0)
+  let r = h % total
+  for (const x of list) {
+    r -= x.weight
+    if (r < 0) return x
+  }
+  return list[0] as T
+}
+
+/**
+ * What kind of place this tile is.
+ *
+ * Derived from a COARSE coordinate — neighbouring hexes usually fall in the
+ * same cell and so share a character. That is what makes highlands cluster
+ * into a range and woods into a wood, instead of every tile rolling
+ * independently and the whole island averaging out to the same texture.
+ *
+ * The blend with the tile's own hash keeps region edges ragged; without it
+ * the patches are visibly rectangular.
+ */
+function characterOf(a: Axial): Character {
+  const region = hash({ q: Math.floor(a.q / 2), r: Math.floor(a.r / 2) })
+  const jitter = hash(a) % 5 === 0 ? hash({ q: a.r, r: a.q }) : 0
+  return pick(CHARACTERS, (region ^ jitter) >>> 0).kind
 }
 
 export interface PropField {
@@ -202,6 +294,53 @@ export function createPropField(base = ''): PropField {
     return gltf.scene.clone(true)
   }
 
+  /**
+   * Ground cover around whatever the tile grew: tufts, stones, undergrowth.
+   *
+   * Sized against a PET, not the tile. The forest pieces are 0.23-0.58 units
+   * tall, so the first attempt at 0.16 scale rendered them at about 0.05 —
+   * invisible beside a 0.24-tall pet. Ground cover has to come up to roughly
+   * a pet's knee to register as ground cover at all.
+   *
+   * Small enough that pets walk over it, so it adds no obstacles — but it IS
+   * counted as clutter, because an egg standing in a bush cannot be tapped.
+   */
+  async function scatter(
+    a: Axial, w: { x: number; z: number }, character: Character,
+    h: number, hexSize: number, surface: Surface,
+  ): Promise<void> {
+    const palette = COVER[character]
+    const count = 5 + (h % 5)
+    for (let d = 0; d < count; d++) {
+      const dh = hash({ q: a.q * 31 + d, r: a.r * 17 - d })
+      /*
+       * One dead tree now and then, in woods and highlands. The cheapest way
+       * to stop a wood looking planted: real woods have one.
+       */
+      const bare = (character === 'wood' || character === 'highland') && dh % 23 === 0
+      const name = bare
+        ? BARE_TREES[dh % BARE_TREES.length] as string
+        : palette[dh % palette.length] as string
+
+      const ang = ((dh >> 4) % 360) * Math.PI / 180
+      const rad = hexSize * (0.18 + ((dh >> 7) % 55) / 100)
+      const x = w.x + Math.cos(ang) * rad
+      const z = w.z + Math.sin(ang) * rad
+      // Tufts over the sea used to float; stones on the beach are fine.
+      if (!allows(name, surface.groundAt(x, z))) continue
+
+      const bit = await forestModel(name)
+      bit.position.set(x, surface.heightAt(x, z) ?? 0, z)
+      bit.rotation.y = ((dh >> 11) % 360) * Math.PI / 180
+      // Vary per PIECE, not per tile, or a tile reads as one stamped set.
+      const scale = (bare ? 0.7 : 0.36) + ((dh >> 13) % 34) / 100
+      bit.scale.setScalar(scale)
+      group.add(bit)
+      decor.push({ x, z, r: hexSize * 0.16 * (scale / 0.5) })
+      if (bare) blocks.push({ x, z, r: hexSize * 0.16 })
+    }
+  }
+
   return {
     group,
 
@@ -266,12 +405,25 @@ export function createPropField(base = ''): PropField {
 
         // The home rock stays clear: Fred, the egg and the first pet live there.
         if (a.q === 0 && a.r === 0) { placed.add(k); continue }
-        // Roughly one tile in three stays open, so pets have room to wander
-        // and the island keeps some breathing space.
-        if (h % 3 === 0) { placed.add(k); continue }
 
-        const spec = pickProp(h)
+        /*
+         * What kind of place this is, and therefore what grows on it.
+         *
+         * Open ground is now an ENTRY in each character's feature table
+         * rather than a blanket "one tile in three": a meadow is mostly open,
+         * a highland almost never is. That keeps the breathing space pets
+         * wander in without flattening the difference between a wood and a
+         * field.
+         */
+        const character = characterOf(a)
+        const spec = pick(FEATURES[character], h)
         const w = toWorld(a, hexSize)
+
+        if (!spec.name) {
+          placed.add(k)
+          await scatter(a, w, character, h, hexSize, surface)
+          continue
+        }
         // Big features sit centred — a mountain half off its hex looks broken.
         // Small ones scatter, so a wood does not look like a plantation.
         const spread = spec.big ? 0.12 : 0.5
@@ -307,34 +459,7 @@ export function createPropField(base = ''): PropField {
           r: hexSize * (spec.big ? 0.5 : 0.3),
         })
 
-        /*
-         * Ground cover on top: tufts and stones scattered around the feature.
-         *
-         * Sized against a PET, not the tile. The forest pieces are 0.23-0.58
-         * units tall, so the first attempt at 0.16 scale rendered them at
-         * about 0.05 — invisible beside a 0.24-tall pet. Ground cover has to
-         * come up to roughly a pet's knee to register as ground cover at all.
-         *
-         * Small enough that pets walk over them, so they add no obstacles.
-         */
-        const detailCount = 4 + (h % 4)
-        for (let d = 0; d < detailCount; d++) {
-          const dh = hash({ q: a.q * 31 + d, r: a.r * 17 - d })
-          const name = DETAIL_SMALL[dh % DETAIL_SMALL.length] as string
-          const ang = ((dh >> 4) % 360) * Math.PI / 180
-          const rad = hexSize * (0.2 + ((dh >> 7) % 52) / 100)
-          const x = w.x + Math.cos(ang) * rad
-          const z = w.z + Math.sin(ang) * rad
-          // Tufts over the sea used to float; stones on the beach are fine.
-          if (!allows(name, surface.groundAt(x, z))) continue
-          const bit = await forestModel(name)
-          bit.position.set(x, surface.heightAt(x, z) ?? 0, z)
-          bit.rotation.y = ((dh >> 11) % 360) * Math.PI / 180
-          const scale = 0.4 + ((dh >> 13) % 30) / 100
-          bit.scale.setScalar(scale)
-          group.add(bit)
-          decor.push({ x, z, r: hexSize * 0.16 * (scale / 0.5) })
-        }
+        await scatter(a, w, character, h, hexSize, surface)
       }
     },
 
