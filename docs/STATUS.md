@@ -2,7 +2,9 @@
 
 *Updated 27 July 2026, against `docs/pet-island-phase3-brief.md` and its
 numbering. Read `docs/HANDOFF.md` first for how to work on this without
-breaking it; this is what has been done and what is left.*
+breaking it; this is what has been done. **`docs/BACKLOG.md` is what is LEFT** —
+every open card with the measurements and reasoning attached, so a fresh session
+does not have to rediscover any of it.*
 
 **PHASE 3 IS COMPLETE — items 0–6.** Its close-out is
 `docs/PHASE3-HANDOVER.md`: what exists, how it is wired, and what Phase 4 has to
