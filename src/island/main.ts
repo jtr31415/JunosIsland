@@ -210,6 +210,8 @@ async function boot(): Promise<void> {
    */
   const stage = createStage()
   world.onOverlayFrame(renderer => {
+    // Only when it is actually holding something — see stage.isShowing().
+    if (!stage.isShowing()) return
     const rect = overlay.stageRect()
     if (rect) stage.render(renderer, rect)
   })

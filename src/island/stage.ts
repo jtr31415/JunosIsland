@@ -95,6 +95,16 @@ export interface Stage {
   /** Is this object the one currently on the turntable? */
   holds(object: THREE.Object3D | null): boolean
   /**
+   * Is there anything on the turntable at all?
+   *
+   * The vignette must not be DRAWN when it is empty. A tile under
+   * construction now hovers over the real island instead of being lifted in
+   * here, so on a sums round the slot beside the panel is meant to be a
+   * transparent hole onto the world — and rendering an empty scene into it
+   * put back exactly the green container that hole exists to remove.
+   */
+  isShowing(): boolean
+  /**
    * Stand a temporary object on the turntable, popping it into being.
    *
    * Detached by the stage on the next call or on dispose() — DETACHED, never
@@ -280,6 +290,8 @@ export function createStage(): Stage {
     },
 
     holds: object => !!object && guest === object,
+
+    isShowing: () => !!guest || !!temp,
 
     burst() {
       burstT = 0
