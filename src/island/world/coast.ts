@@ -441,6 +441,10 @@ function drawnAround(island: Island, a: Axial, looks: Map<string, TileLook>): Ed
 const typesAround = (island: Island, a: Axial): EdgeKind[] =>
   neighbours(a).map(n => (tileAt(island, n) === 'grass' ? 'land' : 'water') as EdgeKind)
 
+/** The same, over any tile lookup — so a hypothetical placement needs no copy. */
+const typesAroundVia = (at: (n: Axial) => TileType | undefined, a: Axial): EdgeKind[] =>
+  neighbours(a).map(n => (at(n) === 'grass' ? 'land' : 'water') as EdgeKind)
+
 /**
  * Would putting `t` at `a` leave every coastline it touches drawable?
  *
@@ -456,12 +460,21 @@ const typesAround = (island: Island, a: Axial): EdgeKind[] =>
  * neighbours must all still be drawable afterwards.
  */
 export function allows(island: Island, a: Axial, t: TileType): boolean {
-  const tiles = new Map(island.tiles)
-  tiles.set(key(a), t)
-  const after: Island = { tiles }
+  /*
+   * The candidate is applied as an OVERRIDE rather than by copying the map.
+   *
+   * `buildableSockets` asks this of every socket, and every socket asks it of
+   * seven cells, so copying the whole island each time made the cost quadratic
+   * in island size — enough to push the played-island test past a five-second
+   * timeout on a loaded machine, and enough to matter on the tablet, since the
+   * socket outlines are re-synced whenever the island changes.
+   */
+  const ka = key(a)
+  const at = (n: Axial): TileType | undefined =>
+    (key(n) === ka ? t : tileAt(island, n))
   for (const c of [a, ...neighbours(a)]) {
-    if (tileAt(after, c) !== 'water') continue
-    if (!drawableAsWater(typesAround(after, c))) return false
+    if (at(c) !== 'water') continue
+    if (!drawableAsWater(typesAroundVia(at, c))) return false
   }
   return true
 }

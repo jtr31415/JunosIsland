@@ -66,9 +66,9 @@
 
     { "id": "hatch.homeAtLast", "character": "fred", "category": "ceremony", "text": "Home at last!", "port": "item 11", "note": "Follows a name. clip. Replaces '[PETNAME] has arrived!'" },
     { "id": "hatch.isHere", "character": "fred", "category": "ceremony", "text": "Look who's here!", "port": "item 11", "note": "Follows a name. clip. Replaces '[PETNAME] is here!'" },
-    { "id": "land.counted", "character": "fred", "category": "ceremony", "text": "You counted us up some land!" },
+    { "id": "land.counted", "character": "fred", "category": "ceremony", "text": "You have found some land for your friends!" },
 
-    { "id": "gov.spaceSurplus", "character": "fred", "category": "governor", "text": "We've got lots of lovely space — let's read some friends home first!" },
+    { "id": "gov.spaceSurplus", "character": "fred", "category": "governor", "text": "Let's read with the egg to get some more friends!" },
     { "id": "gov.nurseryQueue", "character": "fred", "category": "governor", "text": "They need homes first!" }
   ]
 }

@@ -23,7 +23,17 @@ export type Governor = 'none' | 'space-surplus' | 'nursery-queue'
 
 /** Fred's line for each. Want-framed: what to do next, never what is barred. */
 export const GOVERNOR_LINE: Record<Exclude<Governor, 'none'>, string> = {
-  'space-surplus': "We've got lots of lovely space — let's read some friends home first!",
+  /*
+   * Joe: *"'lets read some friends home first' sounds aweful. lets put it as
+   * 'Lets read with the egg to get some more friends'"*.
+   *
+   * He is right, and the reason is worth keeping: "read some friends home" uses
+   * the world-law vocabulary as if the child already shares it, which reads as
+   * whimsy rather than instruction. The new line names the OBJECT she has to tap
+   * — the egg — so it tells her what to do rather than describing what will
+   * happen. Kept want-framed, and the apostrophe is deliberate in a reading game.
+   */
+  'space-surplus': "Let's read with the egg to get some more friends!",
   'nursery-queue': 'They need homes first!',
 }
 

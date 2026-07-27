@@ -1088,7 +1088,18 @@ async function boot(): Promise<void> {
           // Down comes the stage, and the land arcs onto its socket.
           stageFor(null)
           overlay.close()
-          speech.speak('You counted us up some land!')
+          /*
+           * Joe: *"'You've counted up some land' sounds off. lets call it 'You
+           * have found some land for your friends'"*.
+           *
+           * Note this MOVES the world-law vocabulary. script.ts records that land
+           * is *counted up*, and the opening still says "can you count us up some
+           * land?" — so the ask and the reward now use different words. Joe's call,
+           * and the new line is better on its own terms (it names who the land is
+           * FOR, which is the whole loop), but the opening line is the other half
+           * and wants the same treatment when he next looks at the script.
+           */
+          speech.speak('You have found some land for your friends!')
           fred.talk(2.2)
           /*
            * In from the SIDE, to the socket she chose — never the middle.
