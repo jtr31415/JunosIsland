@@ -219,6 +219,24 @@ service worker before verifying is doing real work, not ceremony.
   WALKING_HEIGHT)`, because a pet under a tree's canopy has not clipped
   anything. And the clamp must add the pet's OWN radius — clamping a centre to
   a surface buries half a pet in the rock.
+- **Rolling the build back shows her an empty island.** A rolled-back build's
+  `createLocalStore.get` sees `schemaVersion: 2 > 1` and returns null, then its
+  boot-time `refresh()` immediately overwrites localStorage with a fresh
+  legacy save. IndexedDB survives untouched, so re-upgrading brings her island
+  back — but anything she played during the rollback was adopted at rev 0 and
+  loses to the pre-rollback revision. No down-migration fixes this properly;
+  it is the argument for item 4's pinned production releases landing early. If
+  a rollback is ever needed, take a backup from the gear FIRST.
+- **A save's revision must be claimed before anything is awaited.** Two
+  concurrent `put`s that both read the counter and write it back afterwards
+  claim the same revision, equal revisions tie on load, and the tie goes to
+  localStorage — so the older island can win and a just-hatched pet vanishes.
+  Writes are queued per document for the same reason. This defeated the
+  persistence barrier from underneath while every test still passed.
+- **`browserText.write` swallows quota errors on purpose**, so localStorage can
+  silently fall behind IndexedDB on a full device. Anything that reads a save
+  for a PURPOSE — export, import, diagnostics — has to pick the higher
+  revision the way `get` does, not just read localStorage.
 - **The service worker uses `skipWaiting` + `clientsClaim`.** `autoUpdate`
   alone waits for every tab to close, which produces phantom regressions —
   fixes demonstrably in the deployed JavaScript but not in what the browser

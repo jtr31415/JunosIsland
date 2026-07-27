@@ -76,7 +76,30 @@ booted her a brand new island and wiped every friend and tile she owns. Fixed
 in `abde7d2` by adopting legacy documents at rev 0. It passed every test in the
 file beforehand, because every test wrote its fixture through the new store.
 
-**A Fable review of the whole item is outstanding at time of writing.**
+**The Fable review found four more, one of them another way to lose a pet.**
+All fixed in `7173b23`:
+
+- Two concurrent saves could claim the same revision, and the older island
+  could then win — defeating the barrier from underneath. Revisions are
+  claimed synchronously now and writes queued per document. My first two tests
+  for it both passed against the bug; they are rewritten and now fail without
+  the fix.
+- **"Start again" had silently stopped wiping anything** — it cleared the
+  localStorage key and the IndexedDB copy came straight back on reload.
+- Backup could export the stale copy on a storage-squeezed device, which is
+  the one device where a backup matters.
+- Import re-sealed a damaged file into a valid save, the only path where the
+  checksum was not consulted.
+- A full disk broke the hatch ceremony: an unguarded ring write rejected after
+  the save had already landed.
+
+**Two deviations from the brief, recorded rather than hidden.** Acceptance (c)
+asks for a byte-identical export→import round trip, which is unmeetable as
+written — `rev` and `updatedAt` legitimately change on restore — so the test
+asserts the payload round-trips instead. And the migration numbering treats
+the existing saves as v1 rather than retroactively v0, because
+`schemaVersion: 1` is literally what is on her tablet; the synthetic ladder
+test proves the framework as the brief intended.
 
 ---
 
