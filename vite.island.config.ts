@@ -19,14 +19,22 @@ const stamp = new Date().toISOString().slice(5, 16).replace('T', ' ')
  * A DEFINE rather than an env lookup, deliberately. The literal string is
  * substituted into the bundle, so `__CHANNEL__ !== 'production'` folds to
  * false and Rollup deletes the branch — which is what lets balance.dev.json
- * be absent from production output rather than merely unreachable.
+ * and the Pet-o-matic be absent from production output rather than merely
+ * unreachable.
+ *
+ * `npm run dev` is always preview. Otherwise the dev server would default to
+ * production, every flag would be off, and the Pet-o-matic — which exists to
+ * be looked at locally — could not be opened at all.
  */
-const channel = process.env.ISLAND_CHANNEL === 'preview' ? 'preview' : 'production'
+const channelFor = (command: string): string =>
+  process.env.ISLAND_CHANNEL === 'preview' || command === 'serve'
+    ? 'preview'
+    : 'production'
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   define: {
     __BUILD_STAMP__: JSON.stringify(stamp),
-    __CHANNEL__: JSON.stringify(channel),
+    __CHANNEL__: JSON.stringify(channelFor(command)),
   },
   root: resolve(here, 'src/island'),
   base: '/JunosIsland/',
@@ -67,4 +75,4 @@ export default defineConfig({
     outDir: resolve(here, 'dist/island'),
     emptyOutDir: true,
   },
-})
+}))
