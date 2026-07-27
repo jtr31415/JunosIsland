@@ -22,6 +22,11 @@ import { handleWorldTap } from '../../src/island/interactions'
 import type { InteractionPorts } from '../../src/island/interactions'
 import { place } from '../../src/island/world/grid'
 import type { Island } from '../../src/island/world/grid'
+import { readFileSync } from 'node:fs'
+import { resolve, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const here = dirname(fileURLToPath(import.meta.url))
 
 function ports(over: Partial<InteractionPorts> = {}): InteractionPorts {
   return {
@@ -171,5 +176,53 @@ describe('choosing again swaps the build without costing her anything', () => {
     const changed = chooseTile(askToRetype(f), 'grass')
     expect(changed.plot?.type).toBe('grass')
     expect(changed.phase).toBe('free')
+  })
+})
+
+/**
+ * The half-built tile must be ON THE ISLAND when the panel is not.
+ *
+ * Joe, 28 July: *"there is never a half built tile, when leaving the incremental
+ * build, map goes back to blank and it only resumes when i pick any blank tile
+ * socket, without option to change."*
+ *
+ * `stageFor('sum')` re-parents the plot onto the overlay's turntable, and the
+ * turntable goes away with the panel. One `overlay.close()` in main.ts closed
+ * without handing the plot back, so it stayed alive — still in `flow.plot`,
+ * still holding her sums — parented to something no longer on screen. Her island
+ * showed an empty socket. Tapping any socket called `askForLand`, which resumes
+ * a standing plot and re-staged it: "it only resumes when I pick a socket".
+ *
+ * It is asserted against the SOURCE because the fault is in the glue rather than
+ * in any function: every unit here behaved correctly and the sequence still lost
+ * her tile. That is the same class of bug, and the same kind of test, as the
+ * wiring assertions in stretch.test.ts.
+ */
+describe('no overlay.close() strands the plot on the hidden stage', () => {
+  const MAIN = resolve(here, '../../src/island/main.ts')
+
+  /** Comments stripped, so a `close()` written about in prose is not a match. */
+  const code = (): string => readFileSync(MAIN, 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/[^\n]*/g, '')
+
+  it('hands the stage back before closing, at every single site', () => {
+    const lines = code().split('\n')
+    const stranded: string[] = []
+    lines.forEach((line, i) => {
+      if (!line.includes('overlay.close()')) return
+      // The teardown may share the line or sit just above it.
+      const window = lines.slice(Math.max(0, i - 3), i + 1).join('\n')
+      if (!window.includes('stageFor(null)')) stranded.push(`${i + 1}: ${line.trim()}`)
+    })
+    expect(stranded, 'these close the panel while it still holds her plot')
+      .toEqual([])
+  })
+
+  it('is checking something — the sites exist to be checked', () => {
+    // Guards the guard: a rename of `overlay.close()` would make the test above
+    // pass by finding nothing at all.
+    const hits = code().split('\n').filter(l => l.includes('overlay.close()'))
+    expect(hits.length).toBeGreaterThanOrEqual(4)
   })
 })

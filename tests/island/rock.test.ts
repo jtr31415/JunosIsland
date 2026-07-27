@@ -34,7 +34,7 @@ import { createFlow, tileOffer, tileTypeFor, rockUnlocked } from '../../src/isla
 import type { Flow } from '../../src/island/flow'
 import { spaceSurplus } from '../../src/island/governors'
 import { PALETTE } from '../../src/island/world/increments'
-import { MOUNTAIN_HEXES } from '../../src/island/world/props'
+import { MOUNTAIN_HEXES, mountainHexFor, mountainSpinFor } from '../../src/island/world/props'
 import { balance } from '../../src/island/balance'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -372,5 +372,83 @@ describe('the finished mountain hex is the pack\'s pre-assembled one', () => {
     const hex = widthOf('tiles/hex_grass.gltf')
     expect(w / hex).toBeGreaterThan(0.75)
     expect(w).toBeGreaterThan(1.7)   // i.e. bigger than FITS.big would allow
+  })
+})
+
+/**
+ * The plot builds the mountain she picked, and keeps it.
+ *
+ * Joe, 28 July: *"when selecting a mountain tile, the incremental build goes back
+ * to a gras tile with props on. we need to make sure the proper rock/mountain
+ * tile is already set up there so it gets placed on completion."*
+ *
+ * TWO PLACEMENT PATHS AGAIN — `increments.ts` grows the plot, `props.ts` plants
+ * the finished hex (HANDOFF §6) — and for a mountain they must agree exactly, not
+ * merely look similar: she watches one particular peak rise and that is the peak
+ * she must be given. So there is ONE chooser, and both callers use it.
+ */
+describe('the mountain on the plot is the mountain she gets', () => {
+  const MAIN = resolve(here, '../../src/island/main.ts')
+  const PROPS = resolve(here, '../../src/island/world/props.ts')
+  const INCREMENTS = resolve(here, '../../src/island/world/increments.ts')
+  const code = (p: string): string => readFileSync(p, 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/[^\n]*/g, '')
+
+  it('names a real model, deterministically, for any hex', () => {
+    const names = new Set(MOUNTAIN_HEXES.map(m => m.name))
+    for (let q = -8; q <= 8; q++) {
+      for (let r = -8; r <= 8; r++) {
+        const a = { q, r }
+        const name = mountainHexFor(a)
+        expect(names.has(name), `${q},${r} -> ${name}`).toBe(true)
+        // Twice the same question, twice the same answer: the island must not
+        // rearrange itself between a build and its touchdown, or between loads.
+        expect(mountainHexFor(a)).toBe(name)
+      }
+    }
+  })
+
+  it('reaches every mountain in the table, so the range is not all one peak', () => {
+    const seen = new Set<string>()
+    for (let q = -12; q <= 12; q++) {
+      for (let r = -12; r <= 12; r++) seen.add(mountainHexFor({ q, r }))
+    }
+    expect(seen.size).toBe(MOUNTAIN_HEXES.length)
+  })
+
+  it('faces a hex edge, and never a negative one', () => {
+    /*
+     * The signed-shift trap this project has already paid for once: `hash` is
+     * unsigned 32-bit and `>>` is signed, so half of all hashes went negative.
+     * There it produced `forest/undefined.gltf`; here it would silently mirror
+     * the facing, and the plot and the finished hex would disagree by a turn.
+     */
+    for (let q = -20; q <= 20; q++) {
+      for (let r = -20; r <= 20; r++) {
+        const spin = mountainSpinFor({ q, r })
+        expect(spin).toBeGreaterThanOrEqual(0)
+        expect(spin).toBeLessThan(Math.PI * 2)
+        const sixths = spin / (Math.PI / 3)
+        expect(Math.abs(sixths - Math.round(sixths))).toBeLessThan(1e-9)
+      }
+    }
+  })
+
+  it('is the SAME function on both paths, asserted in the source', () => {
+    // The agreement is by construction. A second `pick` over the same table
+    // would be one edit away from disagreeing, and nothing would fail.
+    expect(code(PROPS)).toContain('mountainHexFor(a)')
+    expect(code(PROPS)).toContain('mountainSpinFor(a)')
+    expect(code(MAIN)).toContain('mountainHexFor(state.plot.at)')
+    expect(code(MAIN)).toContain('mountainSpinFor(state.plot.at)')
+  })
+
+  it('the plot takes a pre-assembled feature instead of eight scattered pieces', () => {
+    const src = code(INCREMENTS)
+    expect(src).toContain('feature')
+    // Skipping the scatter is the point: the mound covers four fifths of the hex,
+    // so cover placed on it would be cover placed INSIDE it.
+    expect(src).toMatch(/feature\s*\?\s*\[\]\s*:\s*piecesFor/)
   })
 })

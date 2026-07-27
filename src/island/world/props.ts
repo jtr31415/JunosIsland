@@ -169,6 +169,27 @@ export const MOUNTAIN_HEXES: Array<{ name: string; weight: number; big?: boolean
 ]
 
 /**
+ * Which mountain a given rock hex grows, and which way it faces.
+ *
+ * EXPORTED BECAUSE THE PLOT NEEDS THE SAME ANSWER. Joe: *"when selecting a
+ * mountain tile, the incremental build goes back to a gras tile with props on.
+ * we need to make sure the proper rock/mountain tile is already set up there so
+ * it gets placed on completion."*
+ *
+ * The growing plot and the finished hex are two different placement paths
+ * (increments.ts and this file — HANDOFF §6), and for a mountain they must agree
+ * EXACTLY: she watches a particular peak rise, and that is the peak she must
+ * get. A second `pick` over the same table would be one edit away from
+ * disagreeing, so there is one function and both callers use it.
+ */
+export const mountainHexFor = (a: Axial): string =>
+  pick(MOUNTAIN_HEXES, hash(a)).name
+
+/** ...and the facing, snapped to a hex edge. Same reasoning: one answer. */
+export const mountainSpinFor = (a: Axial): number =>
+  ((hash(a) >>> 5) % 6) * (Math.PI / 3)
+
+/**
  * Ground cover from the Forest Nature pack — the small stuff that makes a tile
  * look inhabited rather than decorated.
  *
@@ -1125,7 +1146,11 @@ export function createPropField(base = ''): PropField {
          */
         const rockTile = type === 'rock'
         const character = rockTile ? 'highland' : characterOf(a)
-        const spec = rockTile ? pick(MOUNTAIN_HEXES, h) : pick(FEATURES[character], h)
+        // Through the shared chooser, so the peak she watched rise on the plot is
+        // the peak that lands here.
+        const spec = rockTile
+          ? { name: mountainHexFor(a), weight: 1 }
+          : pick(FEATURES[character], h)
         const w = home
 
         if (!spec.name) {
@@ -1196,7 +1221,9 @@ export function createPropField(base = ''): PropField {
         // Sit ON the ground, not at y = 0 — coast ramps slope, and later
         // elevation will too.
         obj.position.set(spot.x, spot.y, spot.z)
-        obj.rotation.y = ((h >> 5) % 6) * (Math.PI / 3)   // snap to hex facings
+        // Snap to hex facings. A mountain goes through the shared chooser so the
+        // plot and the finished hex face the same way, not merely look alike.
+        obj.rotation.y = rockTile ? mountainSpinFor(a) : ((h >> 5) % 6) * (Math.PI / 3)
         group.add(obj)
         /*
          * Every feature clears the threshold — the smallest is a slab 0.88

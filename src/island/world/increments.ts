@@ -379,6 +379,24 @@ export function createGrowingPlot(
    * site a plot before the island around it is known.
    */
   look: TileLook | null = null,
+  /**
+   * One pre-assembled piece that IS the tile, rather than scenery arranged on it.
+   *
+   * A mountain hex, in other words. Joe: *"when selecting a mountain tile, the
+   * incremental build goes back to a gras tile with props on. we need to make
+   * sure the proper rock/mountain tile is already set up there so it gets placed
+   * on completion."*
+   *
+   * Passed IN rather than derived here, from `props.mountainHexFor`, because the
+   * finished hex is planted by the other placement path and the two must name the
+   * same model and the same facing — she watches one particular peak rise and
+   * that is the peak she must get (HANDOFF §6).
+   *
+   * When set, the eight scattered pieces are skipped entirely: the mound covers
+   * more than four fifths of the hex, so there is nowhere for cover to stand that
+   * is not inside it, which is the trees-inside-rocks fault by another name.
+   */
+  feature: { name: string; spin: number } | null = null,
 ): GrowingPlot {
   const group = new THREE.Group()
   group.name = 'growing-plot'
@@ -510,7 +528,25 @@ export function createGrowingPlot(
    * of clumping — with only eight of them a random scatter leaves obvious
    * bald patches, which reads as unfinished rather than natural.
    */
-  const names = piecesFor(type, seed)
+  const names = feature ? [] : piecesFor(type, seed)
+
+  /*
+   * The mountain, centred and at its native size — the same treatment props.ts
+   * gives it, and for the same reason: the pack already sized these to a hex, so
+   * every scale factor applied on top is a shrink. It takes the FIRST scenery
+   * increment, so its golden ghost stands there from the moment she sites the
+   * plot and turns to stone on her first sum. That ghost is what makes the
+   * promise Joe is asking for — the mountain is set up there, visibly, and it is
+   * what arrives.
+   */
+  if (feature) {
+    void deps.prop(feature.name).then(object => {
+      object.position.set(0, 0, 0)
+      object.rotation.y = feature.spin
+      object.userData.fullScale = 1
+      install(1, object)
+    }).catch(() => { /* a missing peak leaves a bare hex, never a broken build */ })
+  }
 
   /*
    * Where each piece stands, worked out UP FRONT and all together.

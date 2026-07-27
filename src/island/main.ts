@@ -18,7 +18,9 @@ import { createEgg } from './egg'
 import { createFred } from './fred'
 import { createSign } from './sign'
 import { createStage, dotsFilled, DOT_COUNT } from './stage'
-import { createPropField, footprintBelow, WALKING_HEIGHT } from './world/props'
+import {
+  createPropField, footprintBelow, WALKING_HEIGHT, mountainHexFor, mountainSpinFor,
+} from './world/props'
 import { createGrowingPlot } from './world/increments'
 import { plannedLook } from './world/coast'
 import type { GrowingPlot } from './world/increments'
@@ -229,7 +231,15 @@ async function boot(): Promise<void> {
          * then arrived as a coast piece, which is a discontinuity at the one
          * moment §2 wants continuity.
          */
-      }, seed >>> 0, plannedLook(state.island, state.plot.at, state.plot.type))
+      }, seed >>> 0, plannedLook(state.island, state.plot.at, state.plot.type),
+      /*
+       * A mountain hex builds AS a mountain. Named through the shared chooser so
+       * the peak she watches rise is the one props.ts plants at touchdown — the
+       * two placement paths agreeing by construction rather than by luck.
+       */
+      state.plot.type === 'rock'
+        ? { name: mountainHexFor(state.plot.at), spin: mountainSpinFor(state.plot.at) }
+        : null)
       const w = world.worldOf(state.plot.at)
       plot.group.position.copy(w)
       plotAt = state.plot.at
@@ -1331,7 +1341,24 @@ async function boot(): Promise<void> {
       sfx.play('up')
       refresh()
 
-      if (!more) { overlay.close(); return }
+      /*
+       * TAKE THE PLOT OFF THE STAGE BEFORE CLOSING. This line closed the panel
+       * without it, and that is the whole of Joe's *"there is never a half built
+       * tile... map goes back to blank and it only resumes when i pick any blank
+       * tile socket"*.
+       *
+       * `stageFor('sum')` re-parents the plot onto the turntable, and the
+       * turntable goes with the panel. Closing without handing it back left the
+       * plot alive, still in `flow.plot` and still holding her sums, but parented
+       * to something no longer on screen — so her island showed an empty socket
+       * where her half-built tile should be. Tapping any socket called
+       * `askForLand`, which resumes the standing plot and re-staged it, which is
+       * exactly the "it comes back when I pick a socket" she described.
+       *
+       * It also made the change-your-mind tap unreachable: there was no plot on
+       * the island to tap.
+       */
+      if (!more) { stageFor(null); overlay.close(); return }
 
       // Same rule for land: keep counting until the plot is finished. Each sum
       // grows the plot a little more, and refresh() has just shown that.
