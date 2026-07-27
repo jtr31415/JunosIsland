@@ -130,12 +130,17 @@ export function createStage(): Stage {
   turntable.name = 'turntable'
   scene.add(turntable)
 
-  // A small plinth, so the piece is standing on something rather than floating.
+  /*
+   * A small plinth, so the piece stands on something rather than floating.
+   *
+   * SIZED TO THE GUEST, in frame(). At a fixed radius it was built for a hex,
+   * and under an egg — a third the width — it filled the lower half of the
+   * vignette and read as a beige desert the egg happened to be sitting in.
+   */
   const plinth = new THREE.Mesh(
-    new THREE.CylinderGeometry(1.05, 1.15, 0.14, 24),
+    new THREE.CylinderGeometry(1, 1.08, 0.12, 24),
     new THREE.MeshStandardMaterial({ color: 0xf3e7c8, metalness: 0, roughness: 1 }),
   )
-  plinth.position.y = -0.07
   turntable.add(plinth)
 
   /** Scratch for the renderer's CSS-pixel size; allocated once, not per frame. */
@@ -173,11 +178,16 @@ export function createStage(): Stage {
     holds: object => !!object && guest === object,
 
     frame(radius) {
+      // A saucer just wider than the piece, never a landscape of its own.
+      const disc = Math.max(0.35, radius * 1.35)
+      plinth.scale.set(disc, 1, disc)
+      plinth.position.y = -0.06
+
       // Pull back far enough that the piece sits inside the vignette with air
       // around it, whatever it is — an egg and a full hex differ by 3x.
-      const distance = Math.max(2.2, radius * 3.1)
-      camera.position.set(0, distance * 0.42, distance)
-      camera.lookAt(0, radius * 0.35, 0)
+      const distance = Math.max(1.7, radius * 3.4)
+      camera.position.set(0, distance * 0.44, distance)
+      camera.lookAt(0, radius * 0.45, 0)
     },
 
     update(dt, t) {
