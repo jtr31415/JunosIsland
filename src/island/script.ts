@@ -56,3 +56,81 @@ export const HATCH_LINES = [
 
 export const fill = (s: string, name: string, petName = ''): string =>
   s.replace(/\[NAME\]/g, name).replace(/\[PETNAME\]/g, petName)
+
+/**
+ * What each species is CALLED — the word a six-year-old would use.
+ *
+ * `SPECIES` in pets.ts holds file basenames (`animal-fox`), and `pets.ts` strips
+ * the prefix only to build a path. Nothing anywhere named the animals, so the
+ * album pop-out had no species to show. This is COPY, and it lives here with the
+ * rest of the copy rather than beside the loader — a display word is not a fact
+ * about a GLB, and scattering it is how two spellings of the same animal end up
+ * on screen at once.
+ *
+ * Keyed by the FULL id, not the stripped one, so no caller has to know that
+ * `animal-` is a prefix. It is also readable content in a reading game, so it is
+ * rendered in the same literacy font stack as every other word she meets
+ * (`.album-fact`, tokens.css) and spoken by the same voice.
+ *
+ * Two of the twenty-four are judgement rather than transcription:
+ *
+ *   - **`animal-polar` is a Polar Bear**, not a "Polar". There is no such animal
+ *     as a polar and the model is unmistakably a bear; the id is a filename.
+ *   - **`animal-hog` is a Wild Boar**, and this one was settled by LOOKING at the
+ *     model in the Pet-o-matic rather than by reading its filename. It has a warm
+ *     brown coat (measured base 195,113,78 — the bunny's palette, not a
+ *     warthog's grey), a ridge of raised bristles along its back, and one pale
+ *     tusk curving up from the snout. So: not "Warthog", which would be a claim
+ *     about grey warts the model does not make; and not "Pig", because
+ *     `animal-pig` is also in the pack and is pink, and two friends whose cards
+ *     both read "Pig" with different faces is the album contradicting itself.
+ *     "Hog" on its own is a decodable CVC and tempting for that reason, but it is
+ *     not a word a British six-year-old says or hears. "Wild Boar" is what the
+ *     model plainly is, in two short words, and the difference from the pig
+ *     becomes the interesting part rather than a collision to be dodged.
+ *
+ * The rest are the plain word. `animal-bunny` stays a Bunny rather than becoming
+ * a Rabbit: it is the child's word, and it is the pack's own word too.
+ */
+export const SPECIES_NAME: Readonly<Record<string, string>> = {
+  'animal-beaver': 'Beaver',
+  'animal-bee': 'Bee',
+  'animal-bunny': 'Bunny',
+  'animal-cat': 'Cat',
+  'animal-caterpillar': 'Caterpillar',
+  'animal-chick': 'Chick',
+  'animal-cow': 'Cow',
+  'animal-crab': 'Crab',
+  'animal-deer': 'Deer',
+  'animal-dog': 'Dog',
+  'animal-elephant': 'Elephant',
+  'animal-fish': 'Fish',
+  'animal-fox': 'Fox',
+  'animal-giraffe': 'Giraffe',
+  'animal-hog': 'Wild Boar',
+  'animal-koala': 'Koala',
+  'animal-lion': 'Lion',
+  'animal-monkey': 'Monkey',
+  'animal-panda': 'Panda',
+  'animal-parrot': 'Parrot',
+  'animal-penguin': 'Penguin',
+  'animal-pig': 'Pig',
+  'animal-polar': 'Polar Bear',
+  'animal-tiger': 'Tiger',
+}
+
+/**
+ * The species word, or something harmless if the id is not one we know.
+ *
+ * Falls back to the id with its prefix stripped and its first letter raised,
+ * rather than to an empty string or the word "Unknown". A save from a future
+ * build — or a pack that gains a species before this table does — must show her
+ * SOMETHING for her own friend; brief §19 forbids losing what she owns, and a
+ * blank where an animal's name goes is a small version of losing it.
+ */
+export function speciesName(id: string): string {
+  const known = SPECIES_NAME[id]
+  if (known) return known
+  const bare = id.replace(/^animal-/, '').replace(/[-_]+/g, ' ')
+  return bare.charAt(0).toUpperCase() + bare.slice(1)
+}

@@ -403,3 +403,100 @@ describe('a pet and its shadow agree with the sun', () => {
     expect(throwOf(field, 'p')).toBeGreaterThan(throwOf(field, 'c') * 3)
   })
 })
+
+/**
+ * Where a friend actually IS — the port the album's "find it on the map" needs.
+ *
+ * Phase 4. `flow.pets[].at` is where a pet HATCHED, and nothing writes back to
+ * it: wandering happens on these live scene-graph roots and always has. So a
+ * camera asked to go and look at a friend has to read the answer off the field,
+ * and this is the only module that has it.
+ */
+describe('where a friend is standing right now', () => {
+  it('answers with where the model has WALKED to, not where it hatched', async () => {
+    /*
+     * The assertion that defends the feature. A pet starts on its hatch tile and
+     * wanders off; on the one-hex island every other test in this file uses, the
+     * two look nearly the same, so this puts it somewhere they cannot be
+     * confused — a whole hex is only 2.3 units across.
+     */
+    const field = await fieldWith(pet('a', 'animal-cow'))
+    petAt(field, 'a').position.set(4.2, 0, -3.1)
+
+    const at = field.positionOf('a')
+    expect(at).not.toBeNull()
+    expect(at?.x).toBeCloseTo(4.2, 9)
+    expect(at?.z).toBeCloseTo(-3.1, 9)
+  })
+
+  it('follows a pet as it wanders, rather than caching where it began', async () => {
+    /*
+     * The contract, sampled: whatever the field has done to the root this frame
+     * is what this answers with. A cached answer would be right at the moment the
+     * album was wired and wrong every second afterwards — and the album cannot
+     * tell the difference, which is exactly the class of bug HANDOFF §5 lists.
+     *
+     * Room to walk, deliberately. The one-hex island the rest of this file uses
+     * keeps a pet inside 0.8 of a hex, so a wanderer barely leaves its own spot;
+     * on three hexes and a minute of frames it genuinely travels.
+     */
+    const wide: Island = {
+      tiles: new Map([['0,0', 'grass'], ['1,0', 'grass'], ['2,0', 'grass']]),
+    }
+    const field = createPetField()
+    await field.sync([pet('a', 'animal-cow')], wide, HEX)
+    const root = petAt(field, 'a')
+    const start = field.positionOf('a') as THREE.Vector3
+
+    let travelled = 0
+    let was = start.clone()
+    for (let i = 0; i < 3600; i++) {
+      field.update(1 / 60, i / 60, wide, HEX)
+      const at = field.positionOf('a') as THREE.Vector3
+      // Never a stale copy: it is the live root, read afresh.
+      expect(at.x).toBeCloseTo(root.position.x, 9)
+      expect(at.z).toBeCloseTo(root.position.z, 9)
+      travelled += Math.hypot(at.x - was.x, at.z - was.z)
+      was = at
+    }
+    expect(travelled).toBeGreaterThan(0.1)
+  })
+
+  it('reports the height of a flyer, so the caller can decide about it', async () => {
+    /*
+     * A bee hovers at TREE_HEIGHT. This port tells the truth and the ALBUM drops
+     * the height — the camera's pivot is clamped horizontally only, so a pivot
+     * handed a y that high stays in the air for the rest of the session. Deciding
+     * it here would be a rendering module having an opinion about a camera.
+     *
+     * Measured against `TREE_HEIGHT` rather than a typed-in number, for the
+     * reason `WINGBEAT` is imported above: the canopy is derived from `FITS`, so
+     * a constant here would go on claiming to test flight after the trees moved.
+     * The hover bob is ±0.05, hence the margin.
+     */
+    const field = await fieldWith(pet('b', 'animal-bee'))
+    run(field, 30)
+    expect((field.positionOf('b') as THREE.Vector3).y)
+      .toBeGreaterThan(TREE_HEIGHT - 0.06)
+  })
+
+  it('hands out a COPY, so nobody can teleport a pet by holding its answer',
+    async () => {
+      const field = await fieldWith(pet('a', 'animal-cow'))
+      const at = field.positionOf('a') as THREE.Vector3
+      at.set(99, 99, 99)
+      expect(petAt(field, 'a').position.x).not.toBe(99)
+    })
+
+  it('is null for a friend whose model has not landed yet', async () => {
+    /*
+     * `sync` creates nothing until the GLB arrives, so this is the ordinary state
+     * of a just-hatched friend on a tablet. It must not be answered with the
+     * origin, which is a real place on her island — Fred is standing there.
+     */
+    const field = createPetField()
+    expect(field.positionOf('nobody')).toBeNull()
+    await field.sync([pet('a', 'animal-cow')], ISLAND, HEX)
+    expect(field.positionOf('a')).not.toBeNull()
+  })
+})

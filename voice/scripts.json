@@ -42,6 +42,14 @@
       "note": "Repeat-on-tap plays the same clip at rate 0.6; grapheme-by-grapheme help plays at 0.9 (src/challenges/build.ts:83,96)."
     },
     {
+      "idPrefix": "species.",
+      "character": "teacher",
+      "count": 24,
+      "source": "SPECIES_NAME in src/island/script.ts",
+      "rate": 1.0,
+      "note": "The album pop-out's speak button reads the friend's name and THEN her species, chained on the name's end rather than spoken over it (speak() cancels speech, v0:749). Two clips, never one splice: a name.* clip followed by a species.* clip, per the law that a name is a line of its own. Two of the twenty-four are judgement rather than transcription — 'animal-polar' is 'Polar Bear' and 'animal-hog' is 'Wild Boar', because 'animal-pig' is also in the pack. Same words as printed on the card, so what she hears is what she is reading."
+    },
+    {
       "idPrefix": "phoneme.",
       "character": "dad",
       "count": 43,
