@@ -370,6 +370,17 @@ service worker before verifying is doing real work, not ceremony.
   cannot be folded by Rollup, so the code ships unreachable-but-downloaded —
   the whole Pet-o-matic was precached that way. `npm run channel` checks both
   markers in both directions.
+- **Menus dismiss on a tap outside; WORK PAGES do not.** The game has two
+  full-screen overlays and they behave differently on purpose. Tapping beside the
+  tile offer closes it, because that is `cancelPlacing` — a menu, zero cost,
+  nothing in flight. Tapping beside a CHALLENGE does nothing, because a round is
+  work in progress and leaving it deserves a deliberate corner ×.
+  The reason is measured, not aesthetic: `.stage-slot` is `pointer-events: none`
+  and spans 45% of a staged round, so while the backdrop dismissed, nearly half
+  of what she was looking at — including her own egg turning on the vignette —
+  ended the page when touched. That is what Joe's "too many accidental hits"
+  turned out to be. Do not "fix" the inconsistency in either direction without
+  reading this.
 - **The service worker uses `skipWaiting` + `clientsClaim`.** `autoUpdate`
   alone waits for every tab to close, which produces phantom regressions —
   fixes demonstrably in the deployed JavaScript but not in what the browser
