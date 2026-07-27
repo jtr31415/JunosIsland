@@ -37,6 +37,14 @@ interface Live {
   restFor: number
   /** Seconds spent trying to travel without getting anywhere. */
   stuckFor: number
+  /**
+   * Half the creature's own width, measured after scaling.
+   *
+   * Species differ — an elephant is not a chick — so this is measured per pet
+   * rather than assumed, and it is what keeps the pet's SURFACE out of the
+   * scenery rather than merely its centre.
+   */
+  radius: number
 }
 
 export interface Obstacle { x: number; z: number; r: number }
@@ -54,16 +62,24 @@ export interface Obstacle { x: number; z: number; r: number }
  * compete with the movement, it corrects it. And since the correction is
  * purely radial while the goal-seek keeps its tangential component, a pet that
  * meets a tree slides around the trunk instead of stopping dead at it.
+ *
+ * `self` is the pet's OWN radius, and leaving it out was the other half of the
+ * clipping. Clamping a pet's centre to the surface of a rock buries half a pet
+ * in the rock; what has to touch is the two surfaces, not a point and a
+ * surface. Joe's rule: a hard collision on the SURFACES of any moving object.
  */
-function clearOf(pos: THREE.Vector3, obstacles: readonly Obstacle[]): void {
+export function clearOf(
+  pos: THREE.Vector3, obstacles: readonly Obstacle[], self = 0,
+): void {
   for (const ob of obstacles) {
+    const keep = ob.r + self
     const dx = pos.x - ob.x
     const dz = pos.z - ob.z
     const d = Math.hypot(dx, dz)
-    if (d >= ob.r) continue
-    if (d < 1e-4) { pos.x = ob.x + ob.r; continue }  // dead centre: any way out
-    pos.x = ob.x + (dx / d) * ob.r
-    pos.z = ob.z + (dz / d) * ob.r
+    if (d >= keep) continue
+    if (d < 1e-4) { pos.x = ob.x + keep; continue }  // dead centre: any way out
+    pos.x = ob.x + (dx / d) * keep
+    pos.z = ob.z + (dz / d) * keep
   }
 }
 
@@ -130,7 +146,7 @@ export function createPetField(base = ''): PetField {
    * like a group dance. Picking a reachable goal is the fix; pushing harder
    * would only have made the dance more energetic.
    */
-  function randomSpot(island: Island, hexSize: number): THREE.Vector3 {
+  function randomSpot(island: Island, hexSize: number, self = 0): THREE.Vector3 {
     const keys = [...island.tiles.keys()]
     const spot = new THREE.Vector3()
 
@@ -143,7 +159,7 @@ export function createPetField(base = ''): PetField {
         w.z + (Math.random() - 0.5) * hexSize * 0.8,
       )
       const blocked = obstacles.some(o =>
-        Math.hypot(spot.x - o.x, spot.z - o.z) < o.r * 1.15)
+        Math.hypot(spot.x - o.x, spot.z - o.z) < o.r * 1.15 + self)
       if (!blocked) return spot.clone()
     }
     // Every attempt blocked: stay put rather than aim somewhere unreachable.
@@ -167,6 +183,15 @@ export function createPetField(base = ''): PetField {
         // rather than statues on a plinth.
         root.scale.setScalar(0.16)
         holder.add(root)
+        /*
+         * Measured while the holder still sits at the origin, so the box is
+         * the creature's own size rather than its size plus wherever it
+         * happens to stand.
+         */
+        holder.updateMatrixWorld(true)
+        const body = new THREE.Box3().setFromObject(holder)
+        const radius = Math.max(
+          body.max.x - body.min.x, body.max.z - body.min.z) / 2
         const w = toWorld(pet.at as Axial, hexSize)
         holder.position.set(w.x, 0, w.z)
         holder.userData.pick = { kind: 'pet', id: pet.id }
@@ -176,8 +201,8 @@ export function createPetField(base = ''): PetField {
         const shadow = createBlobShadow(0.17)
         group.add(shadow)
         live.set(pet.id, {
-          pet, root: holder, shadow,
-          goal: randomSpot(island, hexSize),
+          pet, root: holder, shadow, radius,
+          goal: randomSpot(island, hexSize, radius),
           phase: Math.random() * Math.PI * 2,
           bounce: 0,
           restFor: 2 + Math.random() * 6,
@@ -212,7 +237,7 @@ export function createPetField(base = ''): PetField {
       // Send those pets somewhere else rather than letting them push at it.
       for (const l of live.values()) {
         const blocked = obstacles.some(o =>
-          Math.hypot(l.goal.x - o.x, l.goal.z - o.z) < o.r * 1.15)
+          Math.hypot(l.goal.x - o.x, l.goal.z - o.z) < o.r * 1.15 + l.radius)
         if (blocked) l.restFor = 0
       }
     },
@@ -235,7 +260,7 @@ export function createPetField(base = ''): PetField {
            */
           l.restFor -= dt
           if (l.restFor <= 0) {
-            l.goal = randomSpot(island, hexSize)
+            l.goal = randomSpot(island, hexSize, l.radius)
             l.restFor = 4 + Math.random() * 8
           }
         } else {
@@ -264,7 +289,7 @@ export function createPetField(base = ''): PetField {
         }
         // Scenery is SOLID. Applied last, after seeking and separation, so
         // nothing downstream can push a pet back inside a tree.
-        clearOf(pos, obstacles)
+        clearOf(pos, obstacles, l.radius)
 
         /*
          * Wedged? Go somewhere else.
@@ -279,7 +304,7 @@ export function createPetField(base = ''): PetField {
           const moved = Math.hypot(pos.x - was.x, pos.z - was.z)
           l.stuckFor = moved < dt * 0.25 ? l.stuckFor + dt : 0
           if (l.stuckFor > 1.2) {
-            l.goal = randomSpot(island, hexSize)
+            l.goal = randomSpot(island, hexSize, l.radius)
             l.stuckFor = 0
           }
         } else l.stuckFor = 0

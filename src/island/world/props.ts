@@ -216,6 +216,115 @@ export function fitInto(o: THREE.Object3D, maxWidth: number, maxHeight: number):
   if (Number.isFinite(fit) && fit > 0) o.scale.setScalar(fit)
 }
 
+/** A circle of ground something solid already stands on. */
+export interface Footprint { x: number; z: number; r: number }
+
+/**
+ * Half the widest horizontal extent of an object, AS FITTED.
+ *
+ * Measured, never assumed, for the same reason `fitInto` exists: the packs
+ * disagree about scale by up to ninefold within one family, so a nominal
+ * keep-out radius would be far too generous for a pebble and far too mean for
+ * a boulder. Refreshes world matrices first — several KayKit models carry a
+ * transform on the node above the mesh, and measuring them cold lies.
+ */
+export function footprintOf(o: THREE.Object3D): number {
+  o.updateMatrixWorld(true)
+  const box = new THREE.Box3().setFromObject(o)
+  return Math.max(box.max.x - box.min.x, box.max.z - box.min.z) / 2
+}
+
+/**
+ * How tall a thing has to be to be in a pet's way.
+ *
+ * A pet stands about 0.24 units and Fred about 0.35, so anything measured
+ * below this is what a walking creature can actually bump into.
+ */
+export const WALKING_HEIGHT = 0.3
+
+/**
+ * The widest horizontal reach of an object BELOW a given height, as fitted.
+ *
+ * The difference between this and `footprintOf` is a tree. Its canopy is the
+ * widest part of it and a pet walking under a canopy has not clipped
+ * anything — blocking the full width would have pets swerving around thin air
+ * while still, at the trunk, being free to walk through the bit that is
+ * solid. Measuring at walking height asks the question that matters: what is
+ * in the way of something moving along the ground?
+ *
+ * Hills and mountains are solid all the way down, so for them this returns
+ * very nearly the full footprint, which is the point — that is where pets were
+ * walking into the scenery.
+ */
+export function footprintBelow(o: THREE.Object3D, height: number): number {
+  o.updateMatrixWorld(true)
+  const whole = new THREE.Box3().setFromObject(o)
+  if (!Number.isFinite(whole.min.y)) return 0
+  const ceiling = whole.min.y + height
+  const centre = new THREE.Vector3(
+    (whole.min.x + whole.max.x) / 2, 0, (whole.min.z + whole.max.z) / 2)
+
+  let reach = 0
+  const v = new THREE.Vector3()
+  o.traverse(node => {
+    const mesh = node as THREE.Mesh
+    if (!mesh.isMesh) return
+    const pos = mesh.geometry?.getAttribute('position')
+    if (!pos) return
+    for (let i = 0; i < pos.count; i++) {
+      v.fromBufferAttribute(pos as THREE.BufferAttribute, i).applyMatrix4(mesh.matrixWorld)
+      if (v.y > ceiling) continue
+      reach = Math.max(reach, Math.hypot(v.x - centre.x, v.z - centre.z))
+    }
+  })
+  /*
+   * Nothing down there at all — a cloud, or a piece floating clear of the
+   * ground. Nothing to walk into, so nothing to walk around.
+   */
+  return reach
+}
+
+/**
+ * Would a piece of radius `r` centred at (x, z) stand inside something solid?
+ *
+ * Circles rather than boxes, and touching counts as clear: two pieces whose
+ * footprints just kiss look like two things next to each other, which is what
+ * a wood is. It is the overlap that reads as a mistake.
+ */
+export function standsInside(
+  x: number, z: number, r: number, solid: readonly Footprint[],
+): boolean {
+  return solid.some(f => Math.hypot(f.x - x, f.z - z) < f.r + r)
+}
+
+/**
+ * The first of several candidate spots that a piece of radius `r` can actually
+ * stand in: on ground it accepts, and clear of everything solid already there.
+ *
+ * Candidates are supplied in preference order and the FIRST acceptable one
+ * wins, which is what keeps the island still. Every candidate is derived from
+ * the tile's hash, so a piece that was already standing clear is offered its
+ * old spot first and does not move; only the pieces that were inside a rock go
+ * looking. Nothing here may consult a random number — the same hex must grow
+ * the same thing in the same place every time the island loads.
+ *
+ * Returning null is a real answer, and the right one. A slightly barer tile
+ * looks finished; a tree standing inside a boulder looks broken.
+ */
+export function firstClear<T extends { x: number; z: number }>(
+  candidates: readonly T[],
+  r: number,
+  onGround: (x: number, z: number) => boolean,
+  solid: readonly Footprint[],
+): T | null {
+  for (const c of candidates) {
+    if (!onGround(c.x, c.z)) continue
+    if (standsInside(c.x, c.z, r, solid)) continue
+    return c
+  }
+  return null
+}
+
 /**
  * How much room each kind of thing may take, as [width, height] in world
  * units — width relative to the hex, height against a PET.
@@ -323,6 +432,25 @@ export function createPropField(base = ''): PropField {
   const placed = new Set<string>()
   const blocks: Array<{ x: number; z: number; r: number }> = []
   const decor: Array<{ x: number; z: number; r: number }> = []
+
+  /**
+   * Where solid scenery already stands, at its MEASURED size.
+   *
+   * A third list, and deliberately not one of the two above, because it
+   * answers a different question. `blocks` is what a pet must walk round and
+   * `decor` is what the egg must not stand in; this is what a new piece of
+   * scenery must not be planted inside. Joe, playing: "trees are clipping into
+   * the larger rock pieces, looks odd." They were — `scatter` ran immediately
+   * after the tile's big feature was added and knew nothing about it, while
+   * the feature blocks a radius of half a hex and cover starts scattering at
+   * 0.18 of one. Roughly the inner half of every tile's undergrowth was
+   * planted inside its own rock.
+   *
+   * Measured rather than assumed, because these packs vary ninefold within a
+   * family and a nominal radius would be wrong in both directions.
+   */
+  const footprints: Footprint[] = []
+
   const clouds: THREE.Object3D[] = []
   let atlas: THREE.Texture | null = null
   let forestTex: THREE.Texture | null = null
@@ -410,23 +538,55 @@ export function createPropField(base = ''): PropField {
         ? BARE_TREES[dh % BARE_TREES.length] as string
         : palette[dh % palette.length] as string
 
-      const ang = ((dh >> 4) % 360) * Math.PI / 180
-      const rad = hexSize * Math.max(innerClear, 0.18 + ((dh >> 7) % 55) / 100)
-      const x = w.x + Math.cos(ang) * rad
-      const z = w.z + Math.sin(ang) * rad
-      // Tufts over the sea used to float; stones on the beach are fine.
-      if (!allows(name, surface.groundAt(x, z))) continue
-
+      /*
+       * Size it BEFORE siting it. The piece has to know how much room it
+       * takes before it can be asked whether it fits anywhere, and fitInto
+       * does not care where the object is.
+       */
       const bit = await forestModel(name)
-      bit.position.set(x, surface.heightAt(x, z) ?? 0, z)
-      bit.rotation.y = ((dh >> 11) % 360) * Math.PI / 180
       // Vary per PIECE, not per tile, or a tile reads as one stamped set.
       const [cw, ch] = bare ? FITS.bare : FITS.cover
       const vary = 0.8 + ((dh >> 13) % 45) / 100
       fitInto(bit, cw * vary, ch * vary)
+      const r = footprintOf(bit)
+
+      /*
+       * Try the derived spot first, then a few deterministic alternatives.
+       *
+       * Attempt zero reproduces exactly where this piece used to go, so
+       * nothing that was already standing clear moves; only the pieces that
+       * were inside a rock go looking for somewhere else. Every alternative
+       * comes from the hash, never from a random number: the same hex must
+       * grow the same thing in the same place every time the island loads, or
+       * the world rearranges itself behind the child's back.
+       */
+      const candidates = Array.from({ length: 8 }, (_, attempt) => {
+        const ah = attempt === 0
+          ? dh
+          : hash({ q: a.q * 31 + d, r: a.r * 17 - d - attempt * 977 })
+        const ang = ((ah >> 4) % 360) * Math.PI / 180
+        const rad = hexSize * Math.max(innerClear, 0.18 + ((ah >> 7) % 55) / 100)
+        return { x: w.x + Math.cos(ang) * rad, z: w.z + Math.sin(ang) * rad }
+      })
+      // Tufts over the sea used to float; stones on the beach are fine.
+      const spot = firstClear(candidates, r,
+        (x, z) => allows(name, surface.groundAt(x, z)), footprints)
+      if (!spot) continue
+      const { x, z } = spot
+
+      bit.position.set(x, surface.heightAt(x, z) ?? 0, z)
+      bit.rotation.y = ((dh >> 11) % 360) * Math.PI / 180
       group.add(bit)
       decor.push({ x, z, r: hexSize * 0.10 })
-      if (bare) blocks.push({ x, z, r: hexSize * 0.14 })
+      /*
+       * Only the bare tree is solid enough to keep others out. Tufts and
+       * pebbles are meant to grow into each other — undergrowth that observes
+       * a personal space reads as a flower bed.
+       */
+      if (bare) {
+        blocks.push({ x, z, r: hexSize * 0.14 })
+        footprints.push({ x, z, r })
+      }
     }
   }
 
@@ -558,22 +718,7 @@ export function createPropField(base = ''): PropField {
          * has to be given up — and a tile with nowhere green left simply grows
          * nothing, which is what a beach looks like anyway.
          */
-        let spot: { x: number; z: number; y: number } | null = null
-        for (let attempt = 0; attempt < 6 && !spot; attempt++) {
-          const pull = 1 - attempt / 6                     // ... inward
-          const ox = (((h >> 3) % 100) / 100 - 0.5) * hexSize * spread * pull
-          const oz = (((h >> 9) % 100) / 100 - 0.5) * hexSize * spread * pull
-          const x = w.x + ox, z = w.z + oz
-          if (!allows(spec.name, surface.groundAt(x, z))) continue
-          spot = { x, z, y: surface.heightAt(x, z) ?? 0 }
-        }
-        if (!spot) { placed.add(k); continue }
-
         const obj = await model(spec.name)
-        // Sit ON the ground, not at y = 0 — coast ramps slope, and later
-        // elevation will too.
-        obj.position.set(spot.x, spot.y, spot.z)
-        obj.rotation.y = ((h >> 5) % 6) * (Math.PI / 3)   // snap to hex facings
         /*
          * Landscape is fitted by FOOTPRINT and objects by HEIGHT.
          *
@@ -584,12 +729,52 @@ export function createPropField(base = ''): PropField {
         const [fw, fh] = spec.big ? FITS.big : FITS.feature
         const vary = 0.88 + ((h >> 11) % 26) / 100
         fitInto(obj, fw * vary, fh * vary)
+        const r = footprintOf(obj)
+
+        /*
+         * A feature also has to clear its NEIGHBOURS' features. Tiles are
+         * dressed one at a time and a tree sited near the rim of its own hex
+         * has no idea a mountain rose on the hex next door — which is the
+         * other half of the clipping Joe saw. Big pieces are exempt from the
+         * test against smaller ones only in the sense that they are placed
+         * centred and rarely reach that far.
+         */
+        const tries = Array.from({ length: 6 }, (_, attempt) => {
+          const pull = 1 - attempt / 6                     // ... inward
+          const ox = (((h >> 3) % 100) / 100 - 0.5) * hexSize * spread * pull
+          const oz = (((h >> 9) % 100) / 100 - 0.5) * hexSize * spread * pull
+          return { x: w.x + ox, z: w.z + oz }
+        })
+        const at = firstClear(tries, r,
+          (x, z) => allows(spec.name, surface.groundAt(x, z)), footprints)
+        if (!at) { placed.add(k); continue }
+        const spot = { x: at.x, z: at.z, y: surface.heightAt(at.x, at.z) ?? 0 }
+
+        // Sit ON the ground, not at y = 0 — coast ramps slope, and later
+        // elevation will too.
+        obj.position.set(spot.x, spot.y, spot.z)
+        obj.rotation.y = ((h >> 5) % 6) * (Math.PI / 3)   // snap to hex facings
         group.add(obj)
         placed.add(k)
+        /*
+         * What a pet must walk round, MEASURED at walking height.
+         *
+         * This used to be `hexSize * (big ? 0.5 : 0.3)` — a guess, and a
+         * consistently low one. A mountain fitted to FITS.big measures about
+         * 0.9 across and was declaring 0.58, so pets walked a third of a unit
+         * into the rock face and the egg could be sited inside a hillside.
+         * Joe, playing: "frog, egg, animals into mountains… there should be a
+         * hard collision on surfaces of any moving object."
+         *
+         * Measured below walking height rather than overall, so a pet may
+         * still walk under a tree's canopy — which is not clipping, it is
+         * shade.
+         */
         blocks.push({
           x: obj.position.x, z: obj.position.z,
-          r: hexSize * (spec.big ? 0.5 : 0.3),
+          r: footprintBelow(obj, WALKING_HEIGHT),
         })
+        footprints.push({ x: obj.position.x, z: obj.position.z, r })
 
         await scatter(a, w, character, h, hexSize, surface)
       }
