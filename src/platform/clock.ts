@@ -10,6 +10,29 @@
  * Injectable rather than mockable. The island is handed a clock; a test hands
  * it a different one. No module-level patching, no global stubbing, nothing
  * that leaks between test files.
+ *
+ * ---
+ *
+ * WHAT MUST NOT GO BEHIND THIS CLOCK.
+ *
+ * There are two kinds of time in this game and only one of them belongs here.
+ *
+ *   - CALENDAR time — what day is it. The visitor's day latch, difficulty's
+ *     two-distinct-days gate, the seasonal calendar. This is the clock.
+ *   - ELAPSED time — how long since that tap. The input locks and reward
+ *     windows in `src/challenges/*` (`Date.now() + 1800`, and the rest), all
+ *     of them faithful ports of v0.
+ *
+ * Elapsed-time gates must keep reading the real clock. Press advance-day in
+ * the debug panel while one of them is armed and an adjustable clock jumps its
+ * deadline a day into the past: every input lock releases at once, every
+ * reward window is already over, and the mash-rescue that exists to protect a
+ * frustrated child silently stops working. The bug would appear only in debug
+ * sessions, which is where nobody is looking for it.
+ *
+ * So item 2's sweep converts the calendar reads and deliberately leaves the
+ * challenge timers alone. They are also v0 ports, where HANDOFF rule 1 permits
+ * dependency injection and nothing else.
  */
 
 export interface Clock {
