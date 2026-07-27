@@ -86,3 +86,33 @@ describe('every ceremony in main.ts is behind the barrier', () => {
     expect(upToNextTop).not.toContain('void persist()')
   })
 })
+
+describe('nothing in main.ts reads the calendar directly (item 2)', () => {
+  it('asks the clock, not Date', () => {
+    /*
+     * The visitor's day latch, difficulty's two-distinct-days gate and the
+     * seasons all turn on what day it is, and every one of them is untestable
+     * against a real `Date.now()`. A test that waits for midnight is a test
+     * nobody runs.
+     *
+     * Two exceptions, both in the clock's own construction: seeding the
+     * adjustable clock from real time, and wrapping a stored timestamp for
+     * display. Everything else must go through `clock`.
+     */
+    const reads = code.split('\n')
+      .map((line, i) => ({ line: line.trim(), n: i + 1 }))
+      .filter(({ line }) => /\bDate\.now\(\)|new Date\(/.test(line))
+      .filter(({ line }) => !line.includes('createAdjustableClock(Date.now())'))
+      .filter(({ line }) => !line.includes('new Date(clock.now())'))
+
+    expect(reads.map(r => `${r.n}: ${r.line}`)).toEqual([])
+  })
+
+  it('keeps the adjustable clock out of production', () => {
+    // A player must not be able to move the calendar by typing in the URL bar
+    // — and more to the point, must not be handed a clock that can drift from
+    // the one the save was written against.
+    expect(code).toContain("debugging\n")
+    expect(countOf('createAdjustableClock(')).toBe(1)
+  })
+})

@@ -31,6 +31,8 @@ import { createLocalStore } from '../platform/storage'
 import { createDurableStore } from '../platform/durable'
 import { openIdb } from '../platform/idb'
 import { requestPersistence, shouldRequest } from '../platform/persistence'
+import { createClock, createAdjustableClock } from '../platform/clock'
+import type { AdjustableClock } from '../platform/clock'
 import type { PersistState } from '../platform/persistence'
 import {
   backupFilename, readBackup, summarise, confirmText, download, pickFile,
@@ -242,7 +244,22 @@ async function boot(): Promise<void> {
    * browsing, a blocked database — and the game plays on with one copy rather
    * than refusing to start.
    */
-  const store = createDurableStore(createLocalStore(), { idb: await openIdb() })
+  /*
+   * One clock, asked by everything that cares what day it is (item 2).
+   *
+   * Adjustable only under ?debug, so a production session gets the real thing
+   * and no way to move it. Everything downstream reads `clock.now()` rather
+   * than Date.now(), which is what makes the visitor rollover and difficulty's
+   * two-distinct-days gate testable without waiting for real midnight.
+   */
+  const debugging = location.search.includes('debug')
+  const clock: AdjustableClock | ReturnType<typeof createClock> = debugging
+    ? createAdjustableClock(Date.now())
+    : createClock()
+
+  const store = createDurableStore(createLocalStore(), {
+    idb: await openIdb(), now: () => clock.now(),
+  })
   const PROFILE = 'juno'
   /** Her name where the script wants one, or something friendly if she skipped. */
   const child = (): string => childName || 'friend'
@@ -475,7 +492,12 @@ async function boot(): Promise<void> {
   gearBtn.title = 'Grown-ups'
   gearBtn.setAttribute('aria-label', 'grown-ups menu')
   gearBtn.onclick = () => {
-    const d = new Date()
+    /*
+     * From the CLOCK, so advance-day does not lock a grown-up out of the
+     * gear in the middle of a debug session. In production the clock is the
+     * real one, so this is still simply today's date (v0:1080).
+     */
+    const d = new Date(clock.now())
     // DDMM, exactly as v0:1080 computes it.
     const pin = String(d.getDate()).padStart(2, '0')
       + String(d.getMonth() + 1).padStart(2, '0')
@@ -527,7 +549,7 @@ async function boot(): Promise<void> {
     await persist()
     const env = await store.envelope(PROFILE, 'save')
     if (!env) { overlay.toast('Nothing to back up yet'); return }
-    download(backupFilename(childName, new Date()), JSON.stringify(env, null, 2))
+    download(backupFilename(childName, new Date(clock.now())), JSON.stringify(env, null, 2))
     overlay.toast('Backup saved')
   }
 
@@ -1245,8 +1267,37 @@ async function boot(): Promise<void> {
    * changing tables and redeploying — three rounds of that is more expensive
    * than the hook.
    */
-  if (location.search.includes('debug')) {
+  if (debugging) {
+    /*
+     * Advance the calendar without waiting for one.
+     *
+     * The visitor's day latch, difficulty's two-distinct-days gate and the
+     * seasons are all things nobody can exercise by hand otherwise. Note these
+     * move the CALENDAR only: the input locks and reward windows in
+     * src/challenges are elapsed-time gates and deliberately still read the
+     * real clock, or pressing this would release every lock at once and
+     * silently disable the mash-rescue (see platform/clock.ts).
+     */
+    const skip = (label: string, days: number): void => {
+      const b = document.createElement('button')
+      b.className = 'dev-reset'
+      b.textContent = label
+      b.title = `Jump the calendar ${days} day${days === 1 ? '' : 's'} forward`
+      b.onclick = () => {
+        ;(clock as AdjustableClock).advanceDays(days)
+        overlay.toast(`Now ${clock.today()}`)
+      }
+      document.body.append(b)
+    }
+    skip('+1d', 1)
+    skip('+7d', 7)
+
     ;(window as unknown as Record<string, unknown>).__world = {
+      clock: {
+        today: () => clock.today(),
+        advanceDays: (n: number) => { (clock as AdjustableClock).advanceDays(n) },
+        reset: () => { (clock as AdjustableClock).reset() },
+      },
       scene: world.scene,
       dump: () => {
         const out: Array<Record<string, unknown>> = []
