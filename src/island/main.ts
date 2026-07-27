@@ -402,8 +402,11 @@ async function boot(): Promise<void> {
    * tap dead until a reload. `ceremony()` releases these however the body ends.
    */
   const exits: Exits = {
-    lock() { inCeremony = true; overlay.setBusy(true) },
-    unlock() { inCeremony = false; overlay.setBusy(false) },
+    // The camera's pivot is held too: refresh() runs INSIDE both ceremonies,
+    // and a shot held on purpose must not start gliding because something
+    // re-rendered underneath it.
+    lock() { inCeremony = true; overlay.setBusy(true); world.holdCamera(true) },
+    unlock() { inCeremony = false; overlay.setBusy(false); world.holdCamera(false) },
   }
 
   flow = loaded.flow
@@ -1465,6 +1468,10 @@ async function boot(): Promise<void> {
       speech.speak('Fred!')
     },
     bouncePet: id => pets.bounce(id),
+    // "Zoom to location": move the camera's pivot onto the tile she tapped, so
+    // spin and pinch happen there instead of back at the home tile. The world
+    // owns the easing and the clamping; this is only the coordinate.
+    focusOn: a => world.focusOn(world.worldOf(a)),
     say: text => overlay.say(text),
     clearSay: () => overlay.clearSay(),
     speak: text => { speech.speak(text) },

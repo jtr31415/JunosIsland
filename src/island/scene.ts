@@ -30,6 +30,43 @@ import { pickFrom } from './picking'
 export type { Hit } from './picking'
 import type { Hit } from './picking'
 
+/**
+ * Where the island sits and how big it is, in world units.
+ *
+ * The CENTROID, not the origin. The camera used to frame the island by the
+ * furthest tile's distance from `{q:0,r:0}` and pivot on the origin forever,
+ * so an island grown mostly to one side was both held at arm's length (the
+ * radius counted the whole span twice, once on the empty side) and unturnable
+ * (spin swung the far edge away instead of rotating it in place).
+ *
+ * Measuring from the island's own middle fixes both at once, which is why the
+ * centre and the radius are computed together and handed over together.
+ *
+ * Pure, and exported, because `scene.ts` needs a GL context and this does not:
+ * the arithmetic that decides where the camera looks is the part worth
+ * testing, so it must live somewhere a test can reach.
+ */
+export function islandBounds(
+  i: Island, size: number,
+): { centre: THREE.Vector3; radius: number } {
+  const pts: Array<{ x: number; z: number }> = []
+  let sx = 0
+  let sz = 0
+  for (const k of i.tiles.keys()) {
+    const parts = k.split(',').map(Number)
+    const w = toWorld({ q: parts[0] as number, r: parts[1] as number }, size)
+    pts.push(w)
+    sx += w.x
+    sz += w.z
+  }
+  if (pts.length === 0) return { centre: new THREE.Vector3(), radius: 0 }
+  const cx = sx / pts.length
+  const cz = sz / pts.length
+  let radius = 0
+  for (const p of pts) radius = Math.max(radius, Math.hypot(p.x - cx, p.z - cz))
+  return { centre: new THREE.Vector3(cx, 0, cz), radius }
+}
+
 export interface World {
   scene: THREE.Scene
   lighting: Lighting
@@ -52,6 +89,26 @@ export interface World {
    * twice.
    */
   setIsland(i: Island, plotAt?: Axial | null): void
+  /**
+   * Turn the island about this point — "zoom to location".
+   *
+   * The camera's pivot is the one point that stays put on screen, so moving it
+   * is what makes spin and pinch happen *there* rather than back at the home
+   * tile. Eased, and clamped to the island's own footprint by the camera.
+   *
+   * A capability rather than a tap handler: `interactions.ts` calls it through
+   * a port when she taps her own land, and Phase 4's album pop-out needs the
+   * identical thing for "find it on the map" — `focusOn(worldOf(pet.at))`.
+   */
+  focusOn(point: THREE.Vector3): void
+  /**
+   * Hold the camera's pivot still for the duration of a ceremony.
+   *
+   * `refresh()` runs inside the hatch and the land ceremonies, so without this
+   * a re-render could start the pivot gliding across a shot that is being held
+   * on purpose. Wired to the same lock/unlock every ceremony already uses.
+   */
+  holdCamera(on: boolean): void
   showSockets(v: boolean): void
   pick(clientX: number, clientY: number): Hit | null
   worldOf(a: Axial): THREE.Vector3
@@ -99,6 +156,8 @@ export async function createWorld(canvas: HTMLCanvasElement): Promise<World> {
   let island: Island | null = null
   let running = false
   let last = 0
+  /** The tile keys the camera was last framed for. See `setIsland`. */
+  let footprint: string | null = null
 
   const resize = (): void => {
     const w = canvas.clientWidth || window.innerWidth
@@ -127,15 +186,27 @@ export async function createWorld(canvas: HTMLCanvasElement): Promise<World> {
       // already standing on — see the note on the interface.
       const open = buildableSockets(i, sockets(i))
       socketField.sync(plotAt ? open.filter(s => key(s) !== key(plotAt)) : open)
-      // Keep the whole island in shot as it grows outward.
-      let max = 0
-      for (const k of i.tiles.keys()) {
-        const parts = k.split(',').map(Number)
-        const w = toWorld({ q: parts[0] as number, r: parts[1] as number }, models.size)
-        max = Math.max(max, Math.hypot(w.x, w.z))
+      /*
+       * Re-frame only when the island's footprint has actually changed.
+       *
+       * `setIsland` runs on every `refresh()` — a dozen call sites, several of
+       * them mid-ceremony — and framing sets the wanted distance outright. So
+       * an unconditional call quietly undid her pinch every time anything at
+       * all happened, and would now yank the pivot back off whatever she had
+       * asked to look at. Growth is the one moment re-framing is wanted, and
+       * growth is exactly what this compares.
+       */
+      const sig = [...i.tiles.keys()].sort().join('|')
+      if (sig !== footprint) {
+        footprint = sig
+        const b = islandBounds(i, models.size)
+        camera.frame(b.centre, b.radius)
       }
-      camera.frame(max)
     },
+
+    focusOn(point: THREE.Vector3) { camera.lookAt(point) },
+
+    holdCamera(on: boolean) { camera.hold(on) },
 
     showSockets(v: boolean) { socketField.setVisible(v) },
 
