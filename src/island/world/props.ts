@@ -182,9 +182,21 @@ const allows = (name: string, ground: Ground): boolean =>
  */
 export function fitHeight(o: THREE.Object3D, target: number): void {
   o.scale.setScalar(1)
+  /*
+   * Refresh the world matrices FIRST.
+   *
+   * Box3.setFromObject reads each mesh's matrixWorld, and for an object that
+   * is not yet in the scene those are stale. Several KayKit models carry a
+   * transform on the node above the mesh, so measuring them cold returned a
+   * height far smaller than the truth — and target/height then scaled the
+   * piece up enormously. That is where the grey slabs spanning three hexes
+   * came from: not a bad target, a bad measurement.
+   */
+  o.updateMatrixWorld(true)
   const box = new THREE.Box3().setFromObject(o)
   const height = box.max.y - box.min.y
-  if (height > 1e-4) o.scale.setScalar(target / height)
+  if (!Number.isFinite(height) || height <= 1e-4) return
+  o.scale.setScalar(target / height)
 }
 
 /**
