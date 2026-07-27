@@ -28,6 +28,13 @@ import { loadIsland, saveIsland } from './save'
 import { commit, ceremony } from './ceremony'
 import type { Committed, Exits } from './ceremony'
 import { createLocalStore } from '../platform/storage'
+import { createDurableStore } from '../platform/durable'
+import { openIdb } from '../platform/idb'
+import { requestPersistence, shouldRequest } from '../platform/persistence'
+import type { PersistState } from '../platform/persistence'
+import {
+  backupFilename, readBackup, summarise, confirmText, download, pickFile,
+} from '../platform/backup'
 import { createFlow, tapEgg, tapSum, askForLand, challengePassed, chooseTile, tileOffer } from './flow'
 import { bindWorldTaps } from './taps'
 import {
@@ -227,11 +234,46 @@ async function boot(): Promise<void> {
   })
 
   /* Saves. One profile for now; profiles proper arrive in M3. */
-  const store = createLocalStore()
+  /*
+   * Two copies, a checksum and eight snapshots (Phase 3 item 1).
+   *
+   * Presents the same SaveStore the island has always spoken, so nothing below
+   * this line knows durability happened. IndexedDB may be absent — private
+   * browsing, a blocked database — and the game plays on with one copy rather
+   * than refusing to start.
+   */
+  const store = createDurableStore(createLocalStore(), { idb: await openIdb() })
   const PROFILE = 'juno'
   /** Her name where the script wants one, or something friendly if she skipped. */
   const child = (): string => childName || 'friend'
   const loaded = await loadIsland(store, PROFILE)
+
+  /*
+   * "I found your island!" — never an error a child reads.
+   *
+   * The primary save failed its checksum and a snapshot was used instead. She
+   * is told something reassuring happened, not that something broke; the
+   * detail is in the console for a grown-up.
+   */
+  const load = store.lastLoad(PROFILE, 'save')
+  if (load?.outcome === 'restored') {
+    setTimeout(() => overlay.toast('I found your island!'), 900)
+  }
+
+  /*
+   * Ask the browser to keep her island, once she owns something worth keeping.
+   *
+   * Storage that is not marked persistent can be evicted under pressure with
+   * no warning to anyone. Asked after the first friend or the first tile
+   * rather than at boot: some browsers prompt, and a prompt on the opening
+   * screen is the one most likely to be dismissed.
+   */
+  let persistGranted: PersistState = loaded.persistGranted
+  async function askToKeepIt(): Promise<void> {
+    if (!shouldRequest(persistGranted, flow.pets.length, flow.tilesEarned)) return
+    persistGranted = await requestPersistence()
+    void persist()
+  }
   let openingSeen = loaded.openingSeen
   /*
    * What she is called. Empty until she has been asked, which happens once,
@@ -244,7 +286,7 @@ async function boot(): Promise<void> {
   if (childName) document.title = `${childName}'s Island`
 
   const persist = (): Promise<void> =>
-    saveIsland(store, PROFILE, flow, openingSeen, childName)
+    saveIsland(store, PROFILE, flow, openingSeen, childName, persistGranted)
 
   /**
    * Save, wait for it, and come back with proof.
@@ -441,10 +483,70 @@ async function boot(): Promise<void> {
     if (entry === null) return
     if (entry.trim() !== pin) { overlay.toast('Wrong PIN'); return }
 
+    const choice = prompt([
+      'Grown-ups',
+      '',
+      '1  Back up to a file',
+      '2  Restore from a backup',
+      '3  Start again (wipes this island)',
+      '',
+      'Type a number:',
+    ].join('\n'))
+    if (choice === null) return
+
+    if (choice.trim() === '1') { void backup(); return }
+    if (choice.trim() === '2') { void restore(); return }
+    if (choice.trim() !== '3') return
+
     const n = flow.pets.length
     const what = n === 0 ? 'this island' : `this island and ${n} friend${n === 1 ? '' : 's'}`
     if (!confirm(`Start again? This wipes ${what}.`)) return
     try { localStorage.removeItem('petIsland.v1.' + PROFILE + '.save') } catch { /* ignore */ }
+    location.reload()
+  }
+
+  /**
+   * Off the device, into a file the grown-up keeps.
+   *
+   * The only export route there is: brief §19 permits no accounts and no
+   * network calls beyond static hosting, so this file is the difference
+   * between a lost tablet costing an afternoon and costing everything she has
+   * ever built.
+   */
+  async function backup(): Promise<void> {
+    // Flush first. Backing up a save that is one ceremony out of date is a
+    // subtle way of losing exactly the thing she just earned.
+    await persist()
+    const env = await store.envelope(PROFILE, 'save')
+    if (!env) { overlay.toast('Nothing to back up yet'); return }
+    download(backupFilename(childName, new Date()), JSON.stringify(env, null, 2))
+    overlay.toast('Backup saved')
+  }
+
+  /**
+   * Back from a file, with the current island kept in case of a mistake.
+   *
+   * Every failure here is "nothing happened". An import is the one moment a
+   * parent can destroy an island on purpose, so a wrong file picked in a hurry
+   * must not leave a half-applied save behind.
+   */
+  async function restore(): Promise<void> {
+    const text = await pickFile()
+    if (text === null) return
+
+    const incoming = readBackup(text)
+    if (!incoming) { overlay.toast("That file isn't a Pet Island backup"); return }
+
+    const current = await store.envelope(PROFILE, 'save')
+    const summary = summarise(incoming)
+    const mine = current
+      ? summarise(current)
+      : { name: childName || 'unnamed', savedAt: '', pets: flow.pets.length }
+    if (!confirm(confirmText(summary, mine))) return
+
+    // restore() snapshots what it replaces before writing, so a mistaken
+    // import is recoverable from the ring rather than final.
+    await store.restore(PROFILE, 'save', incoming)
     location.reload()
   }
   document.body.append(gearBtn)
@@ -604,6 +706,7 @@ async function boot(): Promise<void> {
          * single most important moment in the game (brief §19).
          */
         const receipt = await commitState()
+        void askToKeepIt()
 
         /*
          * And hold the exits for the duration.
@@ -809,6 +912,7 @@ async function boot(): Promise<void> {
         // §19: save the finished tile BEFORE celebrating it. The hatch branch
         // learned this; closing the tab mid-ceremony must not cost her the sum.
         const receipt = await commitState()
+        void askToKeepIt()
 
         await ceremony(receipt, exits, async () => {
           // Fill the dots first: the sum that FINISHED the tile deserves to

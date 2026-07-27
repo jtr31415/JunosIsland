@@ -40,9 +40,20 @@ interface IslandSave {
    * painted on her own signpost; nothing sends it anywhere.
    */
   childName?: string
+  /**
+   * What `navigator.storage.persist()` said, if it has been asked.
+   *
+   * Recorded so a later session knows whether this island is living on storage
+   * the browser has promised to keep, and so she is not re-prompted every time
+   * she plays. Null means never asked or no answer available.
+   */
+  persistGranted?: boolean | null
 }
 
-export function toSave(flow: Flow, openingSeen: boolean, childName?: string): IslandSave {
+export function toSave(
+  flow: Flow, openingSeen: boolean, childName?: string,
+  persistGranted: boolean | null = null,
+): IslandSave {
   return {
     tiles: [...flow.island.tiles.entries()],
     pets: [...flow.pets],
@@ -53,6 +64,7 @@ export function toSave(flow: Flow, openingSeen: boolean, childName?: string): Is
     tilesEarned: flow.tilesEarned,
     plot: flow.plot,
     childName,
+    persistGranted,
   }
 }
 
@@ -67,10 +79,10 @@ function readPlot(v: unknown): Flow['plot'] {
 
 export function fromSave(
   save: IslandSave | null,
-): { flow: Flow; openingSeen: boolean; childName: string } {
+): { flow: Flow; openingSeen: boolean; childName: string; persistGranted: boolean | null } {
   const fresh = createFlow()
   if (!save || !Array.isArray(save.tiles) || save.tiles.length === 0) {
-    return { flow: fresh, openingSeen: false, childName: '' }
+    return { flow: fresh, openingSeen: false, childName: '', persistGranted: null }
   }
   const island: Island = { tiles: new Map(save.tiles) }
   return {
@@ -114,19 +126,20 @@ export function fromSave(
     },
     openingSeen: save.openingSeen === true,
     childName: typeof save.childName === 'string' ? save.childName : '',
+    persistGranted: typeof save.persistGranted === 'boolean' ? save.persistGranted : null,
   }
 }
 
 export async function loadIsland(
   store: SaveStore, profileId: string,
-): Promise<{ flow: Flow; openingSeen: boolean; childName: string }> {
+): Promise<{ flow: Flow; openingSeen: boolean; childName: string; persistGranted: boolean | null }> {
   const raw = await store.get<IslandSave>(profileId, 'save')
   return fromSave(raw)
 }
 
 export async function saveIsland(
   store: SaveStore, profileId: string, flow: Flow, openingSeen: boolean,
-  childName?: string,
+  childName?: string, persistGranted: boolean | null = null,
 ): Promise<void> {
-  await store.put(profileId, 'save', toSave(flow, openingSeen, childName))
+  await store.put(profileId, 'save', toSave(flow, openingSeen, childName, persistGranted))
 }
