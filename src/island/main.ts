@@ -476,8 +476,9 @@ async function boot(): Promise<void> {
      * height for each. Framing the plot like an egg put it on the bottom edge
      * of the vignette with a screenful of empty sky above it.
      */
+    // Eye high, aim low: you look DOWN onto a tile lying on the ground.
     if (kind === 'read') stage.frame(0.55)
-    else stage.frame(world.models.size, 0.22)
+    else stage.frame(world.models.size, 0.05, 1.35)
     refreshDots(kind, state)
     return true
   }

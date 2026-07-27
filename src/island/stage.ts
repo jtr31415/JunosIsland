@@ -123,12 +123,14 @@ export interface Stage {
   /**
    * Frame the turntable for an object of roughly this size.
    *
-   * `lookHeight` is where the eye rests, as a fraction of the radius. It
-   * defaults to something suited to a tall object like an egg; a flat one
-   * like a tile needs a lower line or it sits on the bottom edge of the frame
-   * with empty sky above it.
+   * `lookHeight` is what the camera AIMS at and `eyeHeight` is where it sits,
+   * both as fractions of the radius — and they are separate because a flat
+   * object needs them pulled in opposite directions. A tile lying on the
+   * ground wants the eye HIGH and the aim LOW, so you look down onto its
+   * surface. Tying the two together dropped the camera to ground level and
+   * showed the tile edge-on as a gold sliver.
    */
-  frame(radius: number, lookHeight?: number): void
+  frame(radius: number, lookHeight?: number, eyeHeight?: number): void
   update(dt: number, t: number): void
   /** Draw into a scissored rect of the shared renderer. */
   render(renderer: THREE.WebGLRenderer, rect: StageRect): void
@@ -284,7 +286,7 @@ export function createStage(): Stage {
       sparks.visible = true
     },
 
-    frame(radius, lookHeight = 0.8) {
+    frame(radius, lookHeight = 0.8, eyeHeight = 1.2) {
       // A saucer just wider than the piece, never a landscape of its own.
       const disc = Math.max(0.35, radius * 1.35)
       plinth.scale.set(disc, 1, disc)
@@ -303,7 +305,7 @@ export function createStage(): Stage {
        * makes it read as standing in a place rather than on a putting green.
        */
       const distance = Math.max(1.7, radius * 3.4)
-      camera.position.set(0, radius * Math.max(0.5, lookHeight * 1.5), distance)
+      camera.position.set(0, radius * eyeHeight, distance)
       camera.lookAt(0, radius * lookHeight, 0)
     },
 
