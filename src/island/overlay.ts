@@ -491,11 +491,13 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
       const flight = chip.animate([
         { transform: at(0, 0, 1), opacity: 1 },
         // Up and over, so it arcs rather than sliding along a ruler.
-        { transform: at(dx * 0.55, dy * 0.35 - 60, 0.8), opacity: 1, offset: 0.55 },
-        { transform: at(dx, dy, 0.25), opacity: 0 },
+        { transform: at(dx * 0.5, dy * 0.3 - 48, 0.86), opacity: 1, offset: 0.5 },
+        { transform: at(dx, dy, 0.3), opacity: 0 },
       ], {
         duration: balance.stage.chipMs,
-        easing: 'cubic-bezier(.34,.9,.4,1)',
+        // Gentler than it was: it used to snap away, which read as the name
+        // being taken rather than being put somewhere safe.
+        easing: 'cubic-bezier(.25,.6,.3,1)',
         // HOLD the last frame. Without it the chip snaps back to mid-screen at
         // full opacity the instant the animation ends, and sits there until
         // the backstop — turning a dropped onfinish from invisible into ugly.

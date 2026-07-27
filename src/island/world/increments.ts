@@ -214,6 +214,74 @@ export interface GrowingPlot {
  * when it is ready — which keeps the sequence in its intended order however
  * the network behaves, and means a slow load can never reorder the build.
  */
+/**
+ * A sparkle: a soft round glow, not a ball.
+ *
+ * Spheres were wrong and looked it — a sphere has an edge and a shaded side,
+ * so a dozen of them read as beads scattered on the grass. A sparkle has no
+ * edge at all: it is bright in the middle and gone at the rim, which is what
+ * makes it look like light rather than like an object.
+ *
+ * So: a sprite with a radial-gradient texture, always facing the camera,
+ * varied in size and hue. Sprites also cost nothing to orient, which matters
+ * when a dozen of them are moving.
+ *
+ * The texture is built ONCE and shared — a canvas per spark would allocate a
+ * few hundred kilobytes in the middle of the one moment that must not stutter.
+ */
+let sparkTexture: THREE.CanvasTexture | null = null
+
+/**
+ * Null where there is no DOM.
+ *
+ * This module is deliberately testable without a browser — the increment
+ * maths and the landing arc are pinned headlessly — and a canvas in the
+ * constructor would have quietly taken that away. A sparkle with no texture
+ * is still a sprite in the right place at the right size; it simply has no
+ * glow to draw, which is exactly what a test needs and a child never sees.
+ */
+function glowTexture(): THREE.CanvasTexture | null {
+  if (sparkTexture) return sparkTexture
+  if (typeof document === 'undefined') return null
+  const size = 64
+  const canvas = document.createElement('canvas')
+  canvas.width = canvas.height = size
+  const ctx = canvas.getContext('2d')
+  if (ctx) {
+    const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2)
+    // A hot white core, a warm shoulder, and a long soft fall to nothing.
+    g.addColorStop(0, 'rgba(255,255,255,1)')
+    g.addColorStop(0.22, 'rgba(255,246,214,0.95)')
+    g.addColorStop(0.5, 'rgba(255,209,102,0.45)')
+    g.addColorStop(1, 'rgba(255,183,3,0)')
+    ctx.fillStyle = g
+    ctx.fillRect(0, 0, size, size)
+  }
+  sparkTexture = new THREE.CanvasTexture(canvas)
+  sparkTexture.colorSpace = THREE.SRGBColorSpace
+  return sparkTexture
+}
+
+/** Warm hues, so a burst reads as gold rather than as one flat colour. */
+const SPARK_HUES = [0xffffff, 0xfff3b0, 0xffd166, 0xffb703, 0xffe9a8]
+
+export function makeSparkle(seed: number): THREE.Sprite {
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: glowTexture() ?? undefined,
+    color: SPARK_HUES[seed % SPARK_HUES.length],
+    transparent: true,
+    depthWrite: false,
+    // Additive, so overlapping sparks brighten rather than muddying — the one
+    // place in this project where that is right, because these ARE light.
+    blending: THREE.AdditiveBlending,
+  }))
+  // Varied sizes: a burst of identical dots reads as a pattern, not a spray.
+  const scale = 0.18 + (seed % 5) * 0.07
+  sprite.scale.setScalar(scale)
+  sprite.userData.size = scale
+  return sprite
+}
+
 export function createGrowingPlot(
   type: TileType, hexSize: number, deps: PlotDeps, seed = 1,
 ): GrowingPlot {
@@ -370,36 +438,27 @@ export function createGrowingPlot(
    * for something meant to glitter — and this adds no light to the scene, so
    * the lighting brief's ban on glow passes is untouched.
    */
-  const GLOW = [0xfff3b0, 0xffd166, 0xffb703]
   const flourish = new THREE.Group()
-  for (let i = 0; i < 12; i++) {
-    const spark = new THREE.Mesh(
-      new THREE.SphereGeometry(0.05, 7, 6),
-      new THREE.MeshBasicMaterial({
-        color: GLOW[i % 3], transparent: true, opacity: 0.95, depthWrite: false,
-      }),
-    )
-    const a = (i / 12) * Math.PI * 2
+  for (let i = 0; i < 14; i++) {
+    const spark = makeSparkle(i)
+    const a = (i / 14) * Math.PI * 2
     spark.position.set(
-      Math.cos(a) * hexSize * 0.55, 0.55 + Math.sin(a * 2) * 0.22,
+      Math.cos(a) * hexSize * 0.55, 0.5 + Math.sin(a * 3) * 0.28,
       Math.sin(a) * hexSize * 0.55)
     flourish.add(spark)
   }
 
   /*
-   * The trail: a handful of glows that drop off the tile as it flies and hang
-   * in the air behind it, fading. Separate from the flourish because it is
-   * about the JOURNEY, and it must not be part of what the tile keeps.
+   * The trail: glows shed along the flight and left hanging in the air.
+   *
+   * Separate from the flourish because it is about the JOURNEY, and it must
+   * not become part of what the tile keeps.
    */
   const trail = new THREE.Group()
   trail.visible = false
-  for (let i = 0; i < 10; i++) {
-    const mote = new THREE.Mesh(
-      new THREE.SphereGeometry(0.055, 6, 5),
-      new THREE.MeshBasicMaterial({
-        color: GLOW[i % 3], transparent: true, opacity: 0, depthWrite: false,
-      }),
-    )
+  for (let i = 0; i < 12; i++) {
+    const mote = makeSparkle(i + 7)
+    mote.material.opacity = 0
     trail.add(mote)
   }
   group.parent?.add(trail)
@@ -467,9 +526,10 @@ export function createGrowingPlot(
           const age = Math.min(1, (trailAge[i] as number) + dt * 1.6)
           trailAge[i] = age
           if (age < 1) alive = true
-          const m = (mote as THREE.Mesh).material as THREE.MeshBasicMaterial
-          m.opacity = (1 - age) * 0.85
-          mote.scale.setScalar(Math.max(0.05, 1 - age * 0.6))
+          const m = (mote as THREE.Sprite).material
+          m.opacity = (1 - age) * (1 - age)
+          const full = (mote.userData.size as number) ?? 0.2
+          mote.scale.setScalar(Math.max(0.02, full * (1 - age * 0.55)))
         })
         if (!alive && landT < 0) trail.visible = false
       }

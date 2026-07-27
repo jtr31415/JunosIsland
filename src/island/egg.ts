@@ -33,6 +33,15 @@ export interface Egg {
   /** Show the state for this 0..1 progress toward hatching. */
   setProgress(progress: number): void
   update(dt: number, t: number): void
+  /**
+   * Arrive, rather than simply be there.
+   *
+   * Every egg — including the very first — used to blink into existence at
+   * full size. A thing that appears has always been there as far as a child
+   * is concerned; a thing that ARRIVES came from somewhere, and the whole
+   * premise is that eggs wash up on her shore.
+   */
+  arrive(): void
   /** Crack open: a shudder, a burst, then hide. Resolves when done. */
   hatch(): Promise<void>
   reset(): void
@@ -142,12 +151,16 @@ export function createEgg(): Egg {
   group.userData.pick = { kind: 'egg' }
 
   let shudder = false
+  /** 0..1 through the arrival, or -1 when it is not playing. */
+  let arriveT = -1
   let stage: EggStage = 'intact'
 
   return {
     group,
 
     setPosition(x, z) { group.position.set(x, 0, z) },
+
+    arrive() { arriveT = 0 },
 
     setProgress(progress) {
       stage = stageFor(progress)
@@ -158,7 +171,20 @@ export function createEgg(): Egg {
       crackGroups.forEach((g, i) => { g.visible = i < shown })
     },
 
-    update(_dt, t) {
+    update(dt, t) {
+      if (arriveT >= 0) {
+        arriveT = Math.min(1, arriveT + dt * 1.5)
+        if (arriveT >= 1) { arriveT = -1; group.scale.setScalar(0.62) }
+        else {
+          // Drops in and settles, with a squash as it meets the ground.
+          const fall = 1 - Math.pow(1 - arriveT, 2)
+          const bounce = Math.max(0, Math.sin((arriveT - 0.7) / 0.3 * Math.PI))
+          group.position.y = 2.2 * (1 - fall)
+          group.scale.set(
+            0.62 * (1 + bounce * 0.16), 0.62 * (1 - bounce * 0.2), 0.62 * (1 + bounce * 0.16))
+          return
+        }
+      }
       if (shudder) return
       /*
        * An egg on the ground ROCKS; it does not hover. The first version bobbed
@@ -204,6 +230,7 @@ export function createEgg(): Egg {
 
     reset() {
       group.visible = true
+      arriveT = 0                     // and it arrives again, rather than pops
       body.scale.setScalar(1)
       body.rotation.set(0, 0, 0)
       glow.material.opacity = 0

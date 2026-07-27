@@ -20,6 +20,7 @@ import * as THREE from 'three'
 import { createStage, dotsFilled, DOT_COUNT } from '../../src/island/stage'
 import type { SumItem } from '../../src/core/generators/sums'
 import type { ReadPick } from '../../src/core/generators/read'
+import { balance } from '../../src/island/balance'
 
 const SUM: SumItem = { a: 2, b: 3, op: 'add' }
 const PICKS: ReadPick[] = [{ w: 'sat', cls: 'green' }, { w: 'him', cls: 'green' }]
@@ -220,7 +221,8 @@ describe('the album chip', () => {
     overlay.flyToAlbum('Gachap', target)
     expect(root.querySelector('.album-chip')).not.toBeNull()
 
-    vi.advanceTimersByTime(1500)
+    // Derived from the flight, not guessed: the backstop must outlive it.
+    vi.advanceTimersByTime(balance.stage.chipMs + 900)
     expect(root.querySelector('.album-chip')).toBeNull()
     vi.useRealTimers()
   })

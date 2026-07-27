@@ -22,6 +22,7 @@ import type { LightingPreset } from './lighting'
 import meadowDay from './lighting/presets/meadow-day.json'
 import { balance } from './balance'
 import { fitInto } from './world/props'
+import { makeSparkle } from './world/increments'
 
 /**
  * Seconds per revolution, from balance.json.
@@ -194,18 +195,13 @@ export function createStage(): Stage {
    */
   const sparks = new THREE.Group()
   sparks.visible = false
-  const SPARKS = 14
+  const SPARKS = 16
   for (let i = 0; i < SPARKS; i++) {
-    const spark = new THREE.Mesh(
-      new THREE.SphereGeometry(0.045, 6, 5),
-      new THREE.MeshStandardMaterial({
-        color: i % 3 === 0 ? 0xfff2a8 : i % 3 === 1 ? 0xffd166 : 0xffffff,
-        metalness: 0, roughness: 1, transparent: true,
-      }),
-    )
+    // Same sparkle as the tile's flourish: a soft glow, not a bead.
+    const spark = makeSparkle(i)
     spark.userData.dir = new THREE.Vector3(
       Math.cos((i / SPARKS) * Math.PI * 2),
-      0.55 + (i % 4) * 0.28,
+      0.5 + (i % 5) * 0.26,
       Math.sin((i / SPARKS) * Math.PI * 2),
     ).normalize()
     sparks.add(spark)
@@ -308,9 +304,10 @@ export function createStage(): Stage {
             const dir = spark.userData.dir as THREE.Vector3
             spark.position.copy(dir).multiplyScalar(0.2 + reach * 0.85)
             spark.position.y += 0.25 - burstT * burstT * 0.5
-            const m = (spark as THREE.Mesh).material as THREE.MeshStandardMaterial
+            const m = (spark as THREE.Sprite).material
             m.opacity = 1 - burstT * burstT
-            spark.scale.setScalar(1 - burstT * 0.45)
+            const full = (spark.userData.size as number) ?? 0.2
+            spark.scale.setScalar(full * (1 - burstT * 0.4))
           }
         }
       }

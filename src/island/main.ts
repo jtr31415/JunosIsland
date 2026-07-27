@@ -661,8 +661,6 @@ async function boot(): Promise<void> {
         }
 
         overlay.showName(name)
-        const line = HATCH_LINES[flow.pets.length % HATCH_LINES.length] as string
-        speech.speak(fill(line, child(), name))
         fred.talk(2.4)
         fred.hop()
 
@@ -677,10 +675,19 @@ async function boot(): Promise<void> {
         await wait(friend ? HATCH_HOLD_MS : 400)
         stage.showTemp(null)
         stageFor(null)
-        // The card has said its piece; the chip below carries the name on.
-        overlay.clearName()
         overlay.setBusy(false)
         overlay.close()
+
+        /*
+         * The name is spoken AFTER the round closes.
+         *
+         * Closing tears the challenge down, and teardown cancels speech
+         * (v0:847, faithfully ported) — so saying it first meant the friend's
+         * name was cut off mid-word by the very act of putting the words
+         * away. This is the one line in the game that must be heard whole.
+         */
+        const line = HATCH_LINES[flow.pets.length % HATCH_LINES.length] as string
+        speech.speak(fill(line, child(), name))
         egg.reset()
         refresh()
 
@@ -699,7 +706,12 @@ async function boot(): Promise<void> {
          * chip launches toward the top corner asks a six-year-old to watch
          * two things at once, and she will watch neither.
          */
-        setTimeout(() => overlay.flyToAlbum(name, albumBtn), 420)
+        setTimeout(() => {
+          // The card goes as the chip picks the name up, so the two read as
+          // one movement rather than as the name existing twice.
+          overlay.clearName()
+          overlay.flyToAlbum(name, albumBtn)
+        }, 900)
         inCeremony = false
 
         if (openingResumeAt >= 0) {
@@ -911,11 +923,30 @@ async function boot(): Promise<void> {
       if (beat.cue === 'point-egg') fred.pointAt(egg.group.position)
 
       overlay.say(text)
-      speech.speak(text)
+      /*
+       * Wait for him to FINISH, rather than guessing how long he takes.
+       *
+       * Each beat used to sit for a computed number of milliseconds and then
+       * move on — and moving on speaks the next line, which cancels the
+       * current utterance (v0:749, faithfully ported). Guess low and the last
+       * words are cut off; the child's own name is at the END of "Oh! Hello,
+       * Juno", which is exactly what she lost. Now the beat ends when the
+       * voice does, with the computed time only as a ceiling for the case
+       * where there is no voice at all.
+       */
+      let spoken = false
+      const finished = new Promise<void>(resolve => {
+        spoken = speech.speak(text, undefined, () => resolve())
+        if (!spoken) resolve()
+      })
       fred.talk(Math.min(6, text.length * 0.06))
       if (beat.cue === 'egg-arrives') fred.hop()
 
-      await waitForTap(beatMs(text))
+      await Promise.race([
+        waitForTap(beatMs(text)),
+        // ...plus a breath after the voice stops, so lines do not run together.
+        finished.then(() => wait(balance.story.beatMinMs * 0.45)),
+      ])
       fred.pointAt(null)
 
       // The two beats that hand over to the child.
@@ -1102,6 +1133,8 @@ async function boot(): Promise<void> {
   }
 
   refresh()
+  // Even the very first egg washes up rather than being there already.
+  egg.arrive()
   world.start()
   document.getElementById('boot')?.remove()
 
