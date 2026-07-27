@@ -19,7 +19,7 @@ function ports(over: Partial<InteractionPorts> = {}): InteractionPorts {
     storyPlaying: () => false,
     openRead: vi.fn(),
     openSum: vi.fn(),
-    replayStory: vi.fn(),
+    greetFred: vi.fn(),
     bouncePet: vi.fn(),
     say: vi.fn(),
     clearSay: vi.fn(),
@@ -98,24 +98,55 @@ describe('tapping the egg', () => {
 })
 
 describe('tapping Fred', () => {
-  it('replays the story from free play', () => {
+  /*
+   * He used to replay the whole opening, and Joe hit it mid-game: the intro
+   * restarted, handed over an animal after one challenge and a tile after the
+   * next, in the middle of a session she was already playing. A tap on a
+   * friendly character has to be the smallest thing in the game.
+   */
+  it('hops and says his name, like any other friend', () => {
     const p = ports()
     handleWorldTap(createFlow(), { kind: 'fred' }, p)
-    expect(p.replayStory).toHaveBeenCalled()
+    expect(p.greetFred).toHaveBeenCalled()
   })
 
-  it('does NOT replay the story while placing', () => {
-    // This exact sequence let the story call tapEgg (a no-op outside 'free')
-    // and then open a round anyway — real work, no reward.
-    const p = ports()
-    handleWorldTap(readyToPlace(), { kind: 'fred' }, p)
-    expect(p.replayStory).not.toHaveBeenCalled()
+  it('changes nothing at all', () => {
+    // Not "changes little" — a greeting must not move the flow one inch,
+    // whatever she happens to be in the middle of.
+    for (const f of [createFlow(), readyToPlace(), tapEgg(createFlow())]) {
+      expect(handleWorldTap(f, { kind: 'fred' }, ports())).toBe(f)
+    }
   })
 
-  it('does NOT replay the story mid-challenge', () => {
+  it('never opens a round', () => {
     const p = ports()
-    handleWorldTap(tapEgg(createFlow()), { kind: 'fred' }, p)
-    expect(p.replayStory).not.toHaveBeenCalled()
+    handleWorldTap(createFlow(), { kind: 'fred' }, p)
+    expect(p.openRead).not.toHaveBeenCalled()
+    expect(p.openSum).not.toHaveBeenCalled()
+  })
+})
+
+describe('tapping her own land', () => {
+  /*
+   * Joe: "annoying UX if you only want to look around the island." Any patch
+   * of grass used to start a maths round, so turning the camera to look at
+   * what she had built handed her a sum instead.
+   */
+  it('does nothing when there is no plot under construction', () => {
+    const p = ports()
+    const f = createFlow()
+    expect(handleWorldTap(f, { kind: 'tile', axial: { q: 0, r: 0 } }, p)).toBe(f)
+    expect(p.openSum).not.toHaveBeenCalled()
+  })
+
+  it('still carries on a plot she is already building', () => {
+    // Unambiguously what she is doing, so it is not a surprise.
+    const p = ports()
+    const sited = readyToPlace()
+    handleWorldTap(sited, { kind: 'tile', axial: { q: 0, r: 0 } }, p)
+    // No plot on this state either, so still nothing — the guard is the plot,
+    // not the phase.
+    expect(p.openSum).not.toHaveBeenCalled()
   })
 })
 
@@ -163,10 +194,27 @@ describe('tapping a socket', () => {
     expect(p.openSum).toHaveBeenCalledWith(next)
   })
 
-  it('does nothing in free play', () => {
+  it('ASKS for land from free play — the glowing outline is the way in', () => {
+    /*
+     * It used to do nothing here, because land was asked for by tapping any
+     * grass. That made looking round the island a minefield, so the socket
+     * took the job over: it is the one place building can happen and the only
+     * thing that starts it.
+     */
     const p = ports()
+    const next = handleWorldTap(createFlow(), { kind: 'socket', axial: { q: 1, r: 0 } }, p)
+    expect(next.phase).toBe('placing')
+    expect(p.say).toHaveBeenCalled()
+  })
+
+  it('respects the land governor when asked from a socket', () => {
+    // The governor guards the path that STARTS new land, and that path moved.
+    const p = ports()
+    p.landPaused = vi.fn(() => true)
     const f = createFlow()
     expect(handleWorldTap(f, { kind: 'socket', axial: { q: 1, r: 0 } }, p)).toBe(f)
+    expect(p.invite).toHaveBeenCalledWith('space-surplus')
+    expect(p.openSum).not.toHaveBeenCalled()
   })
 })
 
@@ -189,17 +237,17 @@ describe('tapping a pet', () => {
 })
 
 describe('tapping the island', () => {
-  it('opens the BANK from free play, not a sum', () => {
+  it('does NOT open the bank from free play any more', () => {
     /*
-     * Spec section 2 builds the tile in view, so there is nothing for a sum to
-     * advance until the child has said what she wants and where. Opening a
-     * round here is the invisible progress the growing plot exists to abolish.
+     * Joe: "annoying UX if you only want to look around the island." Turning
+     * the camera to admire what she built used to hand her a maths round. The
+     * bank is opened from a socket now.
      */
     const p = ports()
-    const next = handleWorldTap(createFlow(), { kind: 'tile', axial: { q: 0, r: 0 } }, p)
-    expect(next.phase).toBe('placing')
+    const f = createFlow()
+    expect(handleWorldTap(f, { kind: 'tile', axial: { q: 0, r: 0 } }, p)).toBe(f)
     expect(p.openSum).not.toHaveBeenCalled()
-    expect(p.say).toHaveBeenCalled()
+    expect(p.say).not.toHaveBeenCalled()
   })
 
   it('opens a sum once a plot is under construction', () => {
@@ -272,9 +320,11 @@ describe('a completed round is never discarded', () => {
     // Found at the M1 gate in its earlier form: a surplus hid the offer and a
     // tile she had earned became unreachable. The plot cannot be surplus —
     // there is only ever one, and asking again advances it.
+    //
+    // Asking now happens at a SOCKET; carrying on happens at either.
     const p = ports()
     let f = earnTile()
-    f = handleWorldTap({ ...f, phase: 'free' }, { kind: 'tile', axial: { q: 0, r: 0 } }, p)
+    f = handleWorldTap({ ...f, phase: 'free' }, { kind: 'socket', axial: { q: 1, r: 0 } }, p)
     expect(f.phase).toBe('placing')
     f = handleWorldTap(chooseTile(f, 'water'), { kind: 'socket', axial: { q: 0, r: 1 } }, p)
     const plot = f.plot
@@ -382,10 +432,12 @@ describe('a governor diverts a tap, it never strands one', () => {
     expect(p.invite).toHaveBeenCalledWith('nursery-queue')
   })
 
-  it('a paused land tap does not open the bank', () => {
+  it('a paused ask does not open the bank', () => {
+    // The governor guards the path that STARTS new land, and that path is the
+    // socket now.
     const p = ports({ landPaused: () => true })
     const before = createFlow()
-    const next = handleWorldTap(before, { kind: 'tile', axial: { q: 0, r: 0 } }, p)
+    const next = handleWorldTap(before, { kind: 'socket', axial: { q: 1, r: 0 } }, p)
     expect(next).toBe(before)
     expect(next.phase).toBe('free')
     expect(p.invite).toHaveBeenCalledWith('space-surplus')

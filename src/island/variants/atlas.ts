@@ -28,6 +28,7 @@
 import * as THREE from 'three'
 import { recolourInto, isNatural } from './recolour'
 import { NATURAL, setById } from './sets'
+import speciesBase from './species-base.json'
 import type { PetSet } from './sets'
 
 export interface SetAtlas {
@@ -38,9 +39,9 @@ export interface SetAtlas {
    * nothing", but genuinely untouched, which is what makes the friends Juno
    * already owns provably identical to before this engine existed.
    */
-  dress(pet: THREE.Object3D, setId: string): Promise<void>
-  /** The recoloured texture, or null for the natural set. */
-  texture(setId: string): Promise<THREE.Texture | null>
+  dress(pet: THREE.Object3D, setId: string, speciesId: string): Promise<void>
+  /** The recoloured texture for one species, or null for the natural set. */
+  texture(setId: string, speciesId: string): Promise<THREE.Texture | null>
   /** For the Pet-o-matic and the debug dump. */
   cached(): string[]
   /** Only ever called when the whole pet field goes. */
@@ -55,7 +56,10 @@ export interface SetAtlas {
  * frame on a mid-range tablet (brief §14). It also keeps the recolour rule as
  * ordinary arithmetic a unit test can reach, rather than GLSL nobody can check.
  */
-function paint(source: CanvasImageSource, w: number, h: number, set: PetSet): HTMLCanvasElement {
+function paint(
+  source: CanvasImageSource, w: number, h: number, set: PetSet,
+  base: ReadonlySet<string>,
+): HTMLCanvasElement {
   const canvas = document.createElement('canvas')
   canvas.width = w
   canvas.height = h
@@ -63,7 +67,7 @@ function paint(source: CanvasImageSource, w: number, h: number, set: PetSet): HT
   if (!ctx) return canvas
   ctx.drawImage(source, 0, 0)
   const data = ctx.getImageData(0, 0, w, h)
-  recolourInto(data.data, set, w)
+  recolourInto(data.data, set, w, base)
   ctx.putImageData(data, 0, 0)
   return canvas
 }
@@ -96,12 +100,20 @@ export function createSetAtlas(base = ''): SetAtlas {
     return source
   }
 
-  async function build(set: PetSet): Promise<THREE.Texture | null> {
+  /** A species' own base-coat colours, from the table the autopsy emits. */
+  const baseOf = (speciesId: string): ReadonlySet<string> => {
+    const key = speciesId.replace('animal-', '')
+    const list = (speciesBase as Record<string, string[]>)[key] ?? []
+    return new Set(list)
+  }
+
+  async function build(set: PetSet, speciesId: string): Promise<THREE.Texture | null> {
     if (isNatural(set)) return null
     const src = await baseTexture()
     const image = src.image as (CanvasImageSource & { width: number; height: number }) | undefined
     if (!image) return null
-    const map = new THREE.CanvasTexture(paint(image, image.width, image.height, set))
+    const map = new THREE.CanvasTexture(
+      paint(image, image.width, image.height, set, baseOf(speciesId)))
     map.colorSpace = THREE.SRGBColorSpace
     map.flipY = false
     map.generateMipmaps = false
@@ -112,22 +124,31 @@ export function createSetAtlas(base = ''): SetAtlas {
   }
 
   const api: SetAtlas = {
-    texture(setId) {
-      const hit = textures.get(setId)
+    texture(setId, speciesId) {
+      /*
+       * Keyed by set AND species, because the base coat is a fact about the
+       * animal: a pale band is a polar bear's coat and a penguin's belly, and
+       * one shared image cannot recolour the first while sparing the second.
+       * Built on demand, so only the creatures actually on screen cost
+       * anything.
+       */
+      const key = `${setId}/${speciesId}`
+      const hit = textures.get(key)
       if (hit) return hit
       // An unknown set — a save naming one since removed — falls back to
       // natural rather than stopping her playing.
-      const built = build(setById(setId) ?? NATURAL)
-      textures.set(setId, built)
+      const built = build(setById(setId) ?? NATURAL, speciesId)
+      textures.set(key, built)
       return built
     },
 
-    async dress(pet, setId) {
-      const map = await api.texture(setId)
+    async dress(pet, setId, speciesId) {
+      const map = await api.texture(setId, speciesId)
       if (!map) return                       // natural: leave the model alone
 
-      let forSet = dressed.get(setId)
-      if (!forSet) { forSet = new Map(); dressed.set(setId, forSet) }
+      const key = `${setId}/${speciesId}`
+      let forSet = dressed.get(key)
+      if (!forSet) { forSet = new Map(); dressed.set(key, forSet) }
 
       pet.traverse(node => {
         const mesh = node as THREE.Mesh

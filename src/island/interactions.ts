@@ -47,7 +47,8 @@ export interface InteractionPorts {
   landPaused(f: Flow): boolean
   /** Fred asks for the other thing instead. Never a lockout. */
   invite(which: 'space-surplus' | 'nursery-queue'): void
-  replayStory(): void
+  /** Fred hops and says his name, like any other friend. */
+  greetFred(): void
   bouncePet(id: string): void
   say(text: string): void
   clearSay(): void
@@ -76,14 +77,41 @@ export function handleWorldTap(flow: Flow, hit: Hit | null, p: InteractionPorts)
     }
 
     case 'fred': {
-      // "tell me again?" — replayable forever (brief section 3), but only from
-      // free play, or the story would call transitions that cannot fire.
-      if (flow.phase === 'free') p.replayStory()
+      /*
+       * He hops and says his name, exactly as every pet does.
+       *
+       * This used to replay the whole opening — brief §3's "tell me again?" —
+       * and Joe hit it mid-game: the intro restarted, walked her through a
+       * challenge that handed over an animal and then another that handed over
+       * a tile, in the middle of a session she was already playing. A tap on a
+       * friendly character has to be the smallest thing in the game, not the
+       * largest.
+       *
+       * Replaying the story is not lost, it has moved behind the grown-ups PIN
+       * where a curious tap cannot reach it.
+       */
+      p.greetFred()
       return flow
     }
 
     case 'socket': {
-      if (flow.phase !== 'placing' || !flow.chosen) return flow
+      /*
+       * A socket is now how she ASKS for land, as well as where it goes.
+       *
+       * Any patch of grass used to start a maths round, which made simply
+       * looking round her own island a minefield — Joe: "annoying UX if you
+       * only want to look around". The glowing outlines are permanent for the
+       * same reason: if they are the only thing that starts land, they have to
+       * be visible before she has already started.
+       */
+      if (flow.phase !== 'placing' || !flow.chosen) {
+        if (!flow.plot && p.landPaused(flow)) { p.invite('space-surplus'); return flow }
+        const asked = askForLand(flow)
+        if (asked === flow) return flow
+        if (asked.phase === 'challenge') p.openSum(asked)
+        else p.say('Pick some land, then choose where it goes!')
+        return asked
+      }
       const next = placeTile(flow, hit.axial)
       if (next === flow) return flow          // not a legal socket; choice kept
       p.clearSay()
@@ -119,23 +147,21 @@ export function handleWorldTap(flow: Flow, hit: Hit | null, p: InteractionPorts)
 
     case 'tile': {
       /*
-       * Asking the island for land.
+       * Tapping her own land does NOTHING, deliberately.
        *
-       * With a plot already under construction this opens the next sum. With
-       * none it opens the bank — pick a type, pick a socket — because spec §2
-       * builds the tile in view and there is nothing to advance until the
-       * child has said what and where.
+       * It used to start a maths round, so there was no way to turn the camera
+       * or look at what she had built without being handed a sum. Land is
+       * asked for at a socket now — the glowing outline at the island's edge,
+       * which says "you could build here" in the one place building happens.
+       *
+       * A plot already under construction is the exception: tapping the tile
+       * she is in the middle of building carries on with it, because that is
+       * unambiguously what she is doing.
        */
-      /*
-       * The governor is checked HERE, on the path that STARTS new land.
-       * Checking it only inside the port meant it could never fire: by then
-       * a plot always existed, and the pause requires that there is none.
-       */
-      if (!flow.plot && p.landPaused(flow)) { p.invite('space-surplus'); return flow }
+      if (!flow.plot) return flow
       const next = askForLand(flow)
       if (next === flow) return flow
       if (next.phase === 'challenge') p.openSum(next)
-      else p.say('Pick some land, then choose where it goes!')
       return next
     }
 

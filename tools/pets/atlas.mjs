@@ -13,7 +13,7 @@
  * colour is entirely a texture lookup, and every pet samples a handful of
  * vertical COLUMNS of `colormap.png`, using v to pick a shade down a gradient.
  */
-import { readFileSync, readdirSync } from 'node:fs'
+import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { inflateSync } from 'node:zlib'
 import { dirname, resolve, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -252,3 +252,79 @@ console.log(`  chromatic (>0.25)    ${pct(chromatic)}`)
 console.log(`  near-black (max<90)  ${pct(nearBlack)}`)
 console.log('\n-> a set recolour shifts the chromatic texels and leaves the')
 console.log('   achromatic ones alone: the eyes and the face stay put.')
+
+/* ------------------------------------------------------- the base table --- */
+
+/**
+ * Which colours are each species' BASE COAT, written out for the recolourer.
+ *
+ * Joe: "for pig, polar bear, penguin, goat and panda, you picked the wrong
+ * base colour to change." He is right, and the cause is structural: the first
+ * version decided base-versus-marking per ATLAS BAND, and a band is shared by
+ * up to 23 species. The vote is therefore won by whatever most species use it
+ * for, and the pale, monochrome animals — the pig, the polar bear, the
+ * penguin, the goat, the panda — lose it every time. Their coat gets treated
+ * as somebody else's marking.
+ *
+ * A base coat is a fact about an ANIMAL, so it has to be decided from that
+ * animal's own colours. That cannot be done at runtime — it needs the UVs out
+ * of the .glb — so it is computed here and shipped as data.
+ *
+ * The rule per species: take the colours it actually samples, weight them by
+ * how many of its vertices use them, and call the largest similar-colour
+ * cluster the base. Everything else is a marking and is left alone.
+ */
+const HUE_TOL = 40
+const PALE = 0.12
+
+function baseColoursFor(file) {
+  const { json: g, bin } = readGlb(join(PETS, file))
+  const tally = new Map()
+  for (const [u, v] of uvs(g, bin)) {
+    const x = Math.min(img.w - 1, Math.max(0, Math.round(u * img.w - 0.5)))
+    const y = Math.min(img.h - 1, Math.max(0, Math.round(v * img.h - 0.5)))
+    const o = y * img.stride + x * img.bpp
+    const c = [img.px[o], img.px[o + 1], img.px[o + 2]]
+    if (Math.max(...c) < 78) continue                  // soul: never a coat
+    const key = c.join(',')
+    tally.set(key, (tally.get(key) ?? 0) + 1)
+  }
+
+  const hsv = ([r, g2, b]) => {
+    const R = r / 255, G = g2 / 255, B = b / 255
+    const mx = Math.max(R, G, B), mn = Math.min(R, G, B), d = mx - mn
+    let h = 0
+    if (d) {
+      if (mx === R) h = ((G - B) / d) % 6
+      else if (mx === G) h = (B - R) / d + 2
+      else h = (R - G) / d + 4
+      h = (h * 60 + 360) % 360
+    }
+    return [h, mx === 0 ? 0 : d / mx, mx]
+  }
+
+  // Cluster by hue, with all the pale colours as one cluster of their own.
+  const clusters = []
+  for (const [key, n] of [...tally.entries()].sort((a, b) => b[1] - a[1])) {
+    const c = key.split(',').map(Number)
+    const [h, s] = hsv(c)
+    const pale = s < PALE
+    let into = clusters.find(cl => cl.pale === pale
+      && (pale || Math.abs(((h - cl.hue) % 360 + 540) % 360 - 180) <= HUE_TOL))
+    if (!into) { into = { hue: h, pale, weight: 0, keys: [] }; clusters.push(into) }
+    into.weight += n
+    into.keys.push(key)
+  }
+  clusters.sort((a, b) => b.weight - a.weight)
+  return clusters[0] ? clusters[0].keys : []
+}
+
+const table = {}
+for (const f of files) table[f.replace('animal-', '').replace('.glb', '')] = baseColoursFor(f)
+
+const OUT = resolve(here, '../../src/island/variants/species-base.json')
+writeFileSync(OUT, JSON.stringify(table, null, 1) + '\n')
+console.log('\nwrote species-base.json')
+for (const [k, v] of Object.entries(table)) {
+  console.log('  ' + k.padEnd(13) + String(v.length).padStart(2) + ' base colours  ' + v.slice(0, 3).join('  '))
+}

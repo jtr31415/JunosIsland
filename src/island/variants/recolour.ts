@@ -90,6 +90,26 @@ export const BAND = 64
 export const RAMP_LOW = 0.34
 export const RAMP_HIGH = 1.0
 
+/**
+ * How far from its band's base colour a hue may sit and still be the coat.
+ *
+ * Beyond this it is a MARKING and keeps the colour the artist gave it — the
+ * tiger's stripes, the tortoiseshell's patches. Wide enough that the shading
+ * either side of a base colour travels with it, narrow enough that a genuinely
+ * different colour does not.
+ */
+export const BASE_HUE_SPREAD = 42
+
+/**
+ * Below this saturation a pixel is treated as pale rather than coloured.
+ *
+ * Which side of the line that puts it depends on its band: on a coloured coat
+ * a pale pixel is a marking (a penguin's belly, a badger's stripe) and stays;
+ * on a coat that is ITSELF pale — the polar bear — the pale pixels are the
+ * coat and are what must change.
+ */
+export const MARKING_SATURATION = 0.12
+
 /* --------------------------------------------------------------- colour --- */
 
 /** RGB bytes to HSV, with h in degrees and s, v in 0..1. */
@@ -164,22 +184,117 @@ export const isNatural = (p: SetPalette): boolean => p.sat < 0
  * not the moment to be casually copying.
  */
 export function recolourInto(
-  rgba: Uint8ClampedArray, p: SetPalette, width: number, band = BAND,
+  rgba: Uint8ClampedArray, p: SetPalette, width: number,
+  base?: ReadonlySet<string>, band = BAND,
 ): number {
   if (isNatural(p)) return 0
 
+  /*
+   * The species' OWN base coat, when we know which species this is for.
+   *
+   * Joe: "for pig, polar bear, penguin, goat and panda you picked the wrong
+   * base colour to change." The band heuristic below decides base-versus-
+   * marking from a whole atlas band, and a band is shared by up to 23 species
+   * — so the vote goes to whatever most of them use it for, and the pale,
+   * monochrome animals lose it every time. Their coat gets treated as somebody
+   * else's marking and never changes.
+   *
+   * A base coat is a fact about an ANIMAL. `species-base.json` records it,
+   * computed from each model's own UVs by tools/pets/atlas.mjs, and when it is
+   * supplied it settles the question outright.
+   */
+  if (base) {
+    let lo = Infinity, hi = -Infinity
+    for (let i = 0; i < rgba.length; i += 4) {
+      if (rgba[i + 3] === 0) continue
+      if (!base.has(`${rgba[i]},${rgba[i + 1]},${rgba[i + 2]}`)) continue
+      const v = Math.max(rgba[i] as number, rgba[i + 1] as number, rgba[i + 2] as number) / 255
+      if (v < lo) lo = v
+      if (v > hi) hi = v
+    }
+    let changed = 0
+    for (let i = 0; i < rgba.length; i += 4) {
+      if (rgba[i + 3] === 0) continue
+      const r = rgba[i] as number, g = rgba[i + 1] as number, b = rgba[i + 2] as number
+      if (!base.has(`${r},${g},${b}`)) continue        // a marking, or the face
+      const v = Math.max(r, g, b) / 255
+      const t = hi > lo ? (v - lo) / (hi - lo) : 0.5
+      const [nr, ng, nb] = shade(t, p)
+      if (nr !== r || ng !== g || nb !== b) changed++
+      rgba[i] = nr; rgba[i + 1] = ng; rgba[i + 2] = nb
+    }
+    return changed
+  }
+
   const bands = Math.max(1, Math.ceil(width / band))
-  const lo = new Array<number>(bands).fill(Infinity)
-  const hi = new Array<number>(bands).fill(-Infinity)
   const bandOf = (i: number): number =>
     Math.min(bands - 1, Math.floor(((i / 4) % width) / band))
+
+  /* -- pass one: what is each band's BASE COAT? ---------------------------- */
+
+  const BUCKETS = 24                                   // 15° apiece
+  const hist = Array.from({ length: bands }, () => new Array<number>(BUCKETS).fill(0))
+  const pale = new Array<number>(bands).fill(0)
+  const chromatic = new Array<number>(bands).fill(0)
 
   for (let i = 0; i < rgba.length; i += 4) {
     if (rgba[i + 3] === 0) continue
     const r = rgba[i] as number, g = rgba[i + 1] as number, b = rgba[i + 2] as number
     if (isSoul(r, g, b)) continue
-    const v = Math.max(r, g, b) / 255
     const k = bandOf(i)
+    const [h, s] = rgbToHsv(r, g, b)
+    if (s < MARKING_SATURATION) { pale[k] = (pale[k] as number) + 1; continue }
+    chromatic[k] = (chromatic[k] as number) + 1
+    const bucket = Math.floor(h / (360 / BUCKETS)) % BUCKETS
+    const row = hist[k] as number[]
+    row[bucket] = (row[bucket] as number) + 1
+  }
+
+  /** The band's own base colour, and whether that base is a pale one. */
+  const baseHue = new Array<number>(bands).fill(0)
+  const baseIsPale = new Array<boolean>(bands).fill(false)
+  for (let k = 0; k < bands; k++) {
+    baseIsPale[k] = (pale[k] as number) > (chromatic[k] as number)
+    const row = hist[k] as number[]
+    let best = 0
+    for (let bkt = 1; bkt < BUCKETS; bkt++) {
+      if ((row[bkt] as number) > (row[best] as number)) best = bkt
+    }
+    baseHue[k] = (best + 0.5) * (360 / BUCKETS)
+  }
+
+  /**
+   * Is this pixel part of the band's base coat, or one of its MARKINGS?
+   *
+   * Joe, on the first version: "it's now applied across the board. Highlights
+   * and eyes need to maintain the original colour — tiger stripes, penguin
+   * belly, tortoiseshell, panda stripe."
+   *
+   * Quite right. Recolouring every non-black pixel to one hue turns a tiger
+   * into a solid berry cat: the stripes survive only as a shade difference,
+   * and the thing that made it a tiger is gone. So each band keeps its base
+   * coat — the colour most of it is made of — and anything far from that in
+   * hue, or pale where the base is not, is a marking and is left exactly as
+   * the artist drew it.
+   */
+  const isBase = (h: number, s: number, k: number): boolean => {
+    if (baseIsPale[k] === true) return s < MARKING_SATURATION
+    if (s < MARKING_SATURATION) return false           // a pale belly on a coloured coat
+    const d = Math.abs(((h - (baseHue[k] as number)) % 360 + 540) % 360 - 180)
+    return d <= BASE_HUE_SPREAD
+  }
+
+  /* -- pass two: normalise the base coat, and only the base coat ----------- */
+
+  const lo = new Array<number>(bands).fill(Infinity)
+  const hi = new Array<number>(bands).fill(-Infinity)
+  for (let i = 0; i < rgba.length; i += 4) {
+    if (rgba[i + 3] === 0) continue
+    const r = rgba[i] as number, g = rgba[i + 1] as number, b = rgba[i + 2] as number
+    if (isSoul(r, g, b)) continue
+    const k = bandOf(i)
+    const [h, s, v] = rgbToHsv(r, g, b)
+    if (!isBase(h, s, k)) continue
     if (v < (lo[k] as number)) lo[k] = v
     if (v > (hi[k] as number)) hi[k] = v
   }
@@ -190,13 +305,15 @@ export function recolourInto(
     const r = rgba[i] as number, g = rgba[i + 1] as number, b = rgba[i + 2] as number
     if (isSoul(r, g, b)) continue
     const k = bandOf(i)
+    const [h, s, v] = rgbToHsv(r, g, b)
+    if (!isBase(h, s, k)) continue                     // a marking: leave it be
     const min = lo[k] as number, max = hi[k] as number
     /*
-     * A band holding one flat colour has no range to normalise. Put it in the
-     * middle of the ramp rather than at an end, so a species whose coat is a
-     * single tone lands somewhere sensible instead of at black or white.
+     * A band whose base is one flat colour has no range to normalise. Put it
+     * in the middle of the ramp rather than at an end, so a species whose coat
+     * is a single tone lands somewhere sensible instead of at black or white.
      */
-    const t = max > min ? (Math.max(r, g, b) / 255 - min) / (max - min) : 0.5
+    const t = max > min ? (v - min) / (max - min) : 0.5
     const [nr, ng, nb] = shade(t, p)
     if (nr !== r || ng !== g || nb !== b) moved++
     rgba[i] = nr; rgba[i + 1] = ng; rgba[i + 2] = nb

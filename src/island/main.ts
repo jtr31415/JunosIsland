@@ -534,7 +534,12 @@ async function boot(): Promise<void> {
     // He lives on the home rock, not at a point on it.
     fred.setHome(home.x - world.models.size * 0.22, home.z + world.models.size * 0.24,
       world.models.size * 0.34)
-    world.showSockets(flow.phase === 'placing')
+    /*
+     * Always visible, because they are now how she asks for land at all.
+     * A control that only appears once you have already used it is not a
+     * control, it is a reward.
+     */
+    world.showSockets(true)
     void pets.sync(flow.pets, flow.island, world.models.size)
     if (flow.phase !== 'placing') placeEgg()
     egg.setProgress(hatchProgress(flow))
@@ -602,7 +607,8 @@ async function boot(): Promise<void> {
       '',
       '1  Back up to a file',
       '2  Restore from a backup',
-      '3  Start again (wipes this island)',
+      '3  Play the story again',
+      '4  Start again (wipes this island)',
       '',
       'Type a number:',
     ].join('\n'))
@@ -610,7 +616,14 @@ async function boot(): Promise<void> {
 
     if (choice.trim() === '1') { void backup(); return }
     if (choice.trim() === '2') { void restore(); return }
-    if (choice.trim() !== '3') return
+    /*
+     * Brief §3 wants the story replayable forever. It used to be a tap on
+     * Fred, which Joe hit mid-game — the intro restarted and walked her
+     * through challenges that handed over an animal and then a tile. Still
+     * available, now behind the PIN where a curious tap cannot reach it.
+     */
+    if (choice.trim() === '3') { void runOpening(); return }
+    if (choice.trim() !== '4') return
 
     const n = flow.pets.length
     const what = n === 0 ? 'this island' : `this island and ${n} friend${n === 1 ? '' : 's'}`
@@ -1321,7 +1334,11 @@ async function boot(): Promise<void> {
     eggsPaused,
     landPaused,
     invite,
-    replayStory: () => { void runOpening() },
+    greetFred: () => {
+      fred.hop()
+      fred.talk(1.2)
+      speech.speak('Fred!')
+    },
     bouncePet: id => pets.bounce(id),
     say: text => overlay.say(text),
     clearSay: () => overlay.clearSay(),

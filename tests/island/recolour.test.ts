@@ -158,7 +158,7 @@ describe('against the real colormap.png', () => {
     expect(offenders).toEqual([])
   })
 
-  it('changes the coat for every set except the natural one', () => {
+  it('changes the base coat for every set except the natural one', () => {
     // A palette that protects the face perfectly by changing nothing at all
     // would pass the test above. This is the other half.
     for (const set of SETS) {
@@ -169,8 +169,33 @@ describe('against the real colormap.png', () => {
       for (let j = 0; j < before.length; j += 4) {
         if (!isSoul(before[j] as number, before[j + 1] as number, before[j + 2] as number)) coats++
       }
-      if (set.id === 'natural') expect(moved).toBe(0)
-      else expect(moved / coats, `${set.id} barely changed`).toBeGreaterThan(0.9)
+      if (set.id === 'natural') { expect(moved).toBe(0); continue }
+      expect(moved, `${set.id} changed nothing`).toBeGreaterThan(0)
+      expect(moved / coats, `${set.id} barely changed`).toBeGreaterThan(0.35)
+    }
+  })
+
+  it('LEAVES the markings — stripes, bellies, patches', () => {
+    /*
+     * Joe, on the version that recoloured everything: "it's now applied across
+     * the board. Highlights and eyes need to maintain the original colour —
+     * tiger stripes, penguin belly, tortoiseshell, panda stripe."
+     *
+     * Each band keeps the base coat it is mostly made of and recolours only
+     * that; a colour far from it in hue, or pale where the base is not, is a
+     * marking and survives untouched. Roughly half the atlas is markings, so
+     * a set that moved everything would fail here and a set that moved nothing
+     * would fail above.
+     */
+    for (const set of SETS.slice(1)) {
+      const before = buffer()
+      const after = buffer()
+      const moved = recolourInto(after, set, img.w)
+      let coats = 0
+      for (let j = 0; j < before.length; j += 4) {
+        if (!isSoul(before[j] as number, before[j + 1] as number, before[j + 2] as number)) coats++
+      }
+      expect(coats - moved, `${set.id} kept no markings`).toBeGreaterThan(coats * 0.2)
     }
   })
 

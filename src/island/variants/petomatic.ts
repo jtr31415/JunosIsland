@@ -110,7 +110,8 @@ export async function runPetOMatic(
   async function show(index: number): Promise<void> {
     at = (index + SETS.length) % SETS.length
     const set = SETS[at] as typeof SETS[number]
-    for (const stand of stands) if (stand) await atlas.dress(stand, set.id)
+    await Promise.all(stands.map((stand, i) =>
+      stand ? atlas.dress(stand, set.id, species[i] as string) : Promise.resolve()))
     caption.firstChild?.remove()
     caption.prepend(`${set.name}`)
     detail.textContent =
