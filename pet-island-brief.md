@@ -52,11 +52,16 @@ Scene: calm sea, one hex, Fred the frog sitting, gentle waves.
 4. *(an egg bobs ashore — plink)* "Ooh! Look! An egg!"
 5. "Eggs come from far across the sea… and they only hatch for someone who
    **reads to them**."
-6. "Will you read to it, [NAME]?" → first word-find (one word) → the egg cracks.
-7. "You found its name! **[PETNAME] was coming home all along.**"
+6. "Will you read to it, friend?" → first word-find (one word) → the egg cracks.
+7. Fred: "You found its name!" → the **teacher voice** announces it
+   ("**Bimo!**" — names are always the teacher's) → Fred: "**Home at last!**
+   It was coming home all along."
 8. "Every friend you read home needs somewhere to live… can you **count us up
    some land**?" → first sum → first pick-of-three tile → placement → move-in
    celebration → free play begins.
+
+*(Splice law: no character ever says a dynamic name mid-sentence; spoken
+address uses "friend"; the child's name is print-only.)*
 
 **Standing world-law vocabulary** (all first-use lines, hatch lines,
 want-bubbles): eggs *hatch when read to*; pets *come home* when their name is
@@ -97,11 +102,25 @@ later as a special event.
 
 ## 5. The pet system
 
-- **Variants, not meshes:** base = Kenney Cube Pets (24 species). Identity =
-  species × palette (8) × pattern (plain/spotty/stripy/starry) = **768 pets**
-  before sizes, golden/sparkle rarities and hats. Palette + pattern are
-  shader/texture parameters on flat-faced cubes; the face decal (the soul)
-  stays constant per species.
+- **Variants organised as SETS.** Base = Kenney Cube Pets (24 species).
+  Variants are grouped into **named sets of 24** (one per species): the
+  natural set first, then colour sets, pattern sets (stripy, polkadot,
+  starry…) and combined sets — ~40 sets, **≈1,000 creatures**. Set palettes
+  are **CC's design** (funky, distinct, judged in the Pet-o-matic; no
+  palettes specified here). Palette + pattern are shader/texture parameters;
+  the face decal (the soul) stays constant per species.
+- **Progressive disclosure.** The album shows ONLY unlocked sets — one page
+  per set, per-set counts (never a global 1,000). At **85% of the current
+  set**, the next set unlock fires as a surprise: a new page flutters into
+  the book and its first egg arrives. Hatches draw from unlocked, incomplete
+  sets; the daily visitor and pet quests can gift specific stragglers, so
+  100% of every set stays reachable. Completing a set (24/24) is a golden
+  ceremony and a stardust payout.
+- **Find-my-pet.** Tapping an owned pet in the album speaks its name, then
+  offers "Find [name] on the island?" — accept and the book closes, the
+  camera glides (~1.2s) to the creature and **follows it** with a damped,
+  gentle chase until any tap returns to orbit. Pets waiting in the nursery
+  are found there.
 - **Procedural decodable names** from the child's *taught graphemes* (reuse the
   alien-word generator): every pet is a Bimo, a Sheptun, a Corbell. The name is
   shown large at hatch, spoken via TTS, tappable forever after.
@@ -280,11 +299,72 @@ optimisation pass on all imports.
 ## 16. Perpetuity summary
 
 Curriculum ladder (years of material) × mastery scheduler (self-tuning) ×
-768-pet variant space × player-authored island growth × seasonal calendar ×
+~1,000-creature space in ~40 progressive sets × player-authored island growth
+× seasonal calendar ×
 verb unlocks over time (new tile types, decorations, pet interactions,
 **archipelago**: new islands at band milestones). No content treadmill.
 
-## 17. Milestones
+## 17. Wonders & rare content (the long-horizon layer)
+
+Rare rewards on weekly-to-multi-week horizons. **Laws of the strand:** strictly
+non-military — no weapons, cannon, catapults, fortification walls or soldier
+props from any pack, ever; at most two built structures in the entire line
+(below) — this is a dream, not a civilisation; ~95% of wonders are mystic
+props, living nature and creatures. **Colours are CC's call**: funky,
+saturated, mystical, chosen under the lighting presets via the retint
+pipeline and vetoed from the preview page — this brief deliberately specifies
+no palettes.
+
+### The mystic wonders (props, particles, retints)
+- **Ancient Stone Ring** — weathered spire circle, faintly glowing carvings;
+  pets nap inside. First wonder; Fred wonders who built it.
+- **Star Pool** — a pond that reflects stars even at noon. **It IS the wonder
+  meter, diegetically**: star-motes gather in the water as stardust is
+  earned; shooting stars land here. Progress is a place you visit, never a
+  HUD (no-nag law satisfied by architecture).
+- **Rainbow Spring** — a small falls; each completed fact family adds one
+  real colour band to its rainbow. The Owl's Book made landscape.
+- **Fairy Mushroom Ring** — oversized funky toadstools; pets bounce on them
+  (squash-stretch trampolines).
+- **Singing Stones** — tap a stone, get a pentatonic note; tunes possible,
+  wrong notes impossible.
+- **Crystal Garden** — jewel spire clusters in three growth stages; glows in
+  the dusk drift.
+- **Sleeping Giant** — mountain pieces arranged as a mossy dozing figure;
+  occasionally sighs a puff of leaves.
+- **Cloud Herd** — low, slow cloud props; the island grows its own weather.
+- **Moon-Cheese Meadow** — the Extra pack's cheese terrain, honoured as
+  fallen moon-cheese. Silly is a wonder category.
+- **Enchantment ladders** as previously specced (blossom grove I–III,
+  glowing cove), plus crystal/aurora ladders when ice arrives.
+
+### The two permitted structures
+- **Little Harbour** — pier + sail ship (de-flagged, neutral); the daily
+  visitor thereafter visibly arrives by boat.
+- **The Castle** — fairy-tale finale and the venue golden ceremonies relocate
+  to. The arc's answer to the Stone Ring's question.
+
+### The Legends (code-built creatures, the Fred precedent)
+Unique, one each, built from primitives in the cube-pet language, arriving
+WITH their wonder — the wonder is a habitat that summons a being:
+- **Unicorn** — drawn to the fully-enchanted grove (tier III).
+- **Narwhal** — surfaces in the glowing cove; the unicorn build plus water.
+- **Dragon** — small, round, mostly asleep on a warm rock; yawns when
+  tapped; bubble-breath, never fire.
+Legends live on their own album page of silhouettes ("Legends"), are named
+by species (real aspirational reading words), and have bespoke micro-
+behaviours. More may join later; three at v1.
+
+### Stardust, events, pacing
+As previously specced: stardust from effort quality only (review clears,
+streaks, family completions, quest chains — never from re-grinding mastered
+facts); thresholds on the shared asymptotic curve; a fill guarantees a
+wonder — randomness decides which and where, never whether; reveal = a
+shooting star landing at the Star Pool. Every reveal and enchantment tier is
+playable on demand in the **Wonder Gallery** dev page; pacing distributions
+are asserted by the persona simulator.
+
+## 18. Milestones
 
 - **M0 — Extraction.** The §7 module list out of the 2D file into a tested
   `core/` package; **the 2D game keeps shipping from these modules** — that is
@@ -301,10 +381,11 @@ verb unlocks over time (new tile types, decorations, pet interactions,
   Owl's Book with fact families and solution pings, parent dashboard,
   school-list import, profiles/islands, save export.
 - **M4 — Dress & seasons.** Biome art pass, seasonal tiles/visitors, audio
-  pass, tablet perf pass, archipelago hook.
+  pass, tablet perf pass, archipelago hook, Wonders v1 (ruins + blossom
+  enchantment I).
 - Ship M1 to the QA department immediately; her verdict outranks this document.
 
-## 18. Guardrails (non-negotiable)
+## 19. Guardrails (non-negotiable)
 
 - No time-limited content, no streak loss, no dark patterns of any kind; §13
   applies in full.

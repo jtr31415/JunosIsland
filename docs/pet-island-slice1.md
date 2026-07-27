@@ -55,8 +55,9 @@ spec's curves are fitted to it.
 `cost(n) = round(cap − (cap − base) · e^((1 − n) / tau))`
 
 - **Tiles (sums):** base 1, cap 16, tau 6 →
-  n: 1→**1**, 2→**3**, 3→**5**, 4→**7**, 5→**9**, 6→**10**, 8→**12**,
-  12→**14**, 20→**15**, →16.
+  n: 1→**1**, 2→**3**, 3→**5**, 4→**7**, 5→**8**, 6→**9**, 8→**11**,
+  12→**14**, 20→**15**, →16. *(Table corrected 27 Jul to match the formula —
+  the formula is canonical.)*
 - **Eggs (pages):** base 1, cap 14, tau 5 →
   n: 1→**1**, 2→**3**, 3→**5**, 4→**7**, 5→**8**, 6→**9**, 8→**11**,
   12→**13**, →14.
@@ -125,6 +126,9 @@ spec's curves are fitted to it.
   "governor": { "maxWaitingPets": 3, "maxEmptySurplus": 4 },
   "stage":    { "spinSec": 9, "progressDots": true, "flyBackMs": 900 },
   "firstRun": { "tileOffer": ["grass", "grass", "water"], "egg2DelaySec": 20 },
+  "sets":     { "size": 24, "unlockAt": 0.85 },
+  "wonder":   { "base": 12, "cap": 90, "tau": 4, "sources":
+                { "reviewClear": 3, "streak5": 2, "familyComplete": 8, "questChain": 4 } },
   "unlocks":  [ { "type": "spring", "tiles": 8,  "pets": 6  },
                 { "type": "desert", "tiles": 18, "pets": 12 },
                 { "type": "ice",    "tiles": 30, "pets": 20 } ]
