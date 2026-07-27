@@ -124,6 +124,8 @@ async function boot(): Promise<void> {
    * socket, then GROWN by each sum, so arithmetic visibly becomes ground.
    */
   let plot: GrowingPlot | null = null
+  /** Where the current plot is sited, remembered past the flow clearing it. */
+  let plotAt: Axial | null = null
   /** Set while a finished plot is showing its flourish before being removed. */
   let plotFarewell: ReturnType<typeof setTimeout> | null = null
   /** Tear a plot down now, cancelling any farewell in progress. */
@@ -166,12 +168,16 @@ async function boot(): Promise<void> {
     // two hexes overlap and the farewell disposes the wrong one.
     if (plotFarewell) dropPlot()
     if (!plot) {
+      // Seeded from the socket: the same hex always grows the same thing, but
+      // no two hexes grow the same thing as each other.
+      const seed = (state.plot.at.q * 73856093) ^ (state.plot.at.r * 19349663)
       plot = createGrowingPlot(state.plot.type, world.models.size, {
         models: world.models,
         prop: name => props.load(name),
-      })
+      }, seed >>> 0)
       const w = world.worldOf(state.plot.at)
       plot.group.position.copy(w)
+      plotAt = state.plot.at
       world.scene.add(plot.group)
     }
     plot.setProgress(state.sumProgress, sumsForTile(state))
@@ -778,6 +784,7 @@ async function boot(): Promise<void> {
 
           // The flourish plays while the plot is still on the turntable.
           const finished = plot
+          const sited = plotAt
           finished?.setProgress(1, 1)
           await wait(balance.stage.flourishMs)
 
@@ -810,9 +817,20 @@ async function boot(): Promise<void> {
            * settling into place rather than as a duplicate.
            */
           world.setIsland(flow.island)
-          const dressed = props.sync(flow.island, world.models.size, world.surface)
           await wait(balance.stage.flyBackMs)
-          await dressed
+
+          /*
+           * The tile keeps EXACTLY what she built.
+           *
+           * She watched those eight things arrive one at a time; planting a
+           * different eight from the coordinate hash at touchdown means the
+           * trees move and change species in the frame the scaffolding
+           * disappears. So the prop field adopts the grown scenery, and never
+           * dresses that hex itself.
+           */
+          if (finished && sited) {
+            props.adopt(sited, finished.harvest(), world.models.size)
+          }
 
           /*
            * Touchdown. The scaffolding goes and the real tile appears in the

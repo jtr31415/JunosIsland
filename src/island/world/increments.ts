@@ -88,15 +88,37 @@ export const isComplete = (sumsDone: number, cost: number): boolean =>
  * trees and rocks with Forest Nature ground cover between them; water gets
  * reeds and lilies, because a pond that sprouted a pine would be funny once.
  */
-const PIECES: Record<TileType, readonly string[]> = {
+const PALETTE: Record<TileType, readonly string[]> = {
   grass: [
-    'rock_single_A', 'Grass_1_A_Color1', 'Bush_1_A_Color1', 'Bush_2_A_Color1',
-    'tree_single_B', 'trees_A_small', 'Rock_1_A_Color1', 'Grass_2_A_Color1',
+    'rock_single_A', 'rock_single_B', 'rock_single_C', 'rock_single_D',
+    'tree_single_A', 'tree_single_B', 'trees_A_small', 'trees_B_small',
+    'Grass_1_A_Color1', 'Grass_1_C_Color1', 'Grass_2_A_Color1', 'Grass_2_C_Color1',
+    'Bush_1_A_Color1', 'Bush_2_A_Color1', 'Bush_4_A_Color1', 'Bush_3_A_Color1',
+    'Rock_1_A_Color1', 'Rock_2_A_Color1', 'Rock_3_A_Color1', 'Rock_1_D_Color1',
   ],
   water: [
-    'waterplant_A', 'waterlily_A', 'waterplant_B', 'waterlily_B',
-    'waterplant_C', 'waterlily_A', 'waterplant_A', 'waterlily_B',
+    'waterplant_A', 'waterplant_B', 'waterplant_C',
+    'waterlily_A', 'waterlily_B',
   ],
+}
+
+/**
+ * The eight pieces THIS plot grows, drawn from the palette by its own seed.
+ *
+ * Every plot used to grow the same eight things in the same eight places, so
+ * a child who built four tiles built the same tile four times. Seeded from
+ * the socket, so a given hex always grows the same thing — the island must
+ * not rearrange itself between sessions — but no two hexes agree.
+ */
+function piecesFor(type: TileType, seed: number): string[] {
+  const palette = PALETTE[type]
+  const out: string[] = []
+  let h = (seed || 1) >>> 0
+  for (let i = 0; i < 8; i++) {
+    h = (h * 1664525 + 1013904223) >>> 0
+    out.push(palette[h % palette.length] as string)
+  }
+  return out
 }
 
 /**
@@ -172,6 +194,14 @@ export interface GrowingPlot {
   land(ms: number, reach?: number): void
   /** Ease the newly-revealed pieces in. Call per frame. */
   update(dt: number): void
+  /**
+   * Give up the finished scenery, leaving the plot with nothing to dispose.
+   *
+   * Returns the group holding everything she grew, minus the tile hex and the
+   * flourish — the hex because the real island now draws that, the flourish
+   * because it was a celebration and not a thing.
+   */
+  harvest(): THREE.Object3D
   dispose(): void
 }
 
@@ -185,7 +215,7 @@ export interface GrowingPlot {
  * the network behaves, and means a slow load can never reorder the build.
  */
 export function createGrowingPlot(
-  type: TileType, hexSize: number, deps: PlotDeps,
+  type: TileType, hexSize: number, deps: PlotDeps, seed = 1,
 ): GrowingPlot {
   const group = new THREE.Group()
   group.name = 'growing-plot'
@@ -238,6 +268,19 @@ export function createGrowingPlot(
   let disposed = false
   /** 0..1 through the landing arc, or -1 when it is not playing. */
   let landT = -1
+  /**
+   * Where the plot actually lives, captured when the flight starts.
+   *
+   * The flight animates an OFFSET from this, never an absolute position.
+   * Writing absolutes assumed the group sat at the origin — which it does on
+   * the stage's turntable, but NOT once it has been handed back to the world,
+   * where it stands at its own socket. So the tile jumped to the middle of
+   * the island and flew in from there.
+   */
+  const base = new THREE.Vector3()
+  /** Which trail mote to drop next, and when it was dropped. */
+  let trailNext = 0
+  const trailAge: number[] = new Array(10).fill(1)
   let landMs = 900
   let landReach = 1.6
   /** Hovering above the socket while she builds it. */
@@ -297,10 +340,13 @@ export function createGrowingPlot(
    * of clumping — with only eight of them a random scatter leaves obvious
    * bald patches, which reads as unfinished rather than natural.
    */
-  const names = PIECES[type]
+  const names = piecesFor(type, seed)
   names.forEach((name, i) => {
-    const angle = (i / names.length) * Math.PI * 2 + 0.4
-    const radius = hexSize * (0.24 + (i % 3) * 0.14)
+    // Angle and radius jittered by the seed too, so two tiles with a piece in
+    // common still do not look like the same tile twice.
+    const spin = ((seed >> (i + 3)) % 32) / 32
+    const angle = ((i + spin) / names.length) * Math.PI * 2 + 0.4
+    const radius = hexSize * (0.22 + ((seed >> (i + 7)) % 40) / 100)
     void deps.prop(name).then(object => {
       object.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius)
       object.rotation.y = angle + i
@@ -311,21 +357,53 @@ export function createGrowingPlot(
     }).catch(() => { /* a missing piece leaves a gap, never a broken build */ })
   })
 
-  /* Increment 10: the completion flourish. */
+  /*
+   * Increment 10: the completion flourish, and the trail behind the flight.
+   *
+   * The look is v0's tap burst (v0:1506-1524), which the child already knows
+   * from the 2D game: small round glows in the theme's warm colours, thrown
+   * outward and fading as they shrink. The first attempt used plain grey-lit
+   * spheres, which read as beads rather than as sparkle.
+   *
+   * MeshBasic, not Standard: a spark is its own light. Under the three-light
+   * rig a lit sphere goes dull on its shadow side, which is precisely wrong
+   * for something meant to glitter — and this adds no light to the scene, so
+   * the lighting brief's ban on glow passes is untouched.
+   */
+  const GLOW = [0xfff3b0, 0xffd166, 0xffb703]
   const flourish = new THREE.Group()
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 12; i++) {
     const spark = new THREE.Mesh(
-      new THREE.SphereGeometry(0.05, 6, 5),
-      new THREE.MeshStandardMaterial({
-        color: i % 2 ? 0xfff2a8 : 0xffd166,
-        metalness: 0, roughness: 1, transparent: true, opacity: 0.9,
+      new THREE.SphereGeometry(0.05, 7, 6),
+      new THREE.MeshBasicMaterial({
+        color: GLOW[i % 3], transparent: true, opacity: 0.95, depthWrite: false,
       }),
     )
-    const a = (i / 8) * Math.PI * 2
+    const a = (i / 12) * Math.PI * 2
     spark.position.set(
-      Math.cos(a) * hexSize * 0.6, 0.7 + Math.sin(a * 2) * 0.2, Math.sin(a) * hexSize * 0.6)
+      Math.cos(a) * hexSize * 0.55, 0.55 + Math.sin(a * 2) * 0.22,
+      Math.sin(a) * hexSize * 0.55)
     flourish.add(spark)
   }
+
+  /*
+   * The trail: a handful of glows that drop off the tile as it flies and hang
+   * in the air behind it, fading. Separate from the flourish because it is
+   * about the JOURNEY, and it must not be part of what the tile keeps.
+   */
+  const trail = new THREE.Group()
+  trail.visible = false
+  for (let i = 0; i < 10; i++) {
+    const mote = new THREE.Mesh(
+      new THREE.SphereGeometry(0.055, 6, 5),
+      new THREE.MeshBasicMaterial({
+        color: GLOW[i % 3], transparent: true, opacity: 0, depthWrite: false,
+      }),
+    )
+    trail.add(mote)
+  }
+  group.parent?.add(trail)
+
   install(INCREMENTS.length - 1, flourish, false)
 
   return {
@@ -359,6 +437,13 @@ export function createGrowingPlot(
 
     land(ms, reach = balance.stage.landReach) {
       floating = false
+      base.copy(group.position)
+      base.y = 0
+      // The trail lives beside the plot, not inside it, so it stays put in
+      // the air while the tile moves on.
+      if (trail.parent !== group.parent) group.parent?.add(trail)
+      trail.visible = true
+      trailNext = 0
       landMs = Math.max(120, ms)
       landReach = reach
       landT = 0
@@ -372,14 +457,38 @@ export function createGrowingPlot(
          * be set down, not a thing at sea.
          */
         hover += dt
-        group.position.set(0, FLOAT_HEIGHT + Math.sin(hover * 1.3) * 0.06, 0)
+        group.position.y = FLOAT_HEIGHT + Math.sin(hover * 1.3) * 0.06
+      }
+
+      // Fade whatever the flight has already left hanging in the air.
+      if (trail.visible) {
+        let alive = false
+        trail.children.forEach((mote, i) => {
+          const age = Math.min(1, (trailAge[i] as number) + dt * 1.6)
+          trailAge[i] = age
+          if (age < 1) alive = true
+          const m = (mote as THREE.Mesh).material as THREE.MeshBasicMaterial
+          m.opacity = (1 - age) * 0.85
+          mote.scale.setScalar(Math.max(0.05, 1 - age * 0.6))
+        })
+        if (!alive && landT < 0) trail.visible = false
       }
 
       if (landT >= 0) {
         landT = Math.min(1, landT + dt * (1000 / landMs))
+        // Shed a glow every few frames, at wherever the tile has got to.
+        if (landT < TOUCHDOWN) {
+          const mote = trail.children[trailNext % trail.children.length]
+          if (mote) {
+            mote.position.copy(group.position)
+            mote.position.y += 0.25
+            trailAge[trailNext % trail.children.length] = 0
+            trailNext++
+          }
+        }
         if (landT >= 1) {
           landT = -1
-          group.position.set(0, 0, 0)
+          group.position.copy(base)
           group.scale.set(1, 1, 1)
         } else if (landT < TOUCHDOWN) {
           /*
@@ -392,13 +501,13 @@ export function createGrowingPlot(
           const t = landT / TOUCHDOWN
           const fall = t * t
           // From where it has been hovering, not from an arbitrary ceiling.
-          group.position.y = FLOAT_HEIGHT * (1 - fall)
+          group.position.set(base.x, base.y + FLOAT_HEIGHT * (1 - fall), base.z)
           /*
            * ...and it comes IN FROM THE SIDE. The lateral travel eases out
            * while the fall accelerates, so the path flattens as it arrives —
            * a thing flying in and settling, rather than a thing dropped.
            */
-          group.position.x = landReach * (1 - t) * (1 - t)
+          group.position.x = base.x + landReach * (1 - t) * (1 - t)
           group.scale.set(1, 1, 1)
         } else {
           /*
@@ -409,7 +518,7 @@ export function createGrowingPlot(
            * the tile first touched the ground, so the one thing it existed to
            * express was over before the event it was expressing.
            */
-          group.position.set(0, 0, 0)
+          group.position.copy(base)
           const settle = (landT - TOUCHDOWN) / (1 - TOUCHDOWN)
           const impact = Math.sin(settle * Math.PI) * (1 - settle * 0.4)
           group.scale.set(1 + impact * 0.16, 1 - impact * 0.2, 1 + impact * 0.16)
@@ -428,6 +537,19 @@ export function createGrowingPlot(
       }
     },
 
+    harvest() {
+      const keep = new THREE.Group()
+      keep.name = 'grown-scenery'
+      keep.position.copy(group.position)
+      slots.forEach((slot, i) => {
+        // The hex and the flourish stay behind; everything between is hers.
+        if (i === 0 || i === slots.length - 1) return
+        if (slot.object) keep.add(slot.object)
+      })
+      keep.position.y = 0
+      return keep
+    },
+
     dispose() {
       disposed = true
       /*
@@ -443,6 +565,13 @@ export function createGrowingPlot(
        * owned except the sparks.
        */
       ghostMaterial.dispose()         // ours alone
+      trail.removeFromParent()
+      trail.traverse(o => {
+        const m = o as THREE.Mesh
+        if (!m.isMesh) return
+        m.geometry.dispose()
+        ;(m.material as THREE.Material).dispose()
+      })
       flourish.traverse(o => {
         const m = o as THREE.Mesh
         if (!m.isMesh) return

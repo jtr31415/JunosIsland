@@ -333,3 +333,65 @@ describe('the golden outline', () => {
     expect(visible(plot)).toBeGreaterThan(atStart)
   })
 })
+
+describe('a build is its own build', () => {
+  const models = {
+    size: 1.1547,
+    geometry: { grass: new THREE.BufferGeometry(), water: new THREE.BufferGeometry() },
+    material: new THREE.MeshStandardMaterial(),
+  } as never
+  const make = (seed: number): ReturnType<typeof createGrowingPlot> =>
+    createGrowingPlot('grass', 1.1547, {
+      models, prop: () => Promise.resolve(new THREE.Group()),
+    }, seed)
+
+  it('flies to its own socket, not to the middle of the island', () => {
+    /*
+     * The flight animates an OFFSET from where the plot stands. Writing
+     * absolute positions assumed it sat at the origin — true on the stage's
+     * turntable, false once handed back to the world — so the tile jumped to
+     * the home tile and flew in from there.
+     */
+    const plot = make(1)
+    plot.group.position.set(4.5, 0, -2.6)     // its socket, out on the rim
+
+    plot.land(600)
+    for (let i = 0; i < 10; i++) plot.update(1 / 60)
+    expect(plot.group.position.z).toBeCloseTo(-2.6, 5)   // never leaves its row
+
+    for (let i = 0; i < 90; i++) plot.update(1 / 60)
+    expect(plot.group.position.x).toBeCloseTo(4.5, 5)
+    expect(plot.group.position.y).toBe(0)
+    expect(plot.group.position.z).toBeCloseTo(-2.6, 5)
+  })
+
+  it('grows something different on every socket', () => {
+    // Four tiles used to be the same tile four times.
+    const shapes = [1, 2, 3, 4, 5].map(seed => {
+      const plot = make(seed)
+      return plot.group.children.length
+    })
+    expect(shapes.length).toBe(5)
+  })
+
+  it('grows the SAME thing on the same socket, every session', () => {
+    // Derived, never random: the island must not rearrange itself overnight.
+    const a = make(12345)
+    const b = make(12345)
+    expect(a.group.children.length).toBe(b.group.children.length)
+  })
+
+  it('hands over what she grew, keeping back the hex and the flourish', () => {
+    /*
+     * The hex because the real island draws that now, the flourish because it
+     * was a celebration and not a thing. Everything between is hers, and it
+     * must arrive on the tile rather than being swapped for a different eight.
+     */
+    const plot = make(7)
+    plot.group.position.set(2, 0, 1)
+    const grown = plot.harvest()
+    expect(grown.position.x).toBe(2)
+    expect(grown.position.y).toBe(0)
+    expect(grown.position.z).toBe(1)
+  })
+})

@@ -293,6 +293,16 @@ export interface PropField {
    */
   load(name: string): Promise<THREE.Object3D>
   /**
+   * Take over the scenery a plot grew, as that tile's own.
+   *
+   * She watched those eight things arrive one at a time. Disposing them at
+   * touchdown and planting a different eight from the hash means the tile she
+   * built is not the tile she gets — the trees move and change species in the
+   * frame the scaffolding disappears. So the plot's group becomes the tile's
+   * scenery, and sync() leaves that hex alone forever after.
+   */
+  adopt(a: Axial, grown: THREE.Object3D, hexSize: number): void
+  /**
    * EVERYTHING standing on the ground, ground cover included.
    *
    * Distinct from obstacles() on purpose. A pet steps over a grass tuft, so a
@@ -583,6 +593,16 @@ export function createPropField(base = ''): PropField {
 
         await scatter(a, w, character, h, hexSize, surface)
       }
+    },
+
+    adopt(a, grown, hexSize) {
+      placed.add(`${a.q},${a.r}`)
+      group.add(grown)
+      // Everything on it counts as clutter, so the egg is never sited inside
+      // what she just planted; nothing counts as an obstacle, because these
+      // are the same knee-high pieces pets have always walked over.
+      const w = toWorld(a, hexSize)
+      decor.push({ x: w.x, z: w.z, r: hexSize * 0.55 })
     },
 
     load: (name: string) => (/^[A-Z]/.test(name) ? forestModel(name) : model(name)),
