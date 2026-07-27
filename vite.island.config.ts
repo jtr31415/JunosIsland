@@ -53,6 +53,20 @@ export default defineConfig(({ command }) => ({
        */
       registerType: 'autoUpdate',
       workbox: {
+        /*
+         * THE FONT MUST BE PRECACHED, and by default it is not.
+         *
+         * vite-plugin-pwa precaches js, css and html only. Andika is the whole
+         * point of the reading surface — a single-storey `a` and a hooked `l`,
+         * which is what a child is taught — so a first offline load without it
+         * silently falls back to Roboto and gives her the two letterforms she
+         * cannot read. 40KB, latin subset, regular and bold.
+         *
+         * The pet models have the same gap and are deliberately NOT added here:
+         * they are 3.21 MiB against a 5MB budget and warming them at runtime was
+         * measured to close the render delay instead. See pets.ts `warm`.
+         */
+        globPatterns: ['**/*.{js,css,html,woff2}'],
         skipWaiting: true,
         clientsClaim: true,
         cleanupOutdatedCaches: true,

@@ -9,6 +9,30 @@
  * The overlay knows nothing about Three.js, and the world knows nothing about
  * challenges. `flow.ts` is the only thing that talks to both.
  */
+/*
+ * ANDIKA, ACTUALLY LOADED.
+ *
+ * `challenges.css` has named Andika as its first choice since the port, and it
+ * has never once been used: nothing bundled the font and nothing declared an
+ * @font-face, so it resolved only if the device happened to have it installed.
+ * On Juno's Android tablet it does not, so every word she has ever read has been
+ * rendered in Roboto — which is exactly what Joe caught by eye:
+ *
+ *   "we need to change the font to something where the l has a little hook and
+ *    the a is not the carolingian derived type, but the closed loop one"
+ *
+ * A double-storey `a` and a straight `l` are what he is describing, and they are
+ * what a child is NOT taught. Andika is SIL's literacy typeface and gives both
+ * of the letterforms he asked for: a single-storey closed-loop `a` and an `l`
+ * with a tail. It was the right choice all along; it just never arrived.
+ *
+ * Bundled rather than fetched: this is an offline-capable PWA on a tablet, and a
+ * font that needs the network is a font that is missing exactly when she is on
+ * the sofa without it. 40KB for regular and bold, latin subset.
+ */
+import '@fontsource/edu-sa-beginner/latin-400.css'
+import '@fontsource/edu-sa-beginner/latin-700.css'
+import '@fontsource/andika/latin-400.css'
 import '../ui/tokens.css'
 import '../ui/challenges.css'
 import { mountWordFind } from '../challenges/wordFind'
