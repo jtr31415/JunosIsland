@@ -547,5 +547,65 @@ export function lookFor(island: Island, a: Axial): TileLook {
   return looksFor(island).get(key(a)) as TileLook
 }
 
+/**
+ * How a tile WOULD be drawn if she built it here — before it exists.
+ *
+ * Joe: *"when chosing a water tile, the incremental build during the challenge
+ * step should already show the appropriately designed coast piece with all the
+ * water props (lillies, etc) at water level, not land level."*
+ *
+ * The growing plot had no way to ask this, so it drew a flat water slab for the
+ * whole build and then the finished tile arrived as a coast piece — a visual
+ * discontinuity at the exact moment the spec wants continuity, since the whole
+ * point of building in view is that what she watched become real is the thing
+ * she gets.
+ *
+ * Solved over a HYPOTHETICAL island with the tile already on it, because a
+ * coast look is a fact about a neighbourhood rather than about a tile, and the
+ * plot's neighbours are real even while the plot is not.
+ */
+export function plannedLook(island: Island, a: Axial, t: TileType): TileLook {
+  if (t !== 'water') return { kind: 'grass', turns: 0 }
+  const tiles = new Map(island.tiles)
+  tiles.set(key(a), t)
+  return looksFor({ tiles }).get(key(a)) as TileLook
+}
+
+/**
+ * Where the water surface sits, relative to the land rim.
+ *
+ * Measured from the coast meshes, and already relied on by the edge table: land
+ * at 0, the sand ramp between −0.05 and −0.1, open water at −0.2. Named here so
+ * the growing plot can float a lily on the water rather than on the grass.
+ */
+export const WATER_LEVEL = -0.2
+
+/**
+ * Which way the water faces on a drawn tile, as a world-space angle.
+ *
+ * The middle of the water arc, so a plot can put its lilies and reeds where the
+ * water will actually be instead of spreading them evenly over a hex that is
+ * two-thirds dry land. Null when the tile has no water edge at all.
+ */
+export function waterHeading(look: TileLook): number | null {
+  const edges = presentedBy(look)
+  const wet: number[] = []
+  edges.forEach((e, k) => { if (e === 'water') wet.push(k) })
+  if (wet.length === 0) return null
+  if (wet.length === 6) return 0
+  /*
+   * Averaged as VECTORS, not as indices. The arc can wrap past edge 5 back to
+   * 0 — `longestRun` exists for the same reason — and averaging 5 and 0
+   * arithmetically points at edge 2.5, the opposite side of the hex.
+   */
+  let x = 0, z = 0
+  for (const k of wet) {
+    const ang = k * Math.PI / 3
+    x += Math.cos(ang)
+    z += Math.sin(ang)
+  }
+  return Math.atan2(z, x)
+}
+
 /** Every direction index, for tests and callers that want to enumerate. */
 export const EDGE_COUNT = DIRECTIONS.length

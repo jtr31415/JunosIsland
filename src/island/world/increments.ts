@@ -39,6 +39,8 @@ import type { TileType } from './grid'
 import type { TileModels } from './tiles'
 import { balance } from '../balance'
 import { fitInto, FITS } from './props'
+import { WATER_LEVEL, waterHeading } from './coast'
+import type { TileLook } from './coast'
 
 /**
  * The ten canonical steps, in order.
@@ -184,7 +186,10 @@ const fitFor = (name: string): readonly [number, number] =>
   name.startsWith('waterlily') ? FITS.lily
     : name.startsWith('waterplant') ? FITS.reed
       : /^(Grass|Bush|Rock)/.test(name) ? FITS.cover
-        : FITS.grown
+        // A forest tree, on a plot that has to fit eight things round one hex:
+        // taller than the general grown fit, and no wider.
+        : /^Tree_/.test(name) ? FITS.grownTree
+          : FITS.grown
 
 /**
  * How high above its socket the finished plot starts, and how far to the side.
@@ -336,6 +341,20 @@ export function makeSparkle(seed: number): THREE.Sprite {
 
 export function createGrowingPlot(
   type: TileType, hexSize: number, deps: PlotDeps, seed = 1,
+  /**
+   * How the finished tile will be DRAWN, if the caller knows.
+   *
+   * Joe: the incremental build of a water tile "should already show the
+   * appropriately designed coast piece with all the water props (lillies, etc)
+   * at water level, not land level". Without this the plot built a flat water
+   * slab and the finished tile arrived as a coast — a discontinuity at exactly
+   * the moment §2 wants continuity, since the point of building in view is that
+   * what she watched become real is the thing she gets.
+   *
+   * Optional, and defaulted rather than required, because a restored save can
+   * site a plot before the island around it is known.
+   */
+  look: TileLook | null = null,
 ): GrowingPlot {
   const group = new THREE.Group()
   group.name = 'growing-plot'
@@ -447,10 +466,17 @@ export function createGrowingPlot(
    * different idea in the middle of this one; one visual language for "coming
    * soon" is easier to read than two.
    */
-  const tile = new THREE.Mesh(
-    deps.models.geometry[type === 'water' ? 'water' : 'grass'],
-    deps.models.material,
-  )
+  /*
+   * The hex she is actually going to get, coast model and all — not a stand-in
+   * for it. `turns` is the same sixth-of-a-turn step the finished tile field
+   * applies, so the plot and the tile it becomes are the same object in the same
+   * orientation.
+   */
+  const kind = look?.kind === 'coast'
+    ? (`coast_${look.variant}` as const)
+    : (type === 'water' ? 'water' : 'grass')
+  const tile = new THREE.Mesh(deps.models.geometry[kind], deps.models.material)
+  if (look && look.kind === 'coast') tile.rotation.y = look.turns * Math.PI / 3
   install(0, tile)
 
   /*
@@ -480,12 +506,36 @@ export function createGrowingPlot(
    */
   const spots = layOut(names, seed, hexSize)
 
+  /*
+   * Where the water is, and how far down it sits.
+   *
+   * A coast hex is mostly dry land — the widest model has four water edges of
+   * six, the narrowest one — so spreading lilies evenly round it strands most of
+   * them on the grass. They are fanned into the water arc instead, and dropped
+   * to the water surface, which is the second half of what Joe reported: "with
+   * all the water props (lillies, etc) at water level, not land level".
+   *
+   * Null on a plain water tile, which is water all over and wants no fan.
+   */
+  const heading = look?.kind === 'coast' ? waterHeading(look) : null
+  const wetY = look?.kind === 'coast' ? WATER_LEVEL : 0
+
   names.forEach((name, i) => {
     const spot = spots[i]
     if (!spot) return
-    const { angle, radius } = spot
+    let { angle } = spot
+    const { radius } = spot
+    if (heading !== null) {
+      /*
+       * Fanned across 120 degrees centred on the water, keeping each piece's own
+       * offset so the arrangement stays as deterministic and as spread as
+       * `layOut` made it — it is remapped, never re-rolled.
+       */
+      const spread = (i / Math.max(1, names.length - 1)) - 0.5
+      angle = heading + spread * (Math.PI * 2 / 3)
+    }
     void deps.prop(name).then(object => {
-      object.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius)
+      object.position.set(Math.cos(angle) * radius, wetY, Math.sin(angle) * radius)
       object.rotation.y = angle + i
       const [fw, fh] = fitFor(name)
       fitInto(object, fw, fh)

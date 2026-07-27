@@ -20,6 +20,7 @@ import { createSign } from './sign'
 import { createStage, dotsFilled, DOT_COUNT } from './stage'
 import { createPropField, footprintBelow, WALKING_HEIGHT } from './world/props'
 import { createGrowingPlot } from './world/increments'
+import { plannedLook } from './world/coast'
 import type { GrowingPlot } from './world/increments'
 import { createAlbum } from './album'
 import { hatchProgress, landProgress, sumsForTile, pagesForEgg } from './flow'
@@ -221,7 +222,13 @@ async function boot(): Promise<void> {
       plot = createGrowingPlot(state.plot.type, world.models.size, {
         models: world.models,
         prop: name => props.load(name),
-      }, seed >>> 0)
+        /*
+         * The look the finished tile WILL have, solved over the island with this
+         * plot already on it. Without it a water plot built as a flat slab and
+         * then arrived as a coast piece, which is a discontinuity at the one
+         * moment §2 wants continuity.
+         */
+      }, seed >>> 0, plannedLook(state.island, state.plot.at, state.plot.type))
       const w = world.worldOf(state.plot.at)
       plot.group.position.copy(w)
       plotAt = state.plot.at

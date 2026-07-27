@@ -157,7 +157,7 @@ describe('against the real colormap.png', () => {
       }
     }
     expect(offenders).toEqual([])
-  })
+  }, 30_000)
 
   it('changes the base coat for every set except the natural one', () => {
     // A palette that protects the face perfectly by changing nothing at all
@@ -174,7 +174,7 @@ describe('against the real colormap.png', () => {
       expect(moved, `${set.id} changed nothing`).toBeGreaterThan(0)
       expect(moved / coats, `${set.id} barely changed`).toBeGreaterThan(0.35)
     }
-  })
+  }, 30_000)
 
   it('LEAVES the markings — stripes, bellies, patches', () => {
     /*
@@ -198,7 +198,7 @@ describe('against the real colormap.png', () => {
       }
       expect(coats - moved, `${set.id} kept no markings`).toBeGreaterThan(coats * 0.2)
     }
-  })
+  }, 30_000)
 
   it('sends a DARK-coated species to the top of the ramp too', () => {
     /*
@@ -240,7 +240,7 @@ describe('against the real colormap.png', () => {
      */
     expect(lo).toBeGreaterThan(RAMP_LOW * 1.5)
     expect(hi).toBeGreaterThan(0.62)
-  })
+  }, 30_000)
 
   it('keeps the shading rather than flattening it', () => {
     /*

@@ -391,6 +391,20 @@ export const FITS = {
   cover: [0.42, 0.16] as const,
   /** A dead tree standing among live ones. */
   bare: [0.45, 0.7] as const,
+  /**
+   * A LIVE tree from the Forest Nature pack.
+   *
+   * Joe: *"the trees need to be a bit bigger, or at least spawn fewer small ones
+   * in favour of bigger ones."* Both halves are here — this is larger than the
+   * dead-trunk fit it borrowed at first, and the per-piece variation that
+   * multiplies it starts higher for trees, so the small end of the range is
+   * simply gone rather than merely rarer.
+   *
+   * Taller than it is wide, unlike everything else in this table, because that
+   * is what distinguishes a tree from a bush at a glance — and height is free
+   * here: a canopy well above WALKING_HEIGHT is not an obstacle a pet can clip.
+   */
+  tree: [0.58, 1.05] as const,
   /** Single trees and small clumps. */
   feature: [1.0, 0.95] as const,
   /**
@@ -406,6 +420,15 @@ export const FITS = {
    * overlapping; at this size, 94%.
    */
   grown: [0.62, 0.6] as const,
+  /**
+   * A forest tree on a GROWN plot.
+   *
+   * Same bargain as `grown` — eight pieces round one hex, so nothing may be as
+   * big as it would be planted on its own — but not as short. A tree squashed to
+   * the general grown height reads as a bush, which defeats the point of putting
+   * trees on the tiles she builds.
+   */
+  grownTree: [0.5, 0.86] as const,
   /**
    * Hills and mountains. These carry their own hex base, so at full width
    * they cover the tile and read as REPLACING it; a green rim around the base
@@ -619,8 +642,14 @@ export function createPropField(base = ''): PropField {
       const bit = await forestModel(name)
       // Vary per PIECE, not per tile, or a tile reads as one stamped set.
       // A tree gets a tree's room, live or dead; everything else is undergrowth.
-      const [cw, ch] = (bare || leafy) ? FITS.bare : FITS.cover
-      const vary = 0.8 + ((dh >> 13) % 45) / 100
+      const [cw, ch] = leafy ? FITS.tree : bare ? FITS.bare : FITS.cover
+      /*
+       * Per-PIECE variation, never per tile, or a tile reads as one stamped set.
+       * Trees start from 0.95 rather than 0.8: Joe asked for "fewer small ones
+       * in favour of bigger ones", and raising the floor is what removes the
+       * small end rather than just making it less likely.
+       */
+      const vary = (leafy ? 0.95 : 0.8) + ((dh >> 13) % 45) / 100
       fitInto(bit, cw * vary, ch * vary)
       const r = footprintOf(bit)
 
