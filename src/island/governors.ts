@@ -45,7 +45,39 @@ export function inGracePeriod(f: Flow): boolean {
   return f.pets.length < 2 && f.island.tiles.size < 4
 }
 
-/** Empty habitable land beyond what the current pets need. */
+/**
+ * How many fields this many pets want.
+ *
+ * Joe, 28 July: *"for every tile, there needs to be one animal. we can be a bit
+ * more relaxed with that, say 3 tiles for 2 animals."*
+ */
+export const fieldsWanted = (pets: number): number =>
+  pets * balance.governor.tilesPerPet
+
+/**
+ * Land beyond what the current pets want — the number both governors read.
+ *
+ * IT IS MEASURED AGAINST A RATIO, and that correction is the whole of Joe's
+ * report. He said the ratio *"seems to be 1:1, think that was more relaxed
+ * before"*, and he was right on both counts.
+ *
+ * This used to be `habitable - pets`, an ABSOLUTE difference, with the corridor
+ * either side of it absolute too: land paused at a surplus of 4, eggs paused at a
+ * deficit of 3. A constant gap of four is generous when she owns five fields and
+ * nothing at all when she owns forty, so the RATIO was driven to 1:1 as the
+ * island grew — while the early game, where four is most of the island, genuinely
+ * was more relaxed. He was describing real behaviour, not misremembering it.
+ *
+ * A ratio target cannot be written as a constant difference, which is why the
+ * cost curves were the wrong place to look: `egg` and `tile` are the same curve
+ * to within rounding, and making one dearer would not have changed the
+ * equilibrium this function sets. Now the corridor is `wanted ± the two
+ * constants`, so at ten pets she may hold 11 to 19 fields — a ratio of 1.1 to
+ * 1.9, converging on 1.5 rather than on 1.
+ *
+ * FIELDS ONLY: not rock, which is land but cannot be stood on, and not water.
+ * See the note in the loop.
+ */
 export function spaceSurplus(f: Flow): number {
   /*
    * FIELDS ONLY. Rock is land but it is not LODGING, and the distinction is
@@ -65,7 +97,7 @@ export function spaceSurplus(f: Flow): number {
    */
   let habitable = 0
   for (const type of f.island.tiles.values()) if (type === 'grass') habitable++
-  return habitable - f.pets.length
+  return habitable - fieldsWanted(f.pets.length)
 }
 
 /**
@@ -76,11 +108,21 @@ export function spaceSurplus(f: Flow): number {
  */
 export function activeGovernor(f: Flow): Governor {
   if (inGracePeriod(f)) return 'none'
-  if (spaceSurplus(f) >= balance.governor.maxEmptySurplus) return 'space-surplus'
-  // A pet with nowhere of its own to be is "waiting". Until habitats land in
-  // M2, that means more pets than habitable tiles.
-  const waiting = f.pets.length - Math.max(0, spaceSurplus(f) + f.pets.length)
-  if (waiting >= balance.governor.maxWaitingPets) return 'nursery-queue'
+  const surplus = spaceSurplus(f)
+  if (surplus >= balance.governor.maxEmptySurplus) return 'space-surplus'
+  /*
+   * ...and the mirror. A pet with nowhere of its own to be is "waiting", which
+   * now means the fields fall short of what her pets want by `maxWaitingPets`.
+   *
+   * Written as the negative surplus rather than as
+   * `pets - Math.max(0, surplus + pets)`, which is what stood here. That
+   * expression reduces to exactly `-surplus` for any non-negative field count —
+   * so it was correct, but it read as though it were computing something else,
+   * and it silently depended on `surplus` being `habitable - pets` with a
+   * coefficient of one. Under a ratio target that identity no longer holds, and
+   * the roundabout form would have quietly gone on meaning the old thing.
+   */
+  if (-surplus >= balance.governor.maxWaitingPets) return 'nursery-queue'
   return 'none'
 }
 

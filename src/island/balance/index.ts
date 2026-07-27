@@ -14,7 +14,22 @@ export interface Balance {
   tile: CostCurve
   egg: CostCurve
   pages: { wordsPerFindPage: number; mix: PageKind[] }
-  governor: { maxWaitingPets: number; maxEmptySurplus: number }
+  governor: {
+    maxWaitingPets: number
+    maxEmptySurplus: number
+    /**
+     * How many fields the island wants per pet.
+     *
+     * Joe, 28 July: *"for every tile, there needs to be one animal. we can be a
+     * bit more relaxed with that, say 3 tiles for 2 animals. bit more maths than
+     * reading since the maths goes quicker."*
+     *
+     * A RATIO, which is the whole point — the governors used to hold an absolute
+     * difference, and an absolute difference cannot express a ratio. See
+     * `spaceSurplus`.
+     */
+    tilesPerPet: number
+  }
   pets: {
     /**
      * How many recent hatches the species draw refuses to repeat.

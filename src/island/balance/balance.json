@@ -3,7 +3,7 @@
   "egg":      { "base": 1, "cap": 14, "tau": 5 },
   "pages":    { "wordsPerFindPage": 3,
                 "mix": ["find", "build", "build", "build"] },
-  "governor": { "maxWaitingPets": 3, "maxEmptySurplus": 4 },
+  "governor": { "maxWaitingPets": 3, "maxEmptySurplus": 4, "tilesPerPet": 1.5 },
   "pets":     { "speciesMemory": 5 },
   "stage":    { "spinSec": 9, "progressDots": true, "flyBackMs": 900,
                 "hatchHoldMs": 1300, "petLoadMs": 3000, "chipMs": 1250,
