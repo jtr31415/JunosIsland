@@ -56,6 +56,22 @@ export interface Sign {
   dispose(): void
 }
 
+/*
+ * Board and posts, derived rather than eyeballed.
+ *
+ * The posts used to be a flat 0.42 tall while the board's underside sat at
+ * 0.355, so each one climbed 0.065 into the board — over a third of its
+ * height — and, being slightly deeper than the board, stood PROUD of the
+ * lettered face rather than behind it. The result was two stakes drawn on
+ * top of her name. Deriving the post height from the board's underside means
+ * moving the board can no longer put a post through the writing.
+ */
+export const BOARD_W = 0.52
+export const BOARD_H = 0.17
+export const BOARD_Y = 0.44
+export const BOARD_BOTTOM = BOARD_Y - BOARD_H / 2
+export const POST_H = BOARD_BOTTOM
+
 export function createSign(name: string): Sign {
   const group = new THREE.Group()
   group.name = 'sign'
@@ -66,8 +82,9 @@ export function createSign(name: string): Sign {
   // Two posts rather than one: a single stake reads as a lollipop, and two
   // make it a sign somebody put up on purpose.
   for (const side of [-1, 1]) {
-    const post = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.42, 0.045), wood(POST))
-    post.position.set(side * 0.19, 0.21, 0)
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.045, POST_H, 0.045), wood(POST))
+    post.position.set(side * 0.19, POST_H / 2, 0)
+    post.name = 'sign-post'
     group.add(post)
   }
 
@@ -84,14 +101,15 @@ export function createSign(name: string): Sign {
    * the name round the edges, which looks like a mistake rather than a sign.
    */
   const board = new THREE.Mesh(
-    new THREE.BoxGeometry(0.52, 0.17, 0.03),
+    new THREE.BoxGeometry(BOARD_W, BOARD_H, 0.03),
     [edge, edge, edge, edge, face, edge],
   )
-  board.position.y = 0.44
+  board.position.y = BOARD_Y
+  board.name = 'sign-board'
   group.add(board)
 
-  const cap = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.025, 0.05), trim)
-  cap.position.y = 0.535
+  const cap = new THREE.Mesh(new THREE.BoxGeometry(BOARD_W + 0.04, 0.025, 0.05), trim)
+  cap.position.y = BOARD_Y + BOARD_H / 2 + 0.0125
   group.add(cap)
 
   return {
