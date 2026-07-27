@@ -89,6 +89,15 @@ export interface Stage {
   release(): void
   /** Is this object the one currently on the turntable? */
   holds(object: THREE.Object3D | null): boolean
+  /**
+   * A burst of sparks on the turntable.
+   *
+   * The shell breaking, seen where she has been watching it (§3, §6). Lives
+   * on the stage rather than in the world because that is where her attention
+   * has been for the last five pages — the whole point of the ceremony is
+   * that it happens on the thing she was working toward, not somewhere else.
+   */
+  burst(): void
   /** Frame the turntable for an object of roughly this size. */
   frame(radius: number): void
   update(dt: number, t: number): void
@@ -163,6 +172,32 @@ export function createStage(): Stage {
   ground.position.y = -0.08
   scene.add(ground)
 
+  /*
+   * The hatch burst, built once and replayed. Building it on demand would
+   * allocate geometry in the middle of the one moment that must not stutter.
+   */
+  const sparks = new THREE.Group()
+  sparks.visible = false
+  const SPARKS = 14
+  for (let i = 0; i < SPARKS; i++) {
+    const spark = new THREE.Mesh(
+      new THREE.SphereGeometry(0.045, 6, 5),
+      new THREE.MeshStandardMaterial({
+        color: i % 3 === 0 ? 0xfff2a8 : i % 3 === 1 ? 0xffd166 : 0xffffff,
+        metalness: 0, roughness: 1, transparent: true,
+      }),
+    )
+    spark.userData.dir = new THREE.Vector3(
+      Math.cos((i / SPARKS) * Math.PI * 2),
+      0.55 + (i % 4) * 0.28,
+      Math.sin((i / SPARKS) * Math.PI * 2),
+    ).normalize()
+    sparks.add(spark)
+  }
+  scene.add(sparks)
+  /** 0..1 through the burst, or -1 when it is not playing. */
+  let burstT = -1
+
   /** Scratch for the renderer's CSS-pixel size; allocated once, not per frame. */
   const canvasSize = new THREE.Vector2()
   let guest: THREE.Object3D | null = null
@@ -197,6 +232,11 @@ export function createStage(): Stage {
 
     holds: object => !!object && guest === object,
 
+    burst() {
+      burstT = 0
+      sparks.visible = true
+    },
+
     frame(radius) {
       // A saucer just wider than the piece, never a landscape of its own.
       const disc = Math.max(0.35, radius * 1.35)
@@ -221,6 +261,23 @@ export function createStage(): Stage {
     },
 
     update(dt, t) {
+      if (burstT >= 0) {
+        burstT += dt * 1.15
+        if (burstT >= 1) { burstT = -1; sparks.visible = false }
+        else {
+          // Out fast, then drift and fade — a pop rather than a firework.
+          const reach = Math.sin(Math.min(1, burstT * 1.7) * Math.PI * 0.5)
+          for (const spark of sparks.children) {
+            const dir = spark.userData.dir as THREE.Vector3
+            spark.position.copy(dir).multiplyScalar(0.2 + reach * 0.85)
+            spark.position.y += 0.25 - burstT * burstT * 0.5
+            const m = (spark as THREE.Mesh).material as THREE.MeshStandardMaterial
+            m.opacity = 1 - burstT * burstT
+            spark.scale.setScalar(1 - burstT * 0.45)
+          }
+        }
+      }
+
       spin += dt * (Math.PI * 2) / TURN_SECONDS
       turntable.rotation.y = spin
       // A gentle bob, so the stage is alive while she is thinking.
@@ -264,6 +321,14 @@ export function createStage(): Stage {
       if (guest && guestHome) { guestHome.add(guest); guest.position.copy(guestAt) }
       plinth.geometry.dispose()
       ;(plinth.material as THREE.Material).dispose()
+      ground.geometry.dispose()
+      ;(ground.material as THREE.Material).dispose()
+      sparks.traverse(o => {
+        const m = o as THREE.Mesh
+        if (!m.isMesh) return
+        m.geometry.dispose()
+        ;(m.material as THREE.Material).dispose()
+      })
     },
   }
 }

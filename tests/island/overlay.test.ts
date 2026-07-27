@@ -229,3 +229,67 @@ describe('the backdrop', () => {
     expect(isOpen()).toBe(true)
   })
 })
+
+/**
+ * The ceremony window.
+ *
+ * Between the last correct answer and the friend arriving there are about two
+ * seconds of animation. They used to be fully interactive, and a tap in them
+ * could rip the egg off the turntable mid-hatch or — worse — dismiss the
+ * round and then re-open one, leaving the flow in a challenge with no overlay
+ * and no way out but a reload.
+ */
+describe('while a ceremony is playing', () => {
+  it('ignores the back button', () => {
+    const { overlay, host, q, isOpen } = setup()
+    overlay.openWordFind(PICKS)
+    overlay.setBusy(true)
+
+    q('.overlay-back').click()
+
+    expect(isOpen()).toBe(true)
+    expect(host.onDismissed).not.toHaveBeenCalled()
+    expect(host.onPassed).not.toHaveBeenCalled()
+  })
+
+  it('ignores the backdrop', () => {
+    const { overlay, host, layer, isOpen } = setup()
+    overlay.openWordFind(PICKS)
+    overlay.setBusy(true)
+
+    backdropTap(layer)
+
+    expect(isOpen()).toBe(true)
+    expect(host.onDismissed).not.toHaveBeenCalled()
+  })
+
+  it('gives the exits back the moment it is over', () => {
+    // A lock that outlived its ceremony would be a trap of its own.
+    const { overlay, host, q, isOpen } = setup()
+    overlay.openWordFind(PICKS)
+    overlay.setBusy(true)
+    overlay.setBusy(false)
+
+    q('.overlay-back').click()
+
+    expect(isOpen()).toBe(false)
+    expect(host.onDismissed).toHaveBeenCalled()
+  })
+
+  it('never leaves the lock on across rounds', () => {
+    /*
+     * The dangerous failure: a ceremony that threw part-way through would
+     * leave busy set, and every exit dead for the rest of the session. So
+     * teardown clears it unconditionally rather than trusting the caller.
+     */
+    const { overlay, host, q, isOpen } = setup()
+    overlay.openSum(SUM)
+    overlay.setBusy(true)
+    overlay.openSum(SUM)          // next round, without anyone clearing it
+
+    q('.overlay-back').click()
+
+    expect(isOpen()).toBe(false)
+    expect(host.onDismissed).toHaveBeenCalled()
+  })
+})

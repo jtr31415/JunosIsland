@@ -65,6 +65,19 @@ export interface Overlay {
    * take the vignette down without opening anything.
    */
   setStaged(v: boolean): void
+  /**
+   * Ignore every way out, briefly.
+   *
+   * For a ceremony: the seconds between the last correct answer and the
+   * friend arriving are an ANIMATION, not a moment of choice, and a tap
+   * during them used to tear the egg off the stage mid-hatch and could strand
+   * the flow in a challenge with no overlay to finish or dismiss.
+   *
+   * Deliberately not a lockout of the child — nothing is greyed out, nothing
+   * is refused twice, and it lasts under two seconds (brief §18 forbids
+   * pressure, not choreography).
+   */
+  setBusy(v: boolean): void
   /** Where the vignette should be drawn, in CSS pixels, or null if unstaged. */
   stageRect(): { x: number; y: number; width: number; height: number } | null
   /** "How much longer", with no numbers (§6). */
@@ -249,6 +262,7 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
   })
 
   function teardown(): void {
+    busy = false
     if (handle) { handle.teardown(); handle = null }
     layer.classList.add('hide')
     layer.classList.remove('staged')
@@ -282,8 +296,10 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
    * backdrop. The target check matters: without it, every tap inside the
    * panel would bubble up and close the round mid-word.
    */
+  /** While true, the ways out are ignored. See setBusy(). */
+  let busy = false
   let backdropPress = false
-  layer.addEventListener('pointerdown', e => { backdropPress = e.target === layer })
+  layer.addEventListener('pointerdown', e => { backdropPress = !busy && e.target === layer })
   layer.addEventListener('pointerup', e => {
     // On RELEASE, and only if the press began out here too. Acting on contact
     // would dismiss a round the moment a finger landed to drag the island
@@ -294,7 +310,7 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
 
   back.onclick = () => {
     const wasOpen = !layer.classList.contains('hide')
-    if (!wasOpen) return
+    if (!wasOpen || busy) return
     // Already answered correctly? Then leaving COLLECTS. Never discard work
     // the child has actually done (brief section 18). But she asked to go, so
     // the reward lands on the island and no further page is dealt.
@@ -345,6 +361,8 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
     setStaged(v) {
       layer.classList.toggle('staged', v)
     },
+
+    setBusy(v) { busy = v },
 
     stageRect() {
       if (!layer.classList.contains('staged')) return null

@@ -85,6 +85,8 @@ export function createPetField(base = ''): PetField {
   const cache = new Map<string, THREE.Group>()
   const live = new Map<string, Live>()
   let obstacles: Obstacle[] = []
+  /** Bounces asked for before their pet finished loading. */
+  const pendingBounce = new Set<string>()
 
   async function model(species: string): Promise<THREE.Group> {
     const hit = cache.get(species)
@@ -166,12 +168,25 @@ export function createPetField(base = ''): PetField {
           restFor: 2 + Math.random() * 6,
           stuckFor: 0,
         })
+        // Arrived at last: play the welcome that was asked for too early.
+        if (pendingBounce.delete(pet.id)) {
+          const l = live.get(pet.id)
+          if (l) l.bounce = 1
+        }
       }
     },
 
     bounce(id) {
       const l = live.get(id)
-      if (l) l.bounce = 1
+      if (l) { l.bounce = 1; pendingBounce.delete(id); return }
+      /*
+       * Not here yet. A pet's model loads asynchronously, so the hatch
+       * ceremony asks a brand-new friend to hop in before the file has
+       * arrived — and a bounce that quietly does nothing turns the moment she
+       * has worked five pages for into a pet that is simply, flatly, there.
+       * Remembered instead, and played the moment it lands.
+       */
+      pendingBounce.add(id)
     },
 
     setObstacles(list) {

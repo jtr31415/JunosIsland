@@ -73,6 +73,20 @@ const PAGE_GAP_MS = 260
  */
 const PLOT_FAREWELL_MS = 1400
 
+/**
+ * How long the stage holds after the shell breaks.
+ *
+ * Enough that the name card and the dissolve do not land on the same frame,
+ * which reads as one flicker rather than two beats — but no longer, because
+ * the egg is gone by then and the shot is of an empty turntable. The pet
+ * popping up here is the missing beat (§3), and is still to come.
+ */
+const HATCH_HOLD_MS = 700
+
+/** A promise that settles after n milliseconds. */
+const wait = (ms: number): Promise<void> =>
+  new Promise(resolve => setTimeout(resolve, ms))
+
 const canvas = document.getElementById('view') as HTMLCanvasElement
 
 async function boot(): Promise<void> {
@@ -510,16 +524,71 @@ async function boot(): Promise<void> {
       const hatched = flow.pets.length > petsBefore
 
       if (hatched) {
-        stageFor(null); overlay.close()
+        /*
+         * SAVE FIRST, celebrate second.
+         *
+         * The pet exists in `flow` the moment handleChallengePassed returns,
+         * but persist() used to run only after the ceremony — leaving a
+         * two-second window in which closing the tab lost both the friend and
+         * the page that earned her. Two seconds is not long unless it is the
+         * single most important moment in the game (brief §18).
+         */
+        persist()
+
+        /*
+         * And hold the exits for the duration.
+         *
+         * The ceremony is an animation, not a moment of choice. A tap during
+         * it used to rip the egg off the turntable mid-hatch — re-opening the
+         * exact bug this change exists to fix — and, worse, a dismiss
+         * followed by a re-tap could strand the flow in a challenge with no
+         * overlay, recoverable only by reloading.
+         */
+        inCeremony = true
+        overlay.setBusy(true)
+
+        // If she has already left (collect-and-leave inside the win hold),
+        // there is no stage to perform on; hatch in the world as before.
+        const onStage = overlay.isOpen()
+        /*
+         * THE CEREMONY HAPPENS ON THE STAGE (§3 and §6), where she has been
+         * watching.
+         *
+         * The first version closed the stage and then hatched the egg back in
+         * the world — so the egg she had followed for five pages vanished at
+         * the exact moment it finally mattered, and the payoff played out
+         * somewhere she was not looking. Order now: burst and hatch in view,
+         * name card, spoken name, and only then does the stage dissolve and
+         * the friend arrive on the island.
+         */
+        world.lighting.celebrationBump()
+        if (onStage) stage.burst()
+        // No stinger here: the word-find already played 'win' when the last
+        // word landed (v0:959), and a second one 420ms later doubles it.
         await egg.hatch()
+
         overlay.showName(name)
         const line = HATCH_LINES[flow.pets.length % HATCH_LINES.length] as string
         speech.speak(fill(line, child(), name))
         fred.talk(2.4)
         fred.hop()
-        world.lighting.celebrationBump()
+
+        // A beat before the stage goes, so the card and the dissolve do not
+        // land on the same frame and read as one flicker.
+        await wait(HATCH_HOLD_MS)
+        stageFor(null)
+        overlay.setBusy(false)
+        overlay.close()
         egg.reset()
         refresh()
+
+        // ...and the new friend hops in rather than simply being there,
+        // with the light lifting again for the arrival itself.
+        const arrival = flow.pets[flow.pets.length - 1]
+        if (arrival) pets.bounce(arrival.id)
+        world.lighting.celebrationBump()
+        inCeremony = false
+
         if (openingResumeAt >= 0) {
           const at = openingResumeAt
           openingResumeAt = -1
@@ -605,6 +674,14 @@ async function boot(): Promise<void> {
   /* ---------- the opening: Fred's Lonely Rock (brief section 3) ---------- */
 
   let inOpening = false
+  /**
+   * True while a hatch ceremony is playing.
+   *
+   * World taps are ignored for its duration, alongside the overlay's own
+   * exits — otherwise a tap lands on an egg that is mid-hatch and half-way
+   * between two scenes.
+   */
+  let inCeremony = false
   /** Where to resume after the opening hands over to the child. */
   let openingResumeAt = -1
 
@@ -738,7 +815,7 @@ async function boot(): Promise<void> {
 
   const ports: InteractionPorts = {
     challengeOpen: () => overlay.isOpen(),
-    storyPlaying: () => inOpening,
+    storyPlaying: () => inOpening || inCeremony,
     // The governors are asked BEFORE the transition now (see interactions.ts),
     // so these just open. A port that declined here used to strand the flow
     // in 'challenge' with no overlay and no way out but a reload.
