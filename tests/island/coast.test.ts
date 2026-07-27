@@ -225,9 +225,24 @@ function pondInLand(dir = 0): Island {
 }
 
 describe('waterMask', () => {
-  it('counts open sea as water — the island floats in it', () => {
-    // A lone tile has six unbuilt neighbours and is therefore all shore.
-    expect(waterMask(createIsland(), { q: 0, r: 0 })).toBe(0b111111)
+  it('does NOT count open sea as water — the island edge is a cliff', () => {
+    /*
+     * Counting unbuilt neighbours sanded the entire rim, so almost every tile
+     * she owned was mostly beach — and the sand MOVED, because building one
+     * hex turned its neighbours' "open sea" into land and re-cut them all. A
+     * coastline should mark something she made, a pond meeting a field, not
+     * the ragged edge of however far she happens to have built.
+     */
+    expect(waterMask(createIsland(), { q: 0, r: 0 })).toBe(0)
+    expect(lookFor(createIsland(), { q: 0, r: 0 })).toEqual({ kind: 'grass', turns: 0 })
+  })
+
+  it('leaves the whole rim of a solid island plain', () => {
+    const i = blob()
+    for (const k of i.tiles.keys()) {
+      const [q, r] = k.split(',').map(Number)
+      expect(lookFor(i, { q: q as number, r: r as number }).kind).toBe('grass')
+    }
   })
 
   it('counts a placed pond as water too', () => {
@@ -327,23 +342,26 @@ describe('lookFor', () => {
     }
   })
 
-  it('re-sands a neighbour when a tile is placed beside it', () => {
+  it('sands a neighbour the moment a POND is dug beside it', () => {
     /*
-     * The reason the coastline is derived rather than stored. Building on the
-     * far side of a tile changes that tile's own shoreline, and a saved
-     * coastline would have gone stale exactly here.
+     * The reason the coastline is derived rather than stored: placing water
+     * changes the shoreline of a tile nobody touched, and a saved coastline
+     * would have gone stale exactly here.
      */
-    const lone = createIsland()
-    expect(lookFor(lone, { q: 0, r: 0 }).kind).toBe('grass')
+    const dry = blob()
+    expect(lookFor(dry, { q: 0, r: 0 }).kind).toBe('grass')
 
-    // Two neighbours, so the rock drops from six wet edges to four and
-    // crosses from "island" into "shoreline" without being touched itself.
-    let grown = place(lone, DIRECTIONS[0] as Axial, 'grass')
-    grown = place(grown, DIRECTIONS[1] as Axial, 'grass')
+    const pond = place(blob(), { q: 2, r: 0 }, 'water')
+    const neighbourOfPond = lookFor(pond, { q: 1, r: 0 })
+    expect(neighbourOfPond.kind).toBe('coast')
+  })
 
-    const after = lookFor(grown, { q: 0, r: 0 })
-    expect(after.kind).toBe('coast')
-    if (after.kind === 'coast') expect(after.variant).toBe('D')
+  it('un-sands a tile when the pond it faced is filled in', () => {
+    // Symmetry: if placing water sands a neighbour, the coastline must be a
+    // pure function of the map rather than something that accumulates.
+    const withPond = place(blob(), { q: 2, r: 0 }, 'water')
+    expect(lookFor(withPond, { q: 1, r: 0 }).kind).toBe('coast')
+    expect(lookFor(blob(), { q: 1, r: 0 }).kind).toBe('grass')
   })
 
   it('is stable — the same island always draws the same coastline', () => {

@@ -209,3 +209,89 @@ describe('landing a finished plot', () => {
     expect(plot.group.position.y).toBe(0)
   })
 })
+
+/**
+ * The golden outline: the whole tile shown from the first moment, each piece
+ * turning real as a page is collected.
+ *
+ * Joe's shape for it, and a better game than revealing pieces out of nothing:
+ * seeing the finished tile from the start means the work has a SHAPE. She can
+ * see there are four things left, and which four, without being told a number.
+ */
+describe('the golden outline', () => {
+  const models = {
+    size: 1.1547,
+    geometry: { grass: new THREE.BufferGeometry(), water: new THREE.BufferGeometry() },
+    material: new THREE.MeshStandardMaterial(),
+  } as never
+
+  /** Count what is actually being drawn, ghost or real. */
+  const visible = (plot: ReturnType<typeof createGrowingPlot>): number =>
+    plot.group.children.filter(c => c.visible).length
+
+  it('NEVER grows more props on a dear tile than on a cheap one', () => {
+    /*
+     * Joe: "when the player is at like 16 challenges per reward, we don't
+     * have 16 props on every tile."
+     *
+     * The piece count is a property of the SEQUENCE, not of the price. A
+     * sixteen-sum tile buys the same ten steps as a one-sum tile; the sums
+     * only decide how fast they arrive. If this ever inverts, an expensive
+     * island becomes a cluttered one and pets lose the room they wander in.
+     */
+    expect(INCREMENTS).toHaveLength(10)
+    for (const cost of [1, 5, 10, 16, 40]) {
+      expect(incrementsShown(cost, cost)).toBe(INCREMENTS.length)
+    }
+  })
+
+  it('shows the finished tile as an outline before any work is done', () => {
+    const plot = createGrowingPlot('grass', 1.1547, {
+      models, prop: () => Promise.resolve(new THREE.Group()),
+    })
+    // The hex is installed synchronously; its ghost stands in from the start.
+    expect(visible(plot)).toBeGreaterThan(0)
+  })
+
+  it('swaps outline for real piece, never showing both at once', () => {
+    const plot = createGrowingPlot('grass', 1.1547, {
+      models, prop: () => Promise.resolve(new THREE.Group()),
+    })
+    // The hex and its outline: installed together, exactly one drawn.
+    const drawn = plot.group.children.filter(c => c.visible)
+    expect(drawn).toHaveLength(1)
+    const outline = drawn[0]
+
+    plot.setProgress(1, 1)          // everything at once, the intro tile
+    expect(outline?.visible).toBe(false)                      // promise kept
+    expect(plot.group.children.filter(c => c.visible).length)
+      .toBeGreaterThanOrEqual(1)                              // ...by the real hex
+  })
+
+  it('never brings an outline back once its piece is real', () => {
+    // Growth is one-way (§2's serene-right rule), and so is the promise.
+    const plot = createGrowingPlot('grass', 1.1547, {
+      models, prop: () => Promise.resolve(new THREE.Group()),
+    })
+    plot.setProgress(10, 10)
+    const real = plot.group.children.filter(c => c.visible)
+
+    plot.setProgress(0, 10)         // a wrong answer, or a stale refresh
+    expect(plot.group.children.filter(c => c.visible)).toEqual(real)
+  })
+
+  it('does not promise the flourish — it is an event, not a piece', () => {
+    /*
+     * A golden outline of a burst of sparks, hanging there from the first
+     * moment, promises something that will never be standing on the tile. It
+     * just reads as eight more props she has not earned.
+     */
+    const plot = createGrowingPlot('grass', 1.1547, {
+      models, prop: () => Promise.resolve(new THREE.Group()),
+    })
+    const atStart = visible(plot)
+    plot.setProgress(10, 10)
+    // The flourish appears only at the end; it was never previewed.
+    expect(visible(plot)).toBeGreaterThan(atStart)
+  })
+})

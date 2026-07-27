@@ -1,6 +1,15 @@
 /**
  * The growing plot: maths progress made physical (slice-1 spec §2).
  *
+ * IT SHOWS THE WHOLE TILE FROM THE FIRST MOMENT, as a golden outline hanging
+ * in the air, and each completed page turns one more piece of it real.
+ *
+ * That is Joe's call and it is a better game than the first version, which
+ * revealed pieces one at a time out of nothing: seeing the finished tile from
+ * the start means the work has a SHAPE. She can see there are four things
+ * left, and which four, without being told a number — which is the same job
+ * the progress dots do, done by the thing itself.
+ *
  * A tile is not awarded finished. It is BUILT, in view, as sums land — so a
  * child watches her arithmetic turn into ground she owns. That continuous
  * cause-and-effect is the entire pedagogical point of building it this way
@@ -90,9 +99,6 @@ const PIECES: Record<TileType, readonly string[]> = {
   ],
 }
 
-/** How solid a freshly sited plot looks. It firms up as the build advances. */
-const GHOST_OPACITY = 0.45
-
 /**
  * How much room each piece gets on the plot, matching how props.ts plants it.
  *
@@ -166,9 +172,44 @@ export function createGrowingPlot(
   const group = new THREE.Group()
   group.name = 'growing-plot'
 
-  /** One entry per increment. `object` is null until its asset lands. */
-  const slots: Array<{ object: THREE.Object3D | null; shown: boolean; ease: number }> =
-    INCREMENTS.map(() => ({ object: null, shown: false, ease: 0 }))
+  /**
+   * One entry per increment.
+   *
+   * `object` is the real piece and `ghost` is its golden preview; both are
+   * null until the asset lands. Exactly one of them is ever visible.
+   */
+  const slots: Array<{
+    object: THREE.Object3D | null
+    ghost: THREE.Object3D | null
+    shown: boolean
+    ease: number
+  }> = INCREMENTS.map(() => ({ object: null, ghost: null, shown: false, ease: 0 }))
+
+  /**
+   * The look of a piece that is coming but is not here yet.
+   *
+   * Gold rather than grey, and glowing rather than faint, because this is a
+   * PROMISE and not an absence — the tile she is going to have, shown to her
+   * while she earns it. Depth-write off so the ghosts never occlude the real
+   * pieces standing among them.
+   */
+  const ghostMaterial = new THREE.MeshBasicMaterial({
+    color: 0xffcf5a,
+    transparent: true,
+    opacity: 0.26,
+    depthWrite: false,
+  })
+
+  /** A golden stand-in with the same shape and pose as the real thing. */
+  const makeGhost = (object: THREE.Object3D): THREE.Object3D => {
+    const ghost = object.clone(true)
+    ghost.traverse(o => {
+      const m = o as THREE.Mesh
+      if (m.isMesh) m.material = ghostMaterial
+    })
+    ghost.renderOrder = 2
+    return ghost
+  }
 
   let disposed = false
   /** 0..1 through the landing arc, or -1 when it is not playing. */
@@ -176,37 +217,49 @@ export function createGrowingPlot(
   let landMs = 900
   let landReach = 1.6
 
-  const install = (index: number, object: THREE.Object3D): void => {
+  const install = (index: number, object: THREE.Object3D, preview = true): void => {
     if (disposed) return
     const slot = slots[index]
     if (!slot) return
-    object.visible = false
+
+    /*
+     * The promise and the thing promised, in the same place and pose.
+     *
+     * `preview` is false for the completion flourish: it is an EVENT, not a
+     * piece of the tile, and showing a golden outline of a burst of sparks
+     * from the first moment promises something that will never be standing
+     * there — it just looks like eight more props she has not earned yet.
+     */
+    const ghost = preview ? makeGhost(object) : null
+    slot.ghost = ghost
     slot.object = object
+    if (ghost) group.add(ghost)
     group.add(object)
-    // Already due by the time it arrived? Then start it growing at once.
-    if (slot.shown) { object.visible = true; object.scale.setScalar(0.001); slot.ease = 0 }
+
+    if (slot.shown) {
+      // Already earned by the time the asset arrived: skip straight to real.
+      if (ghost) ghost.visible = false
+      object.visible = true
+      object.scale.setScalar(0.001)
+      slot.ease = 0
+    } else {
+      object.visible = false
+      if (ghost) ghost.visible = true
+    }
   }
 
   /*
-   * Increment 1: the hex itself — spec §2's GHOST hex.
+   * Increment 1: the hex itself.
    *
-   * The real geometry, but a cloned material so it can be translucent: at
-   * full opacity a sited plot is indistinguishable from finished land, and
-   * the child cannot tell what she owns from what she is still building. It
-   * solidifies as the build advances, so the tile becoming real is something
-   * she watches rather than something she is told.
-   *
-   * The material MUST be a clone. TileModels' material is shared by every hex
-   * on the island, so making that one transparent would ghost the whole world.
+   * It gets the same treatment as everything else — a golden outline first,
+   * turning real when the first page is collected. The earlier version made
+   * the hex a translucent WHITE ghost that firmed up gradually, which was a
+   * different idea in the middle of this one; one visual language for "coming
+   * soon" is easier to read than two.
    */
-  const tileMaterial = (deps.models.material as THREE.MeshStandardMaterial).clone()
-  tileMaterial.transparent = true
-  tileMaterial.opacity = GHOST_OPACITY
-  tileMaterial.depthWrite = false
-
   const tile = new THREE.Mesh(
     deps.models.geometry[type === 'water' ? 'water' : 'grass'],
-    tileMaterial,
+    deps.models.material,
   )
   install(0, tile)
 
@@ -246,7 +299,7 @@ export function createGrowingPlot(
       Math.cos(a) * hexSize * 0.6, 0.7 + Math.sin(a * 2) * 0.2, Math.sin(a) * hexSize * 0.6)
     flourish.add(spark)
   }
-  install(INCREMENTS.length - 1, flourish)
+  install(INCREMENTS.length - 1, flourish, false)
 
   return {
     group,
@@ -258,17 +311,16 @@ export function createGrowingPlot(
         if (!slot || i >= show || slot.shown) continue
         slot.shown = true
         slot.ease = 0
+        // The promise is kept: the outline goes, the real piece pops in.
+        if (slot.ghost) slot.ghost.visible = false
         if (slot.object) {
           slot.object.visible = true
           slot.object.scale.setScalar(0.001)
         }
       }
-      // Nothing here ever hides a piece already shown: growth is one-way.
+      // Nothing here ever hides a piece already shown: growth is one-way, and
+      // a ghost once redeemed never comes back.
 
-      // ...and the hex firms up from ghost to solid as the plot fills in.
-      const solid = show / INCREMENTS.length
-      tileMaterial.opacity = GHOST_OPACITY + (1 - GHOST_OPACITY) * solid
-      tileMaterial.depthWrite = tileMaterial.opacity > 0.98
     },
 
     land(ms, reach = balance.stage.landReach) {
@@ -340,7 +392,7 @@ export function createGrowingPlot(
        * constant. Dropping the references is enough; nothing here is uniquely
        * owned except the sparks.
        */
-      tileMaterial.dispose()          // ours alone: cloned, not shared
+      ghostMaterial.dispose()         // ours alone
       flourish.traverse(o => {
         const m = o as THREE.Mesh
         if (!m.isMesh) return

@@ -7,9 +7,9 @@
  * is most of what makes the island read as an island rather than a piece of
  * lawn floating in a swimming pool.
  *
- * The rule: no owned grass tile may touch water directly. A grass tile with any
- * water or open-sea neighbour is DRAWN as a coast, oriented so its sand faces
- * the water.
+ * The rule: no owned grass tile may touch PLACED water directly. A grass tile
+ * next to a pond is DRAWN as a coast, oriented so its sand faces the water.
+ * The island's outer edge is not a coast — see waterMask.
  *
  * All of this is DERIVED, never stored. `Island` stays "which hexes the child
  * owns and what is on them"; the coastline is a function of that map, so
@@ -18,7 +18,7 @@
  */
 import { DIRECTIONS, neighbours } from './hex'
 import type { Axial } from './hex'
-import { has, tileAt } from './grid'
+import { tileAt } from './grid'
 import type { Island } from './grid'
 
 export const COAST_VARIANTS = ['A', 'B', 'C', 'D'] as const
@@ -55,14 +55,25 @@ export type TileLook =
 /**
  * Which of the six neighbours are water, as a bitmask over DIRECTIONS.
  *
- * "Water" means owned water OR nothing at all: the island floats in open sea,
- * so an unbuilt neighbour is every bit as wet as a placed pond, and the shore
- * has to be drawn the same way for both.
+ * "Water" means a PLACED water tile, and nothing else.
+ *
+ * The first version also counted unbuilt neighbours, on the reasoning that the
+ * island floats in open sea and a shore is a shore. That was wrong for this
+ * game, and Joe called it: it sanded the entire rim of the island, so almost
+ * every tile she owned was mostly beach — and worse, the sand kept moving.
+ * Build one hex and its neighbours all re-cut themselves, because what had
+ * been "open sea" became "land". The coastline should mark a real feature she
+ * MADE — a pond meeting a field — not the ragged edge of however far she has
+ * happened to build.
+ *
+ * The edge of the island is now a plain grass cliff into the sea again, which
+ * is also what the KayKit reference renders do: their coasts sit around
+ * water, and the outer boundary of the whole map is a straight drop.
  */
 export function waterMask(island: Island, a: Axial): number {
   let mask = 0
   neighbours(a).forEach((n, k) => {
-    if (!has(island, n) || tileAt(island, n) === 'water') mask |= 1 << k
+    if (tileAt(island, n) === 'water') mask |= 1 << k
   })
   return mask
 }
