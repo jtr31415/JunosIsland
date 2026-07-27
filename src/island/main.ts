@@ -164,6 +164,31 @@ async function boot(): Promise<void> {
   world.scene.add(pets.group)
   world.pickables.push(pets.group)
 
+  /**
+   * Which friend is in the egg — decided IN ADVANCE, so she can be fetched
+   * while the child is still reading.
+   *
+   * Joe: "preloaded the animal otherwise there is a render delay and
+   * disappointment." The species used to be drawn on the line that hatched it,
+   * which left no time at all: the fetch started as the shell broke and the
+   * plinth was empty for as long as the network took.
+   *
+   * DECIDING EARLIER rather than guessing. The draw is uniform over 24, so
+   * warming a "likely" species would hit one time in 24 and be a download
+   * wasted the other 23 — and warming the whole pack is 3.21MiB measured,
+   * against a 5MB budget on the target tablet. Committing to the next one
+   * makes the preload right every time, for one file.
+   *
+   * It costs nothing to draw early: the old code drew a species on EVERY
+   * passed page and threw it away on the four in five that did not hatch.
+   * This draws one and keeps it until it is spent, which is strictly fewer
+   * draws — and it is the seam a remembered draw would replace, if the "two
+   * cats in a row" card ever gives this a deck the way `makeDeck` does for
+   * words. A deck would swap this function and nothing else.
+   */
+  const drawSpecies = (): string => SPECIES[ri(defaultRng, SPECIES.length)] as string
+  let nextSpecies = drawSpecies()
+
   const props = createPropField()
   world.scene.add(props.group)
 
@@ -879,13 +904,25 @@ async function boot(): Promise<void> {
   async function passed(more: boolean): Promise<void> {
     if (flow.challenge === 'read') {
       const name = petName(defaultRng)
-      const species = SPECIES[ri(defaultRng, SPECIES.length)] as string
+      const species = nextSpecies
       const petsBefore = flow.pets.length
 
       flow = handleChallengePassed(flow, { name, species })
       const hatched = flow.pets.length > petsBefore
 
       if (hatched) {
+        /*
+         * This egg is spent, so decide the NEXT friend and start fetching her
+         * now — the next hatch is five pages away, which is minutes of cover
+         * rather than the 700ms a breaking shell buys.
+         *
+         * Fire and forget, and it must stay that way: this runs alongside a
+         * ceremony that locks the exits, and a preload nobody awaits cannot
+         * extend that lock or deadlock it. `warm` never rejects, so the `void`
+         * is not hiding a failure.
+         */
+        nextSpecies = drawSpecies()
+        void pets.warm(nextSpecies)
         /*
          * SAVE FIRST, celebrate second.
          *
@@ -1600,6 +1637,20 @@ async function boot(): Promise<void> {
    */
   world.start()
   document.getElementById('boot')?.remove()
+
+  /*
+   * Fetch the first friend now, while the child is reading Fred's story.
+   *
+   * AFTER `world.start()`, deliberately. The island's own models are the boot
+   * critical path and a pet nobody can see for several minutes must not
+   * compete with them for a tablet's bandwidth — the point is to spend the
+   * quiet time, not the busy time. From here there are minutes of reading
+   * before the first shell breaks.
+   *
+   * Not awaited: boot goes on to ask her name and start the story, and neither
+   * should wait on a GLB.
+   */
+  void pets.warm(nextSpecies)
 
   /*
    * Ask her name once, before the story.
