@@ -24,7 +24,7 @@ blocked on it.
 | **2** | Clock service | **Done.** |
 | **3** | Parity gate deflake | **Done.** 50/50 green. |
 | **4** | Channels & flags | **Done.** One decision for Joe, below. |
-| 5 | Cube-pet material autopsy | Not started. |
+| **5** | Cube-pet material autopsy | **Done.** Finding in HANDOFF §6. |
 | 6 | Sets & the variant engine | Not started. |
 | 7 | Progressive album + set unlocks | Not started. |
 | 8 | Habitats, nursery, wants | Not started. |
@@ -157,6 +157,28 @@ the channel split is real in the machinery but not yet in what she plays.
 Cutting the first tag is a release decision and yours. Everything is in place
 for it: tag, push, and the root becomes that tag while main keeps flowing to
 `/preview/`.
+
+### Item 5 — cube-pet material autopsy
+
+Measured, not guessed, and re-runnable with `npm run pets:atlas`. One material
+per pet, one shared texture, **no vertex colours and no `baseColorFactor`** —
+colour is entirely a texture lookup, across 710 texels of a 512×512 atlas
+arranged in seven columns.
+
+**A set is one recoloured atlas.** Because all 24 species share the single
+material, recolouring is per-SET rather than per-variant: one composited image
+serves a whole set, so ~40 images cover the ≈1,000-creature space. That is a
+much cheaper item 6 than it looked.
+
+The recolour rule is **saturation, not position**: no texel is shared by all 24
+species, and columns mix eye-whites with coat colours, but 9% of sampled texels
+are achromatic and 6% near-black — the eyes and face — against 64% chromatic.
+Shift the chromatic and leave the rest, and brief §5's "the face decal stays
+constant" holds by construction rather than by care.
+
+Both alternative routes are measured shut, and the cloning landmine is written
+up: a clone arrives with the BASE material, and a set's texture is shared by
+every pet in it, so it is cached and detached, never disposed.
 
 ---
 

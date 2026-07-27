@@ -202,6 +202,49 @@ service worker before verifying is doing real work, not ceremony.
 - **Pet GLBs are not self-contained** — each references an external
   `Textures/colormap.png`. Without it every pet renders pure white, which looks
   like a material bug rather than a missing file.
+- **How the pets are coloured, and therefore how variants must work.** The
+  Phase 3 item 5 autopsy; re-run it with `npm run pets:atlas` rather than
+  trusting this paragraph, because it is a claim about 24 binary files and a
+  PNG.
+
+  Measured: **one** material per pet, named `colormap`, carrying a
+  `baseColorTexture` and **no** `baseColorFactor`. Vertex attributes are
+  `POSITION+NORMAL+TANGENT+TEXCOORD_0` — there is **no `COLOR_0`**, so no
+  vertex colours anywhere. Colour is therefore *entirely* a texture lookup.
+  The 24 species sample 710 distinct texels of the 512×512 atlas, 40–106 each,
+  arranged in seven vertical columns (u = 48, 112, 176, 240, 304, 432, 496)
+  where v picks a shade down a gradient.
+
+  **The decision: a set is one recoloured atlas.** Because every species shares
+  the single material, recolouring is per-SET rather than per-variant — one
+  canvas-composited 512×512 image serves all 24 species in a set, so ~40
+  images cover the whole ≈1,000-creature space. Generate lazily for unlocked
+  sets and cache by `setId`.
+
+  The other two routes are closed, and measured shut: **material colour
+  params** cannot work because there is one material per pet, so parts cannot
+  be coloured independently and there is no `baseColorFactor` to drive;
+  **attribute or UV rewriting** would need a column per colour role per set —
+  the atlas has seven columns total — and forking UVs per variant gives up the
+  shared geometry buffers that make a thousand creatures affordable.
+
+  **Recolour by saturation, not by position.** No texel at all is sampled by
+  every species (each draws its dark features from column 496 at its own row),
+  so "preserve the shared texels" is not available; and "preserve a column" is
+  too coarse, because u=112 carries eye-whites and coat colours together. What
+  separates the soul from the coat is saturation: of the 710 texels, 9% are
+  achromatic and 6% near-black — the eyes and facial features — while 64% are
+  chromatic. Shift the chromatic ones and leave the achromatic alone, and
+  brief §5's "the face decal (the soul) stays constant per species" holds by
+  construction.
+- **Set textures are shared by every pet in the set** — and a three.js
+  `clone()` already shares materials with the original. Two consequences, both
+  the same trap the album preview already carries a test for. A cloned species
+  arrives holding the BASE material, so the set's material has to be assigned
+  after cloning or every variant renders in the natural palette. And disposing
+  a set's texture breaks every pet of that set at once, including ones she
+  already owns (brief §19) — set textures are cached and detached, never
+  disposed, exactly as `stage.showTemp` handles pet models.
 - **Three.js `setViewport`/`setScissor` take CSS pixels** and apply the pixel
   ratio internally. Doing it yourself squares it: correct on a DPR-1 desktop,
   off-canvas on the DPR-2 tablet.
