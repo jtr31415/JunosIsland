@@ -69,11 +69,13 @@
   place-items: center;
   padding: 2vh 2vw;
   /*
-   * The backdrop CATCHES taps while a round is open, so tapping beside the
-   * panel goes back to the island — the first thing anyone tries with a
-   * modal. It was `none`, which let taps fall through to the canvas where
-   * they were discarded for being mid-challenge: the backdrop looked
-   * dismissible and did nothing at all.
+   * The backdrop CATCHES taps while a round is open — and SWALLOWS them.
+   *
+   * It used to dismiss, and that is now the corner X's job alone: `.stage-slot`
+   * is deliberately `pointer-events: none`, so the vignette she is watching
+   * counted as backdrop and touching her own egg ended the page. Catching still
+   * matters, though: `none` would let taps fall through to the canvas and spin
+   * the camera under a live round.
    *
    * Only while open. Hidden, it must not swallow taps meant for the world.
    */
@@ -95,6 +97,15 @@
 
 /* While a challenge is open the say card would collide with it. */
 body:has(.overlay:not(.hide)) .say { display: none; }
+
+/*
+ * ...and so would the album button, which sits in exactly the corner the way
+ * out now occupies. Two round buttons stacked in one corner is ambiguous at
+ * best; worse, the one underneath opens a full-screen panel over a live round.
+ * Her friends are not going anywhere — the corner belongs to the X until the
+ * page is finished.
+ */
+body:has(.overlay:not(.hide)) .album-button { display: none; }
 
 /* A speech line from Fred: big, friendly, tappable to advance. */
 .say {

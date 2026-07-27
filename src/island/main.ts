@@ -24,7 +24,7 @@ import { plannedLook } from './world/coast'
 import type { GrowingPlot } from './world/increments'
 import { createAlbum } from './album'
 import { hatchProgress, landProgress, sumsForTile, pagesForEgg } from './flow'
-import { pageKind, balance, applyDevBalance } from './balance'
+import { balance, applyDevBalance } from './balance'
 import { landPaused, eggsPaused, activeGovernor, GOVERNOR_LINE } from './governors'
 import { OPENING, HATCH_LINES, TILE_QUESTION, fill } from './script'
 import { loadIsland, saveIsland } from './save'
@@ -62,12 +62,10 @@ import { defaultRng } from '../core/rng'
 import { makeDeck, makeMemoryDeck } from '../core/decks'
 import { GREEN, RED } from '../core/wordlists'
 import { buildPool, buildNeighbours } from '../core/neighbours'
-import { generateRead } from '../core/generators/read'
-import type { ReadState, ReadPick } from '../core/generators/read'
-import { generateBuild } from '../core/generators/build'
-import type { BuildState, BuildItem } from '../core/generators/build'
-import { generateAdd } from '../core/generators/sums'
-import type { SumState, SumItem } from '../core/generators/sums'
+import type { ReadState } from '../core/generators/read'
+import type { BuildState } from '../core/generators/build'
+import type { SumState } from '../core/generators/sums'
+import { dealReading, dealSum } from './deal'
 import { petName } from '../core/names'
 
 /** Injected at build time by Vite (see vite.island.config.ts). */
@@ -896,27 +894,36 @@ async function boot(): Promise<void> {
     }
   }
 
+  /*
+   * NOTE what these no longer do: generate.
+   *
+   * Every call used to deal a brand new card, so leaving a round and coming
+   * back re-rolled the question — and `dealReading`/`dealSum` say at length why
+   * that was worse than it looks. The state's `readHeld` / `sumHeld` bit is
+   * passed straight through; the decision itself lives in deal.ts, where it can
+   * be tested against the real generators rather than a mock.
+   */
   function openRead(state: Flow = flow): void {
     if (state.phase !== 'challenge' || state.challenge !== 'read') return
     overlay.clearSay()
     // Put the egg on the turntable first, then mount the round WITH the
     // layout — one call, so the mount's own teardown cannot drop it.
     const staged = stageFor('read', state)
-    if (pageKind(state.readProgress) === 'build') {
-      generateBuild(buildStore, { rng: defaultRng, drawGreen, level: 1 })
-      overlay.openBuild(buildStore.history[buildStore.idx] as BuildItem, staged)
-    } else {
-      generateRead(readStore, { rng: defaultRng, drawGreen, drawRed, neigh, level: 1 })
-      overlay.openWordFind(readStore.history[readStore.idx] as ReadPick[], staged)
-    }
+    const card = dealReading(
+      { read: readStore, build: buildStore },
+      { rng: defaultRng, drawGreen, drawRed, neigh, level: 1 },
+      state.readProgress, state.readHeld,
+    )
+    if (card.kind === 'build') overlay.openBuild(card.item, staged)
+    else overlay.openWordFind(card.picks, staged)
   }
 
   function openSum(state: Flow = flow): void {
     if (state.phase !== 'challenge' || state.challenge !== 'sum') return
-    generateAdd(sumStore, defaultRng, 1)
+    const item = dealSum(sumStore, defaultRng, 1, state.sumHeld)
     overlay.clearSay()
     const staged = stageFor('sum', state)
-    overlay.openSum(sumStore.history[sumStore.idx] as SumItem, staged)
+    overlay.openSum(item, staged)
   }
 
   /**

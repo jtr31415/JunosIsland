@@ -170,19 +170,36 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
   again.setAttribute('aria-label', 'say it again')
 
   /**
-   * A way out. THIS IS NOT OPTIONAL.
+   * A way out. THIS IS NOT OPTIONAL — and it is now an X in the corner.
    *
-   * Without it a child can be trapped: peeking at a sum's answer sets the
-   * renderer's `solved` flag and disables the number pad (a faithful port of
-   * v0), but the island has no forward-tap navigation like the 2D game does,
-   * so nothing can ever fire onAdvance. The only exit was reloading the page.
+   * Without a way out a child can be trapped: peeking at a sum's answer sets
+   * the renderer's `solved` flag and disables the number pad (a faithful port
+   * of v0), but the island has no forward-tap navigation like the 2D game
+   * does, so nothing can ever fire onAdvance. The only exit was reloading.
    *
-   * Leaving costs nothing — challengeFailed takes no tile and no pet.
+   * Joe, playtesting: *"there should be an x button to get back to the island
+   * when through a challenge, too many accidental hits."* Two complaints in one
+   * sentence, and the shape of the answer is in both:
+   *
+   *   - It was a text button reading "← back to the island", sitting in the
+   *     control row an inch from "say it again" — the button a struggling child
+   *     reaches for repeatedly. A word she cannot yet read, next to the word she
+   *     taps most. That is the mis-tap.
+   *   - An X in the corner is the one close affordance a six-year-old has
+   *     already met on every device she has touched, it needs no reading at
+   *     all, and it is nowhere near anything she taps on purpose.
+   *
+   * There is now exactly ONE way out, and it is deliberate. The tap-outside
+   * backdrop went with the old button, for the reason below.
+   *
+   * Leaving costs nothing — challengeFailed takes no tile and no pet — and
+   * since the flow now HOLDS the card, it does not cost her the word either.
    */
   const back = document.createElement('button')
-  back.className = 'chunk chunk-button overlay-back'
-  back.textContent = '← back to the island'
+  back.className = 'chunk chunk-button overlay-x'
+  back.textContent = '×'
   back.setAttribute('aria-label', 'back to the island')
+  back.title = 'back to the island'
 
   const panel = document.createElement('div')
   panel.id = 'words'          // the ported renderers style themselves from this
@@ -204,10 +221,13 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
 
   const controls = document.createElement('div')
   controls.className = 'overlay-controls'
-  controls.append(again, back)
+  controls.append(again)
 
   shell.append(panel, controls)
-  layer.append(shell, stageSlot)
+  // The X is a child of the LAYER, not of the panel: it is fixed to the corner
+  // of the screen, so it does not move when the panel grows, and a page with a
+  // long tray of tiles cannot push it under a finger.
+  layer.append(shell, stageSlot, back)
 
   const sayEl = document.createElement('div')
   sayEl.className = 'chunk say hide'
@@ -327,26 +347,25 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
   again.onclick = () => { handle?.sayAgain() }
 
   /*
-   * Tapping outside the panel goes back to the island.
+   * TAPPING OUTSIDE THE PANEL NO LONGER LEAVES. This is deliberate, and it is
+   * the other half of Joe's "too many accidental hits".
    *
-   * The first thing anyone tries with a modal, and the backdrop was dead. It
-   * takes exactly the same path as the button — which means work already
-   * earned is COLLECTED rather than thrown away (brief §19); a dismissal that
-   * silently discarded a correct answer would be much worse than a dead
-   * backdrop. The target check matters: without it, every tap inside the
-   * panel would bubble up and close the round mid-word.
+   * The backdrop used to dismiss, on the grounds that it is the first thing
+   * anyone tries with a modal. That reasoning holds for a grown-up's dialog and
+   * not for this one, because of what the backdrop IS here: `.stage-slot` is
+   * `pointer-events: none` on purpose, so the whole vignette — nearly half the
+   * screen in a staged round, and the half with her own egg turning on it —
+   * counts as backdrop. A child watching her egg and reaching out to touch it
+   * was ending the round. That is not a modal being dismissed, it is a child
+   * being thrown out of a page for looking at the thing she is working toward.
+   *
+   * So the backdrop still SWALLOWS taps (the layer keeps pointer-events, or
+   * they would fall through and spin the camera under a live round) and does
+   * nothing else. The one way out is the X, which is unmissable and is not
+   * anywhere she taps by accident.
    */
   /** While true, the ways out are ignored. See setBusy(). */
   let busy = false
-  let backdropPress = false
-  layer.addEventListener('pointerdown', e => { backdropPress = !busy && e.target === layer })
-  layer.addEventListener('pointerup', e => {
-    // On RELEASE, and only if the press began out here too. Acting on contact
-    // would dismiss a round the moment a finger landed to drag the island
-    // behind the panel — the very gesture the canvas was just fixed for.
-    if (backdropPress && e.target === layer) back.click()
-    backdropPress = false
-  })
 
   back.onclick = () => {
     const wasOpen = !layer.classList.contains('hide')

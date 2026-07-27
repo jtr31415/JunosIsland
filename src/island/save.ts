@@ -123,6 +123,28 @@ export function fromSave(
       sumProgress: typeof save.sumProgress === 'number' ? save.sumProgress : 0,
       challenge: null,
       chosen: null,
+      /*
+       * A RELOAD RE-ROLLS THE CARD, and that is accepted rather than overlooked.
+       *
+       * `readHeld` / `sumHeld` say "the card at the generator's `history[idx]`
+       * was dealt and left unfinished", and the generators' histories live in
+       * memory only — so the bit could not be honoured across a reload without
+       * writing the card itself into the save, which is a schema bump this
+       * phase is deliberately not taking (see the rollback note in
+       * docs/HANDOFF.md §6: a new field costs a version, and a rolled-back
+       * build shows her an empty island).
+       *
+       * The threat model settles it. What the held card defends against is a
+       * six-year-old tapping X until a word she does not fancy goes away —
+       * one tap, instant, repeatable. Reloading is not that: it means killing
+       * an installed PWA's tab and waiting through a cold boot, to skip a
+       * single word. Nobody does that by accident and no six-year-old does it
+       * on purpose thirty times a sitting. Restored explicitly to false, so the
+       * next round deals fresh rather than indexing at a history that no longer
+       * exists — which `deal()` also guards, belt and braces.
+       */
+      readHeld: false,
+      sumHeld: false,
     },
     openingSeen: save.openingSeen === true,
     childName: typeof save.childName === 'string' ? save.childName : '',

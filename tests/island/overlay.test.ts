@@ -56,15 +56,11 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
-/**
- * Tap the backdrop: down AND up out here.
- *
- * Release-based like the world, so a finger landing on the dimmed area to
- * drag the island behind the panel does not dismiss the round on contact.
- */
+/** A tap that lands on the dimmed area beside the panel. */
 function backdropTap(layer: HTMLElement): void {
   layer.dispatchEvent(new Event('pointerdown', { bubbles: true }))
   layer.dispatchEvent(new Event('pointerup', { bubbles: true }))
+  layer.dispatchEvent(new Event('click', { bubbles: true }))
 }
 
 /** Answer a sum correctly by tapping its number chips. */
@@ -120,13 +116,45 @@ describe('finishing a round leaves the overlay open', () => {
   })
 })
 
+describe('the way out', () => {
+  /*
+   * Joe: "there should be an x button to get back to the island when through a
+   * challenge, too many accidental hits."
+   */
+  it('is an X, and it is the only button in the control row that is not "say it again"', () => {
+    const { root, overlay, q } = setup()
+    overlay.openWordFind(PICKS)
+
+    const x = q('.overlay-x')
+    expect(x.textContent).toBe('×')
+    // Readable by something even if not by her: it is a glyph, not a word.
+    expect(x.getAttribute('aria-label')).toBe('back to the island')
+
+    // It is NOT in the row beside "say it again" — that adjacency is the
+    // mis-tap Joe reported. It belongs to the layer, in the corner.
+    const controls = root.querySelector('.overlay-controls') as HTMLElement
+    expect(controls.contains(x)).toBe(false)
+    expect([...controls.children].map(c => c.className))
+      .toEqual([expect.stringContaining('overlay-again')])
+  })
+
+  it('goes away with the round, so it can never be tapped over the island', () => {
+    const { overlay, q } = setup()
+    overlay.openSum(SUM)
+    overlay.close()
+    // `.hide` is display:none on the layer, and the X is a child of it.
+    expect((q('.overlay') as HTMLElement).classList.contains('hide')).toBe(true)
+    expect(q('.overlay').contains(q('.overlay-x'))).toBe(true)
+  })
+})
+
 describe('the back button', () => {
   it('collects earned work but asks for no further page', () => {
     const { root, overlay, host, q, isOpen } = setup()
     overlay.openSum(SUM)
     solve(root, SUM_ANSWER)
 
-    q('.overlay-back').click()
+    q('.overlay-x').click()
 
     // Never discard work the child has actually done (brief §19) — so this is
     // onPassed, not onDismissed. `false` is "collect it, but let me out".
@@ -139,7 +167,7 @@ describe('the back button', () => {
     const { overlay, host, q, isOpen } = setup()
     overlay.openSum(SUM)
 
-    q('.overlay-back').click()
+    q('.overlay-x').click()
 
     expect(host.onDismissed).toHaveBeenCalled()
     expect(host.onPassed).not.toHaveBeenCalled()
@@ -148,7 +176,7 @@ describe('the back button', () => {
 
   it('does nothing at all when the overlay is already shut', () => {
     const { host, q } = setup()
-    q('.overlay-back').click()
+    q('.overlay-x').click()
     expect(host.onDismissed).not.toHaveBeenCalled()
     expect(host.onPassed).not.toHaveBeenCalled()
   })
@@ -183,28 +211,36 @@ describe('say it again', () => {
   })
 })
 
+/**
+ * The backdrop, which USED to dismiss and deliberately no longer does.
+ *
+ * `.stage-slot` is `pointer-events: none` so the renderer can scissor into it,
+ * which means the vignette — nearly half a staged round, and the half with her
+ * own egg turning on it — counted as backdrop. Reaching out to touch her egg
+ * ended the page. That is Joe's "too many accidental hits", and the fix is not
+ * a smarter backdrop: it is one deliberate X and a backdrop that only swallows.
+ */
 describe('the backdrop', () => {
-  it('tapping outside the panel goes back to the island', () => {
+  it('does NOT leave the round — that is the X button’s job alone', () => {
     const { overlay, host, layer, isOpen } = setup()
     overlay.openSum(SUM)
     backdropTap(layer)
-    expect(isOpen()).toBe(false)
-    expect(host.onDismissed).toHaveBeenCalled()
+    expect(isOpen()).toBe(true)
+    expect(host.onDismissed).not.toHaveBeenCalled()
+    expect(host.onPassed).not.toHaveBeenCalled()
   })
 
-  it('COLLECTS work already earned rather than discarding it', () => {
-    /*
-     * The backdrop takes the same path as the button, so a correct answer
-     * followed by an impatient tap outside still banks the reward. Silently
-     * throwing away work she had done would be far worse than a dead
-     * backdrop (brief section 18).
-     */
-    const { root, overlay, host, layer } = setup()
+  it('does not collect either — an accidental tap changes nothing at all', () => {
+    // It used to take the same path as the button, so an answered sum plus a
+    // stray tap banked the reward and left. Correct while the backdrop was a
+    // way out; now it would be a reward for a mis-tap, and it ends her sitting.
+    const { root, overlay, host, layer, isOpen } = setup()
     overlay.openSum(SUM)
     solve(root, SUM_ANSWER)
     backdropTap(layer)
-    expect(host.onPassed).toHaveBeenCalledWith(false)
+    expect(host.onPassed).not.toHaveBeenCalledWith(false)
     expect(host.onDismissed).not.toHaveBeenCalled()
+    expect(isOpen()).toBe(true)
   })
 
   it('ignores taps INSIDE the panel, which would close it mid-word', () => {
@@ -240,27 +276,16 @@ describe('the backdrop', () => {
  * and no way out but a reload.
  */
 describe('while a ceremony is playing', () => {
-  it('ignores the back button', () => {
+  it('ignores the X button', () => {
     const { overlay, host, q, isOpen } = setup()
     overlay.openWordFind(PICKS)
     overlay.setBusy(true)
 
-    q('.overlay-back').click()
+    q('.overlay-x').click()
 
     expect(isOpen()).toBe(true)
     expect(host.onDismissed).not.toHaveBeenCalled()
     expect(host.onPassed).not.toHaveBeenCalled()
-  })
-
-  it('ignores the backdrop', () => {
-    const { overlay, host, layer, isOpen } = setup()
-    overlay.openWordFind(PICKS)
-    overlay.setBusy(true)
-
-    backdropTap(layer)
-
-    expect(isOpen()).toBe(true)
-    expect(host.onDismissed).not.toHaveBeenCalled()
   })
 
   it('gives the exits back the moment it is over', () => {
@@ -270,7 +295,7 @@ describe('while a ceremony is playing', () => {
     overlay.setBusy(true)
     overlay.setBusy(false)
 
-    q('.overlay-back').click()
+    q('.overlay-x').click()
 
     expect(isOpen()).toBe(false)
     expect(host.onDismissed).toHaveBeenCalled()
@@ -287,7 +312,7 @@ describe('while a ceremony is playing', () => {
     overlay.setBusy(true)
     overlay.openSum(SUM)          // next round, without anyone clearing it
 
-    q('.overlay-back').click()
+    q('.overlay-x').click()
 
     expect(isOpen()).toBe(false)
     expect(host.onDismissed).toHaveBeenCalled()

@@ -82,6 +82,32 @@ export interface Flow {
   sumProgress: number
   /** How many tiles have been earned in total — drives the cost curve. */
   tilesEarned: number
+  /**
+   * A dealt card left unfinished: the SAME one comes back next time.
+   *
+   * Joe, playtesting: *"there should be an x button to get back to the island
+   * when through a challenge... also resume at the same challenge card,
+   * otherwise kids can skip something they dont like."* The resume is the
+   * load-bearing half. A way out that re-rolled the question would be a way to
+   * skip a word she does not fancy, one tap at a time.
+   *
+   * ONE BIT, and only one bit, because the card itself already exists
+   * somewhere better: the generators keep their own history and `history[idx]`
+   * IS the card she was dealt (v0's `renderCurrent` renders exactly that, and
+   * its `forward` only generates when `idx` sits at the end). All that is
+   * missing is whether that card has been consumed. So this stays a boolean and
+   * `flow.ts` keeps importing nothing from `core/` — no `ReadPick`, no
+   * `BuildItem`, no `SumItem` leaking into the state machine.
+   *
+   * Set when a round is abandoned, cleared when one is passed. Two of them
+   * rather than one, because reading and maths draw from different decks: a
+   * finished sum must not quietly re-roll the word she walked away from.
+   *
+   * Transient, exactly like `pending` and `chosen` — `save.ts` does not write
+   * it. See the note there: a RELOAD still re-rolls, and that is accepted.
+   */
+  readHeld: boolean
+  sumHeld: boolean
 }
 
 export function createFlow(): Flow {
@@ -98,6 +124,8 @@ export function createFlow(): Flow {
     readProgress: 0,
     sumProgress: 0,
     tilesEarned: 0,
+    readHeld: false,
+    sumHeld: false,
   }
 }
 
@@ -173,9 +201,10 @@ export function challengePassed(f: Flow, hatch?: HatchDetails): Flow {
 
   if (f.challenge === 'read' && hatch) {
     const readProgress = f.readProgress + 1
+    // The card was ANSWERED, so it is spent: the next page is a fresh draw.
     if (readProgress < pagesForEgg(f)) {
       // Not yet. The egg is closer, and that progress can never be lost.
-      return { ...f, phase: 'free', challenge: null, readProgress }
+      return { ...f, phase: 'free', challenge: null, readProgress, readHeld: false }
     }
     const home = firstFreeSpot(f)
     const pet: Pet = {
@@ -192,12 +221,15 @@ export function challengePassed(f: Flow, hatch?: HatchDetails): Flow {
       // A fresh egg washes ashore, so there is always something to read to.
       eggPresent: true,
       readProgress: 0,
+      readHeld: false,
     }
   }
 
   if (f.challenge === 'sum') {
     const sumProgress = f.sumProgress + 1
-    const next = { ...f, phase: 'free' as Phase, challenge: null, sumProgress }
+    const next = {
+      ...f, phase: 'free' as Phase, challenge: null, sumProgress, sumHeld: false,
+    }
     // Not paid for yet: the plot simply stands a little further on, which the
     // increment sequence shows. Nothing is banked and nothing is invisible.
     if (sumProgress < sumsForTile(f)) return next
@@ -212,10 +244,23 @@ export function challengePassed(f: Flow, hatch?: HatchDetails): Flow {
  *
  * Costs nothing. No tile lost, no pet lost, the egg still there to try again
  * (brief section 18 — wrong answers cost nothing but a wobble).
+ *
+ * And the card is HELD rather than thrown away. Leaving must cost her nothing,
+ * but it must not BUY her anything either: without this, an X and a re-tap
+ * dealt a different word, so the way out doubled as a way to skip the word she
+ * did not fancy — and it charged for the privilege, because the generators ramp
+ * their difficulty off `history.length` and draw from finite decks. She comes
+ * back to the same card, at the same size, having spent nothing.
  */
 export function challengeFailed(f: Flow): Flow {
   if (f.phase !== 'challenge') return f
-  return { ...f, phase: 'free', challenge: null }
+  return {
+    ...f,
+    phase: 'free',
+    challenge: null,
+    readHeld: f.readHeld || f.challenge === 'read',
+    sumHeld: f.sumHeld || f.challenge === 'sum',
+  }
 }
 
 /**
