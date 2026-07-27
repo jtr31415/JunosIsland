@@ -21,7 +21,7 @@ Nothing is waiting on Joe. Both prior rulings are closed: **#4 formula wins**,
 | **1** | Hard save & restore | **Done.** See below. |
 | **2** | Clock service | **Done.** |
 | **3** | Parity gate deflake | **Done.** 50/50 green. |
-| 4 | Channels & flags | Not started. |
+| **4** | Channels & flags | **Done.** One decision for Joe, below. |
 | 5 | Cube-pet material autopsy | Not started. |
 | 6 | Sets & the variant engine | Not started. |
 | 7 | Progressive album + set unlocks | Not started. |
@@ -135,6 +135,26 @@ before, because the sleep was cutting the script short.
 
 `npm run parity:soak` is the proof, and CI runs it nightly and on demand in
 its own job rather than on every push, so a slow proof never blocks a deploy.
+
+### Item 4 — channels and flags
+
+Root is production and is built from the newest `v*` tag; `/preview/` is built
+from main. Juno's PWA is installed against the root, so that is where
+production has to stay. The dev stamp names the channel.
+
+Nine flags, one per unbuilt feature. In production every one is off and the
+query string is not consulted at all — no URL a child could arrive at can turn
+an unfinished feature on. `balance.dev.json` is *absent* from a production
+bundle rather than guarded: `__CHANNEL__` is a build-time define, so Rollup
+deletes the branch and the chunk is never emitted. `npm run channel` proves it
+by grepping the built output, and CI runs it against both builds.
+
+**Waiting on Joe: the first release tag.** Until a `v*` tag exists, production
+falls back to main — so today the root is still whatever main last built, and
+the channel split is real in the machinery but not yet in what she plays.
+Cutting the first tag is a release decision and yours. Everything is in place
+for it: tag, push, and the root becomes that tag while main keeps flowing to
+`/preview/`.
 
 ---
 
