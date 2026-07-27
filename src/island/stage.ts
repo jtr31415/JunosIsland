@@ -139,9 +139,29 @@ export function createStage(): Stage {
    */
   const plinth = new THREE.Mesh(
     new THREE.CylinderGeometry(1, 1.08, 0.12, 24),
-    new THREE.MeshStandardMaterial({ color: 0xf3e7c8, metalness: 0, roughness: 1 }),
+    new THREE.MeshStandardMaterial({ color: 0x66b83f, metalness: 0, roughness: 1 }),
   )
   turntable.add(plinth)
+
+  /*
+   * A patch of ground under everything.
+   *
+   * Without one the sky dome's LOWER hemisphere fills the bottom of the
+   * vignette — in the world the sea covers that, and the stage has no sea, so
+   * the first version framed the egg against a beige desert. Grass, in the
+   * Summer atlas's own green, so the turntable reads as a corner of her
+   * island lifted up for a closer look.
+   *
+   * Outside the turntable, so it does not spin: rotating ground is a
+   * fairground ride, and this is meant to be somewhere she recognises.
+   */
+  const ground = new THREE.Mesh(
+    new THREE.CircleGeometry(1, 48),
+    new THREE.MeshStandardMaterial({ color: 0x59a43c, metalness: 0, roughness: 1 }),
+  )
+  ground.rotation.x = -Math.PI / 2
+  ground.position.y = -0.08
+  scene.add(ground)
 
   /** Scratch for the renderer's CSS-pixel size; allocated once, not per frame. */
   const canvasSize = new THREE.Vector2()
@@ -182,6 +202,8 @@ export function createStage(): Stage {
       const disc = Math.max(0.35, radius * 1.35)
       plinth.scale.set(disc, 1, disc)
       plinth.position.y = -0.06
+      // Wide enough that the horizon stays out of frame at any framing.
+      ground.scale.setScalar(Math.max(24, radius * 40))
 
       // Pull back far enough that the piece sits inside the vignette with air
       // around it, whatever it is — an egg and a full hex differ by 3x.
