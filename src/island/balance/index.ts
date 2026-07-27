@@ -15,7 +15,15 @@ export interface Balance {
   egg: CostCurve
   pages: { wordsPerFindPage: number; mix: PageKind[] }
   governor: { maxWaitingPets: number; maxEmptySurplus: number }
-  stage: { spinSec: number; progressDots: boolean; flyBackMs: number }
+  stage: {
+    spinSec: number; progressDots: boolean; flyBackMs: number
+    /** How long the friend stands on the plinth before the stage dissolves. */
+    hatchHoldMs: number
+    /** How long the ceremony will wait for a pet model before going on. */
+    petLoadMs: number
+    /** The album chip's flight. */
+    chipMs: number
+  }
   firstRun: { tileOffer: string[]; egg2DelaySec: number }
   unlocks: Array<{ type: string; tiles: number; pets: number }>
 }

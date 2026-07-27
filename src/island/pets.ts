@@ -73,6 +73,21 @@ export interface PetField {
   sync(pets: readonly Pet[], island: Island, hexSize: number): Promise<void>
   /** Squash-stretch bounce, e.g. when tapped. */
   bounce(id: string): void
+  /**
+   * A standalone copy of a species, for showing off.
+   *
+   * Not a live pet — no id, no wandering, no place on the island. The hatch
+   * ceremony needs one to stand on the turntable while the stage is still up.
+   *
+   * The caller detaches it when done and MUST NOT dispose it: this is a
+   * clone, and a three.js clone shares geometry and materials with the cached
+   * original, so freeing them would break every other pet of that species —
+   * including friends she already owns (brief §18). It comes from the same
+   * loader and the same cache as the real thing, which is the point: the
+   * friend she meets on the stage is the friend that walks out onto the
+   * island.
+   */
+  preview(species: string): Promise<THREE.Object3D>
   /** Trees and rocks to walk around rather than through. */
   setObstacles(list: Obstacle[]): void
   update(dt: number, t: number, island: Island, hexSize: number): void
@@ -175,6 +190,8 @@ export function createPetField(base = ''): PetField {
         }
       }
     },
+
+    preview: species => model(species),
 
     bounce(id) {
       const l = live.get(id)

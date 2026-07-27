@@ -306,3 +306,21 @@
   background: var(--sun, #ffd166);
   transform: scale(1.18);
 }
+
+/* The album chip: the friend's name flying into the book she is kept in.
+   Starts where the name card was, so the eye can follow it (§3). */
+.album-chip {
+  position: fixed;
+  left: 50%;
+  top: 42%;
+  transform: translate(-50%, -50%);
+  z-index: 30;
+  pointer-events: none;
+  padding: .5rem 1.1rem;
+  border-radius: 999px;
+  background: var(--sun, #ffd166);
+  color: var(--ink, #23404f);
+  font-weight: 700;
+  font-size: clamp(1rem, 2.6vw, 1.35rem);
+  box-shadow: 0 .35rem 0 rgba(35, 64, 79, .18);
+}

@@ -21,6 +21,7 @@ import { createLighting } from './lighting'
 import type { LightingPreset } from './lighting'
 import meadowDay from './lighting/presets/meadow-day.json'
 import { balance } from './balance'
+import { fitInto } from './world/props'
 
 /**
  * Seconds per revolution, from balance.json.
@@ -29,6 +30,10 @@ import { balance } from './balance'
  * and the schema already had a slot waiting for it.
  */
 const TURN_SECONDS = balance.stage.spinSec
+
+/** How fast the ceremony's guest pops into being, and how far it overshoots. */
+const POP_SPEED = 3.4
+const POP_OVERSHOOT = 0.22
 
 /**
  * How many progress dots to draw, and how many are filled.
@@ -89,6 +94,23 @@ export interface Stage {
   release(): void
   /** Is this object the one currently on the turntable? */
   holds(object: THREE.Object3D | null): boolean
+  /**
+   * Stand a temporary object on the turntable, popping it into being.
+   *
+   * Detached by the stage on the next call or on dispose() — DETACHED, never
+   * disposed. For things that belong to the ceremony rather than to the world:
+   * the pet that has just hatched has no place on the island yet, and must
+   * not be re-parented back into one.
+   *
+   * NEVER dispose what is passed here. A preview is a clone, and a three.js
+   * clone SHARES geometry and materials with the cached original — freeing
+   * them would break every other pet of that species, on the stage and on the
+   * island, including friends she already owns (brief §18). Dropping the
+   * scene-graph link is the whole of the cleanup, and it is enough.
+   *
+   * Pass null to clear.
+   */
+  showTemp(object: THREE.Object3D | null, height?: number): void
   /**
    * A burst of sparks on the turntable.
    *
@@ -197,6 +219,10 @@ export function createStage(): Stage {
   scene.add(sparks)
   /** 0..1 through the burst, or -1 when it is not playing. */
   let burstT = -1
+  /** The ceremony's temporary guest, and how far through its pop-in it is. */
+  let temp: THREE.Object3D | null = null
+  let tempT = 0
+  let tempScale = 1
 
   /** Scratch for the renderer's CSS-pixel size; allocated once, not per frame. */
   const canvasSize = new THREE.Vector2()
@@ -222,6 +248,20 @@ export function createStage(): Stage {
       guestAt = object.position.clone()
       turntable.add(object)
       object.position.set(0, 0, 0)
+    },
+
+    showTemp(object, height = 0.6) {
+      // Detach only — see the note on showTemp about the shared cache.
+      if (temp) { temp.removeFromParent(); temp = null }
+      if (!object) return
+
+      fitInto(object, height * 1.6, height)
+      tempScale = object.scale.x
+      object.position.set(0, 0, 0)
+      object.scale.setScalar(0.001)
+      turntable.add(object)
+      temp = object
+      tempT = 0
     },
 
     release() {
@@ -261,6 +301,13 @@ export function createStage(): Stage {
     },
 
     update(dt, t) {
+      if (temp && tempT < 1) {
+        tempT = Math.min(1, tempT + dt * POP_SPEED)
+        // Overshoot and settle: a friend ARRIVES rather than appearing.
+        const k = 1 + POP_OVERSHOOT * Math.sin(tempT * Math.PI) * (1 - tempT)
+        temp.scale.setScalar(Math.max(0.001, tempScale * k * Math.min(1, tempT * 1.6)))
+      }
+
       if (burstT >= 0) {
         burstT += dt * 1.15
         if (burstT >= 1) { burstT = -1; sparks.visible = false }
@@ -318,6 +365,7 @@ export function createStage(): Stage {
     },
 
     dispose() {
+      if (temp) { temp.removeFromParent(); temp = null }
       if (guest && guestHome) { guestHome.add(guest); guest.position.copy(guestAt) }
       plinth.geometry.dispose()
       ;(plinth.material as THREE.Material).dispose()

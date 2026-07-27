@@ -76,12 +76,12 @@ const PLOT_FAREWELL_MS = 1400
 /**
  * How long the stage holds after the shell breaks.
  *
- * Enough that the name card and the dissolve do not land on the same frame,
- * which reads as one flicker rather than two beats — but no longer, because
- * the egg is gone by then and the shot is of an empty turntable. The pet
- * popping up here is the missing beat (§3), and is still to come.
+ * Long enough to MEET the friend: she pops up on the plinth as the shell
+ * goes, and this is how long the child gets to look at her before the stage
+ * dissolves and she walks out into the world. It was briefly cut to 700ms
+ * when the beat was missing and the shot was of an empty turntable.
  */
-const HATCH_HOLD_MS = 700
+const HATCH_HOLD_MS = balance.stage.hatchHoldMs
 
 /** A promise that settles after n milliseconds. */
 const wait = (ms: number): Promise<void> =>
@@ -561,11 +561,50 @@ async function boot(): Promise<void> {
          * name card, spoken name, and only then does the stage dissolve and
          * the friend arrive on the island.
          */
+        /*
+         * Start loading the friend NOW, while the shell is still breaking.
+         *
+         * The hatch runs about 700ms, which is ample cover for a model that
+         * is usually already in the loader's cache. Waiting until after would
+         * put a visible gap between the egg breaking and anyone appearing —
+         * exactly the dead beat this change exists to fill.
+         */
+        const arriving = onStage
+          ? pets.preview(species).catch(() => null)
+          : Promise.resolve(null)
+
         world.lighting.celebrationBump()
         if (onStage) stage.burst()
         // No stinger here: the word-find already played 'win' when the last
         // word landed (v0:959), and a second one 420ms later doubles it.
         await egg.hatch()
+
+        /*
+         * The friend takes the egg's place on the turntable.
+         *
+         * §3's order: burst -> pet pops with the name card -> name spoken ->
+         * stage dissolves -> pet hops down into the world. Without this beat
+         * the hold framed an EMPTY plinth: the shell broke and nobody came
+         * out, which is the least satisfying possible reading of a hatch.
+         */
+        /*
+         * Wait for the friend, but NOT indefinitely.
+         *
+         * The exits are locked for the ceremony, so awaiting a bare network
+         * fetch meant a stalled request soft-locked the game permanently:
+         * empty plinth, dead back button, reload the only way out. And a hang
+         * is the common failure mode for a fetch, not a rare one. Past this
+         * budget the ceremony simply goes on without the model — the same
+         * graceful path a failed load already took.
+         */
+        const friend = await Promise.race([
+          arriving,
+          wait(balance.stage.petLoadMs).then(() => null),
+        ])
+        if (onStage && friend) {
+          stage.show(null, world.scene)      // the shell has gone; send it home
+          stage.showTemp(friend)
+        }
 
         overlay.showName(name)
         const line = HATCH_LINES[flow.pets.length % HATCH_LINES.length] as string
@@ -573,10 +612,13 @@ async function boot(): Promise<void> {
         fred.talk(2.4)
         fred.hop()
 
-        // A beat before the stage goes, so the card and the dissolve do not
-        // land on the same frame and read as one flicker.
+        // A beat with the friend on the plinth and her name on the card,
+        // before the stage dissolves and she walks out into the world.
         await wait(HATCH_HOLD_MS)
+        stage.showTemp(null)
         stageFor(null)
+        // The card has said its piece; the chip below carries the name on.
+        overlay.clearName()
         overlay.setBusy(false)
         overlay.close()
         egg.reset()
@@ -587,6 +629,17 @@ async function boot(): Promise<void> {
         const arrival = flow.pets[flow.pets.length - 1]
         if (arrival) pets.bounce(arrival.id)
         world.lighting.celebrationBump()
+
+        /*
+         * ...and THEN a chip flies into the album, so "where did my friend
+         * go?" has a visible answer (§3's last beat).
+         *
+         * After the arrival, not with it. §3 orders these one after the
+         * other, and for good reason: a pet bouncing in mid-island while a
+         * chip launches toward the top corner asks a six-year-old to watch
+         * two things at once, and she will watch neither.
+         */
+        setTimeout(() => overlay.flyToAlbum(name, albumBtn), 420)
         inCeremony = false
 
         if (openingResumeAt >= 0) {

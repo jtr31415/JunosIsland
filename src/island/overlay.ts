@@ -20,6 +20,7 @@ import type { Sfx } from '../platform/audio'
 import type { ReadPick } from '../core/generators/read'
 import type { BuildItem } from '../core/generators/build'
 import type { SumItem } from '../core/generators/sums'
+import { balance } from './balance'
 
 export interface OverlayHost {
   speech: Speaker
@@ -85,6 +86,20 @@ export interface Overlay {
   say(text: string, onTap?: () => void): void
   clearSay(): void
   showName(name: string): void
+  /** Take the name card down early, e.g. when the chip carries the name on. */
+  clearName(): void
+  /**
+   * Send a chip flying from the middle of the screen into the album button.
+   *
+   * §3's last beat. It answers the question a six-year-old actually has at
+   * the end of a hatch — "where did my friend GO?" — by drawing the line
+   * between the ceremony and the place her friends are kept. Without it the
+   * album is a button she has no reason to believe in.
+   *
+   * Silently does nothing if the target is missing or the browser has no
+   * WAAPI: a decoration that throws would take the ceremony with it.
+   */
+  flyToAlbum(name: string, target: Element | null): void
   /**
    * Ask the child her name, once, before the story starts.
    *
@@ -188,6 +203,7 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
 
   let handle: ChallengeHandle | null = null
   let toastTimer: ReturnType<typeof setTimeout> | null = null
+  let nameTimer: ReturnType<typeof setTimeout> | null = null
   /**
    * Set the moment a correct answer lands, before the renderer's own
    * auto-advance has fired.
@@ -446,10 +462,63 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
       sayEl.onclick = null
     },
 
+    flyToAlbum(name, target) {
+      if (!target || typeof Element.prototype.animate !== 'function') return
+      const to = target.getBoundingClientRect()
+
+      const chip = document.createElement('div')
+      chip.className = 'chunk album-chip'
+      chip.textContent = name
+      chip.setAttribute('aria-hidden', 'true')   // the name was already spoken
+      root.append(chip)
+
+      const from = chip.getBoundingClientRect()
+      const dx = (to.left + to.width / 2) - (from.left + from.width / 2)
+      const dy = (to.top + to.height / 2) - (from.top + from.height / 2)
+
+      /*
+       * Every keyframe carries the -50% centring.
+       *
+       * A WAAPI animation on `transform` REPLACES the base transform for its
+       * whole duration, so keyframes that only translate threw the chip's own
+       * centring away — it jumped half its width and height on the first
+       * frame, exactly as the eye landed on it, and then aimed past the
+       * button by the same amount all the way to the end.
+       */
+      const at = (x: number, y: number, k: number): string =>
+        `translate(-50%, -50%) translate(${x}px, ${y}px) scale(${k})`
+
+      const flight = chip.animate([
+        { transform: at(0, 0, 1), opacity: 1 },
+        // Up and over, so it arcs rather than sliding along a ruler.
+        { transform: at(dx * 0.55, dy * 0.35 - 60, 0.8), opacity: 1, offset: 0.55 },
+        { transform: at(dx, dy, 0.25), opacity: 0 },
+      ], {
+        duration: balance.stage.chipMs,
+        easing: 'cubic-bezier(.34,.9,.4,1)',
+        // HOLD the last frame. Without it the chip snaps back to mid-screen at
+        // full opacity the instant the animation ends, and sits there until
+        // the backstop — turning a dropped onfinish from invisible into ugly.
+        fill: 'forwards',
+      })
+      flight.onfinish = () => chip.remove()
+      // A dropped animation must not leave litter on the island.
+      setTimeout(() => chip.remove(), balance.stage.chipMs + 600)
+    },
+
+    clearName() {
+      nameEl.classList.add('hide')
+      if (nameTimer) { clearTimeout(nameTimer); nameTimer = null }
+    },
+
     showName(name) {
       nameEl.textContent = name
       nameEl.classList.remove('hide')
-      setTimeout(() => nameEl.classList.add('hide'), 2600)
+      if (nameTimer) clearTimeout(nameTimer)
+      // Tracked, so clearName() can take it down early when the album chip
+      // picks the name up — two copies of the same name on screen at once
+      // reads as the name duplicating itself, not as one flying away.
+      nameTimer = setTimeout(() => { nameEl.classList.add('hide'); nameTimer = null }, 2600)
     },
 
     toast,
