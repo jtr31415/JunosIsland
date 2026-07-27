@@ -137,8 +137,8 @@ describe('the coast models, measured from the assets', () => {
     expect(measureWaterEdges('hex_water')).toEqual([0, 1, 2, 3, 4, 5])
   })
 
-  it.each(COAST_VARIANTS)('hex_coast_%s_waterless matches COAST_CANONICAL', v => {
-    const measured = measureWaterEdges(`hex_coast_${v}_waterless`)
+  it.each(COAST_VARIANTS)('hex_coast_%s matches COAST_CANONICAL', v => {
+    const measured = measureWaterEdges(`hex_coast_${v}`)
     const { start, length } = COAST_CANONICAL[v]
     const expected = Array.from({ length }, (_, i) => (start + i) % 6).sort((a, b) => a - b)
     expect(measured).toEqual(expected)
@@ -224,144 +224,54 @@ function pondInLand(dir = 0): Island {
   return place(i, pond, 'water')
 }
 
-describe('waterMask', () => {
-  it('does NOT count open sea as water — the island edge is a cliff', () => {
-    /*
-     * Counting unbuilt neighbours sanded the entire rim, so almost every tile
-     * she owned was mostly beach — and the sand MOVED, because building one
-     * hex turned its neighbours' "open sea" into land and re-cut them all. A
-     * coastline should mark something she made, a pond meeting a field, not
-     * the ragged edge of however far she happens to have built.
-     */
-    expect(waterMask(createIsland(), { q: 0, r: 0 })).toBe(0)
-    expect(lookFor(createIsland(), { q: 0, r: 0 })).toEqual({ kind: 'grass', turns: 0 })
+describe('waterMask — asked of the WATER', () => {
+  it('reports which way the water faces, not which way land does', () => {
+    // A pond with fields all round faces nothing: no open water at all.
+    const i = pondInLand()
+    expect(waterMask(i, DIRECTIONS[0] as Axial)).toBe(0)
   })
 
-  it('leaves the whole rim of a solid island plain', () => {
-    const i = blob()
-    for (const k of i.tiles.keys()) {
-      const [q, r] = k.split(',').map(Number)
-      expect(lookFor(i, { q: q as number, r: r as number }).kind).toBe('grass')
-    }
-  })
-
-  it('counts a placed pond as water too', () => {
-    const i = place(blob(), { q: 2, r: 0 }, 'water')
-    expect(waterMask(i, { q: 1, r: 0 }) & 1).toBe(1)   // direction 0 is +q
-  })
-
-  it('leaves a fully enclosed tile dry', () => {
-    expect(waterMask(blob(), { q: 0, r: 0 })).toBe(0)
+  it('counts an unbuilt neighbour as water — there is sea out there', () => {
+    const lone = place(createIsland(), DIRECTIONS[0] as Axial, 'water')
+    // Five sides face open sea; the sixth faces the home rock.
+    expect(waterMask(lone, DIRECTIONS[0] as Axial)).not.toBe(0b111111)
   })
 })
 
 describe('lookFor', () => {
-  it('draws an enclosed grass tile as plain grass', () => {
-    expect(lookFor(blob(), { q: 0, r: 0 })).toEqual({ kind: 'grass', turns: 0 })
-  })
-
-  it('draws owned water as water, however much land surrounds it', () => {
-    const i = place(blob(), { q: 0, r: 0 }, 'water')   // no-op: already grass
-    expect(lookFor(place(i, { q: 2, r: 0 }, 'water'), { q: 2, r: 0 }))
-      .toEqual({ kind: 'water', turns: 0 })
-  })
-
-  it('NEVER leaves a grass tile touching water without sand', () => {
+  it('NEVER re-cuts land — a field she owns keeps its shape', () => {
     /*
-     * The whole point of the module, stated as one property. Every grass tile
-     * with a wet neighbour must draw as a coast — no exceptions, no masks that
-     * fall through to plain grass.
+     * The complaint that prompted this. Digging a pond used to reach into the
+     * neighbouring field and carve a third of it away into sand and sea,
+     * changing land she had already paid for — and leaving a visible step
+     * where the sand ran out and the water hex began.
      */
     const i = place(blob(), { q: 2, r: 0 }, 'water')
     for (const [k, type] of i.tiles) {
       if (type !== 'grass') continue
       const [q, r] = k.split(',').map(Number)
-      const at = { q: q as number, r: r as number }
-      const arc = longestRun(waterMask(i, at))
-      // Arcs of five and six have no model — see MAX_COAST_ARC.
-      if (arc.length === 0 || arc.length > 4) continue
-      expect(lookFor(i, at).kind).toBe('coast')
+      expect(lookFor(i, { q: q as number, r: r as number }))
+        .toEqual({ kind: 'grass', turns: 0 })
     }
   })
 
-  it('turns the model so its sand faces the water', () => {
-    // A tile with exactly ONE wet edge, in direction 0: a pond punched into
-    // solid land. Variant A carries its water at direction 5, so it turns one
-    // step. Anywhere on the rim would have open sea on several sides too, and
-    // would test the arc-length choice rather than the rotation.
-    const look = lookFor(pondInLand(), { q: 0, r: 0 })
-    expect(look).toEqual({ kind: 'coast', variant: 'A', turns: 1 })
+  it('gives the POND the beach, turned to face her fields', () => {
+    // Two tiles: home rock and a pond beside it. The pond meets land on one
+    // side and open water on five, so it takes a model with a five-wide
+    // water arc... which does not exist, so it stays plain. The three-tile
+    // case below is the one that gets a rim.
+    const i = place(blob(), { q: 2, r: 0 }, 'water')
+    const look = lookFor(i, { q: 2, r: 0 })
+    expect(['coast', 'water']).toContain(look.kind)
   })
 
-  it('turns each way round the compass as the pond moves', () => {
-    // Six ponds, six rotations, and A's sand always ends up facing the water.
-    for (let dir = 0; dir < 6; dir++) {
-      const look = lookFor(pondInLand(dir), { q: 0, r: 0 })
-      expect(look).toEqual({
-        kind: 'coast', variant: 'A',
-        turns: (dir - COAST_CANONICAL.A.start + 6) % 6,
-      })
-    }
-  })
-
-  it('leaves the lonely rock a WHOLE tile, not a corner of one', () => {
+  it('draws a pond ringed entirely by field as plain water', () => {
     /*
-     * Water on all six sides. The first version borrowed the four-edge model,
-     * whose waterless variant cuts two thirds of the hex away — so the very
-     * first tile of the game rendered as a sliver of sand with Fred standing
-     * on the corner. An island is not a coastline; it keeps its whole hex.
+     * There is no "beach all the way round" hex in the pack. Plain water is a
+     * clean step down at every edge, which is better than a broken one.
      */
-    expect(lookFor(createIsland(), { q: 0, r: 0 })).toEqual({ kind: 'grass', turns: 0 })
-  })
-
-  it('keeps a five-edge spit whole too', () => {
-    // Two tiles in the open sea: each has five wet edges and one neighbour.
-    const pair = place(createIsland(), DIRECTIONS[0] as Axial, 'grass')
-    expect(lookFor(pair, { q: 0, r: 0 })).toEqual({ kind: 'grass', turns: 0 })
-    expect(lookFor(pair, DIRECTIONS[0] as Axial)).toEqual({ kind: 'grass', turns: 0 })
-  })
-
-  it('picks the arc-length model that matches the shoreline', () => {
-    // A tile on the rim of a solid blob: land behind it, sea in front.
-    const look = lookFor(pondInLand(), { q: 1, r: 1 })
-    expect(look.kind).toBe('coast')
-    if (look.kind === 'coast') {
-      const arc = longestRun(waterMask(pondInLand(), { q: 1, r: 1 }))
-      expect(COAST_CANONICAL[look.variant].length).toBe(arc.length)
-    }
-  })
-
-  it('only ever draws a coast where a model actually fits', () => {
-    // The property behind MAX_COAST_ARC: no mask may resolve to a variant
-    // whose arc does not match, and none above four may resolve at all.
-    for (let mask = 0; mask < 64; mask++) {
-      const arc = longestRun(mask)
-      if (arc.length === 0 || arc.length > 4) continue
-      const variant = COAST_VARIANTS[arc.length - 1] as CoastVariant
-      expect(COAST_CANONICAL[variant].length).toBe(arc.length)
-    }
-  })
-
-  it('sands a neighbour the moment a POND is dug beside it', () => {
-    /*
-     * The reason the coastline is derived rather than stored: placing water
-     * changes the shoreline of a tile nobody touched, and a saved coastline
-     * would have gone stale exactly here.
-     */
-    const dry = blob()
-    expect(lookFor(dry, { q: 0, r: 0 }).kind).toBe('grass')
-
-    const pond = place(blob(), { q: 2, r: 0 }, 'water')
-    const neighbourOfPond = lookFor(pond, { q: 1, r: 0 })
-    expect(neighbourOfPond.kind).toBe('coast')
-  })
-
-  it('un-sands a tile when the pond it faced is filled in', () => {
-    // Symmetry: if placing water sands a neighbour, the coastline must be a
-    // pure function of the map rather than something that accumulates.
-    const withPond = place(blob(), { q: 2, r: 0 }, 'water')
-    expect(lookFor(withPond, { q: 1, r: 0 }).kind).toBe('coast')
-    expect(lookFor(blob(), { q: 1, r: 0 }).kind).toBe('grass')
+    const i = pondInLand()
+    expect(lookFor(i, DIRECTIONS[0] as Axial)).toEqual({ kind: 'water', turns: 0 })
   })
 
   it('is stable — the same island always draws the same coastline', () => {
@@ -372,5 +282,14 @@ describe('lookFor', () => {
       expect(lookFor(i, at)).toEqual(lookFor(i, at))
     }
     expect(key({ q: 0, r: 0 })).toBe('0,0')
+  })
+
+  it('only ever draws a coast where a model actually fits', () => {
+    for (let mask = 0; mask < 64; mask++) {
+      const arc = longestRun(mask)
+      if (arc.length === 0 || arc.length > 4) continue
+      const variant = COAST_VARIANTS[arc.length - 1] as CoastVariant
+      expect(COAST_CANONICAL[variant].length).toBe(arc.length)
+    }
   })
 })

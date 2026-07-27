@@ -37,19 +37,18 @@ const TILE_URL: Record<RenderKind, string> = {
   grass: 'tiles/hex_grass.gltf',
   water: 'tiles/hex_water.gltf',
   /*
-   * The WATERLESS coast models: land and sand ramp only, with the water part
-   * of the hex cut away entirely.
+   * The WATERED coast models — full hexes carrying land, sand ramp and water.
    *
-   * The watered versions carry their own slab of dark blue, and against an
-   * open sea that turned every shore tile into a raised navy plate — the
-   * island read as a pile of separate blue-and-sand tiles rather than one
-   * landmass with a beach. Cutting the water out lets the sea show through,
-   * which is what these variants exist for.
+   * These now sit on the WATER cell, not the land one, so a coast hex is a
+   * pond edge: land at the rim where it meets her field, sloping down into
+   * its own water. The waterless variants were right while the coast lived on
+   * the land tile and had to let open sea show through the cut-away side;
+   * here there is nothing to cut away, and a full hex is what closes the gap.
    */
-  coast_A: 'tiles/hex_coast_A_waterless.gltf',
-  coast_B: 'tiles/hex_coast_B_waterless.gltf',
-  coast_C: 'tiles/hex_coast_C_waterless.gltf',
-  coast_D: 'tiles/hex_coast_D_waterless.gltf',
+  coast_A: 'tiles/hex_coast_A.gltf',
+  coast_B: 'tiles/hex_coast_B.gltf',
+  coast_C: 'tiles/hex_coast_C.gltf',
+  coast_D: 'tiles/hex_coast_D.gltf',
 }
 
 /**

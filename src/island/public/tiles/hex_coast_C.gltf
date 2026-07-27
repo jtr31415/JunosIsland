@@ -15,7 +15,7 @@
     "nodes" : [
         {
             "mesh" : 0,
-            "name" : "hex_coast_D_waterless"
+            "name" : "hex_coast_C"
         }
     ],
     "materials" : [
@@ -32,7 +32,7 @@
     ],
     "meshes" : [
         {
-            "name" : "hex_coast_D_waterless",
+            "name" : "hex_coast_C",
             "primitives" : [
                 {
                     "attributes" : {
@@ -63,61 +63,61 @@
         {
             "bufferView" : 0,
             "componentType" : 5126,
-            "count" : 128,
+            "count" : 152,
             "max" : [
-                4.172325134277344e-07,
+                0.9999998807907104,
                 0,
-                0.5773501992225647
+                1.1547003984451294
             ],
             "min" : [
                 -0.9999997615814209,
                 -1,
-                -1.1546987295150757
+                -1.1547002792358398
             ],
             "type" : "VEC3"
         },
         {
             "bufferView" : 1,
             "componentType" : 5126,
-            "count" : 128,
+            "count" : 152,
             "type" : "VEC2"
         },
         {
             "bufferView" : 2,
             "componentType" : 5126,
-            "count" : 128,
+            "count" : 152,
             "type" : "VEC3"
         },
         {
             "bufferView" : 3,
             "componentType" : 5123,
-            "count" : 234,
+            "count" : 318,
             "type" : "SCALAR"
         }
     ],
     "bufferViews" : [
         {
             "buffer" : 0,
-            "byteLength" : 1536,
+            "byteLength" : 1824,
             "byteOffset" : 0,
             "target" : 34962
         },
         {
             "buffer" : 0,
-            "byteLength" : 1024,
-            "byteOffset" : 1536,
+            "byteLength" : 1216,
+            "byteOffset" : 1824,
             "target" : 34962
         },
         {
             "buffer" : 0,
-            "byteLength" : 1536,
-            "byteOffset" : 2560,
+            "byteLength" : 1824,
+            "byteOffset" : 3040,
             "target" : 34962
         },
         {
             "buffer" : 0,
-            "byteLength" : 468,
-            "byteOffset" : 4096,
+            "byteLength" : 636,
+            "byteOffset" : 4864,
             "target" : 34963
         }
     ],
@@ -129,8 +129,8 @@
     ],
     "buffers" : [
         {
-            "byteLength" : 4564,
-            "uri" : "hex_coast_D_waterless.bin"
+            "byteLength" : 5500,
+            "uri" : "hex_coast_C.bin"
         }
     ]
 }

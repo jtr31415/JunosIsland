@@ -7,9 +7,9 @@
  * is most of what makes the island read as an island rather than a piece of
  * lawn floating in a swimming pool.
  *
- * The rule: no owned grass tile may touch PLACED water directly. A grass tile
- * next to a pond is DRAWN as a coast, oriented so its sand faces the water.
- * The island's outer edge is not a coast — see waterMask.
+ * The rule: a WATER tile that meets her fields is drawn as a coast, turned so
+ * its own land rim faces them. The land itself is never touched — see
+ * waterMask for why that matters.
  *
  * All of this is DERIVED, never stored. `Island` stays "which hexes the child
  * owns and what is on them"; the coastline is a function of that map, so
@@ -53,27 +53,29 @@ export type TileLook =
   | { kind: 'coast'; variant: CoastVariant; turns: number }
 
 /**
- * Which of the six neighbours are water, as a bitmask over DIRECTIONS.
+ * Which of the six neighbours are NOT land, as a bitmask over DIRECTIONS.
  *
- * "Water" means a PLACED water tile, and nothing else.
+ * Asked of a WATER tile: which way does its water face? The complement is
+ * where it meets her fields, and that is the side that needs a beach.
  *
- * The first version also counted unbuilt neighbours, on the reasoning that the
- * island floats in open sea and a shore is a shore. That was wrong for this
- * game, and Joe called it: it sanded the entire rim of the island, so almost
- * every tile she owned was mostly beach — and worse, the sand kept moving.
- * Build one hex and its neighbours all re-cut themselves, because what had
- * been "open sea" became "land". The coastline should mark a real feature she
- * MADE — a pond meeting a field — not the ragged edge of however far she has
- * happened to build.
+ * THE COAST BELONGS TO THE WATER, not to the land. Two reasons, both Joe's
+ * and both right:
  *
- * The edge of the island is now a plain grass cliff into the sea again, which
- * is also what the KayKit reference renders do: their coasts sit around
- * water, and the outer boundary of the whole map is a straight drop.
+ *   - A tile she already owns must not be re-cut behind her. Digging a pond
+ *     used to reach into the neighbouring field and carve a third of it away
+ *     into sand and sea, changing land she had already paid for.
+ *   - And it left a GAP. The land tile's coast model had its water side cut
+ *     away so the sea could show through, but the neighbouring water hex is a
+ *     flat slab at its own height — so where the sand ran out there was a
+ *     visible step into nothing.
+ *
+ * Putting the beach inside the water cell fixes both: the pond carries its
+ * own rim, and it meets the field's flat, unmodified edge.
  */
 export function waterMask(island: Island, a: Axial): number {
   let mask = 0
   neighbours(a).forEach((n, k) => {
-    if (tileAt(island, n) === 'water') mask |= 1 << k
+    if (tileAt(island, n) !== 'grass') mask |= 1 << k
   })
   return mask
 }
@@ -102,14 +104,12 @@ export function longestRun(mask: number): Run {
 }
 
 /**
- * The widest arc the models cover. Beyond it, a tile is not a coast at all.
+ * The widest water arc the models cover.
  *
- * A coast model is land on one side and sea on the other, and the waterless
- * variants CUT THE SEA SIDE AWAY so the ocean shows through. That is the right
- * trade for a headland and completely wrong for an island: borrowing the
- * four-edge model for a tile with six wet edges deleted two thirds of the hex
- * and left Fred standing on a corner of his own rock. Above this width there
- * is no land side to stand on, so the tile stays a whole grass hex.
+ * A pond entirely surrounded by field has a water arc of ZERO and no model —
+ * there is no "beach all the way round" hex in the pack. It draws as plain
+ * water, which is a clean step down at every edge rather than a broken one.
+ * Above four, the pond is mostly open water and the same applies.
  */
 const MAX_COAST_ARC = 4
 
@@ -129,10 +129,16 @@ const MAX_COAST_ARC = 4
  *     continuous where it matters most: along the open sea.
  */
 export function lookFor(island: Island, a: Axial): TileLook {
-  if (tileAt(island, a) === 'water') return { kind: 'water', turns: 0 }
+  // Land is land. It is never re-cut by what happens beside it.
+  if (tileAt(island, a) !== 'water') return { kind: 'grass', turns: 0 }
 
+  /*
+   * A water tile with a shore: the model's own water arc must line up with
+   * the way this pond's water actually faces, which leaves its land arc
+   * against her fields.
+   */
   const run = longestRun(waterMask(island, a))
-  if (run.length === 0 || run.length > MAX_COAST_ARC) return { kind: 'grass', turns: 0 }
+  if (run.length === 0 || run.length > MAX_COAST_ARC) return { kind: 'water', turns: 0 }
 
   const variant = COAST_VARIANTS[run.length - 1] as CoastVariant
   const canonical = COAST_CANONICAL[variant]
