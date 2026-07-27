@@ -181,80 +181,63 @@ const allows = (name: string, ground: Ground): boolean =>
   ground === 'green' || (ground === 'sand' && ROCKY.test(name))
 
 /**
- * Scale an object so it stands a given height, whatever size it was authored.
+ * Scale an object to fit inside a box, without distorting it.
  *
- * Fixed scale factors do not work across these packs and it is not close.
- * Forest Nature's Rock_1 family alone runs from 0.54 to 4.58 units tall — a
- * ninefold spread inside ONE family — while the hexagon pack's rock_single_A
- * is 0.07. At a single scale the same number that made a grass tuft look
- * right produced grey boulders taller than the hexes, dwarfing Fred.
+ * ONE function, because fitting by a single dimension is a bug generator and
+ * this project produced three of them in an afternoon. Fit by height and a
+ * lily pad — 0.02 units tall and nearly a metre across — is blown up to a
+ * hex-sized tan disc. Fit by width and a tall thin tree is squashed to a
+ * shrub. Neither dimension is "the" one: the piece has to fit both.
  *
- * So nothing here guesses. Every piece is measured and fitted to a height
- * chosen against a PET (~0.24 units tall), which is the only ruler that
- * matters — and any model added later is normalised for free.
+ * These packs disagree about scale by up to ninefold WITHIN a single family
+ * (Forest Nature's Rock_1 runs 0.54 to 4.58 units tall), so nothing here may
+ * use a fixed multiplier. Everything is measured and fitted, and any model
+ * added later is normalised for free.
  */
-export function fitHeight(o: THREE.Object3D, target: number): void {
+export function fitInto(o: THREE.Object3D, maxWidth: number, maxHeight: number): void {
   o.scale.setScalar(1)
   /*
-   * Refresh the world matrices FIRST.
-   *
-   * Box3.setFromObject reads each mesh's matrixWorld, and for an object that
-   * is not yet in the scene those are stale. Several KayKit models carry a
-   * transform on the node above the mesh, so measuring them cold returned a
-   * height far smaller than the truth — and target/height then scaled the
-   * piece up enormously. That is where the grey slabs spanning three hexes
-   * came from: not a bad target, a bad measurement.
+   * Refresh the world matrices FIRST. Box3.setFromObject reads matrixWorld,
+   * and for an object not yet in the scene those are stale — several KayKit
+   * models carry a transform on the node above the mesh, so measuring them
+   * cold reports the wrong size and the correction goes wild.
    */
-  o.updateMatrixWorld(true)
-  const box = new THREE.Box3().setFromObject(o)
-  const height = box.max.y - box.min.y
-  if (!Number.isFinite(height) || height <= 1e-4) return
-  o.scale.setScalar(target / height)
-}
-
-/**
- * Scale an object so its FOOTPRINT spans a given width.
- *
- * The right measure for landscape. Hills and mountains are authored to sit on
- * a hex and are already the right size; what varies between them is how tall
- * they rise, which is the whole point of having several. Fitting them by
- * height therefore inverts them — hills_B is 0.37 tall and 1.47 wide, so
- * forcing it to 1.45 tall scaled it nearly fourfold into a tan slab five
- * hexes across. Fit the part that must match the tile, and let the silhouette
- * vary, which is what makes a range look like a range.
- */
-export function fitWidth(o: THREE.Object3D, target: number): void {
-  o.scale.setScalar(1)
   o.updateMatrixWorld(true)
   const box = new THREE.Box3().setFromObject(o)
   const width = Math.max(box.max.x - box.min.x, box.max.z - box.min.z)
-  if (!Number.isFinite(width) || width <= 1e-4) return
-  o.scale.setScalar(target / width)
+  const height = box.max.y - box.min.y
+  const fit = Math.min(
+    width > 1e-4 ? maxWidth / width : Infinity,
+    height > 1e-4 ? maxHeight / height : Infinity,
+  )
+  if (Number.isFinite(fit) && fit > 0) o.scale.setScalar(fit)
 }
 
 /**
- * How tall each kind of thing stands, in world units.
+ * How much room each kind of thing may take, as [width, height] in world
+ * units — width relative to the hex, height against a PET.
  *
- * A pet is about 0.24 and Fred about 0.35, so ground cover reaching a pet's
- * knee registers as ground cover, and a hill needs to clear both to read as
- * landscape rather than as an object someone left there.
+ * A pet is about 0.24 units tall and Fred about 0.35, so ground cover
+ * reaching a pet's knee registers as ground cover, and a hill has to clear
+ * both to read as landscape rather than as an object left lying there.
  */
-export const HEIGHTS = {
-  /** Tufts, stones, undergrowth. Ankle to shoulder of a pet. */
-  cover: 0.13,
+export const FITS = {
+  /** Tufts, stones, undergrowth. */
+  cover: [0.42, 0.16] as const,
   /** A dead tree standing among live ones. */
-  bare: 0.62,
-  /** Single trees and small clumps: taller than a pet, shorter than a hill. */
-  feature: 0.78,
+  bare: [0.45, 0.7] as const,
+  /** Single trees and small clumps. */
+  feature: [1.0, 0.95] as const,
   /**
-   * Hills and mountains, as a fraction of the hex's WIDTH, not a height.
-   *
-   * Comfortably under one. These models carry their own hex base, so at full
-   * width they cover the tile completely and read as REPLACING it rather than
-   * standing on it. A green rim around the base is what turns a mountain back
-   * into a feature of the meadow it rose out of.
+   * Hills and mountains. These carry their own hex base, so at full width
+   * they cover the tile and read as REPLACING it; a green rim around the base
+   * is what turns a mountain back into a feature of the meadow it rose from.
    */
-  big: 0.74,
+  big: [1.7, 1.7] as const,
+  /** Lily pads: flat and wide, so width is what binds. */
+  lily: [0.5, 0.12] as const,
+  /** Reeds: the opposite. */
+  reed: [0.3, 0.26] as const,
 } as const
 
 /** Stable per-coordinate hash, so a tile's scenery never changes. */
@@ -423,8 +406,9 @@ export function createPropField(base = ''): PropField {
       bit.position.set(x, surface.heightAt(x, z) ?? 0, z)
       bit.rotation.y = ((dh >> 11) % 360) * Math.PI / 180
       // Vary per PIECE, not per tile, or a tile reads as one stamped set.
-      const tall = (bare ? HEIGHTS.bare : HEIGHTS.cover) * (0.8 + ((dh >> 13) % 45) / 100)
-      fitHeight(bit, tall)
+      const [cw, ch] = bare ? FITS.bare : FITS.cover
+      const vary = 0.8 + ((dh >> 13) % 45) / 100
+      fitInto(bit, cw * vary, ch * vary)
       group.add(bit)
       decor.push({ x, z, r: hexSize * 0.10 })
       if (bare) blocks.push({ x, z, r: hexSize * 0.14 })
@@ -481,10 +465,14 @@ export function createPropField(base = ''): PropField {
             const rad = hexSize * (0.15 + ((ih >> 7) % 45) / 100)
             bit.position.set(w.x + Math.cos(ang) * rad, 0, w.z + Math.sin(ang) * rad)
             bit.rotation.y = ((ih >> 11) % 360) * Math.PI / 180
-            // Lilies are 0.02 units tall and reeds 0.25 — the same reason
-            // nothing here may use a fixed scale.
-            fitHeight(bit, (name.startsWith('waterlily') ? 0.04 : 0.22)
-              * (0.8 + ((ih >> 13) % 45) / 100))
+            /*
+             * A lily is 0.02 units tall and a reed 0.25 — and a lily is WIDE.
+             * Fitting these by height alone blew each pad up into a tan disc
+             * the size of a hex, sitting beside every pond.
+             */
+            const [ww, wh] = name.startsWith('waterlily') ? FITS.lily : FITS.reed
+            const wv = 0.8 + ((ih >> 13) % 45) / 100
+            fitInto(bit, ww * wv, wh * wv)
             group.add(bit)
             decor.push({ x: bit.position.x, z: bit.position.z, r: hexSize * 0.14 })
           }
@@ -551,8 +539,9 @@ export function createPropField(base = ''): PropField {
          * likes — that variation is the skyline. A tree has to stand the
          * right height beside a pet and may be any width it likes.
          */
-        if (spec.big) fitWidth(obj, hexSize * 2 * HEIGHTS.big * (0.94 + ((h >> 11) % 12) / 100))
-        else fitHeight(obj, HEIGHTS.feature * (0.9 + ((h >> 11) % 26) / 100))
+        const [fw, fh] = spec.big ? FITS.big : FITS.feature
+        const vary = 0.88 + ((h >> 11) % 26) / 100
+        fitInto(obj, fw * vary, fh * vary)
         group.add(obj)
         placed.add(k)
         blocks.push({

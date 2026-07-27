@@ -28,7 +28,7 @@
 import * as THREE from 'three'
 import type { TileType } from './grid'
 import type { TileModels } from './tiles'
-import { fitHeight, HEIGHTS } from './props'
+import { fitInto, FITS } from './props'
 
 /**
  * The ten canonical steps, in order.
@@ -93,17 +93,17 @@ const PIECES: Record<TileType, readonly string[]> = {
 const GHOST_OPACITY = 0.45
 
 /**
- * How tall each piece stands on the plot, matching how props.ts plants them.
+ * How much room each piece gets on the plot, matching how props.ts plants it.
  *
- * Measured and fitted, never a scale factor: the packs disagree about size by
- * up to ninefold within a single family, so one multiplier that suits a grass
- * tuft turns a rock into a boulder taller than the hex it sits on.
+ * Measured and fitted in BOTH dimensions, never a scale factor: these packs
+ * disagree about size by up to ninefold within one family, and fitting by a
+ * single dimension turns a lily pad into a disc the size of the hex.
  */
-const heightFor = (name: string): number =>
-  name.startsWith('waterlily') ? 0.04
-    : name.startsWith('waterplant') ? 0.22
-      : /^(Grass|Bush|Rock)/.test(name) ? HEIGHTS.cover
-        : HEIGHTS.feature
+const fitFor = (name: string): readonly [number, number] =>
+  name.startsWith('waterlily') ? FITS.lily
+    : name.startsWith('waterplant') ? FITS.reed
+      : /^(Grass|Bush|Rock)/.test(name) ? FITS.cover
+        : FITS.feature
 
 export interface PlotDeps {
   /** The finished tile's own mesh, so the ghost hex IS the real hex. */
@@ -190,7 +190,8 @@ export function createGrowingPlot(
     void deps.prop(name).then(object => {
       object.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius)
       object.rotation.y = angle + i
-      fitHeight(object, heightFor(name))
+      const [fw, fh] = fitFor(name)
+      fitInto(object, fw, fh)
       object.userData.fullScale = object.scale.x
       install(i + 1, object)
     }).catch(() => { /* a missing piece leaves a gap, never a broken build */ })
