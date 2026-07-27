@@ -116,6 +116,22 @@ blocking; it wants numbers, and it gets them when item 13 starts.
 - **Item 3 has not been done, and the parity gate has not flaked again.** It
   passed first time on every run today. That is not evidence it is fixed.
 
+  A read-only look while waiting on a review turned up the likely cause, so it
+  is written down here rather than rediscovered. `tools/smoke/parity.mjs:208`
+  settles each step with a fixed `await wait(settleMs)`, and the two jsdom
+  instances run REAL timers concurrently. A scheduling hiccup on either one —
+  a GC pause, a busy machine — snapshots one DOM mid-settle while the other
+  has finished, which produces several spurious diffs at once and then clean
+  runs afterwards: exactly the signature that was seen. The seeded RNG is not
+  the culprit; `seededSource` is injected into each DOM separately, so they do
+  not share a stream.
+
+  The brief's own instruction is the fix: "isolate it with an explicit
+  wait-for-condition, not a sleep." Wait for each DOM to go QUIESCENT
+  independently — its own snapshot unchanged across consecutive polls, bounded
+  by a timeout — and only then compare. Waiting until the two agree would of
+  course mask the very differences the gate exists to find.
+
 ---
 
 ## Fixes from play, this session
