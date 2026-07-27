@@ -4,6 +4,7 @@
   "pages":    { "wordsPerFindPage": 3,
                 "mix": ["find", "build", "build", "build"] },
   "governor": { "maxWaitingPets": 3, "maxEmptySurplus": 4 },
+  "pets":     { "speciesMemory": 5 },
   "stage":    { "spinSec": 9, "progressDots": true, "flyBackMs": 900,
                 "hatchHoldMs": 1300, "petLoadMs": 3000, "chipMs": 1250,
                 "flourishMs": 620, "landHeight": 2.4, "landReach": 1.6 },

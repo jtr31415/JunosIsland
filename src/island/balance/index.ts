@@ -15,6 +15,25 @@ export interface Balance {
   egg: CostCurve
   pages: { wordsPerFindPage: number; mix: PageKind[] }
   governor: { maxWaitingPets: number; maxEmptySurplus: number }
+  pets: {
+    /**
+     * How many recent hatches the species draw refuses to repeat.
+     *
+     * Joe, from playtesting: *"investigate: two cats spawned in a row."* The
+     * draw was uniform over the 24 species with no memory at all, so a repeat
+     * came up one hatch in 24 — often enough that a child collecting friends
+     * meets one early and reads it as her work not counting.
+     *
+     * FIVE, of 24. An egg is several pages of reading apart, so five covers a
+     * whole sitting's worth of hatches: within one session she cannot meet the
+     * same animal twice. It still leaves 19 candidates on every draw, so the
+     * next friend is genuinely a surprise, and a favourite can come back after
+     * six hatches rather than after the whole pack. Raising it toward 23 turns
+     * the collection into a checklist; dropping it to 1 fixes only the literal
+     * back-to-back case and leaves cat-dog-cat, which reads the same to her.
+     */
+    speciesMemory: number
+  }
   /**
    * How long the opening story waits on each of Fred's lines before moving
    * itself on. Scaled to the LINE, not flat: a flat wait makes a short line

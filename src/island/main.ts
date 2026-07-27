@@ -58,8 +58,8 @@ import type { Axial } from './world/hex'
 
 import { createSpeaker } from '../platform/speech'
 import { createSfx } from '../platform/audio'
-import { defaultRng, ri } from '../core/rng'
-import { makeDeck } from '../core/decks'
+import { defaultRng } from '../core/rng'
+import { makeDeck, makeMemoryDeck } from '../core/decks'
 import { GREEN, RED } from '../core/wordlists'
 import { buildPool, buildNeighbours } from '../core/neighbours'
 import { generateRead } from '../core/generators/read'
@@ -163,31 +163,6 @@ async function boot(): Promise<void> {
   const pets = createPetField()
   world.scene.add(pets.group)
   world.pickables.push(pets.group)
-
-  /**
-   * Which friend is in the egg — decided IN ADVANCE, so she can be fetched
-   * while the child is still reading.
-   *
-   * Joe: "preloaded the animal otherwise there is a render delay and
-   * disappointment." The species used to be drawn on the line that hatched it,
-   * which left no time at all: the fetch started as the shell broke and the
-   * plinth was empty for as long as the network took.
-   *
-   * DECIDING EARLIER rather than guessing. The draw is uniform over 24, so
-   * warming a "likely" species would hit one time in 24 and be a download
-   * wasted the other 23 — and warming the whole pack is 3.21MiB measured,
-   * against a 5MB budget on the target tablet. Committing to the next one
-   * makes the preload right every time, for one file.
-   *
-   * It costs nothing to draw early: the old code drew a species on EVERY
-   * passed page and threw it away on the four in five that did not hatch.
-   * This draws one and keeps it until it is spent, which is strictly fewer
-   * draws — and it is the seam a remembered draw would replace, if the "two
-   * cats in a row" card ever gives this a deck the way `makeDeck` does for
-   * words. A deck would swap this function and nothing else.
-   */
-  const drawSpecies = (): string => SPECIES[ri(defaultRng, SPECIES.length)] as string
-  let nextSpecies = drawSpecies()
 
   const props = createPropField()
   world.scene.add(props.group)
@@ -435,6 +410,61 @@ async function boot(): Promise<void> {
   }
 
   flow = loaded.flow
+
+  /**
+   * Who is in the egg, drawn with a short memory.
+   *
+   * Joe, from playtesting: *"investigate: two cats spawned in a row."* The
+   * draw was uniform over the 24 species and remembered nothing at all, so a
+   * repeat came up one hatch in 24 — unremarkable arithmetic, and to a child
+   * collecting friends it reads as the game being broken, or worse, as her
+   * reading not having counted.
+   *
+   * The same problem the word lists solved with `makeDeck`, and deliberately
+   * NOT the same answer. A full deck deals all 24 before repeating any, which
+   * turns a collection into a checklist and puts a favourite 24 hatches away
+   * every time. `makeMemoryDeck` forbids only the repeats she can notice — the
+   * last `speciesMemory` — and still leaves 19 candidates on every draw, so the
+   * rate at which any one animal comes back is unchanged and only the clumping
+   * goes.
+   *
+   * Built HERE, after the save, because her island is where the memory lives
+   * across a reload: `flow.pets` is the list of who has come home, in order.
+   * Nothing about the deck is persisted and nothing needs to be — priming it
+   * from what she already owns costs no save change (PHASE3-HANDOVER §6: a
+   * schema bump waits for the first `v*` tag). Without the priming the deck
+   * would start empty on every load and the reported bug walks back in through
+   * the front door: reload, hatch, cat again.
+   */
+  // `string`, not the literal union SPECIES infers: a species read back out of
+  // a save is a plain string, and priming must be able to take it as read.
+  const drawSpecies = makeMemoryDeck<string>(
+    defaultRng, SPECIES, balance.pets.speciesMemory)
+  drawSpecies.remember(flow.pets.map(p => p.species))
+
+  /**
+   * And decided IN ADVANCE, so she can be fetched while the child is reading.
+   *
+   * Joe: "preloaded the animal otherwise there is a render delay and
+   * disappointment." The species used to be drawn on the line that hatched it,
+   * which left no time at all: the fetch started as the shell broke and the
+   * plinth was empty for as long as the network took.
+   *
+   * DECIDING EARLIER rather than guessing. Warming a "likely" species would
+   * hit one time in 19 and waste the download the other 18 — and warming the
+   * whole pack is 3.21MiB measured, against a 5MB budget on the target tablet.
+   * Committing to the next one makes the preload right every time, for one
+   * file. Which is exactly why the deck may not be consulted again at hatch
+   * time: the friend who is WARMED has to be the friend who HATCHES, or the
+   * 569.9ms cold delay that was just measured out comes straight back. Every
+   * `drawSpecies()` in this file is seated into `nextSpecies` on the spot, and
+   * `tests/island/species.test.ts` pins that.
+   *
+   * It costs nothing to draw early: the old code drew a species on EVERY
+   * passed page and threw it away on the four in five that did not hatch.
+   * This draws one and keeps it until it is spent.
+   */
+  let nextSpecies = drawSpecies()
 
   const overlay = createOverlay(document.body, {
     speech, sfx,
