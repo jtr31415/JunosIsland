@@ -137,6 +137,26 @@ export function askForLand(f: Flow, at: Axial | null = null): Flow {
   return { ...f, phase: 'placing', chosen: null, pending: at }
 }
 
+/**
+ * "Actually, never mind."
+ *
+ * Joe: *"when user clicks on empty tile to do a tile challenge, he cannot change
+ * his mind at the selecting of the tile type stage."* The same fault as tapping
+ * any grass starting a maths round — it turns looking round the island into a
+ * commitment — and the same fix: a way out that costs nothing.
+ *
+ * Only the transient half of the choice is cleared. `plot` is deliberately NOT
+ * touched: it holds every sum already spent on a tile under construction, and a
+ * restored save can put the flow in 'placing' with one standing (see save.ts).
+ * `bankedTiles`, `sumProgress` and `readProgress` are likewise untouched —
+ * nothing a child owns can be lost (brief §19). Asking for land costs nothing
+ * yet, so backing out of it must cost nothing either.
+ */
+export function cancelPlacing(f: Flow): Flow {
+  if (f.phase !== 'placing') return f
+  return { ...f, phase: 'free', chosen: null, pending: null }
+}
+
 export interface HatchDetails { name: string; species: string }
 
 /**

@@ -118,6 +118,23 @@ body:has(.overlay:not(.hide)) .say { display: none; }
   flex-wrap: wrap;
 }
 
+/*
+ * The question, INSIDE the panel with the buttons it is asking about.
+ *
+ * It used to be a `.say` card, which the rule above this one hides whenever any
+ * overlay is open — and the offer IS an overlay. So the question was invisible
+ * for exactly as long as the buttons were on screen. Measured in the browser
+ * before believing it: with no overlay showing, `.say` computes to `block`; with
+ * one showing, `none`.
+ */
+.offer-ask {
+  flex-basis: 100%;
+  text-align: center;
+  font-size: clamp(1.1rem, 3.4vmin, 1.9rem);
+  font-weight: 800;
+  margin-bottom: .2rem;
+}
+
 .offer-tile {
   width: clamp(5.5rem, 17vmin, 9rem);
   aspect-ratio: 1;

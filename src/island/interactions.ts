@@ -15,6 +15,7 @@
  * legitimately opened — assertable in a plain unit test.
  */
 import { tapEgg, tapSum, askForLand, challengePassed, challengeFailed, placeTile } from './flow'
+import { TILE_QUESTION } from './script'
 import type { Flow, HatchDetails } from './flow'
 import type { Hit } from './scene'
 
@@ -109,7 +110,7 @@ export function handleWorldTap(flow: Flow, hit: Hit | null, p: InteractionPorts)
         const asked = askForLand(flow, hit.axial)
         if (asked === flow) return flow
         if (asked.phase === 'challenge') p.openSum(asked)
-        else p.say('Which land would you like?')
+        else p.say(TILE_QUESTION)
         return asked
       }
       const next = placeTile(flow, hit.axial)

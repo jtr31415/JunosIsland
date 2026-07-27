@@ -25,7 +25,7 @@ import { createAlbum } from './album'
 import { hatchProgress, landProgress, sumsForTile, pagesForEgg } from './flow'
 import { pageKind, balance, applyDevBalance } from './balance'
 import { landPaused, eggsPaused, activeGovernor, GOVERNOR_LINE } from './governors'
-import { OPENING, HATCH_LINES, fill } from './script'
+import { OPENING, HATCH_LINES, TILE_QUESTION, fill } from './script'
 import { loadIsland, saveIsland } from './save'
 import { commit, ceremony } from './ceremony'
 import { askPin, askChoice, askConfirm } from './grownups'
@@ -41,7 +41,9 @@ import type { PersistState } from '../platform/persistence'
 import {
   backupFilename, readBackup, summarise, confirmText, download, pickFile,
 } from '../platform/backup'
-import { createFlow, tapEgg, tapSum, askForLand, challengePassed, chooseTile, tileOffer } from './flow'
+import {
+  createFlow, tapEgg, tapSum, askForLand, cancelPlacing, challengePassed, chooseTile, tileOffer,
+} from './flow'
 import { bindWorldTaps } from './taps'
 import {
   handleWorldTap, handleChallengePassed, handleChallengeDismissed,
@@ -1245,7 +1247,7 @@ async function boot(): Promise<void> {
          */
         flow = askForLand(flow)
         refresh()
-        overlay.say('Which land would you like?')
+        overlay.say(TILE_QUESTION)
         break
       }
     }
@@ -1293,12 +1295,53 @@ async function boot(): Promise<void> {
   offerBox.append(offerInner)
   document.body.append(offerBox)
 
+  /*
+   * A tap on the backdrop puts the offer away and gives her the island back.
+   *
+   * Same rule and same mechanics as the grown-ups panels: only a tap on the
+   * backdrop ITSELF, never one that bubbled up from a tile button, or choosing
+   * grass would choose grass and then immediately cancel it.
+   *
+   * `pointerdown` rather than `click`, to match grownups.ts and because a tap
+   * that starts on the backdrop and drifts a few pixels is still a tap on a
+   * tablet.
+   */
+  offerBox.addEventListener('pointerdown', e => {
+    if (e.target !== offerBox) return
+    const next = cancelPlacing(flow)
+    if (next === flow) return
+    flow = next
+    /*
+     * Take the question down with the panel. The `.say` card is hidden by CSS
+     * only while an overlay is open, so dismissing the offer REVEALS the copy
+     * that was set behind it — verified in the browser: the island came back
+     * with "Which tile would you like?" still sitting over it, asking about
+     * buttons that were no longer there.
+     */
+    overlay.clearSay()
+    refresh()
+  })
+
   const TILE_FACE: Record<TileType, string> = { grass: '\u{1F33F}', water: '\u{1F30A}' }
 
   function renderOffer(): void {
     const offer = flow.phase === 'placing' && !flow.chosen ? tileOffer(flow) : []
     offerBox.classList.toggle('hide', offer.length === 0)
     offerInner.replaceChildren()
+    if (offer.length > 0) {
+      /*
+       * The question goes IN the panel, not on the `.say` card.
+       *
+       * `body:has(.overlay:not(.hide)) .say` hides that card while any overlay
+       * is open, and the offer is an overlay — so the question was invisible for
+       * precisely as long as the buttons asking it were on screen. Asking inside
+       * the panel also puts the words next to the thing they are about.
+       */
+      const ask = document.createElement('div')
+      ask.className = 'offer-ask'
+      ask.textContent = TILE_QUESTION
+      offerInner.append(ask)
+    }
     offer.forEach((t, i) => {
       const b = document.createElement('button')
       b.className = `chunk chunk-button offer-tile chunk-${t === 'water' ? 'water' : 'grass'}`

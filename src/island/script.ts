@@ -36,6 +36,19 @@ export const OPENING: Beat[] = [
 ]
 
 /** Spoken when an egg hatches, after the opening. Brief section 3. */
+/**
+ * What the tile offer asks.
+ *
+ * Here, and named, because it was written out twice — once in `interactions.ts`
+ * and once in `main.ts` — so the two could drift, and one of them would then be
+ * a question the game asks in only some circumstances.
+ *
+ * "Tile", not "land", at Joe's request. It matches the word the rest of the game
+ * uses for the thing she is choosing, and it stays right when the biome ladder
+ * adds kinds that are not land at all.
+ */
+export const TILE_QUESTION = 'Which tile would you like?'
+
 export const HATCH_LINES = [
   '[PETNAME] has arrived!',
   '[PETNAME] is here!',

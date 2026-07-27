@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  createFlow, tapEgg, tapSum, askForLand, challengePassed, challengeFailed,
+  createFlow, tapEgg, tapSum, askForLand, cancelPlacing, challengePassed, challengeFailed,
   chooseTile, placeTile, tileOffer,
 } from '../../src/island/flow'
 import { hatchProgress, landProgress, pagesForEgg, sumsForTile } from '../../src/island/flow'
@@ -128,6 +128,61 @@ describe('flow — the earn loop', () => {
   it('refuses a sum when there is no plot to advance', () => {
     const f = createFlow()
     expect(tapSum(f)).toBe(f)
+  })
+
+  describe('changing her mind at the offer', () => {
+    /*
+     * Joe: "when user clicks on empty tile to do a tile challenge, he cannot
+     * change his mind at the selecting of the tile type stage."
+     *
+     * Quite right, and it is the same fault as tapping any grass starting a
+     * maths round: it makes touching the island a commitment. Asking for land
+     * costs nothing yet, so backing out must cost nothing either.
+     */
+    it('returns to the island', () => {
+      const f = cancelPlacing(askForLand(createFlow(), { q: 1, r: 0 }))
+      expect(f.phase).toBe('free')
+      expect(f.chosen).toBeNull()
+      expect(f.pending).toBeNull()
+    })
+
+    it('keeps every scrap of progress — brief §19', () => {
+      // The guardrail, stated over the fields that could carry a loss.
+      const earned = { ...createFlow(), bankedTiles: 2, sumProgress: 3, readProgress: 4 }
+      const f = cancelPlacing(askForLand(earned))
+      expect(f.bankedTiles).toBe(2)
+      expect(f.sumProgress).toBe(3)
+      expect(f.readProgress).toBe(4)
+    })
+
+    it('never abandons a plot already under construction', () => {
+      /*
+       * The dangerous case. A plot holds every sum she has spent on it, so a
+       * dismissal that dropped it would throw away real work — and a restored
+       * save can put the flow in 'placing' WITH a plot standing.
+       */
+      let f = askForLand(createFlow())
+      f = placeTile(chooseTile(f, 'grass'), { q: 1, r: 0 })
+      f = askForLand({ ...f, phase: 'free' })
+      f = placeTile(chooseTile(f, 'grass'), { q: 0, r: 1 })
+      expect(f.plot).not.toBeNull()
+
+      const back = cancelPlacing({ ...f, phase: 'placing' })
+      expect(back.plot).toEqual(f.plot)
+    })
+
+    it('she can ask again straight afterwards', () => {
+      // A way out is only a way out if the way back in still works.
+      const f = cancelPlacing(askForLand(createFlow(), { q: 1, r: 0 }))
+      expect(askForLand(f, { q: 1, r: 0 }).phase).toBe('placing')
+    })
+
+    it('does nothing in any other phase', () => {
+      for (const phase of ['free', 'challenge', 'opening'] as const) {
+        const f = { ...createFlow(), phase }
+        expect(cancelPlacing(f)).toBe(f)
+      }
+    })
   })
 
   it('the INTRO tile costs exactly one sum once sited', () => {
