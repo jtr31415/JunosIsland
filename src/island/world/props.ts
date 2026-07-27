@@ -469,8 +469,25 @@ export const VARY = {
   cover: { min: 0.8, span: 45 },
   /**
    * Live trees start higher. Joe asked for "fewer small ones in favour of
-   * bigger ones", and raising the floor removes the small end rather than
-   * merely making it less likely.
+   * bigger ones", so this floor was raised from 0.8 to 0.95.
+   *
+   * `min` IS NOT ACTUALLY A FLOOR, and the comment here used to claim it was.
+   * The term added to it is `(dh >> 13) % span`, a SIGNED shift on an unsigned
+   * 32-bit hash, so for the half of all hashes with the top bit set the term is
+   * NEGATIVE. Measured: 48.8% of pieces. The real range is min ± span/100, not
+   * min..min+span/100 — a live tree bottoms out at 0.51, not 0.95.
+   *
+   * Raising `min` therefore shifts the whole distribution up, which is most of
+   * what Joe asked for; it does not remove the small end. Fable caught the false
+   * claim reviewing the shadow work, where it mattered: the shadow threshold was
+   * justified against a floor that does not exist.
+   *
+   * DELIBERATELY NOT FIXED. Changing `>>` to `>>>` here would re-roll the size of
+   * roughly half the scenery on every island that already exists — including
+   * Juno's — because `vary` feeds `fitInto`, which feeds `footprintOf`, which
+   * decides where a piece stands. That is the world rearranging itself behind
+   * her, which the header of this file forbids. If the true floor is ever wanted,
+   * it needs a migration or a new hash channel, not a one-character edit.
    */
   tree: { min: 0.95, span: 45 },
   /** Tile features and landscape. */
