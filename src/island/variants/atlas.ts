@@ -27,6 +27,7 @@
  */
 import * as THREE from 'three'
 import { recolourInto, isNatural } from './recolour'
+import { wearFaceUVs } from './facedecals'
 import { NATURAL, setById } from './sets'
 import speciesBase from './species-base.json'
 import type { PetSet } from './sets'
@@ -145,6 +146,22 @@ export function createSetAtlas(base = ''): SetAtlas {
     async dress(pet, setId, speciesId) {
       const map = await api.texture(setId, speciesId)
       if (!map) return                       // natural: leave the model alone
+
+      /*
+       * The eyes move out of the way BEFORE the recoloured texture goes on.
+       *
+       * Belt and braces: the patch belongs on the shared prototype at load time
+       * (see facedecals.ts and pets.ts), and it is idempotent, so this second
+       * call normally moves nothing at all. It is here because a pet dressed
+       * without it is a pet with berry eyeballs, and "the step that was easily
+       * forgotten" is a failure this project has already paid for four times
+       * (HANDOFF §5). Making the wrong sequence unexpressible beats remembering.
+       *
+       * Nothing is patched for the natural set, which returned above — natural
+       * pets read the original swatches, which no set ever writes to, so they
+       * stay bit-identical either way.
+       */
+      wearFaceUVs(pet, speciesId)
 
       const key = `${setId}/${speciesId}`
       let forSet = dressed.get(key)

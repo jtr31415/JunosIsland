@@ -14,59 +14,17 @@
  * vertical COLUMNS of `colormap.png`, using v to pick a shade down a gradient.
  */
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
-import { inflateSync } from 'node:zlib'
 import { dirname, resolve, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { decodePng } from './png.mjs'
+import { RESERVE, RESERVE_X, inReserve, reserveDrift } from './reserve.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const PETS = resolve(here, '../../src/island/public/pets')
 
-/* ------------------------------------------------------------------ png --- */
-
-function decodePng(path) {
-  const buf = readFileSync(path)
-  let off = 8, w = 0, h = 0, depth = 0, colour = 0
-  const idat = []
-  while (off < buf.length) {
-    const len = buf.readUInt32BE(off)
-    const type = buf.toString('ascii', off + 4, off + 8)
-    const data = buf.subarray(off + 8, off + 8 + len)
-    if (type === 'IHDR') {
-      w = data.readUInt32BE(0); h = data.readUInt32BE(4); depth = data[8]; colour = data[9]
-    }
-    if (type === 'IDAT') idat.push(data)
-    if (type === 'IEND') break
-    off += 12 + len
-  }
-  const channels = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 }[colour]
-  const raw = inflateSync(Buffer.concat(idat))
-  const bpp = channels * (depth / 8)
-  const stride = w * bpp
-  const px = Buffer.alloc(h * stride)
-  let p = 0
-  for (let y = 0; y < h; y++) {
-    const f = raw[p++]
-    const line = raw.subarray(p, p + stride); p += stride
-    const prev = y > 0 ? px.subarray((y - 1) * stride, y * stride) : Buffer.alloc(stride)
-    const cur = px.subarray(y * stride, (y + 1) * stride)
-    for (let x = 0; x < stride; x++) {
-      const a = x >= bpp ? cur[x - bpp] : 0
-      const b = prev[x]
-      const c = x >= bpp ? prev[x - bpp] : 0
-      let v = line[x]
-      if (f === 1) v += a
-      else if (f === 2) v += b
-      else if (f === 3) v += (a + b) >> 1
-      else if (f === 4) {
-        const q = a + b - c
-        const pa = Math.abs(q - a), pb = Math.abs(q - b), pc = Math.abs(q - c)
-        v += (pa <= pb && pa <= pc) ? a : (pb <= pc ? b : c)
-      }
-      cur[x] = v & 0xff
-    }
-  }
-  return { w, h, bpp, stride, px }
-}
+/** Anything failing an invariant lands here and turns the exit code red. */
+const failures = []
+const must = (ok, message) => { if (!ok) failures.push(message); return ok }
 
 /* ------------------------------------------------------------------ glb --- */
 
@@ -442,3 +400,404 @@ for (const [k, v] of Object.entries(table)) {
     + `${(100 * p.runnerUp).toFixed(0)}%`.padStart(6) + '   '
     + String(v.length).padStart(2) + ' colours  ' + v.slice(0, 2).join('  ') + close)
 }
+
+/* ================================================================= faces === */
+
+/**
+ * THE FACE DECALS, found in the MESH rather than in the texture.
+ *
+ * Joe: *"penguin pupils should stay black, panda and polar bear and cow white of
+ * eye should stay white."* Every earlier attempt looked for that rule in the
+ * COLOURS, and no such rule exists — measured, the coat samples the very texels
+ * the eyes do, 40.33% of a penguin's surface area drawing from the same pixels
+ * as its own pupils. A rule that protects near-achromatic texels freezes 69.74%
+ * of a polar bear.
+ *
+ * The answer was in the geometry the whole time: THE EYES ARE THEIR OWN MESH. In
+ * all 24 species the face is a flat sheet floating in front of the head — a
+ * separate connected component, mirrored left and right, its area-weighted
+ * normal exactly +z. It is not painted onto the head shell, it is stuck on top
+ * of it. So a component is a face decal when it is
+ *
+ *   flat      its bounding box has zero extent in one axis
+ *   forward   its area-weighted normal points at +z
+ *   front     its centroid is in the front half of the pet
+ *   small     it is under FACE_MAX_SHARE of the pet's surface area
+ *
+ * `flat` and `forward` alone pick out exactly the 63 decals in the pack; `front`
+ * and `small` are belt and braces. THE MARGINS ARE NOT TIGHT: decals are flat to
+ * 9.15e-9 where the next flattest thing in the pack has an extent of 0.0500, and
+ * every decal's normal z is 1.000000 exactly where every planar non-decal's is
+ * 0.000000 exactly. The six rejected are the cow's, dog's and giraffe's flank
+ * patches — planar, but facing ±x.
+ *
+ * No colour test anywhere. That is the point.
+ */
+const PLANAR_EPS = 1e-6
+const FORWARD_DOT = 0.9998
+const FACE_MAX_SHARE = 0.10
+
+/** Where the cost lands, as a share of each pet's surface area. */
+const FACE_SHARE_MIN = 0.010
+const FACE_SHARE_MAX = 0.030
+
+/*
+ * Full TRS down the tree. `coatTriangles` above accumulates SCALE only, which is
+ * enough to compare areas and quite useless for asking which way a face points:
+ * a rotated node would report its normal in the wrong frame, and the whole rule
+ * turns on that normal.
+ */
+const IDENT = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
+
+function mul(a, b) {
+  const o = new Array(16).fill(0)
+  for (let c = 0; c < 4; c++) {
+    for (let r = 0; r < 4; r++) {
+      let s = 0
+      for (let k = 0; k < 4; k++) s += a[k * 4 + r] * b[c * 4 + k]
+      o[c * 4 + r] = s
+    }
+  }
+  return o
+}
+
+function trs(node) {
+  if (node.matrix) return node.matrix.slice()
+  const t = node.translation ?? [0, 0, 0]
+  const [x, y, z, w] = node.rotation ?? [0, 0, 0, 1]
+  const s = node.scale ?? [1, 1, 1]
+  const x2 = x + x, y2 = y + y, z2 = z + z
+  const xx = x * x2, xy = x * y2, xz = x * z2
+  const yy = y * y2, yz = y * z2, zz = z * z2
+  const wx = w * x2, wy = w * y2, wz = w * z2
+  return [
+    (1 - (yy + zz)) * s[0], (xy + wz) * s[0], (xz - wy) * s[0], 0,
+    (xy - wz) * s[1], (1 - (xx + zz)) * s[1], (yz + wx) * s[1], 0,
+    (xz + wy) * s[2], (yz - wx) * s[2], (1 - (xx + yy)) * s[2], 0,
+    t[0], t[1], t[2], 1,
+  ]
+}
+
+const xform = (m, p) => [
+  m[0] * p[0] + m[4] * p[1] + m[8] * p[2] + m[12],
+  m[1] * p[0] + m[5] * p[1] + m[9] * p[2] + m[13],
+  m[2] * p[0] + m[6] * p[1] + m[10] * p[2] + m[14],
+]
+
+/** Every triangle in world space, tagged with the node and vertices it came from. */
+function harvest(g, bin) {
+  const tris = []
+  const meshNodes = []
+  const walk = (i, m) => {
+    const node = g.nodes[i]
+    const wm = mul(m, trs(node))
+    if (node.mesh !== undefined) {
+      meshNodes.push({ index: i, name: node.name ?? '', mesh: node.mesh })
+      for (const pr of g.meshes[node.mesh].primitives ?? []) {
+        if (pr.attributes.TEXCOORD_0 === undefined || pr.indices === undefined) continue
+        const uv = accessor(g, bin, pr.attributes.TEXCOORD_0)
+        const po = accessor(g, bin, pr.attributes.POSITION)
+        const ix = accessor(g, bin, pr.indices)
+        for (let k = 0; k + 2 < ix.length; k += 3) {
+          const c = [ix[k], ix[k + 1], ix[k + 2]]
+          const p = c.map(v => xform(wm, po[v]))
+          const e1 = [p[1][0] - p[0][0], p[1][1] - p[0][1], p[1][2] - p[0][2]]
+          const e2 = [p[2][0] - p[0][0], p[2][1] - p[0][1], p[2][2] - p[0][2]]
+          const cr = [
+            e1[1] * e2[2] - e1[2] * e2[1],
+            e1[2] * e2[0] - e1[0] * e2[2],
+            e1[0] * e2[1] - e1[1] * e2[0],
+          ]
+          const len = Math.hypot(...cr) || 1
+          tris.push({
+            nodeName: node.name ?? '', v: c, world: p,
+            centroid: [0, 1, 2].map(d => (p[0][d] + p[1][d] + p[2][d]) / 3),
+            area: 0.5 * len,
+            normal: cr.map(n => n / len),
+            uv: c.map(v => uv[v]),
+          })
+        }
+      }
+    }
+    for (const child of node.children ?? []) walk(child, wm)
+  }
+  for (const root of g.scenes?.[0]?.nodes ?? []) walk(root, IDENT)
+  return { tris, meshNodes }
+}
+
+/** Connected components of the WHOLE pet, welded by quantised world position. */
+function componentsOf(tris) {
+  const parent = tris.map((_, i) => i)
+  const find = a => {
+    while (parent[a] !== a) { parent[a] = parent[parent[a]]; a = parent[a] }
+    return a
+  }
+  const at = new Map()
+  const q = x => Math.round(x * 1e5)
+  tris.forEach((t, i) => {
+    for (const p of t.world) {
+      const k = `${q(p[0])},${q(p[1])},${q(p[2])}`
+      if (!at.has(k)) at.set(k, [])
+      at.get(k).push(i)
+    }
+  })
+  for (const list of at.values()) {
+    for (let i = 1; i < list.length; i++) {
+      const ra = find(list[0]), rb = find(list[i])
+      if (ra !== rb) parent[ra] = rb
+    }
+  }
+  const groups = new Map()
+  tris.forEach((_, i) => {
+    const r = find(i)
+    if (!groups.has(r)) groups.set(r, [])
+    groups.get(r).push(i)
+  })
+  return [...groups.values()]
+}
+
+/**
+ * Judge every component of one species.
+ *
+ * Pet-wide rather than per-node, and that is not cosmetic: the cat carries a
+ * 21-triangle whisker decal on a node of its own, where it is the LARGEST
+ * component. A per-node size rule lost it, and a rule that is right on 23 of 24
+ * species is a rule that has not been checked on 24.
+ */
+function analyseFaces(file) {
+  const { json: g, bin } = readGlb(join(PETS, file))
+  const { tris, meshNodes } = harvest(g, bin)
+  const total = tris.reduce((s, t) => s + t.area, 0)
+
+  const comps = componentsOf(tris).map(idx => {
+    const ts = idx.map(i => tris[i])
+    const bb = [[1e9, -1e9], [1e9, -1e9], [1e9, -1e9]]
+    let area = 0, nx = 0, ny = 0, nz = 0, cx = 0, cz = 0
+    for (const t of ts) {
+      area += t.area
+      nx += t.normal[0] * t.area; ny += t.normal[1] * t.area; nz += t.normal[2] * t.area
+      cx += t.centroid[0] * t.area; cz += t.centroid[2] * t.area
+      for (const p of t.world) for (let d = 0; d < 3; d++) {
+        bb[d][0] = Math.min(bb[d][0], p[d]); bb[d][1] = Math.max(bb[d][1], p[d])
+      }
+    }
+    const len = Math.hypot(nx, ny, nz) || 1
+    const extent = [0, 1, 2].map(d => bb[d][1] - bb[d][0])
+    return {
+      tris: ts, area, extent,
+      centroidX: cx / area, centroidZ: cz / area,
+      normal: [nx / len, ny / len, nz / len],
+      flatAxis: extent.findIndex(e => e < PLANAR_EPS),
+    }
+  })
+
+  const zmid = comps.reduce((s, c) => s + c.centroidZ * c.area, 0) / total
+  for (const c of comps) {
+    c.flat = c.flatAxis >= 0
+    c.forward = c.normal[2] >= FORWARD_DOT
+    c.front = c.centroidZ > zmid
+    c.small = c.area / total < FACE_MAX_SHARE
+    c.isFace = c.flat && c.forward && c.front && c.small
+  }
+  return { g, tris, meshNodes, comps, total }
+}
+
+/* ------------------------------------------------------- classify all 24 --- */
+
+const faceTable = {}
+const faceCost = []
+let planarTotal = 0, decalTotal = 0, faceVertexTotal = 0, rangeTotal = 0
+const reserveSources = new Set(RESERVE.keys())
+
+for (const f of files) {
+  const name = f.replace('animal-', '').replace('.glb', '')
+  const { g, tris, meshNodes, comps, total } = analyseFaces(f)
+  const decals = comps.filter(c => c.isFace)
+  planarTotal += comps.filter(c => c.flat).length
+  decalTotal += decals.length
+
+  /* -- can a vertex be addressed by node name and index at all? ---------- */
+
+  const seen = new Set(), meshes = new Set()
+  for (const n of meshNodes) {
+    must(n.name !== '', `${name}: an unnamed mesh node`)
+    must(!seen.has(n.name), `${name}: two mesh nodes called ${n.name}`)
+    seen.add(n.name)
+    const prims = (g.meshes[n.mesh].primitives ?? []).length
+    must(prims === 1, `${name}: node ${n.name} holds ${prims} primitives`)
+    /*
+     * Two nodes on one glTF mesh would arrive from GLTFLoader as two Meshes
+     * SHARING a BufferGeometry — so patching by name would write one buffer
+     * twice, with two different vertex sets. It does not happen; asserted so
+     * that it cannot start happening quietly.
+     */
+    must(!meshes.has(n.mesh), `${name}: two nodes share glTF mesh ${n.mesh}`)
+    meshes.add(n.mesh)
+  }
+
+  /* -- is the thing we found shaped like a face? ------------------------- */
+
+  must(decals.length >= 2, `${name}: ${decals.length} face decals, expected at least 2`)
+  const pair = [...decals].sort((a, b) => b.area - a.area).slice(0, 2)
+  if (pair.length === 2) {
+    must(Math.abs(pair[0].area - pair[1].area) < 1e-6,
+      `${name}: the two largest decals differ in area`)
+    must(Math.abs(pair[0].centroidX + pair[1].centroidX) < 1e-4,
+      `${name}: the two largest decals are not a mirrored pair`)
+  }
+
+  /* -- which vertices move, and where ------------------------------------ */
+
+  const decalTris = new Set()
+  for (const c of decals) for (const t of c.tris) decalTris.add(t)
+
+  /** node -> vertex -> destination column. */
+  const want = new Map()
+  for (const t of decalTris) {
+    for (let i = 0; i < 3; i++) {
+      const column = Math.round(t.uv[i][0] * img.w)
+      must(reserveSources.has(column),
+        `${name}: a decal samples column ${column}, which has no reserve`)
+      const dst = RESERVE.get(column)
+      if (dst === undefined) continue
+      if (!want.has(t.nodeName)) want.set(t.nodeName, new Map())
+      const mine = want.get(t.nodeName)
+      const already = mine.get(t.v[i])
+      must(already === undefined || already === dst,
+        `${name}: vertex ${t.v[i]} of ${t.nodeName} wanted in two reserved columns`)
+      mine.set(t.v[i], dst)
+    }
+  }
+
+  /*
+   * A decal vertex shared with a coat triangle would drag coat into the
+   * reserve and freeze it. Zero across the pack — the decals really are
+   * separate sheets rather than welded panels.
+   */
+  for (const t of tris) {
+    if (decalTris.has(t)) continue
+    const mine = want.get(t.nodeName)
+    if (!mine) continue
+    for (const v of t.v) {
+      must(!mine.has(v), `${name}: vertex ${v} of ${t.nodeName} is on a decal AND the coat`)
+    }
+  }
+
+  /* -- pack into runs, which is how the runtime wants it ------------------ */
+
+  const perNode = {}
+  for (const [node, mine] of want) {
+    const byDst = {}
+    for (const [v, dst] of [...mine.entries()].sort((a, b) => a[0] - b[0])) {
+      const runs = (byDst[dst] ??= [])
+      const last = runs[runs.length - 1]
+      if (last && last[0] + last[1] === v) last[1]++
+      else runs.push([v, 1])
+    }
+    perNode[node] = byDst
+    for (const runs of Object.values(byDst)) rangeTotal += runs.length
+  }
+  faceTable[name] = perNode
+  const verts = [...want.values()].reduce((s, m) => s + m.size, 0)
+  faceVertexTotal += verts
+
+  /* -- nothing samples the reserve today --------------------------------- */
+
+  for (const t of tris) {
+    for (const [u] of t.uv) {
+      must(!inReserve(Math.round(u * img.w - 0.5)),
+        `${name}: something already samples the reserved columns`)
+    }
+  }
+
+  /* -- what it costs ----------------------------------------------------- */
+
+  const texels = new Set()
+  for (const t of decalTris) {
+    for (const [u, v] of t.uv) {
+      texels.add(Math.min(img.w - 1, Math.max(0, Math.round(u * img.w - 0.5)))
+        + ',' + Math.min(img.h - 1, Math.max(0, Math.round(v * img.h - 0.5))))
+    }
+  }
+  const share = decals.reduce((s, c) => s + c.area, 0) / total
+  must(share > FACE_SHARE_MIN && share < FACE_SHARE_MAX,
+    `${name}: face decals are ${(100 * share).toFixed(2)}% of the pet, outside `
+    + `${100 * FACE_SHARE_MIN}..${100 * FACE_SHARE_MAX}%`)
+  faceCost.push({
+    name, decals: decals.length, tris: decalTris.size, verts, share, texels: texels.size,
+  })
+}
+
+console.log('\n\nFACE DECALS — the geometry a set may never recolour')
+console.log(`planar components in the pack   ${planarTotal}`)
+console.log(`...judged FACE DECAL            ${decalTotal}`)
+console.log(`vertices to re-UV               ${faceVertexTotal} in ${rangeTotal} runs`)
+console.log('\nspecies        decals  faceTris  faceVerts  faceArea%  texels')
+for (const c of faceCost) {
+  console.log('  ' + c.name.padEnd(14)
+    + String(c.decals).padStart(6) + String(c.tris).padStart(10)
+    + String(c.verts).padStart(11) + (100 * c.share).toFixed(2).padStart(10)
+    + String(c.texels).padStart(8))
+}
+const faceShares = faceCost.map(c => c.share).sort((a, b) => a - b)
+console.log(`\nfaceArea% frozen: min ${(100 * faceShares[0]).toFixed(2)}`
+  + `  median ${(100 * faceShares[12]).toFixed(2)}`
+  + `  max ${(100 * faceShares[faceShares.length - 1]).toFixed(2)}`)
+console.log('Compare a COLOUR rule: protecting near-achromatic texels would freeze')
+console.log('69.7% of a polar bear and 56.5% of a cow. That is the whole argument.')
+
+/* -- idempotence, played out on a copy of the real UVs ---------------------- */
+
+let firstPass = 0, secondPass = 0
+for (const f of files) {
+  const name = f.replace('animal-', '').replace('.glb', '')
+  const { json: g, bin } = readGlb(join(PETS, f))
+  const { tris } = harvest(g, bin)
+  const uvOf = new Map()
+  for (const t of tris) {
+    if (!uvOf.has(t.nodeName)) uvOf.set(t.nodeName, new Map())
+    for (let i = 0; i < 3; i++) uvOf.get(t.nodeName).set(t.v[i], t.uv[i][0])
+  }
+  const apply = () => {
+    let n = 0
+    for (const [node, byDst] of Object.entries(faceTable[name])) {
+      for (const [dst, runs] of Object.entries(byDst)) {
+        for (const [first, count] of runs) {
+          for (let v = first; v < first + count; v++) {
+            if (uvOf.get(node).get(v) === Number(dst) / img.w) continue
+            uvOf.get(node).set(v, Number(dst) / img.w)
+            n++
+          }
+        }
+      }
+    }
+    return n
+  }
+  firstPass += apply()
+  secondPass += apply()
+}
+must(firstPass === faceVertexTotal, `the patch moved ${firstPass}, not ${faceVertexTotal}`)
+must(secondPass === 0, `applying the patch twice moved ${secondPass} more vertices`)
+console.log(`\nidempotence: first pass moved ${firstPass} UVs, second pass ${secondPass}.`)
+
+/* -- the reserve itself ----------------------------------------------------- */
+
+const drift = reserveDrift(img)
+must(drift === 0, `colormap.png's reserve is ${drift} bytes adrift`
+  + ' — run `npm run pets:reserve`')
+console.log(`reserve x ${RESERVE_X[0]}..${RESERVE_X[1]} of colormap.png: `
+  + `${drift} bytes adrift from the swatches it copies.`)
+
+const FACE_OUT = resolve(here, '../../src/island/variants/species-face.json')
+writeFileSync(FACE_OUT, JSON.stringify(faceTable) + '\n')
+console.log('wrote species-face.json')
+
+if (failures.length) {
+  console.error(`\n${failures.length} INVARIANT(S) BROKEN:`)
+  for (const f of failures) console.error('  ' + f)
+  console.error('\nEither colormap.png has gone stale — `npm run pets:reserve` — or the')
+  console.error('art has been re-exported in a way the face-decal rule does not survive.')
+  console.error('Fix the rule against the new models rather than shipping berry eyeballs.')
+  process.exit(1)
+}
+console.log('\nall face-decal invariants hold.')

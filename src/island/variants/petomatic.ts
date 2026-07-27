@@ -20,6 +20,7 @@ import { createLighting, flattenImported } from '../lighting'
 import type { LightingPreset } from '../lighting'
 import { SETS } from './sets'
 import { createSetAtlas } from './atlas'
+import { wearFaceUVs } from './facedecals'
 
 /** Six across, four down: 24 species on one screen, all turning. */
 const COLUMNS = 6
@@ -52,6 +53,10 @@ export async function runPetOMatic(
     const gltf = await loader.loadAsync(`${base}pets/${name}.glb`)
     const pet = gltf.scene
     flattenImported(pet)
+    // Beside its sibling, and for the same reason: a fact about the model that
+    // has to be true before anything looks at it. This page loads each species
+    // itself rather than through the pet field's cache, so it needs its own call.
+    wearFaceUVs(pet, name)
     pet.scale.setScalar(0.5)
 
     const stand = new THREE.Group()
