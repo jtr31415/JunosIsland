@@ -21,7 +21,7 @@
  * for open sea.
  */
 import { describe, it, expect } from 'vitest'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createIsland, place, isLand, tileAt } from '../../src/island/world/grid'
@@ -34,10 +34,37 @@ import { createFlow, tileOffer, tileTypeFor, rockUnlocked } from '../../src/isla
 import type { Flow } from '../../src/island/flow'
 import { spaceSurplus } from '../../src/island/governors'
 import { PALETTE } from '../../src/island/world/increments'
+import { MOUNTAIN_HEXES } from '../../src/island/world/props'
 import { balance } from '../../src/island/balance'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const PUBLIC = resolve(here, '../../src/island/public')
+
+/**
+ * The widest horizontal extent of a glTF, read straight from its accessors.
+ *
+ * `max(x, z)`, matching how `fitInto` defines width — measuring a different axis
+ * is the mistake that pack already cost this project once, on the hex itself.
+ */
+function widthOf(rel: string): number {
+  const j = JSON.parse(readFileSync(resolve(PUBLIC, rel), 'utf8')) as {
+    meshes?: Array<{ primitives: Array<{ attributes: { POSITION: number } }> }>
+    accessors: Array<{ min?: number[]; max?: number[] }>
+  }
+  let lo = [Infinity, Infinity, Infinity]
+  let hi = [-Infinity, -Infinity, -Infinity]
+  for (const mesh of j.meshes ?? []) {
+    for (const prim of mesh.primitives) {
+      const acc = j.accessors[prim.attributes.POSITION]
+      if (!acc?.min || !acc.max) continue
+      for (let i = 0; i < 3; i++) {
+        lo[i] = Math.min(lo[i] as number, acc.min[i] as number)
+        hi[i] = Math.max(hi[i] as number, acc.max[i] as number)
+      }
+    }
+  }
+  return Math.max((hi[0] as number) - (lo[0] as number), (hi[2] as number) - (lo[2] as number))
+}
 
 /** Ring of six around the origin, in the order `neighbours` returns them. */
 const RING: Array<[number, number]> = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]]
@@ -88,14 +115,22 @@ describe('rock is dry land, everywhere the code asks', () => {
     expect(lookFor(i, { q: 1, r: 0 })).toEqual({ kind: 'grass', turns: 0 })
   })
 
-  it('counts as somewhere a pet can live', () => {
+  it('is land, but is NOT counted as lodging for a pet', () => {
     /*
-     * The governors measure habitable land against pets. Counting rock out
-     * would make a mountain range read as no room at all, and set Fred asking
-     * her to read on an island with space to spare.
+     * THE ONE PLACE `isLand` IS THE WRONG QUESTION, and it is deliberate.
+     *
+     * A mountain hex is planted at the model's native size and centred, so the
+     * mound covers its tile and blocks nearly the whole hex below walking
+     * height. There is nowhere on it for a pet to stand. Were it counted as
+     * room, the governor would believe she has space she cannot use and pets
+     * would fail placement silently — worse than a visible shortage.
+     *
+     * So: rock counts as land for the COASTLINE (it is dry, it can be built
+     * from) and not as habitat for the GOVERNORS. If these two ever agree
+     * again, one of them has been changed without the other being considered.
      */
     const f = { ...createFlow(), island: sketch('grass', { 0: 'rock', 1: 'rock' }) }
-    expect(spaceSurplus(f)).toBe(3)          // three tiles of land, no pets yet
+    expect(spaceSurplus(f)).toBe(1)          // the one field, not the two peaks
   })
 
   it('does not let mustBeWater fire beside it', () => {
@@ -281,5 +316,61 @@ describe('a mountain tile actually looks like one', () => {
 
   it('is stony rather than leafy — no forest trees in the rock palette', () => {
     expect(PALETTE.rock.filter(n => /^Tree_|^tree_|^trees_/.test(n))).toEqual([])
+  })
+})
+
+describe('the finished mountain hex is the pack\'s pre-assembled one', () => {
+  /*
+   * Joe, 28 July, with the pack's own promo render: *"the mountain tiles are not
+   * as expected... the tiles from the hex set that i am expecting for the
+   * moutnain selection."* In that render each mound COVERS its hex. The first
+   * attempt drew them through the ordinary feature path, which fits to
+   * `FITS.big` and off-centres by `spread` on purpose — a mountain ON a meadow
+   * rather than a mountain hex — so they came out as boulders on grass.
+   */
+
+  it('every mountain model exists on disk', () => {
+    const missing = MOUNTAIN_HEXES
+      .map(m => m.name)
+      .filter(n => !existsSync(resolve(PUBLIC, 'props', `${n}.gltf`))
+        && !existsSync(resolve(PUBLIC, 'props', `${n}.glb`)))
+    expect(missing).toEqual([])
+  })
+
+  it('offers all three dressings Joe asked for, twice', () => {
+    // "pure grey, with green and with green and trees" — 27 July, and again on
+    // the 28th. The bare variants had been left out of the highland table.
+    const names = MOUNTAIN_HEXES.map(m => m.name)
+    expect(names.some(n => /^mountain_[A-C]$/.test(n)), 'no pure grey').toBe(true)
+    expect(names.some(n => /_grass$/.test(n)), 'none with green').toBe(true)
+    expect(names.some(n => /_grass_trees$/.test(n)), 'none with green and trees').toBe(true)
+  })
+
+  it('is a table SEPARATE from the highland features, and that is the point', () => {
+    /*
+     * If these ever become the same list, the distinction that fixed this bug is
+     * gone: `FEATURES.highland` is fitted and off-centred to leave a green rim,
+     * and `MOUNTAIN_HEXES` is planted native and centred to cover the hex.
+     */
+    expect(MOUNTAIN_HEXES.length).toBeGreaterThanOrEqual(6)
+    for (const m of MOUNTAIN_HEXES) expect(m.name).toMatch(/^mountain_/)
+    // Nothing in here may carry `big`, which is what routes a piece through the
+    // shrinking path it must avoid.
+    for (const m of MOUNTAIN_HEXES) {
+      expect((m as { big?: boolean }).big, m.name).toBeUndefined()
+    }
+  })
+
+  it('is wide enough to cover its hex at native size', () => {
+    /*
+     * The measurement the fix rests on, asserted against the ASSETS so a
+     * re-export cannot quietly break it. The hex is 2.31 deep; a mountain is
+     * ~1.88, which is the thin rim in Joe's screenshot. Fitted to FITS.big it
+     * came out at 1.7 and the variation took it lower still.
+     */
+    const w = widthOf('props/mountain_A_grass.gltf')
+    const hex = widthOf('tiles/hex_grass.gltf')
+    expect(w / hex).toBeGreaterThan(0.75)
+    expect(w).toBeGreaterThan(1.7)   // i.e. bigger than FITS.big would allow
   })
 })

@@ -53,7 +53,6 @@ import {
 import type { InteractionPorts } from './interactions'
 import type { Flow } from './flow'
 import type { TileType } from './world/grid'
-import { isLand } from './world/grid'
 import { toWorld } from './world/hex'
 import type { Axial } from './world/hex'
 
@@ -525,9 +524,12 @@ async function boot(): Promise<void> {
 
     const tiles: Axial[] = []
     for (const [k, type] of flow.island.tiles) {
-      // Rock is somewhere a pet can be, so it is somewhere the egg can sit too.
-      // `clearOf` keeps whatever lands here out of the mountain itself.
-      if (!isLand(type)) continue
+      /*
+       * Fields only, matching `governors.spaceSurplus`. A mountain hex is covered
+       * by its own mound, so siting the egg there would bury it in a hillside —
+       * exactly the fault Joe reported as "frog, egg, animals into mountains".
+       */
+      if (type !== 'grass') continue
       const parts = k.split(',').map(Number)
       tiles.push({ q: parts[0] as number, r: parts[1] as number })
     }

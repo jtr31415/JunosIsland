@@ -17,7 +17,7 @@
  */
 import type { Flow } from './flow'
 import { balance } from './balance'
-import { sockets, isLand } from './world/grid'
+import { sockets } from './world/grid'
 
 export type Governor = 'none' | 'space-surplus' | 'nursery-queue'
 
@@ -48,13 +48,23 @@ export function inGracePeriod(f: Flow): boolean {
 /** Empty habitable land beyond what the current pets need. */
 export function spaceSurplus(f: Flow): number {
   /*
-   * Every owned tile of DRY LAND is somewhere a pet could live — rock included.
-   * The rocky pre-assembles are grass-topped and pets walk on them, so counting
-   * them out would make a mountain range read to the governor as no room at all
-   * and set Fred nagging her to read on an island with space to spare.
+   * FIELDS ONLY. Rock is land but it is not LODGING, and the distinction is
+   * deliberate rather than an oversight — `isLand` is the right question for the
+   * coastline and the wrong one here.
+   *
+   * A mountain hex is planted at the model's native size and centred, so the
+   * mound covers its tile and `footprintBelow(WALKING_HEIGHT)` blocks very nearly
+   * the whole hex. There is nowhere on it for a pet to stand. Counting it as room
+   * would have the governor believe she has space she cannot use, and pets would
+   * fail placement quietly — a silent failure rather than a visible shortage,
+   * which is the worse of the two.
+   *
+   * The cost is that mountains do not advance the pet economy: a girl who builds
+   * a range still gets asked to read. That is honest, but it is a pacing decision
+   * Joe should see rather than infer — carded.
    */
   let habitable = 0
-  for (const type of f.island.tiles.values()) if (isLand(type)) habitable++
+  for (const type of f.island.tiles.values()) if (type === 'grass') habitable++
   return habitable - f.pets.length
 }
 

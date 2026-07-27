@@ -129,6 +129,46 @@ const FEATURES: Record<Character, Array<{ name: string; weight: number; big?: bo
 }
 
 /**
+ * The pre-assembled mountain hexes, for a tile she CHOSE to be a mountain.
+ *
+ * A separate table from `FEATURES.highland` on purpose, and the difference is
+ * the whole of Joe's correction. `FEATURES` holds mountains as a FEATURE OF a
+ * meadow — fitted to `FITS.big`, off-centred by `spread`, so a green rim shows
+ * and the hex still reads as a field with a mountain on it. That is right for a
+ * tile the island dressed on its own, and wrong for a tile she picked mountains
+ * for. Joe, with a screenshot of the pack's own promo render: *"the mountain
+ * tiles are not as expected... the tiles from the hex set that i am expecting
+ * for the moutnain selection."* In that render each mound COVERS its hex.
+ *
+ * So these are planted at native size and centred — see the `rockTile` branch in
+ * `sync` — because the pack already sized them to a hex: `mountain_A_grass` is
+ * 1.88 across against the hex's 2.31, which is the thin rim in his screenshot.
+ * Fitting them to `FITS.big` scaled them to about 0.91 and the size variation
+ * took the small end to 0.72, which is what made them read as boulders on grass.
+ *
+ * All THREE dressings he asked for, twice: *"pure grey, with green and with
+ * green and trees."* The bare variants were previously left out on the grounds
+ * that the Summer atlas renders their rock tan — worth checking by eye, but his
+ * instruction is explicit and a mountain range wants some bare peaks in it.
+ */
+/*
+ * Typed with the optional `big` that `FEATURES` entries carry, so the two can
+ * share the one placement path — and left UNSET on every entry, because `big` is
+ * what routes a piece into the fit-and-offset branch these must avoid. A test
+ * pins that it stays unset.
+ */
+export const MOUNTAIN_HEXES: Array<{ name: string; weight: number; big?: boolean }> = [
+  { name: 'mountain_A', weight: 2 },
+  { name: 'mountain_B', weight: 2 },
+  { name: 'mountain_C', weight: 2 },
+  { name: 'mountain_A_grass', weight: 3 },
+  { name: 'mountain_B_grass', weight: 3 },
+  { name: 'mountain_C_grass', weight: 3 },
+  { name: 'mountain_A_grass_trees', weight: 3 },
+  { name: 'mountain_C_grass_trees', weight: 3 },
+]
+
+/**
  * Ground cover from the Forest Nature pack — the small stuff that makes a tile
  * look inhabited rather than decorated.
  *
@@ -773,6 +813,36 @@ export function createPropField(base = ''): PropField {
     return t
   }
 
+  /**
+   * The BASE palette, for stone that has to read as stone.
+   *
+   * KayKit ships one atlas in four palettes and the geometry samples whichever is
+   * bound, so this is a colour choice and nothing more (see `Season` in
+   * tiles.ts). The island binds Summer, which is right for grass — #3b903a
+   * against base's olive #a2a721 — but Summer also shifts the ROCK swatch warm,
+   * and a mountain drawn with it comes out tan. Rendered and looked at: the range
+   * read as sandstone buttes dropped on a green island.
+   *
+   * Joe asked for *"pure grey"* twice, and his reference is the pack's own promo
+   * render, which uses this palette — grey rock under yellow-green tops. So
+   * mountain hexes bind base and everything else stays Summer. The olive tops
+   * that come with it are a fair price and arguably right: high ground with
+   * thinner grass on it.
+   */
+  let stone: THREE.Texture | null = null
+  async function stoneAtlas(): Promise<THREE.Texture> {
+    if (stone) return stone
+    const t = await new THREE.TextureLoader().loadAsync(
+      `${base}tiles/hexagons_medieval.png`)
+    t.colorSpace = THREE.SRGBColorSpace
+    t.flipY = false
+    t.generateMipmaps = false
+    t.minFilter = THREE.LinearFilter
+    t.magFilter = THREE.LinearFilter
+    stone = t
+    return t
+  }
+
   async function forestTexture(): Promise<THREE.Texture> {
     if (forestTex) return forestTex
     const t = await new THREE.TextureLoader().loadAsync(`${base}forest/forest_texture.png`)
@@ -797,17 +867,26 @@ export function createPropField(base = ''): PropField {
     return gltf.scene.clone(true)
   }
 
-  async function model(name: string): Promise<THREE.Object3D> {
-    const hit = cache.get(name)
+  /**
+   * `grey` binds the base palette instead of Summer — see `stoneAtlas`.
+   *
+   * THE CACHE KEY CARRIES IT, and it must: the same `mountain_A_grass` is used
+   * both as a highland tile's feature (Summer, so it matches the meadow it rose
+   * from) and as a mountain hex (base, so its rock is grey). Keyed on the name
+   * alone, whichever loaded first would silently decide the colour of the other.
+   */
+  async function model(name: string, grey = false): Promise<THREE.Object3D> {
+    const ck = grey ? 'grey:' + name : name
+    const hit = cache.get(ck)
     if (hit) return hit.clone(true)
     const gltf = await loader.loadAsync(`${base}props/${name}.gltf`)
     flattenImported(gltf.scene)
-    const tex = await sharedAtlas()
+    const tex = grey ? await stoneAtlas() : await sharedAtlas()
     gltf.scene.traverse(o => {
       const m = o as THREE.Mesh
       if (m.isMesh) (m.material as THREE.MeshStandardMaterial).map = tex
     })
-    cache.set(name, gltf.scene)
+    cache.set(ck, gltf.scene)
     return gltf.scene.clone(true)
   }
 
@@ -1037,8 +1116,16 @@ export function createPropField(base = ''): PropField {
          * which is exactly the pre-assembled set Joe asked for, "with gras and
          * gras plus mountains".
          */
-        const character = type === 'rock' ? 'highland' : characterOf(a)
-        const spec = pick(FEATURES[character], h)
+        /*
+         * A rock hex is ALWAYS a mountain, never rolled — and it is drawn from
+         * `MOUNTAIN_HEXES`, not from the highland feature table. See that table
+         * for why the two differ: one is a mountain ON a meadow, the other is a
+         * mountain hex. `highland` still supplies the ground COVER, so the rim
+         * around the mound is stony rather than lush.
+         */
+        const rockTile = type === 'rock'
+        const character = rockTile ? 'highland' : characterOf(a)
+        const spec = rockTile ? pick(MOUNTAIN_HEXES, h) : pick(FEATURES[character], h)
         const w = home
 
         if (!spec.name) {
@@ -1048,7 +1135,9 @@ export function createPropField(base = ''): PropField {
         }
         // Big features sit centred — a mountain half off its hex looks broken.
         // Small ones scatter, so a wood does not look like a plantation.
-        const spread = spec.big ? 0.12 : 0.5
+        // A mountain hex sits dead centre: it IS the tile, so there is no rim to
+        // preserve and nothing for an offset to reveal.
+        const spread = rockTile ? 0 : (spec.big ? 0.12 : 0.5)
 
         /*
          * Find ground it can actually stand on, trying the derived spot first
@@ -1059,7 +1148,7 @@ export function createPropField(base = ''): PropField {
          */
         // Same rule as the cover above: a feature that will not load leaves
         // this hex for the next sync rather than every hex after it bare.
-        const obj = await model(spec.name).catch(() => null)
+        const obj = await model(spec.name, rockTile).catch(() => null)
         if (!obj) continue
         /*
          * Landscape is fitted by FOOTPRINT and objects by HEIGHT.
@@ -1068,9 +1157,21 @@ export function createPropField(base = ''): PropField {
          * likes — that variation is the skyline. A tree has to stand the
          * right height beside a pet and may be any width it likes.
          */
-        const [fw, fh] = spec.big ? FITS.big : FITS.feature
-        const vary = VARY.feature.min + ((h >> 11) % VARY.feature.span) / 100
-        fitInto(obj, fw * vary, fh * vary)
+        /*
+         * NATIVE SIZE for a mountain hex, and no size variation either.
+         *
+         * The pack sized these to a hex already; every scale factor applied on
+         * top of that is a shrink, which is the bug Joe reported. The variation
+         * has to go with it — `VARY.feature` reaches 0.8 at the low end, so one
+         * mountain in a range would have been a fifth smaller than its
+         * neighbours, and a range of mismatched peaks reads as a mistake rather
+         * than as terrain. Variety comes from the eight models instead.
+         */
+        if (!rockTile) {
+          const [fw, fh] = spec.big ? FITS.big : FITS.feature
+          const vary = VARY.feature.min + ((h >> 11) % VARY.feature.span) / 100
+          fitInto(obj, fw * vary, fh * vary)
+        }
         const r = footprintOf(obj)
 
         /*
