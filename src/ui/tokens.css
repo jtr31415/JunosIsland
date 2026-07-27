@@ -68,9 +68,20 @@
   display: grid;
   place-items: center;
   padding: 2vh 2vw;
+  /*
+   * The backdrop CATCHES taps while a round is open, so tapping beside the
+   * panel goes back to the island — the first thing anyone tries with a
+   * modal. It was `none`, which let taps fall through to the canvas where
+   * they were discarded for being mid-challenge: the backdrop looked
+   * dismissible and did nothing at all.
+   *
+   * Only while open. Hidden, it must not swallow taps meant for the world.
+   */
   pointer-events: none;
   z-index: 10;
 }
+
+.overlay:not(.hide) { pointer-events: auto; }
 
 .overlay > * { pointer-events: auto; }
 

@@ -56,6 +56,17 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
+/**
+ * Tap the backdrop: down AND up out here.
+ *
+ * Release-based like the world, so a finger landing on the dimmed area to
+ * drag the island behind the panel does not dismiss the round on contact.
+ */
+function backdropTap(layer: HTMLElement): void {
+  layer.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+  layer.dispatchEvent(new Event('pointerup', { bubbles: true }))
+}
+
 /** Answer a sum correctly by tapping its number chips. */
 function solve(root: HTMLElement, answer: number): void {
   const chips = [...root.querySelectorAll('.nchip')] as HTMLElement[]
@@ -169,5 +180,52 @@ describe('say it again', () => {
     expect(isOpen()).toBe(true)
     expect(host.onPassed).not.toHaveBeenCalled()
     expect(host.onDismissed).not.toHaveBeenCalled()
+  })
+})
+
+describe('the backdrop', () => {
+  it('tapping outside the panel goes back to the island', () => {
+    const { overlay, host, layer, isOpen } = setup()
+    overlay.openSum(SUM)
+    backdropTap(layer)
+    expect(isOpen()).toBe(false)
+    expect(host.onDismissed).toHaveBeenCalled()
+  })
+
+  it('COLLECTS work already earned rather than discarding it', () => {
+    /*
+     * The backdrop takes the same path as the button, so a correct answer
+     * followed by an impatient tap outside still banks the reward. Silently
+     * throwing away work she had done would be far worse than a dead
+     * backdrop (brief section 18).
+     */
+    const { root, overlay, host, layer } = setup()
+    overlay.openSum(SUM)
+    solve(root, SUM_ANSWER)
+    backdropTap(layer)
+    expect(host.onPassed).toHaveBeenCalledWith(false)
+    expect(host.onDismissed).not.toHaveBeenCalled()
+  })
+
+  it('ignores taps INSIDE the panel, which would close it mid-word', () => {
+    const { root, overlay, host, isOpen } = setup()
+    overlay.openWordFind(PICKS)
+    const word = root.querySelector('#words .word') as HTMLElement
+    word.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+    word.dispatchEvent(new Event('pointerup', { bubbles: true }))
+    expect(isOpen()).toBe(true)
+    expect(host.onDismissed).not.toHaveBeenCalled()
+  })
+
+  it('does NOT dismiss a press that began inside and drifted out', () => {
+    // Answering a word, finger slides off the panel edge as it lifts. That is
+    // not a request to leave, and treating it as one would throw her out of a
+    // round mid-answer.
+    const { root, overlay, layer, isOpen } = setup()
+    overlay.openWordFind(PICKS)
+    const word = root.querySelector('#words .word') as HTMLElement
+    word.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+    layer.dispatchEvent(new Event('pointerup', { bubbles: true }))
+    expect(isOpen()).toBe(true)
   })
 })

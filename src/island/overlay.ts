@@ -225,6 +225,26 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
 
   again.onclick = () => { handle?.sayAgain() }
 
+  /*
+   * Tapping outside the panel goes back to the island.
+   *
+   * The first thing anyone tries with a modal, and the backdrop was dead. It
+   * takes exactly the same path as the button — which means work already
+   * earned is COLLECTED rather than thrown away (brief §18); a dismissal that
+   * silently discarded a correct answer would be much worse than a dead
+   * backdrop. The target check matters: without it, every tap inside the
+   * panel would bubble up and close the round mid-word.
+   */
+  let backdropPress = false
+  layer.addEventListener('pointerdown', e => { backdropPress = e.target === layer })
+  layer.addEventListener('pointerup', e => {
+    // On RELEASE, and only if the press began out here too. Acting on contact
+    // would dismiss a round the moment a finger landed to drag the island
+    // behind the panel — the very gesture the canvas was just fixed for.
+    if (backdropPress && e.target === layer) back.click()
+    backdropPress = false
+  })
+
   back.onclick = () => {
     const wasOpen = !layer.classList.contains('hide')
     if (!wasOpen) return

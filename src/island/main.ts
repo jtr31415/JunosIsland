@@ -24,6 +24,7 @@ import { OPENING, HATCH_LINES, fill } from './script'
 import { loadIsland, saveIsland } from './save'
 import { createLocalStore } from '../platform/storage'
 import { createFlow, tapEgg, tapSum, askForLand, challengePassed, chooseTile, tileOffer } from './flow'
+import { bindWorldTaps } from './taps'
 import {
   handleWorldTap, handleChallengePassed, handleChallengeDismissed,
 } from './interactions'
@@ -629,9 +630,18 @@ async function boot(): Promise<void> {
     win: () => sfx.play('win'),
   }
 
-  canvas.addEventListener('pointerdown', e => {
+  /*
+   * Acted on RELEASE, not on contact.
+   *
+   * The island is both a thing you turn and a thing you touch, and those two
+   * gestures start identically — so firing on pointerdown meant the moment a
+   * finger landed to rotate the world it had already opened a maths round.
+   * You cannot know a press was a tap until it ends. taps.ts owns the rule
+   * and is tested; this is only plumbing.
+   */
+  bindWorldTaps(canvas, (x, y) => {
     const before = flow
-    flow = handleWorldTap(flow, world.pick(e.clientX, e.clientY), ports)
+    flow = handleWorldTap(flow, world.pick(x, y), ports)
     if (flow !== before) refresh()
   })
 
