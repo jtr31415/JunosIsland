@@ -95,8 +95,23 @@
   backdrop-filter: blur(2px);
 }
 
-/* While a challenge is open the say card would collide with it. */
-body:has(.overlay:not(.hide)) .say { display: none; }
+/*
+ * While a challenge is open the say card would collide with it — and so would
+ * the album, which is not an `.overlay` and so was not covered.
+ *
+ * Fable caught this reviewing the pop-out: with a friend on screen, "Tap the egg
+ * to read it home" sat behind her, competing with the card's own name and
+ * species. It was always true of the album grid; blur and opaque paper hid it,
+ * and a transparent pop-out does not.
+ *
+ * Safe against the mirror this selector is warned about in HANDOFF §6 — closing
+ * a panel REVEALS whatever copy was set behind it — because the album sets no
+ * copy of its own, so what comes back is the island's own standing line, which
+ * is still true.
+ */
+body:has(.overlay:not(.hide)) .say,
+body:has(.album:not(.hide)) .say,
+body:has(.album-pop:not(.hide)) .say { display: none; }
 
 /*
  * ...and so would the album button, which sits in exactly the corner the way

@@ -25,9 +25,25 @@ const PUBLIC = resolve(here, '../../src/island/public')
 /** Forest Nature pieces live in `forest/` and are named `Thing_1_A_Color1`. */
 const isForest = (name: string): boolean => /_Color\d+$/.test(name)
 
-const exists = (name: string): boolean =>
-  existsSync(resolve(PUBLIC, isForest(name) ? 'forest' : 'props', `${name}.gltf`))
-  || existsSync(resolve(PUBLIC, isForest(name) ? 'forest' : 'props', `${name}.glb`))
+/*
+ * MEMOISED, and it matters. The choice test below walks a 25x25 field across four
+ * characters and nine pieces — 22,500 picks — over a set of about sixty distinct
+ * names. Unmemoised that is ~45,000 filesystem stats, which took the test past
+ * vitest's five-second default under parallel load and reddened the suite for
+ * reasons that had nothing to do with the code. Same lesson as the coast test:
+ * a gate that fails when the machine is busy is one people learn to ignore
+ * (HANDOFF §3).
+ */
+const seen = new Map<string, boolean>()
+const exists = (name: string): boolean => {
+  const hit = seen.get(name)
+  if (hit !== undefined) return hit
+  const dir = isForest(name) ? 'forest' : 'props'
+  const ok = existsSync(resolve(PUBLIC, dir, `${name}.gltf`))
+    || existsSync(resolve(PUBLIC, dir, `${name}.glb`))
+  seen.set(name, ok)
+  return ok
+}
 
 const CHARACTERS: Character[] = ['meadow', 'wood', 'rocky', 'highland']
 
