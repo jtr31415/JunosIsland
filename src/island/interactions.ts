@@ -17,6 +17,7 @@
 import { tapEgg, tapSum, askForLand, challengePassed, challengeFailed, placeTile } from './flow'
 import { TILE_QUESTION } from './script'
 import type { Flow, HatchDetails } from './flow'
+import type { Axial } from './world/hex'
 import type { Hit } from './scene'
 
 export interface InteractionPorts {
@@ -51,6 +52,14 @@ export interface InteractionPorts {
   /** Fred hops and says his name, like any other friend. */
   greetFred(): void
   bouncePet(id: string): void
+  /**
+   * Turn the island about this tile — "zoom to location" (Joe, 27 July).
+   *
+   * A camera move and nothing else: it changes no state, costs nothing, and
+   * must never be paired with opening a round. See the `tile` case below for
+   * why this gesture and not another.
+   */
+  focusOn(a: Axial): void
   say(text: string): void
   clearSay(): void
   speak(text: string): void
@@ -148,18 +157,31 @@ export function handleWorldTap(flow: Flow, hit: Hit | null, p: InteractionPorts)
 
     case 'tile': {
       /*
-       * Tapping her own land does NOTHING, deliberately.
+       * Tapping her own land turns the island about THAT tile.
        *
-       * It used to start a maths round, so there was no way to turn the camera
-       * or look at what she had built without being handed a sum. Land is
-       * asked for at a socket now — the glowing outline at the island's edge,
-       * which says "you could build here" in the one place building happens.
+       * It never starts a round — it used to, so there was no way to look at
+       * what she had built without being handed a sum, and land is asked for
+       * at a socket now. That left the tile tap doing nothing at all, which is
+       * the slot this fills, and it fills it with the one thing the tap can
+       * unambiguously mean: *look here*.
        *
-       * A plot already under construction is the exception: tapping the tile
-       * she is in the middle of building carries on with it, because that is
-       * unambiguously what she is doing.
+       * Why this gesture and not a double-tap or a tap on the sea. A
+       * double-tap is unreliable from a six-year-old and would have to be told
+       * apart from two ordinary taps, which is a new state machine on the one
+       * path in the game that has already caused two reported bugs. The sea
+       * carries no location worth pivoting on, and pivoting over open water is
+       * precisely the "lost the island" failure the camera is built to prevent.
+       * Her own land is the only surface where "look here" has a meaning, and
+       * it was already free.
+       *
+       * Nothing is lost or spent, so a mis-aimed tap costs her only a tap
+       * somewhere better (brief section 19).
+       *
+       * A plot already under construction is the exception: tapping while one
+       * stands carries on building it, because that is unambiguously what she
+       * is doing — and a tap must never both move the camera and open a round.
        */
-      if (!flow.plot) return flow
+      if (!flow.plot) { p.focusOn(hit.axial); return flow }
       const next = askForLand(flow)
       if (next === flow) return flow
       if (next.phase === 'challenge') p.openSum(next)

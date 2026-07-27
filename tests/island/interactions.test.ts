@@ -21,6 +21,7 @@ function ports(over: Partial<InteractionPorts> = {}): InteractionPorts {
     openSum: vi.fn(),
     greetFred: vi.fn(),
     bouncePet: vi.fn(),
+    focusOn: vi.fn(),
     say: vi.fn(),
     clearSay: vi.fn(),
     speak: vi.fn(),
@@ -132,11 +133,47 @@ describe('tapping her own land', () => {
    * of grass used to start a maths round, so turning the camera to look at
    * what she had built handed her a sum instead.
    */
-  it('does nothing when there is no plot under construction', () => {
+  it('starts no challenge when there is no plot under construction', () => {
     const p = ports()
     const f = createFlow()
     expect(handleWorldTap(f, { kind: 'tile', axial: { q: 0, r: 0 } }, p)).toBe(f)
     expect(p.openSum).not.toHaveBeenCalled()
+  })
+
+  /*
+   * Joe: "zoom to location. at the moment zoom and rotation is only around the
+   * origin tile." The tile tap was the one gesture in the game that did
+   * nothing at all, and "look here" is the only thing it can unambiguously
+   * mean — so that is what it now does. It moves the camera and NOTHING else.
+   */
+  it('turns the island about the tile she tapped', () => {
+    const p = ports()
+    const f = createFlow()
+    const next = handleWorldTap(f, { kind: 'tile', axial: { q: 3, r: -2 } }, p)
+    expect(p.focusOn).toHaveBeenCalledWith({ q: 3, r: -2 })
+    // Costs nothing and changes nothing: it is a camera move.
+    expect(next).toBe(f)
+  })
+
+  it('focuses without starting a challenge, ever', () => {
+    // The whole point of choosing a gesture that was previously inert.
+    const p = ports()
+    handleWorldTap(createFlow(), { kind: 'tile', axial: { q: 1, r: 0 } }, p)
+    expect(p.openSum).not.toHaveBeenCalled()
+    expect(p.openRead).not.toHaveBeenCalled()
+    expect(p.say).not.toHaveBeenCalled()
+  })
+
+  it('does not focus while a challenge is on screen', () => {
+    const p = ports({ challengeOpen: () => true })
+    handleWorldTap(createFlow(), { kind: 'tile', axial: { q: 1, r: 0 } }, p)
+    expect(p.focusOn).not.toHaveBeenCalled()
+  })
+
+  it('does not focus while the story owns the taps', () => {
+    const p = ports({ storyPlaying: () => true })
+    handleWorldTap(createFlow(), { kind: 'tile', axial: { q: 1, r: 0 } }, p)
+    expect(p.focusOn).not.toHaveBeenCalled()
   })
 
   it('still carries on a plot she is already building', () => {
@@ -147,6 +184,31 @@ describe('tapping her own land', () => {
     // No plot on this state either, so still nothing — the guard is the plot,
     // not the phase.
     expect(p.openSum).not.toHaveBeenCalled()
+  })
+
+  it('carrying on a plot NEVER also moves the camera', () => {
+    /*
+     * A tap that both opened a round and swung the view would be the worst of
+     * both: she loses the place she was looking at AND is handed a sum she did
+     * not ask for. One tap, one thing.
+     */
+    const p = ports()
+    const f = midBuild()
+    const next = handleWorldTap({ ...f, phase: 'free' }, { kind: 'tile', axial: { q: 0, r: 0 } }, p)
+    expect(next.challenge).toBe('sum')
+    expect(p.focusOn).not.toHaveBeenCalled()
+  })
+
+  it('leaves a socket tap alone — asking for land is not looking at land', () => {
+    const p = ports()
+    handleWorldTap(createFlow(), { kind: 'socket', axial: { q: 1, r: 0 } }, p)
+    expect(p.focusOn).not.toHaveBeenCalled()
+  })
+
+  it('leaves the sea alone — there is nothing out there to orbit', () => {
+    const p = ports()
+    handleWorldTap(createFlow(), { kind: 'sea' }, p)
+    expect(p.focusOn).not.toHaveBeenCalled()
   })
 })
 
