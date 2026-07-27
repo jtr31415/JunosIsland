@@ -36,89 +36,71 @@ export interface PetSet extends SetPalette {
 }
 
 /**
- * Three treatments per colour family, so a family reads as a family without
- * three sets looking like one another.
+ * TWELVE BOLD COLOURS, worn three ways.
+ *
+ * Joe, after the first pass: "there are too many samey colours. Let's go for
+ * the bold ones only, say around 10-12. Then we go stripy and dotty with the
+ * same colours."
+ *
+ * He was right — forty sets built as vivid, pastel and deep versions of
+ * thirteen families gave twenty-six palettes that were mostly *dilutions* of
+ * each other, and pale-of-a-colour reads as much the same whichever colour it
+ * started from. Twelve confident colours around the wheel are legible at a
+ * glance; the variety comes from PATTERN instead, which is a difference you
+ * can see across a room.
  */
-const vivid = (hue: number): SetPalette => ({ hue, sat: 0.78, light: 1.0 })
-const pastel = (hue: number): SetPalette => ({ hue, sat: 0.28, light: 1.0 })
-const deep = (hue: number): SetPalette => ({ hue, sat: 0.85, light: 0.7 })
+const BOLD: ReadonlyArray<{ id: string; name: string; hue: number }> = [
+  { id: 'cherry', name: 'Cherry', hue: 2 },
+  { id: 'tangerine', name: 'Tangerine', hue: 28 },
+  { id: 'sunshine', name: 'Sunshine', hue: 48 },
+  { id: 'lime', name: 'Lime', hue: 88 },
+  { id: 'emerald', name: 'Emerald', hue: 148 },
+  { id: 'turquoise', name: 'Turquoise', hue: 176 },
+  { id: 'sky', name: 'Sky', hue: 198 },
+  { id: 'bluebell', name: 'Bluebell', hue: 220 },
+  { id: 'indigo', name: 'Indigo', hue: 250 },
+  { id: 'violet', name: 'Violet', hue: 278 },
+  { id: 'orchid', name: 'Orchid', hue: 305 },
+  { id: 'bubblegum', name: 'Bubblegum', hue: 330 },
+]
+
+/** Bold means bold: one saturation, high, for all of them. */
+const SAT = 0.82
+
+const wearing = (pattern: 'solid' | 'stripy' | 'dotty', label: string): PetSet[] =>
+  BOLD.map(c => ({
+    id: pattern === 'solid' ? c.id : `${c.id}${pattern}`,
+    name: pattern === 'solid' ? c.name : `${label} ${c.name}`,
+    hue: c.hue,
+    sat: SAT,
+    light: 1,
+    pattern,
+  }))
 
 export const SETS: readonly PetSet[] = [
   /*
    * Set one is the natural palette, untouched, and `isNatural` makes that a
    * literal no-op: the base texture is reused rather than recomposited, so the
    * friends Juno already owns are bit-identical to before this engine existed.
-   * A golden test pins it.
    */
-  { id: 'natural', name: 'Natural', hue: 0, sat: -1, light: 1 },
+  { id: 'natural', name: 'Natural', hue: 0, sat: -1, light: 1, pattern: 'solid' },
 
-  // Yellows and golds
-  { id: 'sunshine', name: 'Sunshine', ...vivid(45) },
-  { id: 'butter', name: 'Butter', ...pastel(45) },
-  { id: 'toffee', name: 'Toffee', ...deep(38) },
-
-  // Yellow-greens
-  { id: 'lime', name: 'Lime', ...vivid(75) },
-  { id: 'pistachio', name: 'Pistachio', ...pastel(75) },
-  { id: 'olive', name: 'Olive', ...deep(70) },
-
-  // Greens
-  { id: 'meadow', name: 'Meadow', ...vivid(105) },
-  { id: 'mint', name: 'Mint', ...pastel(105) },
-  { id: 'moss', name: 'Moss', ...deep(100) },
-
-  // Green-teals
-  { id: 'emerald', name: 'Emerald', ...vivid(178) },
-  { id: 'seafoam', name: 'Seafoam', ...pastel(178) },
-  { id: 'pine', name: 'Pine', ...deep(145) },
-
-  // Cyans
-  { id: 'turquoise', name: 'Turquoise', ...vivid(150) },
-  { id: 'icicle', name: 'Icicle', ...pastel(150) },
-  { id: 'lagoon', name: 'Lagoon', ...deep(185) },
-
-  // Blues
-  { id: 'sky', name: 'Sky', ...vivid(200) },
-  { id: 'cloud', name: 'Cloud', ...pastel(200) },
-  { id: 'ocean', name: 'Ocean', ...deep(205) },
-
-  // Deeper blues
-  { id: 'bluebell', name: 'Bluebell', ...vivid(218) },
-  { id: 'forgetmenot', name: 'Forget-me-not', ...pastel(218) },
-  { id: 'denim', name: 'Denim', ...deep(222) },
-
-  // Indigos
-  { id: 'indigo', name: 'Indigo', ...vivid(245) },
-  { id: 'wisteria', name: 'Wisteria', ...pastel(245) },
-  { id: 'midnight', name: 'Midnight', ...deep(250) },
-
-  // Purples
-  { id: 'violet', name: 'Violet', ...vivid(272) },
-  { id: 'lilac', name: 'Lilac', ...pastel(272) },
-  { id: 'grape', name: 'Grape', ...deep(278) },
-
-  // Magentas
-  { id: 'orchid', name: 'Orchid', ...vivid(300) },
-  { id: 'candyfloss', name: 'Candyfloss', ...pastel(300) },
-  { id: 'plum', name: 'Plum', ...deep(305) },
-
-  // Pinks
-  { id: 'bubblegum', name: 'Bubblegum', ...vivid(325) },
-  { id: 'blossom', name: 'Blossom', ...pastel(325) },
-  { id: 'berry', name: 'Berry', ...deep(332) },
-
-  // Reds, back round the wheel
-  { id: 'cherry', name: 'Cherry', ...vivid(0) },
-  { id: 'coral', name: 'Coral', ...pastel(14) },
-  { id: 'ruby', name: 'Ruby', ...deep(352) },
+  // Twelve bold colours, solid.
+  ...wearing('solid', ''),
+  // The same twelve, striped.
+  ...wearing('stripy', 'Stripy'),
+  // ...and spotted.
+  ...wearing('dotty', 'Spotty'),
 
   /*
-   * Three that are not a hue rotation at all, so the run of forty does not
-   * read as one idea repeated. Saturation alone changes these.
+   * THE LEGENDARY TEN are deliberately absent.
+   *
+   * Joe: "the last 10 sets we will do with props at a later stage. Those will
+   * be the legendary sets that will be around 750 challenges in." They are not
+   * a palette at all — they are creatures wearing things — so they belong with
+   * the wonders work rather than here, and putting placeholders in now would
+   * only mean the album promised something that did not exist.
    */
-  { id: 'storm', name: 'Storm', hue: 210, sat: 0.10, light: 0.82 },
-  { id: 'chalk', name: 'Chalk', hue: 40, sat: 0.07, light: 1.0 },
-  { id: 'sherbet', name: 'Sherbet', hue: 20, sat: 0.42, light: 1.0 },
 ] as const
 
 /** Every creature is one of these. Saved as `{setId, speciesId}`. */

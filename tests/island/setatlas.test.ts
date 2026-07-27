@@ -48,7 +48,7 @@ describe('caching', () => {
      * and would make two textures where the design depends on there being one.
      */
     const atlas = createSetAtlas()
-    expect(atlas.texture('berry', 'animal-fox')).toBe(atlas.texture('berry', 'animal-fox'))
+    expect(atlas.texture('cherry', 'animal-fox')).toBe(atlas.texture('cherry', 'animal-fox'))
   })
 
   it('treats an unknown set as natural rather than failing', async () => {
@@ -59,9 +59,9 @@ describe('caching', () => {
 
   it('reports what it has cached', () => {
     const atlas = createSetAtlas()
-    void atlas.texture('mint', 'animal-fox')
-    void atlas.texture('berry', 'animal-fox')
-    expect(atlas.cached().sort()).toEqual(['berry/animal-fox', 'mint/animal-fox'])
+    void atlas.texture('sky', 'animal-fox')
+    void atlas.texture('cherry', 'animal-fox')
+    expect(atlas.cached().sort()).toEqual(['cherry/animal-fox', 'sky/animal-fox'])
   })
 })
 
@@ -100,7 +100,7 @@ describe('the material rules the GLBs impose', () => {
     const { pet } = petLike()
     const atlas = createSetAtlas()
     withTexture(atlas)
-    await atlas.dress(pet, 'berry', 'animal-fox')
+    await atlas.dress(pet, 'cherry', 'animal-fox')
     const worn = (pet.children[0] as THREE.Mesh).material as THREE.MeshStandardMaterial
     expect(worn.side).toBe(THREE.DoubleSide)
     expect(worn.roughness).toBe(1)
@@ -111,7 +111,7 @@ describe('the material rules the GLBs impose', () => {
     const { pet, source } = petLike()
     const atlas = createSetAtlas()
     withTexture(atlas)
-    await atlas.dress(pet, 'berry', 'animal-fox')
+    await atlas.dress(pet, 'cherry', 'animal-fox')
     const worn = (pet.children[0] as THREE.Mesh).material as THREE.MeshStandardMaterial
     expect(worn).not.toBe(source)
     expect(worn.map).not.toBe(source.map)
@@ -124,10 +124,10 @@ describe('the material rules the GLBs impose', () => {
     const { pet } = petLike()
     const atlas = createSetAtlas()
     withTexture(atlas)
-    await atlas.dress(pet, 'berry', 'animal-fox')
+    await atlas.dress(pet, 'cherry', 'animal-fox')
     pet.traverse(o => {
       const m = o as THREE.Mesh
-      if (m.isMesh) expect((m.material as THREE.Material).name).toContain('berry')
+      if (m.isMesh) expect((m.material as THREE.Material).name).toContain('cherry')
     })
   })
 
@@ -150,8 +150,8 @@ describe('the material rules the GLBs impose', () => {
 
     const atlas = createSetAtlas()
     withTexture(atlas)
-    await atlas.dress(a, 'berry', 'animal-fox')
-    await atlas.dress(b, 'berry', 'animal-fox')
+    await atlas.dress(a, 'cherry', 'animal-fox')
+    await atlas.dress(b, 'cherry', 'animal-fox')
     expect(a.material).toBe(b.material)
   })
 
@@ -163,8 +163,8 @@ describe('the material rules the GLBs impose', () => {
     const b = petLike()
     const atlas = createSetAtlas()
     withTexture(atlas)
-    await atlas.dress(a.pet, 'berry', 'animal-fox')
-    await atlas.dress(b.pet, 'berry', 'animal-bee')
+    await atlas.dress(a.pet, 'cherry', 'animal-fox')
+    await atlas.dress(b.pet, 'cherry', 'animal-bee')
     expect((a.pet.children[0] as THREE.Mesh).material)
       .not.toBe((b.pet.children[0] as THREE.Mesh).material)
   })
@@ -179,7 +179,7 @@ describe('the material rules the GLBs impose', () => {
     const spy = vi.spyOn(source, 'dispose')
     const atlas = createSetAtlas()
     withTexture(atlas)
-    await atlas.dress(pet, 'berry', 'animal-fox')
+    await atlas.dress(pet, 'cherry', 'animal-fox')
     expect(spy).not.toHaveBeenCalled()
   })
 
@@ -188,9 +188,9 @@ describe('the material rules the GLBs impose', () => {
     const { pet } = petLike()
     const atlas = createSetAtlas()
     withTexture(atlas)
-    await atlas.dress(pet, 'berry', 'animal-fox')
-    await atlas.dress(pet, 'mint', 'animal-fox')
+    await atlas.dress(pet, 'cherry', 'animal-fox')
+    await atlas.dress(pet, 'sky', 'animal-fox')
     expect(((pet.children[1] as THREE.Mesh).material as THREE.Material).name)
-      .toContain('mint')
+      .toContain('sky')
   })
 })

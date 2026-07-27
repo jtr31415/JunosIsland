@@ -222,7 +222,7 @@ describe('every species adapts equally — the correction', () => {
    * bear's coat is near-white; the fox's is brown. Under a hue rotation the
    * bear moved by nothing at all.
    */
-  const berry = setById('berry')!
+  const berry = setById('cherry')!
 
   it('sends a coat to the SET’s hue, whatever colour it started', () => {
     for (const t of [0, 0.25, 0.5, 0.75, 1]) {
@@ -309,8 +309,8 @@ describe('recolourInto', () => {
 })
 
 describe('the set list', () => {
-  it('is forty sets', () => {
-    expect(SETS.length).toBe(40)
+  it('is one natural set plus twelve colours in three patterns', () => {
+    expect(SETS.length).toBe(37)
   })
 
   it('has unique ids and unique names', () => {
@@ -331,8 +331,8 @@ describe('the set list', () => {
     }
   })
 
-  it('reaches about a thousand creatures across 24 species', () => {
-    expect(totalVariants(24)).toBe(960)
+  it('reaches nearly nine hundred creatures across 24 species', () => {
+    expect(totalVariants(24)).toBe(888)
   })
 
   it('has ids that are safe to save and never renamed', () => {
@@ -341,6 +341,6 @@ describe('the set list', () => {
 
   it('keys a creature by set and species, not by index', () => {
     // Inserting a set later must not renumber every creature she owns.
-    expect(variantKey({ setId: 'berry', speciesId: 'animal-fox' })).toBe('berry/animal-fox')
+    expect(variantKey({ setId: 'cherry', speciesId: 'animal-fox' })).toBe('cherry/animal-fox')
   })
 })

@@ -34,11 +34,24 @@
  * relative to this animal's other pixels" survives while "what colour was it"
  * does not.
  */
+/**
+ * Solid, stripy or dotty — the same twelve colours, worn three ways.
+ *
+ * Discovered by accident: a bug that recoloured only the exact sampled rows of
+ * the atlas gradient banded every animal like a deckchair, and the banding
+ * looked rather good. Each face of a cube pet samples its own point on a
+ * vertical gradient, so a pattern painted DOWN that gradient comes out as a
+ * pattern across the model.
+ */
+export type Pattern = 'solid' | 'stripy' | 'dotty'
+
 export interface SetPalette {
   /** The set's colour, in degrees. This is where the coat ends up. */
   hue: number
   /** How vivid, 0..1. Applied absolutely, not as a multiplier. */
   sat: number
+  /** How the colour is worn. Defaults to solid. */
+  pattern?: Pattern
   /**
    * How light the coat sits overall, as a multiplier on the normalised ramp —
    * so a set can be pale or deep without losing the shading that makes the
@@ -149,6 +162,80 @@ export function hsvToRgb(h: number, s: number, v: number): [number, number, numb
  * over — hue and saturation come wholly from the set. It is what makes a white
  * bear and a brown fox arrive at equally berry versions of themselves.
  */
+/** The patch of colour space a species' base coat occupies. */
+export interface Region {
+  /** Circular mean hue of the base colours, in degrees. */
+  hue: number
+  /** True when the base is essentially colourless — a polar bear, a panda. */
+  pale: boolean
+}
+
+/**
+ * Describe a species' base coat as a region, from the colours it samples.
+ *
+ * Derived rather than stored, so `species-base.json` stays a plain list of
+ * observed colours — a fact about the models — while the interpretation of
+ * that list lives here where it can be changed without regenerating anything.
+ */
+export function regionOf(base: ReadonlySet<string>): Region | null {
+  let x = 0, y = 0, chromatic = 0, pale = 0
+  for (const key of base) {
+    const [r, g, b] = key.split(',').map(Number) as [number, number, number]
+    const [h, s] = rgbToHsv(r, g, b)
+    if (s < MARKING_SATURATION) { pale++; continue }
+    chromatic++
+    x += Math.cos(h * Math.PI / 180)
+    y += Math.sin(h * Math.PI / 180)
+  }
+  if (chromatic === 0 && pale === 0) return null
+  if (pale > chromatic) return { hue: 0, pale: true }
+  const hue = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360
+  return { hue, pale: false }
+}
+
+/** Is this colour part of that region — the coat rather than a marking? */
+export function inRegion(r: number, g: number, b: number, region: Region): boolean {
+  const [h, s] = rgbToHsv(r, g, b)
+  if (region.pale) return s < MARKING_SATURATION
+  if (s < MARKING_SATURATION) return false
+  const d = Math.abs(((h - region.hue) % 360 + 540) % 360 - 180)
+  return d <= BASE_HUE_SPREAD
+}
+
+/** How tall a stripe is, in atlas rows. */
+export const STRIPE = 6
+
+/**
+ * Push a pixel's place on the ramp light or dark, to make a pattern.
+ *
+ * The whole trick is that it stays the SET's colour throughout — a stripy
+ * berry pet is berry in both its stripes, one lighter than the other, rather
+ * than berry crossed with something else. Joe's brief for these was "stripy
+ * and dotty with the same colours".
+ *
+ * Deliberately painted into the ramp rather than as a second hue, because a
+ * face samples one point of the atlas: whatever lands there is a flat colour
+ * on that face, so the pattern is made of which faces get which shade.
+ */
+export function patterned(
+  t: number, x: number, y: number, pattern: Pattern = 'solid',
+): number {
+  if (pattern === 'stripy') {
+    const band = Math.floor(y / STRIPE) % 2 === 0
+    return Math.max(0, Math.min(1, band ? t * 0.55 : t * 0.55 + 0.45))
+  }
+  if (pattern === 'dotty') {
+    /*
+     * A coarse checker rather than round dots. Faces sample scattered points,
+     * so what reads as spots on the model is a scatter in the atlas — round
+     * dots would be wasted precision.
+     */
+    const spot = (Math.floor(y / 5) + Math.floor(x / 5)) % 3 === 0
+    return Math.max(0, Math.min(1, spot ? t * 0.5 + 0.5 : t * 0.5))
+  }
+  return t
+}
+
 export function shade(t: number, p: SetPalette): [number, number, number] {
   const ramp = RAMP_LOW + (RAMP_HIGH - RAMP_LOW) * Math.max(0, Math.min(1, t))
   return hsvToRgb(
@@ -204,22 +291,39 @@ export function recolourInto(
    * supplied it settles the question outright.
    */
   if (base) {
+    /*
+     * A REGION of colour space, not a list of exact colours.
+     *
+     * The first attempt tested membership by exact RGB match against the
+     * texels a species samples — and the atlas is a smooth vertical gradient,
+     * so only those exact rows recoloured while every row between them stayed
+     * as it was. Every animal came out banded like a deckchair, which is what
+     * Joe's screenshot shows. The sampled colours DESCRIBE a region; the whole
+     * region has to move together, or the gradient tears.
+     */
+    const region = regionOf(base)
+    if (!region) return 0
+
     let lo = Infinity, hi = -Infinity
     for (let i = 0; i < rgba.length; i += 4) {
       if (rgba[i + 3] === 0) continue
-      if (!base.has(`${rgba[i]},${rgba[i + 1]},${rgba[i + 2]}`)) continue
-      const v = Math.max(rgba[i] as number, rgba[i + 1] as number, rgba[i + 2] as number) / 255
+      const r = rgba[i] as number, g = rgba[i + 1] as number, b = rgba[i + 2] as number
+      if (isSoul(r, g, b) || !inRegion(r, g, b, region)) continue
+      const v = Math.max(r, g, b) / 255
       if (v < lo) lo = v
       if (v > hi) hi = v
     }
+
     let changed = 0
     for (let i = 0; i < rgba.length; i += 4) {
       if (rgba[i + 3] === 0) continue
       const r = rgba[i] as number, g = rgba[i + 1] as number, b = rgba[i + 2] as number
-      if (!base.has(`${r},${g},${b}`)) continue        // a marking, or the face
+      if (isSoul(r, g, b) || !inRegion(r, g, b, region)) continue
       const v = Math.max(r, g, b) / 255
       const t = hi > lo ? (v - lo) / (hi - lo) : 0.5
-      const [nr, ng, nb] = shade(t, p)
+      const px = (i / 4) % width
+      const py = Math.floor((i / 4) / width)
+      const [nr, ng, nb] = shade(patterned(t, px, py, p.pattern), p)
       if (nr !== r || ng !== g || nb !== b) changed++
       rgba[i] = nr; rgba[i + 1] = ng; rgba[i + 2] = nb
     }
