@@ -393,7 +393,12 @@ Either the cost curve re-bases or session length halves. This wants numbers.
 1. **It ships with every pet in its natural colours**, because item 7 is Phase 5.
    The variant engine is dev-only until then.
 2. **It needs the first `v*` tag** or the channel split does nothing.
-3. **The QA department has still not played it.** Brief §18: "Ship M1 to the QA
+3. **The QA department HAS now played it** — an hour, on 27 July, and the notes
+   marked "playtest" in the task list are what came back: the pet tap target is
+   too small, reading wants a 3:1 build-to-find ratio, a challenge needs a way
+   out, the hatch needs the model preloaded, and the island must not be
+   snookerable with water. What she did AFTER the hour is the other finding:
+   she went looking round the island for her animals, unprompted. Brief §18: "Ship M1 to the QA
    department immediately; her verdict outranks this document." Every visual
    judgement in this build was made from screenshots on a DPR-1 desktop. That is
    still the highest-value action available and it has been true for two phases.

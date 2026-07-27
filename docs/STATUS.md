@@ -9,9 +9,11 @@ breaking it; this is what has been done and what is left.*
 decide. Item 6's wiring onto live pets is item 7, which is Phase 5.
 
 The
-game is deployed at <https://jtr31415.github.io/JunosIsland/> and **has still
-not been played by the QA department**, whose verdict outranks every document
-here (brief §18).
+game is deployed at <https://jtr31415.github.io/JunosIsland/> and **the QA
+department has now played it** — Joe, 27 July: *"she just did a solid hr of work
+and is now enjoying looking at the island and looking for the animals."* Her
+verdict outranks every document here (brief §18), and the notes below marked
+"playtest" are it.
 
 ---
 
@@ -24,7 +26,10 @@ Three findings that change the plan; the full reasoning is in the task cards.
 `PHASE3-HANDOVER` §10, this file, and `HANDOFF` §8 all carry the same sentence:
 the QA department has still not played it, and that is the highest-value action
 available. Phase 4 then schedules five features and a blocked item ahead of her
-first session. Nothing in #28, #31, #33 or #30 blocks a supervised session —
+first session. **That premise expired the same evening** — she has since played
+for an hour, and the notes marked "playtest" in the task list are what came back.
+The rest of Fable's sequencing argument still holds, particularly that the tag
+should precede her next session. Nothing in #28, #31, #33 or #30 blocks a supervised session —
 #33 only matters once the island has grown off-centre, and a first session starts
 at one tile. The one item that protects her first hatch is #29, because the pet
 GLBs are **not** precached (`vite.island.config.ts` has no `globPatterns`) so her
