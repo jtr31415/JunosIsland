@@ -4,7 +4,7 @@
   "pages":    { "wordsPerFindPage": 3, "mix": ["find", "build"] },
   "governor": { "maxWaitingPets": 3, "maxEmptySurplus": 4 },
   "stage":    { "spinSec": 9, "progressDots": true, "flyBackMs": 900,
-                "hatchHoldMs": 1300, "petLoadMs": 1200, "chipMs": 820 },
+                "hatchHoldMs": 1300, "petLoadMs": 3000, "chipMs": 820 },
   "firstRun": { "tileOffer": ["grass", "grass", "water"], "egg2DelaySec": 20 },
   "unlocks":  [ { "type": "spring", "tiles": 8,  "pets": 6  },
                 { "type": "desert", "tiles": 18, "pets": 12 },

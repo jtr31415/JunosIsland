@@ -19,7 +19,14 @@ export interface Balance {
     spinSec: number; progressDots: boolean; flyBackMs: number
     /** How long the friend stands on the plinth before the stage dissolves. */
     hatchHoldMs: number
-    /** How long the ceremony will wait for a pet model before going on. */
+    /**
+     * How long the ceremony will wait for a pet model before going on.
+     *
+     * Generous, because a COLD fetch of a pet on a first hatch genuinely
+     * takes over a second and an empty plinth is the failure this all exists
+     * to prevent — but bounded, because the exits are locked while it waits
+     * and an unbounded wait on a stalled request is a permanent soft-lock.
+     */
     petLoadMs: number
     /** The album chip's flight. */
     chipMs: number

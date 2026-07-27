@@ -622,9 +622,15 @@ async function boot(): Promise<void> {
         fred.talk(2.4)
         fred.hop()
 
-        // A beat with the friend on the plinth and her name on the card,
-        // before the stage dissolves and she walks out into the world.
-        await wait(HATCH_HOLD_MS)
+        /*
+         * A beat with the friend on the plinth and her name on the card,
+         * before the stage dissolves and she walks out into the world.
+         *
+         * Cut short if nobody came: holding on an empty plinth is the dead
+         * beat this whole change exists to remove, and it would be perverse
+         * to keep it as the consolation prize for a slow network.
+         */
+        await wait(friend ? HATCH_HOLD_MS : 400)
         stage.showTemp(null)
         stageFor(null)
         // The card has said its piece; the chip below carries the name on.
