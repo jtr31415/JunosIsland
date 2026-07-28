@@ -158,6 +158,90 @@
       "doneRule": "manual",
       "note": "tough one. it should start with invitation first, the let the user run with whatever they want to do up to a point otherwise we risk breaking the balance of the island. we then make the reward really really tough to reach the reward if it pushes imbalance further if its too far out of balance. with an announcement. match this to PB-042 when we pick it up. target ratio i think should be 1 animal per 2 tiles, with a buffer to 2:3 either way, then it starts to become increasingly tougher to get either.",
       "state": "done"
+    },
+    {
+      "id": "JT-013",
+      "type": "ruling",
+      "title": "Does 2.0 tiles per pet supersede the 1.5 you set this morning? (PB-042)",
+      "detail": "BUILT AND LIVE ALREADY - this is a nod-or-reverse, not a blocker. Your JT-012 note set the target at \"1 animal per 2 tiles\", which is 2.0 tiles per animal. The code held 1.5 (three tiles for two animals) - also yours, from earlier the same day - and PB-039 shipped against it. Both cannot be the target. THE OPTIONS. (a) 2.0 is the new target and 1.5 is simply superseded, which throws away a number you had just reasoned your way to. (b) 2.0 is the target and 1.5 is re-filed as the CROWDED WALL of the new buffer, so both of your rulings survive with different jobs. (c) 1.5 stays the target and 2.0 was loose talk. WHAT FABLE CHOSE: (b), and its reason for calling that a real reconciliation rather than a convenient one is that your own sentence re-files the number for you - you said \"with a buffer to 2:3\", and 2:3 animals-to-tiles IS 1.5 tiles per animal. You did not repudiate the morning's number, you moved it from the centre to the edge in the same breath that set the new centre. WHAT IS BUILT ON IT: balance.json's governor block no longer has tilesPerPet, maxEmptySurplus or petsPerTile; it has corridor {crowded 1.5, empty 3.0}. The old hard floor of 0.667 tiles per pet is gone entirely - under a price scheme it is just deep past the crowded wall, charged rather than refused. TO REVERSE: commit bdc9290; the numbers are data in src/island/balance/balance.json, so changing the target is a one-line edit, not a code change.",
+      "blocks": [
+        "PB-042"
+      ],
+      "doneRule": "manual",
+      "note": "",
+      "state": "open"
+    },
+    {
+      "id": "JT-014",
+      "type": "ruling",
+      "title": "\"A buffer to 2:3 either way\" - is it 1.5 and 3.0 tiles per pet? (PB-042)",
+      "detail": "BUILT AND LIVE ALREADY - nod or reverse. Your phrase needed pinning as two numbers before anything could be coded, because 2:3 either side of a 1:2 target is not symmetric in tiles-per-pet and the two walls had to be written out. THE READINGS. (i) Symmetric in ANIMALS PER TILE: walls at 2:3 (1.5 tiles per pet, crowded) and 1:3 (3.0 tiles per pet, empty). Your 1:2 target sits at the exact midpoint, because 2/3, 1/2 and 1/3 are evenly spaced. (ii) Symmetric in TILES PER PET: 1.5 and 2.5 - but 2.5 is \"two animals per five tiles\", a ratio nobody says out loud, and it throws away the 2:3 you actually wrote. (iii) Multiplicative, x2/3 and x3/2: 1.333 and 3.0, which abandons 2:3 entirely. WHAT FABLE CHOSE: (i). Animals-per-tile is the unit YOU stated the target in (\"1 animal per 2 tiles\"), both walls are ratios a person can say aloud, and that is the house style governors.ts already sets for itself. THE CONSEQUENCE YOU SHOULD WEIGH: the empty wall at 3.0 is WIDE. At ten pets she may build thirty fields before land starts getting dear, where the old code refused her at nineteen. That is deliberate - \"let the user run with whatever they want to do\" - but it is the single biggest behavioural change in the card, and if it feels too loose in play the crowded wall is not the thing to move, the empty one is. WHAT IS BUILT ON IT: activeGovernor fires on these walls, and so does the price. TO REVERSE: commit bdc9290, and it is a data edit - corridor.crowded and corridor.empty in src/island/balance/balance.json.",
+      "blocks": [
+        "PB-042"
+      ],
+      "doneRule": "manual",
+      "note": "",
+      "state": "open"
+    },
+    {
+      "id": "JT-015",
+      "type": "ruling",
+      "title": "Is \"really really tough\" +25% a step, capped at treble? (PB-042)",
+      "detail": "BUILT AND LIVE ALREADY - nod or reverse. This is the one Fable itself flagged as most likely to be wrong, because \"really really tough\" may mean tougher to you than it did to it. THE QUESTION: how much dearer past a wall, over what distance, and does it cap. WHAT FABLE CHOSE: linear, multiplier = 1 + d/4 where d is how many whole steps past the wall she is, capped at 3x, applied to the curve value BEFORE the round-to-a-multiple-of-two so every price stays a whole number of items. WHAT SHE ACTUALLY FACES, tiles, near the top of the curve: one step past the wall about 38 sums, three past about 54, ten past 92, and the hard ceiling is 96 sums or 84 reading pages. WHY IT CAPS: uncapped, a determined builder reaches 200-plus sums, and a price a child cannot pay is the hard stop wearing a different hat - which is the exact bug PB-042 exists to fix. WHY 54 AT THREE PAST IS DEFENSIBLE: it is under twice what she already pays willingly, and nothing expires, so partial progress persists across sittings and it reads as a savings goal rather than a wall. IF YOU WANT IT FIERCER: slope and capMultiple are two constants in the governor block of src/island/balance/balance.json - 0.5 and 4 would roughly double the bite - and no code moves. TO REVERSE: commit bdc9290, data edit only.",
+      "blocks": [
+        "PB-042"
+      ],
+      "doneRule": "manual",
+      "note": "",
+      "state": "open"
+    },
+    {
+      "id": "JT-016",
+      "type": "ruling",
+      "title": "Should the price start exactly where Fred starts talking? (PB-042)",
+      "detail": "BUILT AND LIVE ALREADY - nod or reverse. Not put to Fable, because it follows from your own words: you said the escalation comes \"with an announcement\". THE QUESTION: the invitation used to fire at the old hard-stop thresholds; the price fires at the new buffer walls. If those are different places, then the first dearer purchase happens in silence. THE DECISION: activeGovernor's two thresholds were moved onto the buffer walls, so Fred's ask and the surcharge are provably the same condition, walked over the whole grid in the tests. A rise Fred did not announce would be a silent tax, and you ruled that out. THIS CAUGHT A REAL BUG, which is the argument for it: a brand-new island is one hex with nobody on it, which is already a step past the empty wall - so priced off the wall alone, the very first tile of the game would have cost 25% more while Fred said nothing. The grace period now suppresses the announcement and the price together. WHAT IS BUILT ON IT: the retirement of maxEmptySurplus and petsPerTile as thresholds, and about twenty rewritten tests in tests/island/governors.test.ts. TO REVERSE: commit bdc9290, and this one IS a code change rather than a data edit - it is the shape of activeGovernor.",
+      "blocks": [
+        "PB-042"
+      ],
+      "doneRule": "manual",
+      "note": "",
+      "state": "open"
+    },
+    {
+      "id": "JT-017",
+      "type": "ruling",
+      "title": "The override is a second tap, and Fred asks again every time - right? (PB-042)",
+      "detail": "BUILT, SHIPPED AND ON THE LIVE SITE - this is the half Juno was stuck on, so it went out ahead of the rest. Your JT-012 note said \"it should start with invitation first, then let the user run with whatever they want to do\". THE QUESTION was how she says no. THE DECISION: the first tap on a paused egg or socket spends itself on Fred's line; the very next tap on the SAME thing opens the round regardless. That is option (a) exactly as the card wrote it. THE LOAD-BEARING HALF is that Fred's memory clears ON the override, so the sequence is ask, override, ask, override - every override costs one extra tap and every one of them is preceded by the announcement. A memory that persisted would mean she is asked once in a session and then silently waved through forever after, which is the silent tax again. Fred says nothing on the override itself, because the round is about to speak its own prompt and speech cancels speech. THE COST, honestly: she pays one extra tap every time she wants to overrule him. The alternative - override on the first tap - is fewer taps but no announcement at all. WHAT IS BUILT ON IT: commit 58425b6, src/island/interactions.ts, src/island/main.ts, src/island/governors.ts and four new tests. TO REVERSE: that commit; it is small and self-contained.",
+      "blocks": [
+        "PB-042"
+      ],
+      "doneRule": "manual",
+      "note": "",
+      "state": "open"
+    },
+    {
+      "id": "JT-018",
+      "type": "ruling",
+      "title": "NEEDS JOE: reading just got dearer for a girl playing at one tile per animal (PB-042)",
+      "detail": "NOTHING IS BUILT ON THIS ONE - it is a consequence of your numbers that you should see before Juno does. THE FACT: the new corridor runs from 1.5 to 3.0 tiles per pet. Today's effective free zone ran from about 0.667 up to about 1.5 plus a bit. The new corridor therefore sits ENTIRELY ABOVE the old one. A girl playing at a comfortable one tile per animal - which is where the old code let her sit happily - is, under the new numbers, permanently past the crowded wall and paying surcharged EGGS. So the change she will actually feel is not \"the stop became a price\". It is \"reading got more expensive unless I build more land\". WHY THAT MIGHT BE EXACTLY RIGHT: it is the pedagogy pushing her to do maths until the island reaches your 1:2 target, and the surcharge is capped so it never becomes a wall. WHY IT MIGHT NOT BE: she is six, reading is the half she likes, and a permanent tax on the thing she likes is a strange lever to pull. IF IT IS WRONG, the fix is not the escalation constants - it is the crowded wall itself. Dropping it from 1.5 to about 1.0 would restore roughly today's comfort zone while keeping the 1:2 target and the empty wall. That is corridor.crowded in src/island/balance/balance.json. Answer in the note.",
+      "blocks": [
+        "PB-042"
+      ],
+      "doneRule": "manual",
+      "note": "",
+      "state": "open"
+    },
+    {
+      "id": "JT-019",
+      "type": "ruling",
+      "title": "NEEDS JOE: it can now take TWO tiles to get Fred off her back, not one (PB-042)",
+      "detail": "NOTHING IS BUILT ON THIS - a doctrine of yours quietly stopped being true and I loosened its test rather than papering over it, so you should rule on whether that is acceptable. THE OLD PROMISE, pinned in tests since slice 1: doing ONE of the thing Fred asks for always lifts the governor. Tap, do a round, he stops asking. It was a real kindness - the way out was always one step and she could see it. WHAT BROKE IT: at 1.5 fields per pet a single field is worth two-thirds of a friend, so clearing the crowded wall can now need TWO fields; and an island that has drifted to four bare fields during the grace period is four steps out and needs two friends to come home. THE TESTS NOW SAY the way out is at most two, and never runs through the OTHER governor - so she can never be bounced between them. WHY IT MAY BE FINE: PB-042 means Fred is no longer a wall at all. She can ignore him and pay the surcharge, so \"how many rounds to silence him\" is advice now, not a sentence. WHY YOU MIGHT STILL CARE: two rounds is a long way for a six-year-old when the first one visibly does not work, and \"I did the thing and he is still asking\" is exactly the kind of small betrayal that makes a child stop trusting a character. IF YOU WANT ONE STEP BACK: it means rounding the walls to whole animals per whole tile, which costs some of the precision of the 1:2 target. Answer in the note.",
+      "blocks": [
+        "PB-042"
+      ],
+      "doneRule": "manual",
+      "note": "",
+      "state": "open"
     }
   ],
   "archive": []

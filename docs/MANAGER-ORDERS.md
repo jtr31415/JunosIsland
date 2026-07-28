@@ -89,15 +89,52 @@ You will hit calls that are not yours to make. Two kinds, handled differently:
 - **A decision nobody has ruled on.** Do **not** stop and do not guess silently.
   **Ask Fable** — spawn a subagent with `model: "fable"`, give it the actual
   code and the actual trade-off (not a summary), and ask it to pick and to say
-  why. Then **record the decision in `docs/DECISIONS-FOR-JOE.md`**: the
-  question, the options, what Fable chose, the reasoning, and what was built on
-  it. Joe reviews that file later and may reverse any of it, so write each entry
-  so it can be reversed — say which commit would have to change.
+  why. Build on Fable's answer so the work does not stall, then **queue the
+  decision in the workbench for Joe's nod** (below).
 
 If a decision would change what a *child experiences*, or amend a guardrail in
-`docs/pet-island-lighting.md` or brief §19, that is Joe's alone: build
-everything that does not depend on it, and put the question in
-`docs/DECISIONS-FOR-JOE.md` marked **NEEDS JOE**, not Fable.
+`docs/pet-island-lighting.md` or brief §19, that is Joe's alone. Do not ask
+Fable to settle it. Build everything that does not depend on it, and queue the
+question in the workbench marked **NEEDS JOE**.
+
+### The workbench is the decision channel — not a markdown file
+
+Joe's instruction, 28 July: *"decisions go into the workbench for me to take.
+and you'll retrieve them from there after my nod."* `docs/DECISIONS-FOR-JOE.md`
+is therefore **retired**; it exists only until its entries are migrated.
+
+The workbench is `joe/tasks.json` — his queue, which he works through in the
+workbench UI (`npm run dev:workbench` / `vite.workbench.config.ts`). The shape,
+measured, is `{schemaVersion, tasks[], archive[]}` and each task carries
+`id, type, title, detail, blocks, artefact, doneRule, check, note, state`.
+Types in use are `ruling | review | config | external`; states are `open | done`.
+
+**To raise a decision**, append a task:
+
+- `id` — the next free `JT-0xx`. Do not reuse or renumber.
+- `type` — `"ruling"`.
+- `title` — the question as a question, with the card in brackets, e.g.
+  *"Does 2.0 tiles per pet supersede the shipped 1.5? (PB-042)"*.
+- `detail` — the whole case, written so Joe needs no other file open: what the
+  question is, the options with their consequences, **what Fable chose and why**,
+  **what has already been built on that choice**, and **which commit would have
+  to change if he reverses it**. This is the field that respects his time; a
+  vague `detail` costs him a round trip.
+- `blocks` — the card ids this gates, e.g. `["PB-042"]`.
+- `doneRule` — `"manual"`.
+- `state` — `"open"`. Leave `note` empty; that field is his.
+
+**To retrieve his nod**, at the START of every run read `joe/tasks.json` and
+look for `type: "ruling"` tasks that are now `state: "done"` with a `note`
+filled in. That note is the ruling. Act on it — including **reverting or
+amending what Fable's answer was built on** if he decided differently. Record in
+your handoff which JT ids you picked up and what you did about each.
+
+**Writing to `joe/tasks.json` safely.** It is a live file Joe may be editing in
+the UI. Read it, append your record, write it back preserving formatting and
+LF line endings — and never with Python text mode on Windows (see
+Non-negotiables). Commit it on its own with a `data(workbench):` message so a
+decision is never entangled with a code change.
 
 Fable also earns its keep as a reviewer at a phase boundary — give it the real
 diff and ask it to attack specific things (HANDOFF §7).
@@ -132,8 +169,9 @@ lines; it is a baton, not a diary.
 <New landmines. If it cost you more than twenty minutes to work out, write it
 down. Promote the durable ones into `docs/HANDOFF.md` §6 as well.>
 
-## Open decisions
-<Anything in DECISIONS-FOR-JOE.md added this run, one line each.>
+## Decisions
+<JT ids RAISED into the workbench this run, one line each. Then JT ids PICKED
+UP this run (his nod), and what you did about each — including any revert.>
 ```
 
 ---
