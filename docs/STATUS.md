@@ -48,11 +48,12 @@ verdict outranks every document here (brief §18), and the notes below marked
   against her own early baseline, never a mean, because one four-minute
   butterfly makes a mean report a child who got faster as having got slower.
   And a tick does not appear until the write has landed.
-- **`JT-011` raised, and it is Joe's.** Manual is a persistent per-path mode
-  and Auto is the only thing that ever ticks by itself — so the path he
-  hand-ticks becomes the one path Run B's ladder will never promote. Built
-  spec-literal; the alternatives are one predicate each. It is in the
-  workbench, per A8a.
+- **`JT-011` raised and ANSWERED the same evening.** Manual is a persistent
+  per-path mode and Auto is the only thing that ever ticks by itself — so the
+  path Joe hand-ticks becomes the one path Run B's ladder will never promote.
+  Joe: *"its a"* — leave it. Manual persists, **Run B must skip manual paths**,
+  and returning one to Auto is a deliberate act. No code changed; it is a
+  decision now instead of a default.
 
 Gates on the last two commits: typecheck, **1294 tests**, parity renders
 identically, smoke, channel, build. All green.

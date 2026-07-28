@@ -942,7 +942,7 @@ island.
 | **JT-008** | **ANSWERED** (28 Jul) — the three attempt-model rulings; A2 built on them. |
 | **JT-010** | **ANSWERED and CLOSED** (28 Jul) — the share of maths stays by tick; the reading mix is 3 build to 1 find (`PB-038` was real); the last tick of a deal moment is protected. A3 built on all three. |
 | **JT-009** | **ANSWERED and CLOSED** (28 Jul) — reading (c), a paused page pays nothing and she does it again. Zero lines to build; three tests to pin. `PB-041` parks reading (b), resume, against Joe's *"if it flags in play test, i will bring it back"*. |
-| **JT-011** | **OPEN** (28 Jul, raised by A4) — what does Manual mean once it has been used? It is a persistent per-path mode and Auto is the only thing that ever ticks by itself, so the path Joe hand-ticks is the one Run B's ladder will never promote. Built spec-literal as (a) leave it; (b) snap back to Auto on close and (c) Manual-is-additive are one predicate each. **Shapes Run B.** |
+| **JT-011** | **ANSWERED and CLOSED** (28 Jul) — Joe: *"its a"*. Manual PERSISTS: Run B skips manual paths, and returning one to Auto is a deliberate act. That is what was already built, so the ruling costs nothing to honour — but it is now a decision rather than a default, which is the point of having asked. **Run B must not promote a path in Manual**, and its own field note should re-state that when it is written. |
 | Product Backlog | Seeded, now 41 cards, `PB-001…PB-041` (`PB-036` and `PB-039` Joe's own, `PB-037` Fred-talk has no way in, `PB-038` the A7 page-mix regression, `PB-040` re-done pages are re-measured, `PB-041` resume, parked by ruling). Awaiting Joe's triage. |
 | Superseded docs | `pet-island-phase4-1-spec.md` (rulings changed) |
 
