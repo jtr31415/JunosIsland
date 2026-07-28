@@ -13,9 +13,7 @@ import { createIsland, place, sockets, count } from './world/grid'
 import type { Island, TileType } from './world/grid'
 import { key } from './world/hex'
 import type { Axial } from './world/hex'
-import {
-  canBeWater, canBeGrass, canBeRock, mustBeWater, mustBeLand, buildableSockets,
-} from './world/coast'
+import { buildableSockets, landedType, landOffer, canBeRock } from './world/coast'
 
 /**
  * How much work each reward costs — from the curve, never a constant.
@@ -317,38 +315,32 @@ export function tileOffer(f: Flow): TileType[] {
    * the answer to whether a ONE-BUTTON offer is honest. It is: it says what she
    * will get. Leaving the water button up where the rules will turn it into land
    * would teach a six-year-old that the water button is broken, and she would be
-   * right. So a forced socket offers one thing, in both directions, and the order
-   * below matches `tileTypeFor` exactly — the offer's whole job is to show what
-   * that function is going to do.
+   * right.
    *
-   * Forcing yields to feasibility in both cases. `mustBeWater` used to
-   * short-circuit here, and that was a real hole: a socket with two of her ponds
-   * round it and no fields can still be a shape no model draws, and forcing water
-   * into it produced exactly the fault this rule exists to prevent. `mustBeLand`
-   * asks `allows` before it answers, for the same reason.
+   * So the offer is DERIVED from the choke point rather than restating it. It
+   * used to be a second list of conditions kept in step with `tileTypeFor` by
+   * hand, and every rule added to one had to be remembered into the other — the
+   * comment here said "the order below matches `tileTypeFor` exactly", which is a
+   * promise a comment cannot keep. `landOffer` asks `landedType` what each button
+   * would actually do and shows the ones that do what they say, so a rule can only
+   * ever be added in one place. That now includes the last-resort backstop: where
+   * water would leave her nowhere to grow, there is no water button to press.
    */
-  if (mustBeLand(f.island, f.pending)) return ['grass']
-  if (mustBeWater(f.island, f.pending) && canBeWater(f.island, f.pending)) return ['water']
-  const kinds: TileType[] = []
-  if (canBeGrass(f.island, f.pending)) kinds.push('grass')
-  if (canBeWater(f.island, f.pending)) kinds.push('water')
+  const kinds = landOffer(f.island, f.pending)
   /*
-   * Mountains last, so the two she has always known keep their places. A button
+   * Mountains last, so the two she has always known keep their places — a button
    * that moves is a button she has to re-find every time.
    *
-   * `canBeRock` is asked rather than assumed: the rule is that rock never sits
+   * ADDED HERE RATHER THAN IN `landOffer`, and that is the one place the choke
+   * point above is deliberately not the whole story. Whether rock is REACHABLE is
+   * a coast question and `canBeRock` answers it there; whether it is UNLOCKED is a
+   * pacing question, and pacing lives in `balance.json`, which the coastline knows
+   * nothing about. `canBeRock` is still asked rather than assumed: rock never sits
    * beside water, so at a socket touching one of her ponds the button would be a
-   * lie — and the whole reason this function exists is that it must only ever
-   * show what `tileTypeFor` will actually do.
+   * lie, and this function exists only to show what `tileTypeFor` will really do.
    */
   if (rockUnlocked(f) && canBeRock(f.island, f.pending)) kinds.push('rock')
-  /*
-   * A socket where NEITHER kind is clean should not have been offered at all —
-   * `buildableSockets` keeps those from glowing. If one is reached anyway (an
-   * edited save, a shape from before this rule), grass is the gentler answer:
-   * her fields are never re-cut, and the scorer degrades rather than throwing.
-   */
-  return kinds.length > 0 ? kinds : ['grass']
+  return kinds
 }
 
 /**
@@ -366,66 +358,52 @@ export function tileOffer(f: Flow): TileType[] {
  *     sixty-four neighbourhoods qualify, and the rest are ruled out by the
  *     arithmetic of an asset pack with no four-land-edge model.
  *
- * All three are applied HERE rather than only in the offer, because the opening
- * script chooses a kind before it knows the socket. One choke point means the
- * island can never hold a tile the coastline cannot draw.
+ * ...and behind all three, THE BACKSTOP: no placement may leave her unable to
+ * grow. Where the settled answer would do that, the other kind lands instead.
  *
- * IT DOES NOT MEAN SHE CANNOT WALL HERSELF IN — that stronger claim was made
- * here and is FALSE. A Fable review found a 64-tap counterexample, replayed
- * through this exact path with every placement matching an offered button, that
- * ends with her fields sealed and every glowing socket across the water. It is
- * pinned in `tests/island/coast.test.ts` so it cannot be lost.
+ * Every one of them is applied HERE rather than only in the offer, because the
+ * opening script chooses a kind before it knows the socket. One choke point means
+ * the island can never hold a tile the coastline cannot draw, and cannot reach a
+ * state where nothing green can ever touch her land again. `tileOffer` now derives
+ * its buttons from this function instead of restating its conditions, so the two
+ * cannot disagree about what a tap will do.
  *
- * Three gaps compound, and no value of LAND_FLOOR closes them:
- *   - `mustBeLand` yields when grass is infeasible, so water is still offered at
- *     a socket where it spends the last ways out.
- *   - Grass erosion is unguarded: a field on a dry socket whose empty neighbours
- *     all touch water consumes a way out and creates none.
- *   - Dry sockets are not the real witnesses. Once the count is zero the island
- *     survives on WET sockets where grass happens to remain drawable, which the
- *     floor never models.
+ * WHAT THE BACKSTOP REPLACED, because the history is the argument for it. The
+ * dry-connection floor claimed here to make walling-in impossible; that claim was
+ * FALSE, and a Fable review falsified it with a sixty-four-tap counterexample
+ * replayed through this exact path. It is pinned in `tests/island/coast.test.ts`,
+ * where it now asserts that the sequence is refused. Three gaps compounded and no
+ * value of `LAND_FLOOR` closed them — `mustBeLand` yielding when grass is
+ * infeasible, grass erosion going unguarded, and dry sockets simply not being the
+ * witnesses that keep the island alive.
  *
- * What the floor is, then, is an empirical safety margin and a large one: before
- * it, six natural taps wall her in; after it, a greedy harvest plus a six-ply
- * search was needed to find one sequence. The structural fix is a last-resort
- * backstop — refuse any placement leaving zero growable witnesses — which is
- * carded and deliberately not attempted here.
+ * "Unable to grow" is asked as `coast.hasOutwardCorridor` — is there still a dry
+ * chain from her fields out to open sea? — and NOT as the one-ply question the
+ * counterexample was filed against. One ply is not enough and measurement says so:
+ * it can be walked down to a single witness that is a dead end, where every kind
+ * ends the island and there is nothing left to refuse. The corridor cannot be
+ * walked down, because a field can never break it. Read `coast.landedType` for the
+ * induction, and for why refusing never leaves her with nothing to tap.
  *
- * ORDER MATTERS, and the floor outranks the plug. They collide at exactly one
- * place and it is the place that matters: the socket that CLOSES a ring, which
- * has two of her ponds round it and none of her fields, so `mustBeWater` fires —
- * and closing the ring is the whole fault. Ordered the other way the floor would
- * be silent for the one tile it exists to refuse. The price is a green plug in a
- * channel, which is a wart; the alternative is a wall round her island, which is
- * the end of it, and there is no undo. Where the floor turns water back and no
- * field can be drawn there either, nothing is invented: the socket admits neither
- * kind, and `buildableSockets` stops it glowing, as it already does.
+ * The floor stays, and stays first: it is cheap, it fires early, and it keeps the
+ * island in a shape where the backstop has almost nothing left to do — measured at
+ * no firings at all up to a wetness of 0.65.
  */
 export function tileTypeFor(f: Flow, a: Axial, chosen: TileType): TileType {
   /*
    * Rock answers FIRST, and answers only for itself.
    *
-   * It satisfies the floor on its own terms — rock is dry land and cannot have
-   * water beside it, so a rock hex creates ways out of her fields exactly as a
-   * field does (see `dryAfter`). Asking `mustBeLand` first would answer 'grass'
-   * to a girl who asked for a mountain, in the one case where her mountain was
-   * already the right answer.
+   * It satisfies the floor and the backstop on its own terms: rock is dry land
+   * and cannot have water beside it, so a rock hex creates ways out of her fields
+   * exactly as a field does (see `dryAfter`) and can never cut a corridor.
+   * Delegating it to `landedType` would answer 'grass' to a girl who asked for a
+   * mountain, in the one case where her mountain was already the right answer.
    *
    * Where the rules refuse it, grass — never water. She asked for land, and the
    * gentler of the two readings of "land" is the one that keeps her fields.
    */
   if (chosen === 'rock') return canBeRock(f.island, a) ? 'rock' : 'grass'
-  if (mustBeLand(f.island, a)) return 'grass'
-  if (mustBeWater(f.island, a) && canBeWater(f.island, a)) return 'water'
-  if (chosen === 'water' && !canBeWater(f.island, a)) return 'grass'
-  /*
-   * And the mirror: grass that would break a pond it is placed beside becomes
-   * water instead. Dropping a field at four-fields-round a pond is the case no
-   * model can draw, and refusing to build there at all would leave a hole in her
-   * island she could never fill.
-   */
-  if (chosen === 'grass' && !canBeGrass(f.island, a) && canBeWater(f.island, a)) return 'water'
-  return chosen
+  return landedType(f.island, a, chosen)
 }
 
 /**

@@ -16,6 +16,8 @@ import {
   COAST_CANONICAL, COAST_EDGES, COAST_VARIANTS, longestRun, waterMask, lookFor,
   looksFor, presentedBy, canBeWater, canBeGrass, mustBeWater, mustBeLand,
   buildableSockets, dryLandSockets, dryAfter, LAND_FLOOR,
+  allows, settledType, landedType, isGrowableWitness, canStillGrow,
+  hasOutwardCorridor, withTile,
 } from '../../src/island/world/coast'
 import type { CoastVariant, EdgeKind, TileLook } from '../../src/island/world/coast'
 import { createIsland, place, sockets } from '../../src/island/world/grid'
@@ -859,6 +861,28 @@ describe('an island built only through the placement rules', () => {
     return best
   }
 
+  /**
+   * ...and one playing to win at it against the CORRIDOR, which is the invariant
+   * the guarantee actually rests on.
+   *
+   * `worstCase` above weighs sockets by dry connections, so it is only as sharp as
+   * the floor's own measure — and the sixty-four-tap counterexample got past the
+   * floor precisely by making the dry count irrelevant. This one weighs the thing
+   * that matters: it will spend any number of dry sockets to cut the last way out
+   * to the sea, and only falls back on counting when it cannot.
+   */
+  const corridorKiller: Strategy['choose'] = (open, f) => {
+    let best = open[0] as Axial
+    let bestScore = Infinity
+    for (const s of open) {
+      const t = tileTypeFor(f, s, 'water')
+      const after = withTile(f.island, s, t)
+      const score = (hasOutwardCorridor(after) ? 1000 : 0) + dryLandSockets(after).length
+      if (score < bestScore) { bestScore = score; best = s }
+    }
+    return best
+  }
+
   it('never walls her island in, however much water she asks for', () => {
     /*
      * THE property, and it is deliberately stronger than the rule that satisfies
@@ -948,6 +972,83 @@ describe('an island built only through the placement rules', () => {
     }
   }, 30_000)
 
+  it('leaves a socket she can GROW from glowing, not merely a socket', () => {
+    /*
+     * The stronger form, and the one that says the guarantee is not vacuous.
+     * `buildableSockets` refusing a socket is now possible — narrowly, where grass
+     * is infeasible and water would cut the last corridor — and a guard that
+     * refused her last way out while leaving her a shore across the lake to build
+     * on would satisfy the test above perfectly and still have ended her island.
+     *
+     * So this asks for a glowing socket that is BESIDE HER FIELDS and where grass
+     * is what would land. That is `coast.isGrowableWitness`, and the proof that one
+     * always glows is in `hasOutwardCorridor`: the mouth of the corridor is
+     * dry-empty, so nothing can refuse it.
+     */
+    for (const [name, choose] of [['hugging her coast', hugTheLand],
+      ['hunting the corridor', corridorKiller]] as const) {
+      for (let seed = 1; seed <= 12; seed++) {
+        play(45, seed, 1, {
+          choose,
+          watch: (f, step) => {
+            const open = buildableSockets(f.island, sockets(f.island))
+            expect(open.some(s => isGrowableWitness(f.island, s)),
+              `${name}, seed ${seed}, after ${step} tiles: `
+              + `${[...f.island.tiles].map(([k, t]) => `${k}=${t}`).join(' ')}`).toBe(true)
+          },
+        })
+      }
+    }
+  }, 30_000)
+
+  it('keeps the outward corridor against a player hunting for it', () => {
+    /*
+     * The invariant itself, under the one strategy built to break it. The
+     * counterexample that defeated the floor is a water ring closing round her
+     * fields; this plays that shape deliberately, at every tap, and the corridor is
+     * what stops it — so if this ever goes red the guarantee has gone, whatever the
+     * other tests say.
+     *
+     * Fewer seeds than the strategies above buy, and deliberately: weighing every
+     * socket against a fresh flood fill is dear, and what this is for is the shape
+     * of the attack rather than the breadth of it. The broad sweep is a search
+     * harness rather than a gate — 120 greedy anti-play games and a beam search over
+     * some quarter of a million islands, none of which sealed her in.
+     */
+    for (const seed of [1, 7, 13, 29, 160]) {
+      play(45, seed, 1, {
+        choose: corridorKiller,
+        watch: (f, step) => {
+          expect(hasOutwardCorridor(f.island),
+            `seed ${seed}, after ${step} tiles: `
+            + `${[...f.island.tiles].map(([k, t]) => `${k}=${t}`).join(' ')}`).toBe(true)
+        },
+      })
+    }
+  }, 30_000)
+
+  it('never shows her a button that does something else', () => {
+    /*
+     * The offer and the outcome are now derived from one function, so this is a
+     * property rather than a habit — but it is the property the whole one-button
+     * offer rests on, and it used to be two lists of conditions kept in step by
+     * hand. Every kind offered lands as itself, and no kind is hidden that would.
+     */
+    for (let seed = 1; seed <= 16; seed++) {
+      play(45, seed, seed % 2 === 0 ? 1 : 0.5, {
+        watch: f => {
+          for (const s of buildableSockets(f.island, sockets(f.island))) {
+            const offered = tileOffer({ ...f, phase: 'placing', pending: s, chosen: null })
+            for (const t of ['grass', 'water'] as TileType[]) {
+              expect(offered.includes(t), `seed ${seed}, ${key(s)}, ${t}`)
+                .toBe(tileTypeFor(f, s, t) === t)
+            }
+          }
+        },
+      })
+    }
+  }, 30_000)
+
   /* ------------------------------------------- the floor, close up */
 
   it('counts the ways out of her fields the way Joe described them', () => {
@@ -1032,7 +1133,19 @@ describe('an island built only through the placement rules', () => {
         expect(offer.length, key(s)).toBeGreaterThan(0)
         // Whatever is on the buttons is what arrives when it is pressed.
         for (const t of offer) expect(tileTypeFor(f, s, t), `${key(s)} as ${t}`).toBe(t)
-        if (mustBeLand(island, s)) { expect(offer).toEqual(['grass']); checked++ }
+        if (mustBeLand(island, s)) {
+          /*
+           * NO WATER — which is the invariant, rather than "exactly one button".
+           * Rock arrived after this test and is dry land too: it cannot have water
+           * beside it, so it creates ways out of her fields exactly as a field
+           * does and satisfies the floor on its own terms. So where land is
+           * forced, a mountain button is honest, and the loop above has already
+           * proved every button lands as itself.
+           */
+          expect(offer, key(s)).not.toContain('water')
+          expect(offer, key(s)).toContain('grass')
+          checked++
+        }
       }
     }
     expect(checked, 'no socket in any of these islands had a field forced').toBeGreaterThan(0)
@@ -1136,26 +1249,181 @@ describe('an island built only through the placement rules', () => {
   })
 })
 
+describe('the outward corridor, close up', () => {
+  it('holds of Fred\'s lonely rock, which is where the induction starts', () => {
+    expect(hasOutwardCorridor(createIsland())).toBe(true)
+  })
+
+  it('is always a witness — the small proof the two guards rest on', () => {
+    /*
+     * `coast.survivable` asks the corridor question INSTEAD of the one-ply witness
+     * question, not as well as it, and that is only sound because a corridor
+     * implies a witness: its mouth is dry-empty, so `canBeGrass` there is
+     * unconditionally true and `mustBeWater` unconditionally false, so grass is
+     * what lands; it is beside her fields by definition; and the corridor runs on
+     * past it, so it has an empty neighbour.
+     *
+     * Checked over played islands rather than argued, because the argument is only
+     * as good as the code agreeing with it.
+     */
+    let s = 12345
+    const rnd = (): number => { s = (s * 1664525 + 1013904223) >>> 0; return s / 0x100000000 }
+    for (let seed = 1; seed <= 40; seed++) {
+      let island = createIsland()
+      for (let n = 0; n < 30; n++) {
+        const open = buildableSockets(island, sockets(island))
+        if (open.length === 0) break
+        const at = open[Math.floor(rnd() * open.length)] as Axial
+        const want: TileType = rnd() < 0.75 ? 'water' : 'grass'
+        island = place(island, at, landedType(island, at, want))
+        if (!hasOutwardCorridor(island)) continue
+        expect(canStillGrow(island), `seed ${seed}, after ${n + 1} tiles`).toBe(true)
+      }
+    }
+  })
+
+  it('is cut by water and never by a field', () => {
+    /*
+     * The two halves of the induction, stated as a test. A field introduces no
+     * water, so no hex can gain a water neighbour and the dry set only loses the
+     * hex built on — which is the whole reason `corridorAfter` may answer grass
+     * without looking, and the reason `buildableSockets` can only ever refuse a
+     * socket that refuses grass.
+     */
+    let s = 999
+    const rnd = (): number => { s = (s * 1664525 + 1013904223) >>> 0; return s / 0x100000000 }
+    let sawACut = false
+    for (let seed = 1; seed <= 14; seed++) {
+      let island = createIsland()
+      for (let n = 0; n < 28; n++) {
+        const open = buildableSockets(island, sockets(island))
+        if (open.length === 0) break
+        for (const at of open) {
+          if (!hasOutwardCorridor(island)) continue
+          if (allows(island, at, 'grass')) {
+            expect(hasOutwardCorridor(withTile(island, at, 'grass')),
+              `a field at ${key(at)} cut the corridor`).toBe(true)
+          }
+          if (allows(island, at, 'water')
+            && !hasOutwardCorridor(withTile(island, at, 'water'))) sawACut = true
+        }
+        const at = open[Math.floor(rnd() * open.length)] as Axial
+        island = place(island, at, landedType(island, at, rnd() < 0.8 ? 'water' : 'grass'))
+      }
+    }
+    // ...and the guard is not vacuous: water really can cut it.
+    expect(sawACut, 'no water placement ever threatened the corridor').toBe(true)
+  }, 30_000)
+
+  it('reads a hypothetical island exactly as a real one', () => {
+    /*
+     * `withTile` is a VIEW over her tile map rather than a copy of it — the guards
+     * ask questions of a hypothetical island on every tap, and copying the map each
+     * time is the quadratic `allows` was fixed to avoid, arrived at from the other
+     * side. The saving costs one cast, because the lib types `keys`/`values`/
+     * `entries` as `MapIterator` and a generator is not one.
+     *
+     * So the cast is held to `place`'s behaviour here, on every member of the
+     * interface including full iteration. If the shim is ever wrong this is the
+     * test that says so, rather than a coastline fault three files away.
+     */
+    let island = createIsland()
+    island = place(island, { q: 1, r: 0 }, 'water')
+    island = place(island, { q: 0, r: 1 }, 'grass')
+    for (const [at, t] of [[{ q: -1, r: 0 }, 'grass'], [{ q: 2, r: -1 }, 'water'],
+      // ...and an occupied coord, where `place` is a no-op and so is the view.
+      [{ q: 1, r: 0 }, 'grass']] as Array<[Axial, TileType]>) {
+      const real = place(island, at, t).tiles
+      const view = withTile(island, at, t).tiles
+      expect(view.size).toBe(real.size)
+      const every = [...real.keys(), '9,9', key(at)]
+      for (const k of every) {
+        expect(view.get(k), `get ${k}`).toBe(real.get(k))
+        expect(view.has(k), `has ${k}`).toBe(real.has(k))
+      }
+      expect([...view.keys()].sort()).toEqual([...real.keys()].sort())
+      expect([...view.values()].sort()).toEqual([...real.values()].sort())
+      expect([...view.entries()].map(String).sort())
+        .toEqual([...real.entries()].map(String).sort())
+      expect([...view].map(String).sort()).toEqual([...real].map(String).sort())
+      const seen: string[] = []
+      view.forEach((v, k, m) => { seen.push(`${k}=${v}`); expect(m).toBe(view) })
+      expect(seen.sort()).toEqual([...real].map(([k, v]) => `${k}=${v}`).sort())
+    }
+  })
+
+  it('turns water into a field where a pond would cut the last way out', () => {
+    /*
+     * The guard doing its work at the choke point rather than in the outlines,
+     * which is the case that costs her nothing: the socket still glows, and the
+     * only difference is which button is on the panel.
+     *
+     * Built by playing rather than constructed, because a hand-built fixture for
+     * this is exactly the kind that passes while the real thing is broken.
+     */
+    let s = 4242
+    const rnd = (): number => { s = (s * 1664525 + 1013904223) >>> 0; return s / 0x100000000 }
+    let flips = 0
+    for (let seed = 1; seed <= 40 && flips === 0; seed++) {
+      let island = createIsland()
+      for (let n = 0; n < 40; n++) {
+        const open = buildableSockets(island, sockets(island))
+        if (open.length === 0) break
+        for (const at of open) {
+          if (settledType(island, at, 'water') === 'water'
+            && landedType(island, at, 'water') === 'grass') {
+            flips++
+            // Whatever it lands must still be something the coastline can draw.
+            expect(allows(island, at, 'grass')).toBe(true)
+            /*
+             * ...and the offer must not be advertising the water it will not give.
+             * Stated as the absence of water rather than as exactly one button:
+             * rock came later and is dry land too, so it may honestly appear here
+             * (see the note in "offers one button when a field is forced").
+             */
+            const offer = tileOffer({
+              ...createFlow(), island, phase: 'placing', pending: at, chosen: null,
+            })
+            expect(offer).not.toContain('water')
+            expect(offer).toContain('grass')
+          }
+        }
+        const at = open[Math.floor(rnd() * open.length)] as Axial
+        island = place(island, at, landedType(island, at, 'water'))
+      }
+    }
+    expect(flips, 'the choke-point guard never fired at all').toBeGreaterThan(0)
+  }, 30_000)
+})
+
 /**
- * THE KNOWN LIMIT, pinned so it cannot be quietly lost.
+ * THE COUNTEREXAMPLE THAT USED TO WORK, kept because it is the reason for the
+ * backstop and the only cheap way to notice the backstop going away.
  *
- * A Fable review of the dry-connection floor falsified the property the floor
- * was written to guarantee. This is its counterexample, replayed through the
- * real tap path — every placement matched a button the offer actually showed —
- * and it ends with her fields sealed behind water.
+ * A Fable review of the dry-connection floor falsified the property the floor was
+ * written to guarantee: sixty-four taps, every one of them a button the offer
+ * actually showed, ending with her fields sealed behind water. This test used to
+ * assert that it succeeded — a limitation the project knew about rather than one
+ * it had forgotten — and the assertion below is where that was recorded.
  *
- * The test asserts the CURRENT behaviour, including that it fails. That is
- * deliberate: it is the difference between a limitation the project knows about
- * and one it has forgotten. When the last-resort backstop lands — refuse any
- * placement leaving zero growable witnesses — this test should start passing,
- * and the assertion below is what will say so.
+ * IT NO LONGER SUCCEEDS. The sequence is turned back on its FIFTY-SECOND tap, at
+ * (3,0), and the island it leaves behind can still grow. Both halves are asserted,
+ * because the interesting regression is not "the island got sealed" but "the
+ * sequence became possible again", and the second is what catches it early.
  *
- * Severity, for whoever reads this next: it took a greedy anti-play harvest plus
- * a six-ply search to find. Before the floor existed, SIX natural taps walled her
- * in. This is a safety margin that is very large but not infinite, and the
- * comments in flow.ts used to claim otherwise.
+ * WHICH PART OF THE FIX DOES IT, since that is the useful thing to know. Not the
+ * witness backstop: replayed against that alone the sequence still seals, because
+ * by its sixty-third tap the only witness left is a hex enclosed on all six sides,
+ * and at the two taps before that grass is INFEASIBLE at the socket being wetted
+ * so there is no other kind to fall back on. What refuses (3,0) is
+ * `hasOutwardCorridor` — water there would cut the last dry way out to the open
+ * sea, and grass cannot be drawn there, so the socket does not glow at all. See
+ * `coast.landedType` for why one ply was never going to be enough.
+ *
+ * Severity, for whoever reads this next: it took a greedy anti-play harvest plus a
+ * six-ply search to find. Before the floor existed, SIX natural taps walled her in.
  */
-describe('the floor is a margin, not a theorem', () => {
+describe('the counterexample the floor could not stop', () => {
   /** Same question the played-island suite asks, asked from out here. */
   const fieldsCanGrow = (f: Flow): boolean =>
     buildableSockets(f.island, sockets(f.island))
@@ -1181,27 +1449,43 @@ describe('the floor is a margin, not a theorem', () => {
     [3, -1, 'grass'], [5, -3, 'water'], [5, -2, 'water'], [4, -2, 'grass'],
   ]
 
-  it('can still be walled in, by a sequence no child would find', () => {
+  it('is turned back, and leaves her an island that can still grow', () => {
     let f = createFlow()
-    let offeredEvery = true
-    for (const [q, r, want] of SEALED) {
+    /** Where the game stopped playing along, and what it did about it. */
+    let refused: string | null = null
+    for (let n = 0; n < SEALED.length && refused === null; n++) {
+      const [q, r, want] = SEALED[n] as [number, number, TileType]
       const at: Axial = { q, r }
+      /*
+       * A tap she could not have made is a step the sequence no longer has. Only
+       * a glowing socket can be tapped at all — `picking.nearestSocket` reads the
+       * outlines, and those are `buildableSockets` — so this is the honest test of
+       * reachability and it comes before the offer.
+       */
+      if (!buildableSockets(f.island, sockets(f.island)).some(s => key(s) === key(at))) {
+        refused = `tap ${n} at ${q},${r}: the socket does not glow`
+        break
+      }
       f = askForLand({ ...f, phase: 'free' }, at)
       if (f.phase !== 'placing') break
-      // Every step must be a button she could actually have pressed.
-      if (!tileOffer(f).includes(want)) { offeredEvery = false; break }
+      // ...and a button she could not have pressed is the other way to be refused.
+      if (!tileOffer(f).includes(want)) {
+        refused = `tap ${n} at ${q},${r}: ${want} is not offered`
+        break
+      }
       f = placeTile(chooseTile(f, want), at)
       for (let g = 0; g < 200 && f.plot; g++) {
         f = challengePassed(tapSum({ ...f, phase: 'free' }))
       }
+      expect(fieldsCanGrow(f), `after tap ${n} at ${q},${r}`).toBe(true)
     }
-    expect(offeredEvery, 'the counterexample must stay reachable by real taps')
-      .toBe(true)
     /*
-     * FAILS TODAY, and that is the point. Flip this to `true` when the backstop
-     * lands; if it starts passing on its own, something else fixed it and that
-     * is worth understanding rather than celebrating.
+     * THE HEADLINE. This used to read `expect(offeredEvery).toBe(true)` — the
+     * sequence was reachable, and the island it built was sealed. Both have
+     * changed. Pinned at the exact tap so that a fix which merely moves the
+     * failure later still shows up as a diff worth reading rather than a pass.
      */
-    expect(fieldsCanGrow(f)).toBe(false)
+    expect(refused).toBe('tap 51 at 3,0: the socket does not glow')
+    expect(fieldsCanGrow(f), 'and her fields can still grow').toBe(true)
   })
 })

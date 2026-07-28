@@ -449,6 +449,30 @@ service worker before verifying is doing real work, not ceremony.
   found the same way: `mustBeWater` short-circuiting ahead of the feasibility
   check forced water into undrawable shapes, and sockets that admit NEITHER kind
   fell back to grass, which was itself the violation. Those sockets no longer glow.
+- **"She cannot wall herself in" is a TOPOLOGICAL property, and counting anything
+  will not deliver it.** The dry-connection floor counts sockets and is a large
+  empirical margin; it was claimed to be the guarantee and it is not — a Fable
+  review walled her in in sixty-four taps through the real tap path. Nor is the
+  one-ply rule that replaced the claim ("refuse any placement leaving zero growable
+  witnesses") enough: it can be walked down to a single witness that is a dead end,
+  and at that socket every kind ends the island, so there is nothing left to refuse.
+  Adding plies only moves the cliff. What works is `coast.hasOutwardCorridor` — a
+  dry chain from her fields to open sea — because grass can never break it and
+  water that would is refused, which makes it inductive from Fred's rock rather
+  than measured. **If you are tempted to fix a sealing bug by moving a constant,
+  the constant is not the problem.**
+- **A wall in `buildableSockets` is acceptable ONLY with a proof that something
+  else still glows.** The first one was removed because at the sharp end the socket
+  it refused was her last way out; the narrow one there now refuses only where
+  grass is infeasible AND water would cut the last corridor, and the corridor's own
+  mouth is provably a socket that takes grass. That difference is the whole
+  argument — a guard that keeps `canStillGrow` true by forbidding her to use the
+  last way out is a false guarantee, not a fix.
+- **The offer is DERIVED from the choke point, not kept in step with it.**
+  `flow.tileOffer` used to restate `tileTypeFor`'s conditions and carried a comment
+  promising the two matched — a promise a comment cannot keep. It now asks
+  `landedType` what each button would do and shows the ones that do it. Any new
+  placement rule therefore lands in one place.
 - **Judge cleanliness on neighbours' TYPES and rank on how they are DRAWN.**
   Asking whether a tile can be clean of the drawing is circular — it would depend
   on looks chosen by asking the same question next door, which is what produced
