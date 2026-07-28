@@ -29,38 +29,57 @@ export interface Balance {
   pay: { item: number }
   pages: { wordsPerFindPage: number; mix: PageKind[] }
   governor: {
-    maxEmptySurplus: number
     /**
-     * How many fields the island wants per pet. THREE TILES FOR TWO ANIMALS.
+     * The two walls of the corridor she is free to play inside, in TILES PER PET.
      *
-     * Joe, 28 July: *"for every tile, there needs to be one animal. we can be a
-     * bit more relaxed with that, say 3 tiles for 2 animals. bit more maths than
-     * reading since the maths goes quicker."*
+     * Joe, JT-012: *"target ratio i think should be 1 animal per 2 tiles, with a
+     * buffer to 2:3 either way, then it starts to become increasingly tougher to
+     * get either."*
      *
-     * A RATIO, which is the whole point — the governors used to hold an absolute
-     * difference, and an absolute difference cannot express a ratio. See
-     * `spaceSurplus`.
+     * TARGET: 2.0 tiles per pet — one animal per two tiles. It is not a knob
+     * because nothing reads it; it is the middle of the corridor these two walls
+     * describe, and it supersedes the old `tilesPerPet: 1.5` in its role as the
+     * TARGET. The 1.5 itself survives, as `crowded`.
+     *
+     * WHY THEY LOOK LOPSIDED. 1.5 and 3.0 are not symmetric about 2.0, and that
+     * is deliberate rather than a slip. Joe stated the target in ANIMALS PER
+     * TILE — "1 animal per 2 tiles", "a buffer to 2:3 either way" — and in that
+     * unit the three numbers are 2/3, 1/2, 1/3: evenly spaced, a sixth apart
+     * either side of the target. Inverting each to tiles per pet gives 1.5, 2.0,
+     * 3.0, which is only lopsided because reciprocals do not preserve midpoints.
+     * The buffer is even in the unit he said it in.
+     *
+     * `crowded` — 1.5 tiles per pet, two animals for every three tiles. Breached
+     * when `habitableFields < 1.5 · pets`: too many friends for the land, so the
+     * EGG gets dearer and Fred asks for maths.
+     *
+     * `empty` — 3.0 tiles per pet, one animal for every three tiles. Breached
+     * when `habitableFields > 3 · pets`: bare land with nobody on it, so the
+     * TILE gets dearer and Fred asks her to read.
+     *
+     * See `emptySteps` and `crowdedSteps`, which are the only place either
+     * number is compared against anything — the governors and the prices read
+     * the SAME two functions, so an announcement and a rise cannot drift apart.
      */
-    tilesPerPet: number
+    corridor: { crowded: number; empty: number }
     /**
-     * How many pets a field can house. THREE ANIMALS FOR TWO TILES (PB-039).
+     * How much dearer a reward gets for each whole step past its wall.
      *
-     * The other end of the same balance, and it is a SEPARATE ratio rather than
-     * the reciprocal of `tilesPerPet` — the corridor is deliberately wide, and
-     * these two numbers are the two walls of it, tunable apart.
+     * Joe, JT-012: *"let the user run with whatever they want to do up to a
+     * point... we then make the reward really really tough to reach if it pushes
+     * imbalance further if its too far out of balance."*
      *
-     * Joe, PB-039: *"currently the min balance is 3 tiles vs 2 animals... on the
-     * other end of the scale, which i dont think we have bound properly, so she
-     * should be pushed to do maths only at 3 animals on 2 tiles as the other end
-     * of the balance."*
+     * LINEAR, not exponential: `1 + steps · slope`, so the first step past the
+     * wall costs a quarter more and the eighth costs treble. A curve that bit
+     * harder early would make the wall a lockout in everything but name, and
+     * §19 does not allow a lockout.
      *
-     * It REPLACES `maxWaitingPets: 3`, which was an absolute shortfall measured
-     * from `tilesPerPet` — so the floor converged on 1.5 tiles per pet from below
-     * as the island grew and pushed her to maths at 1.2 tiles per pet by ten pets.
-     * That is the same fault the ceiling had before 17ad266, at the other wall.
-     * See `activeGovernor`.
+     * `capMultiple` is the "up to a point" at the far end: nothing is ever more
+     * than three times its list price, however far out of balance she runs. With
+     * the shipped caps that is 96 units of sums for a tile and 84 of pages for an
+     * egg — a lot of work, reachable work, and it never grows again.
      */
-    petsPerTile: number
+    escalation: { slope: number; capMultiple: number }
   }
   pets: {
     /**
@@ -203,10 +222,20 @@ export async function applyDevBalance(enabled: boolean): Promise<boolean> {
  * same units without moving any price.
  */
 export function cost(curve: CostCurve, n: number): number {
-  const i = Math.max(1, n)
   const pay = Math.max(1, balance.pay.item)
-  const exact = curve.cap - (curve.cap - curve.base) * Math.exp((1 - i) / curve.tau)
-  return pay * Math.round(exact / pay)
+  return pay * Math.round(exactCost(curve, n) / pay)
+}
+
+/**
+ * The curve before it is rounded to a whole item — the list price, exactly.
+ *
+ * Pulled out so the surcharge can multiply it BEFORE the quantum is applied
+ * (see `costPast`). Rounding twice would let a step past the wall move a price
+ * by nothing at all, or by two items where the multiplier asked for one.
+ */
+function exactCost(curve: CostCurve, n: number): number {
+  const i = Math.max(1, n)
+  return curve.cap - (curve.cap - curve.base) * Math.exp((1 - i) / curve.tau)
 }
 
 /**
@@ -227,6 +256,90 @@ export const eggCost = (n: number): number => cost(balance.egg, n)
 
 /** Sums needed for the nth tile (1-based). */
 export const tileCost = (n: number): number => cost(balance.tile, n)
+
+/* ------------------------------------------------------------------------- *
+ * The corridor, and what it costs to run outside it — JT-012.
+ *
+ * Joe: *"it should start with invitation first, then let the user run with
+ * whatever they want to do up to a point otherwise we risk breaking the balance
+ * of the island. we then make the reward really really tough to reach if it
+ * pushes imbalance further if its too far out of balance. with an
+ * announcement."*
+ *
+ * Three things had to be true at once, and they are why the maths lives HERE,
+ * in plain numbers, rather than in `governors.ts` or `flow.ts`:
+ *
+ *   1. The invitation and the price must fire at the same place. Fred's ask IS
+ *      the announcement Joe required, so a price that started anywhere else
+ *      would be a silent tax. `activeGovernor` and `pagesForEgg`/`sumsForTile`
+ *      therefore call the SAME two step functions; there is no second copy of
+ *      either threshold anywhere in the tree to drift.
+ *   2. `cost` must stay ratio-blind. It is called from places that have no
+ *      Flow, and a month of pacing tests pin it exactly as it is.
+ *   3. `governors.ts` type-imports `Flow` from `flow.ts`, so a value import
+ *      back the other way would be a genuine cycle. These take three numbers
+ *      and no types, so neither file has to reach for the other.
+ * ------------------------------------------------------------------------- */
+
+/**
+ * How many whole fields past the EMPTY wall the island stands — the tile's step
+ * count. Zero unless she is genuinely out of balance.
+ *
+ * The first field past the wall is step 1, and that is exactly the field at
+ * which Fred starts asking (`activeGovernor`), which is the coherence the card
+ * required: `> 0` here and 'space-surplus' there are the same condition, not two
+ * conditions that happen to agree today.
+ *
+ * `floor` because the largest field count that does NOT breach `empty · pets` is
+ * `floor(empty · pets)`, whatever `empty` is retuned to.
+ */
+export const emptySteps = (habitableFields: number, pets: number): number =>
+  Math.max(0, habitableFields - Math.floor(balance.governor.corridor.empty * pets))
+
+/**
+ * How many whole pets past the CROWDED wall the island stands — the egg's step
+ * count. The mirror of `emptySteps`, and its exact mirror by construction.
+ *
+ * Measured in PETS rather than fields, because the egg is what gets dearer at
+ * this wall and a pet is the thing she is buying. The most pets `habitableFields`
+ * can hold without breaching is `floor(fields / crowded)`; every pet beyond that
+ * is one step.
+ */
+export const crowdedSteps = (habitableFields: number, pets: number): number =>
+  Math.max(0, pets - Math.floor(habitableFields / balance.governor.corridor.crowded))
+
+/**
+ * What a reward costs, as a multiple of its list price, this many steps out.
+ *
+ * `1 + steps/4`, capped at 3: one step out is a quarter dearer, eight steps out
+ * is treble and nothing is ever dearer than that. Inside the corridor `steps` is
+ * 0 and this is exactly 1, so every price in a balanced island is the price it
+ * has always been — the whole scheme is invisible until she leaves the corridor.
+ */
+export function scarcityMultiplier(steps: number): number {
+  const { slope, capMultiple } = balance.governor.escalation
+  return Math.min(capMultiple, 1 + Math.max(0, steps) * slope)
+}
+
+/**
+ * The nth thing of its kind, `steps` past its wall, in units.
+ *
+ * The multiplier goes on the EXACT curve and the quantum is applied once, at the
+ * end — so every price is still a whole number of items and a multiple of `pay`,
+ * the steps climb monotonically, and no price is rounded twice.
+ */
+export function costPast(curve: CostCurve, n: number, steps: number): number {
+  const pay = Math.max(1, balance.pay.item)
+  return pay * Math.round(exactCost(curve, n) * scarcityMultiplier(steps) / pay)
+}
+
+/** Pages needed for the nth egg when the island is `steps` past the crowded wall. */
+export const eggCostPast = (n: number, steps: number): number =>
+  costPast(balance.egg, n, steps)
+
+/** Sums needed for the nth tile when the island is `steps` past the empty wall. */
+export const tileCostPast = (n: number, steps: number): number =>
+  costPast(balance.tile, n, steps)
 
 /**
  * How many reading PAGES the progress toward an egg represents.

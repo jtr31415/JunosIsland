@@ -23,12 +23,45 @@ import { buildableSockets, landedType, landOffer, canBeRock } from './world/coas
  * itself, and later ones should be real work. The curve does both and
  * flattens rather than running away (slice-1 spec §4).
  */
-import { eggCost, tileCost, itemPay, balance } from './balance'
+import { eggCostPast, tileCostPast, itemPay, balance } from './balance'
+import { tileSteps, eggSteps } from './governors'
 
+/**
+ * ...and how much dearer it is if the island is out of balance — JT-012.
+ *
+ * This is the choke point: every price a child sees comes through these two
+ * functions, and they are the only two that hold a whole Flow, so the surcharge
+ * belongs here and nowhere else. Inside the corridor both step counts are 0 and
+ * these are identically the old prices.
+ *
+ * NOTHING SHE HAS BANKED CAN BE STRANDED BY A RISE, and it is worth writing down
+ * WHY rather than asserting it, because the two walls move in opposite
+ * directions and the honest answer is not obvious.
+ *
+ * A tile's price rises with `emptySteps = fields − 3·pets`. While a plot stands
+ * part-paid, `fields` cannot rise (the only thing that raises it is committing a
+ * plot, which zeroes `sumProgress` and hands her the tile) and `pets` cannot
+ * fall — so mid-round the step count can only go DOWN, and hatching a friend
+ * makes the tile she is part-way through CHEAPER.
+ *
+ * An egg's price rises with `crowdedSteps = pets − ⌊fields/1.5⌋`. While an egg
+ * stands part-read, `pets` cannot rise (hatching zeroes `readProgress` and hands
+ * her the friend) and `fields` cannot fall — tiles are never lost, and a retype
+ * moves an uncommitted plot's type, not the island's. So again the step count
+ * can only go down mid-round, and laying a field makes the egg cheaper.
+ *
+ * Which is the pleasant half of the design: the only actions open to her while
+ * part-paid are the ones the governor is asking for, and every one of them
+ * lowers the price of the thing she is already paying for. Walked in
+ * `tests/island/governors.test.ts` rather than trusted to these three
+ * paragraphs.
+ */
 /** Pages this egg costs. Eggs are counted by how many have already hatched. */
-export const pagesForEgg = (f: Flow): number => eggCost(f.pets.length + 1)
+export const pagesForEgg = (f: Flow): number =>
+  eggCostPast(f.pets.length + 1, eggSteps(f))
 /** Sums this tile costs. Tiles counted by how many have been placed. */
-export const sumsForTile = (f: Flow): number => tileCost(f.tilesEarned + 1)
+export const sumsForTile = (f: Flow): number =>
+  tileCostPast(f.tilesEarned + 1, tileSteps(f))
 
 export type Phase = 'opening' | 'free' | 'challenge' | 'placing'
 export type ChallengeKind = 'read' | 'sum' | null

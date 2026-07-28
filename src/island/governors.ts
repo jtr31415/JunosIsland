@@ -32,7 +32,7 @@
  * `createBreakWatch` at the foot of this file.
  */
 import type { Flow } from './flow'
-import { balance } from './balance'
+import { balance, emptySteps, crowdedSteps } from './balance'
 import { sockets } from './world/grid'
 
 /** The two governors that read the ISLAND's state. `activeGovernor` answers. */
@@ -93,32 +93,36 @@ export function inGracePeriod(f: Flow): boolean {
 }
 
 /**
- * How many fields this many pets want — THREE TILES FOR TWO ANIMALS.
+ * The FEWEST fields this many pets can live on — the CROWDED wall, in fields.
  *
- * Joe, 28 July: *"for every tile, there needs to be one animal. we can be a bit
- * more relaxed with that, say 3 tiles for 2 animals."*
+ * Two animals for every three tiles, 1.5 fields per pet. Below this the island
+ * is overcrowded and Fred asks for maths.
+ *
+ * It used to mean the fields her pets WANT, a target that both walls hung off
+ * at an absolute offset. JT-012 moved the target to 2.0 tiles per pet and put
+ * the walls at 1.5 and 3.0, so this number is no longer a target at all — it is
+ * one wall of the corridor, and the value happens to be unchanged. See
+ * `balance.governor.corridor`, which is now where both walls are stated.
  */
 export const fieldsWanted = (pets: number): number =>
-  pets * balance.governor.tilesPerPet
+  pets * balance.governor.corridor.crowded
 
 /**
- * How many pets this much land can house — THREE ANIMALS FOR TWO TILES.
+ * How many pets this much land can house before it is crowded — the same wall,
+ * read from the other side.
  *
- * The mirror of `fieldsWanted`, and it is written as a mirror on purpose: one
- * says how much land her pets want, the other how many pets her land can hold,
- * and the corridor between them is the whole of the pacing. A reader should be
- * able to see "3 tiles per 2 animals" at one wall and "3 animals per 2 tiles"
- * at the other without doing any algebra.
+ * The mirror of `fieldsWanted`, and written as a mirror on purpose: one says the
+ * least land these friends can live on, the other the most friends this land can
+ * hold, and Fred asks for maths the moment she passes it.
  *
- * Joe, PB-039: *"she should be pushed to do maths only at 3 animals on 2 tiles
- * as the other end of the balance."*
- *
- * NOT the reciprocal of `fieldsWanted`. If it were, the two walls would meet and
- * every state would pause something. They are two separate ratios with a wide
- * gap between them, which is what leaves her free to play in the middle.
+ * WHOLE PETS. It used to be `fields · 1.5`, a separate ratio for a separate
+ * floor (PB-039), and the floor and the ceiling were two independent numbers.
+ * JT-012 replaced both with ONE corridor, so this is now genuinely the inverse
+ * of `fieldsWanted` and floors to a whole animal, because half an animal cannot
+ * be housed or hatched.
  */
 export const petsHoused = (fields: number): number =>
-  fields * balance.governor.petsPerTile
+  Math.floor(fields / balance.governor.corridor.crowded)
 
 /**
  * The fields a pet could actually stand on.
@@ -147,7 +151,14 @@ export function habitableFields(f: Flow): number {
 }
 
 /**
- * Land beyond what the current pets want — the number the CEILING reads.
+ * Land beyond the crowded wall — how much room she has spare.
+ *
+ * IT IS NO LONGER A THRESHOLD. Until JT-012 the ceiling fired at
+ * `spaceSurplus >= maxEmptySurplus`, an absolute offset from one ratio; the
+ * ceiling is now the `empty` wall in its own right and is read through
+ * `emptySteps`, so this survives as a readout — how far off the crowded wall she
+ * is standing — and nothing branches on it. The history below is kept because it
+ * is the reason the walls are ratios at all.
  *
  * IT IS MEASURED AGAINST A RATIO, and that correction is the whole of Joe's
  * report. He said the ratio *"seems to be 1:1, think that was more relaxed
@@ -184,13 +195,37 @@ export function spaceSurplus(f: Flow): number {
 export function activeGovernor(f: Flow): Governor {
   if (inGracePeriod(f)) return 'none'
 
-  // The CEILING: more empty land than her friends want. Fred asks her to read.
-  if (spaceSurplus(f) >= balance.governor.maxEmptySurplus) return 'space-surplus'
+  const fields = habitableFields(f)
+  const pets = f.pets.length
 
   /*
-   * ...and the FLOOR, which is now a ratio of its own — PB-039, and the point of
-   * the change. Her friends outnumber what her fields can house, so Fred asks
-   * her for maths.
+   * BOTH WALLS ARE THE CORRIDOR'S OWN, and both are read through the very
+   * functions that price the rewards. That is JT-012's coherence requirement
+   * rather than a tidy-up: Joe asked for the escalation to come *"with an
+   * announcement"*, and Fred's ask IS the announcement. A price that started
+   * anywhere the invitation did not would be a silent tax on a six-year-old, so
+   * `emptySteps(...) > 0` and 'space-surplus' are not two conditions that agree
+   * today — they are one condition, written once.
+   *
+   * Joe gave the corridor in ANIMALS PER TILE: *"target ratio i think should be
+   * 1 animal per 2 tiles, with a buffer to 2:3 either way"* — 1/2 at the target,
+   * 2/3 and 1/3 at the walls, evenly spaced. Inverted, the walls are 1.5 and 3.0
+   * tiles per pet, which only looks lopsided in the unit he did not use.
+   *
+   * The CEILING: more bare land than one friend per three tiles. Fred asks her
+   * to read, and every further empty field makes the next tile dearer.
+   */
+  if (emptySteps(fields, pets) > 0) return 'space-surplus'
+
+  /*
+   * ...and the FLOOR, its mirror: more friends than two for every three tiles,
+   * so Fred asks for maths and every further friend makes the next egg dearer.
+   *
+   * IT USED TO SIT SOMEWHERE ELSE ENTIRELY, and so did the ceiling. The ceiling
+   * fired at `spaceSurplus >= 4` — an absolute offset from a target ratio — and
+   * the floor at `pets >= 1.5 · fields`, a second unrelated ratio (PB-039).
+   * Neither is the corridor Joe eventually specified, and the old reasoning for
+   * the pair is kept below because it is why they are ratios at all.
    *
    * IT USED TO BE `-surplus >= maxWaitingPets`: the fields falling short of
    * `fieldsWanted` by an absolute three. That reads as symmetric with the
@@ -209,14 +244,39 @@ export function activeGovernor(f: Flow): Governor {
    * every two tiles. At ten pets it now sits at seven fields, 0.7 tiles per pet,
    * and it stays near two-thirds however large the island gets.
    *
-   * The two walls cannot both stand at once: the ceiling needs
-   * `fields >= 1.5·pets + 4` and the floor needs `fields <= pets / 1.5`, and the
-   * first is above the second for every pet count. Brute-forced in the tests
+   * The two walls cannot both stand at once: the ceiling needs `fields > 3·pets`
+   * and the floor needs `fields < 1.5·pets`, and both together would need
+   * `3·pets < 1.5·pets`, which no pet count satisfies. Brute-forced in the tests
    * rather than trusted to that sentence.
    */
-  if (f.pets.length >= petsHoused(habitableFields(f))) return 'nursery-queue'
+  if (crowdedSteps(fields, pets) > 0) return 'nursery-queue'
   return 'none'
 }
+
+/* ------------------------------------------------------------------------- *
+ * What the PRICES read — and they read it from here, on purpose.
+ *
+ * JT-012 asks for the escalation to arrive *"with an announcement"*, and Fred's
+ * ask is that announcement. So these two must be exactly the states in which
+ * `activeGovernor` speaks: `tileSteps(f) > 0` if and only if it returns
+ * 'space-surplus', `eggSteps(f) > 0` if and only if 'nursery-queue'. Anything
+ * else is a tax levied without a word said, which the card rules out.
+ *
+ * WHICH IS WHY THE GRACE PERIOD IS HERE TOO, and it is not decoration: a brand
+ * new island is one hex with nobody on it, which is a whole step past the empty
+ * wall. Priced off the wall alone, the very first tile of the game would cost a
+ * quarter more while Fred stood silent — a beginner taxed for a state she has no
+ * idea exists and could not have avoided. §5 keeps him quiet for the opening;
+ * these keep the till shut with him.
+ * ------------------------------------------------------------------------- */
+
+/** Steps past the EMPTY wall, for pricing the next tile. Silent in grace. */
+export const tileSteps = (f: Flow): number =>
+  inGracePeriod(f) ? 0 : emptySteps(habitableFields(f), f.pets.length)
+
+/** Steps past the CROWDED wall, for pricing the next egg. Silent in grace. */
+export const eggSteps = (f: Flow): number =>
+  inGracePeriod(f) ? 0 : crowdedSteps(habitableFields(f), f.pets.length)
 
 /** May the child start a NEW plot right now? A plot mid-build always finishes. */
 export const landPaused = (f: Flow): boolean =>

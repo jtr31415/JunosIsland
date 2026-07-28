@@ -100,7 +100,17 @@ function rig(): Rig {
 function sitedGrass(tilesEarned = 8): Flow {
   let island = createFlow().island
   for (let q = 2; q <= 16; q++) island = place(island, { q, r: 0 }, 'grass')
-  const f: Flow = { ...createFlow(), island, phase: 'free', tilesEarned }
+  /*
+   * SIX FRIENDS ON SIXTEEN FIELDS, which is inside the balance corridor (JT-012).
+   * Without them the fixture is sixteen bare fields with nobody on it — as far
+   * out of balance as the island gets — and the tile carries the full treble
+   * surcharge, so a single sum no longer reaches the second increment. This file
+   * is about the scaffolding, not the economy, so it buys at the list price.
+   */
+  const pets = Array.from({ length: 6 }, (_, i) => ({
+    id: 'p' + i, name: 'P' + i, species: 'animal-fox', at: { q: 0, r: 0 },
+  }))
+  const f: Flow = { ...createFlow(), island, phase: 'free', tilesEarned, pets }
   const asked = askForLand(f, { q: 1, r: 0 })
   expect(tileOffer(asked)).toContain('rock')
   return chooseTile(asked, 'grass')
