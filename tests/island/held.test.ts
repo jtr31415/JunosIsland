@@ -31,6 +31,8 @@ import {
 } from '../../src/island/flow'
 import type { Flow } from '../../src/island/flow'
 import { dealReading, dealSum } from '../../src/island/deal'
+import { createAttemptTally } from '../../src/island/attempts'
+import type { AttemptEvent } from '../../src/island/attempts'
 import { toSave, fromSave } from '../../src/island/save'
 import { mulberry32 } from '../../src/core/rng'
 import { makeDeck } from '../../src/core/decks'
@@ -357,5 +359,94 @@ describe('the whole gesture, flow and card together', () => {
     f = tapSum({ ...f, phase: 'free' })
     expect(dealSum(store, rng, 1, f.sumHeld)).toEqual(dealt)
     expect(store.history).toHaveLength(1)
+  })
+})
+
+describe('what a paused page pays — JT-009', () => {
+  /*
+   * Joe's ruling, 28 Jul: *"we go with (c) nothing changes, she does the page
+   * again."*
+   *
+   * This is the reward half of JT-008(3). The proficiency half was already
+   * built by A2 — every word she resolved was emitted as it landed — and the
+   * question left open was what the PAGE pays when she leaves it unfinished.
+   * Reading pays by the page, so a girl who finds all but the last word and
+   * taps the X banks nothing toward the egg.
+   *
+   * The behaviour was already the code's, because `challengeFailed` never
+   * touched `readProgress`. These tests exist so it is a DECISION rather than a
+   * coincidence: pro-rata and resume were both live options, and the next
+   * person to read `challengeFailed` should find the ruling attached to it
+   * rather than infer that nobody thought about it.
+   */
+  it('banks nothing for the words she did find, and holds the whole page', () => {
+    const { stores, deps } = reading(53)
+    let f: Flow = createFlow()
+
+    f = tapEgg(f)
+    const card = dealReading(stores, deps, f.readProgress, f.readHeld)
+    expect(card.kind).toBe('find')
+    const targets = card.kind === 'find' ? card.picks.length : 0
+    expect(targets).toBeGreaterThan(1)
+
+    // She works down the page and stops one short of the end.
+    const seen: AttemptEvent[] = []
+    const tally = createAttemptTally(e => seen.push(e), () => 1000)
+    tally.pageStarted('find')
+    tally.prompted()
+    for (let i = 0; i < targets - 1; i++) tally.right()
+
+    f = challengeFailed(f)
+    tally.pageEnded()
+
+    // PROFICIENCY — JT-008(3): every word she answered stands.
+    expect(seen).toHaveLength(targets - 1)
+    expect(seen.every(e => e.correct)).toBe(true)
+
+    // REWARD — JT-009(c): the page paid nothing, because the page is not done.
+    expect(f.readProgress).toBe(0)
+    expect(f.eggPresent).toBe(true)
+
+    // And she comes back to the same page, whole — every word to find again.
+    f = tapEgg(f)
+    const again = dealReading(stores, deps, f.readProgress, f.readHeld)
+    expect(asText(again)).toBe(asText(card))
+    expect(again.kind === 'find' ? again.picks.length : -1).toBe(targets)
+  })
+
+  it('pays the page in full when she finishes it on the second visit', () => {
+    /*
+     * The other side of "nothing changes": the chore is a chore, not a
+     * forfeit. Re-doing the page pays exactly what doing it once pays, so
+     * leaving costs her time and nothing else — which is what made (c)
+     * defensible against pro-rata in the first place.
+     */
+    let f: Flow = createFlow()
+    const paid = challengePassed(tapEgg(createFlow()), { name: 'Bo', species: 'animal-fox' })
+
+    f = challengeFailed(tapEgg(f))
+    f = challengePassed(tapEgg(f), { name: 'Bo', species: 'animal-fox' })
+
+    expect(f.readProgress).toBe(paid.readProgress)
+    expect(f.pets.length).toBe(paid.pets.length)
+  })
+
+  it('leaves the egg exactly as far off as it was — no part-items in the currency', () => {
+    /*
+     * Reading (a), pro-rata, is the one that would have shown up here: it
+     * needed fractions of an item in a currency A7 had just re-based to whole
+     * ones, and it would have moved pages-per-egg, which the month-walk pins.
+     * `readProgress` staying integral across an abandonment is the cheap,
+     * permanent guard against that reading creeping back in unremarked.
+     */
+    let f: Flow = createFlow()
+    f = challengePassed(tapEgg(f), { name: 'Bo', species: 'animal-fox' })
+    const banked = f.readProgress
+    expect(Number.isInteger(banked)).toBe(true)
+
+    for (let i = 0; i < 5; i++) f = challengeFailed(tapEgg({ ...f, phase: 'free' }))
+
+    expect(f.readProgress).toBe(banked)
+    expect(Number.isInteger(f.readProgress)).toBe(true)
   })
 })

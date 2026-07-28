@@ -118,8 +118,8 @@
         "A2.reward"
       ],
       "doneRule": "manual",
-      "note": "",
-      "state": "open"
+      "note": "we go with C) nothing changes, she does the page again. if it flags in play test, i will bring it back, but close after implementation for now.",
+      "state": "done"
     }
   ],
   "archive": []

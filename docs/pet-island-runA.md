@@ -536,6 +536,34 @@ very different things, and one of them moves numbers the A7 month-walk pins.
   `onPassed`: what she answered and what she was paid for are different
   questions, and a find page emits several of the first against one of the second.
 
+### JT-009 answered (28 Jul) — a paused page pays nothing
+
+Joe: *"we go with (c) nothing changes, she does the page again. if it flags in
+play test, i will bring it back, but close after implementation for now."*
+
+**The build was zero lines**, and that is the point of the card rather than an
+argument against it. `challengeFailed` never touched `readProgress`, so (c) was
+already what the code did — but (a) pro-rata and (b) resume were both live, and
+one of them moved numbers the A7 month-walk pins. What shipped is the ruling
+ATTACHED to the behaviour: three tests in `tests/island/held.test.ts`
+(*"what a paused page pays — JT-009"*) drive the real generators and the real
+tally to pin all three halves — the words she found still count for proficiency
+(JT-008(3)), the page banks nothing (JT-009(c)), and the same page comes back
+whole. The third test pins `readProgress` INTEGRAL across repeated
+abandonment, which is the cheap permanent guard against pro-rata creeping back
+in unremarked.
+
+**One honest consequence, recorded rather than fixed.** Under (c) the re-done
+page is re-MEASURED as well as re-read: a girl who finds 11 of 12, leaves, and
+comes back emits those words twice, and the second pass is easier by
+construction because she has just done it. So abandonment now nudges accuracy
+UP slightly. It is small (the ring is 30 and the EWMA α is .15), it needs a
+real child abandoning real pages to appear at all, and every alternative to it
+costs more than it does — de-duplicating attempts per card would mean the tally
+knowing what a card IS, which is exactly the coupling `attempts.ts` was split
+out to avoid. Flagged here so that if the A6 report ever looks flattering for a
+child who leaves a lot, this is the first place to look. `PB-040`.
+
 ---
 
 # LEDGER (updated on every field report)
@@ -543,7 +571,7 @@ very different things, and one of them moves numbers the A7 month-walk pins.
 |---|---|
 | A1 | **BUILT** (28 Jul, `PB-007` closed) — find pages bank on completion; both in-round floaters are `.floater`, out of the `.say` hiding rule. Four regression tests in `tests/island/overlay.test.ts`. Six gates green. |
 | **A7** | **BUILT** (28 Jul) — costs now in units at 2/item, provably invisible: `tests/island/economy.test.ts` walks a month and pins items-per-tile and items-per-egg to the pre-A7 values at every n. The spec's "×2 is exact by construction" was **false** and is corrected in FIELD NOTES; `cost()` rounds in items, and a pre-A7 save is migrated by `save.pay`. |
-| **A2** | **BUILT** (28 Jul, on JT-008's answers) — `src/island/attempts.ts` + one optional `onHelp?` dep; latency needed no dep at all (the overlay wraps its own `Speaker`). 27 unit tests on the rules, 13 wiring tests through the real renderers. Six gates green, parity renders identically. **The spec changed under it**: help no longer excludes (JT-008(2)), and the rescue exclusion goes with it having never been reachable. **JT-009 open** — the reward half of the abandonment ruling. |
+| **A2** | **BUILT** (28 Jul, on JT-008's answers) — `src/island/attempts.ts` + one optional `onHelp?` dep; latency needed no dep at all (the overlay wraps its own `Speaker`). 27 unit tests on the rules, 13 wiring tests through the real renderers. Six gates green, parity renders identically. **The spec changed under it**: help no longer excludes (JT-008(2)), and the rescue exclusion goes with it having never been reachable. **JT-009 now closed** — a paused page pays nothing (see FIELD NOTES). |
 | A3 · A4 · A5 · A6 | SPECCED — awaiting build. These four interlock (harness, tickboxes, schema v3, report) and do not split cleanly; A2 feeds them. |
 | **A8 Workbench** | **BUILT** (28 Jul) — `npm run workbench`. Queue, backlog, lesson editor, export, bake console, voices & key. |
 | **A8 asset viewer** | **BUILT** (28 Jul, `PB-033` closed) — `/viewer.html`. Three galleries, orbitable, searchable, every ID canonical by construction. |
@@ -554,8 +582,8 @@ very different things, and one of them moves numbers the A7 month-walk pins.
 | Run D | Context-specced; rungs blocked on Joe #4–5 |
 | Joe #1–7 | Open — now **JT-001…JT-007** in the workbench, not in prose |
 | **JT-008** | **ANSWERED** (28 Jul) — the three attempt-model rulings; A2 built on them. |
-| **JT-009** | **OPEN** — what a paused page pays. The reward half of JT-008(3). |
-| Product Backlog | Seeded, now 37 cards, `PB-001…PB-037` (`PB-036` Joe's, `PB-037` Fred-talk has no way in). Awaiting Joe's triage. |
+| **JT-009** | **ANSWERED and CLOSED** (28 Jul) — reading (c), a paused page pays nothing and she does it again. Zero lines to build; three tests to pin. `PB-041` parks reading (b), resume, against Joe's *"if it flags in play test, i will bring it back"*. |
+| Product Backlog | Seeded, now 41 cards, `PB-001…PB-041` (`PB-036` and `PB-039` Joe's own, `PB-037` Fred-talk has no way in, `PB-038` the A7 page-mix regression, `PB-040` re-done pages are re-measured, `PB-041` resume, parked by ruling). Awaiting Joe's triage. |
 | Superseded docs | `pet-island-phase4-1-spec.md` (rulings changed) |
 
 **A8 ruling changed by Joe, 28 Jul.** The spec says the Azure key comes from

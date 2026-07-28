@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "nextId": 39,
+  "nextId": 42,
   "cards": [
     {
       "id": "PB-001",
@@ -266,6 +266,27 @@
       "title": "A7 regression: the reading page mix quietly doubled the find pages",
       "detail": "Found while surveying A3's deal path, not yet fixed. main.ts passes state.readProgress to dealReading as the PAGE INDEX, and deal.ts:69 asks pageKind(page), which is mix[page % 4] over ['find','build','build','build']. Since A7 readProgress counts UNITS and advances by pay.item = 2 per page, so the index goes 0,2,4,6 and the mix reads find,build,find,build - one find page in two, where the data says one in four. Demonstrated: pre-A7 'find build build build find build' vs today 'find build find build find build'. This is exactly the trap A7's own field note names ('anything asserting pacing should ask in items, or it is asserting the denomination instead'); the month-walk pinned COSTS in items and the page mix was never asked. Fix is at the deal path, not in balance.json - the index wants converting from units to items (readProgress / itemPay(), exact because a reading page pays exactly one item) - and it needs a test that pins the mix a child actually SEES across an egg, since the existing balance.test.ts pins pageKind(0..3) directly and cannot see this. Note before changing it: alternating find/build may well be the nicer mix. The bug is that nobody chose it.",
       "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-039",
+      "title": "Egg/Tile balance",
+      "detail": "currently the min balance is 3 tiles vs 2 animals, ie for 2 animals, she can have 3 tiles, ie she will have to do some reading to do more maths. on the other end of the scale, which i dont think we have bound properly, so she should be pushed to do maths only at 3 animals on 2 tiles as the other end of the balance.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-040",
+      "title": "A page she abandons is re-measured when she re-does it",
+      "detail": "A consequence of JT-009(c), recorded rather than fixed, because fixing it costs more than it does. She finds 11 of 12 words, taps X, and comes back to the same page whole - so those 11 words are answered TWICE and emitted twice, and the second pass is easier by construction because she has just done them. Abandonment therefore nudges accuracy UP a little. Why it is small: the latency ring is 30 deep and the EWMA alpha is .15, so a handful of repeats move nothing you can see, and it needs a child who actually leaves pages mid-way to appear at all. Why it is not fixed: de-duplicating attempts per card would mean the tally knowing what a CARD is - which store it came from, whether it is the same one - and attempts.ts was deliberately split out of the overlay to keep it arithmetic over an event order rather than a thing that knows about ReadPick. The honest cheap alternative if it ever matters is to mark the repeat rather than drop it: challengeFailed already sets readHeld, so the overlay knows on the way back IN that this page is a re-visit, and one bit on AttemptEvent would let A6 decide. Trigger: if the grown-ups report ever reads flattering for a child who leaves a lot, look here first.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-041",
+      "title": "Resume a paused find page where she left it (JT-009 reading b, parked)",
+      "detail": "Parked by Joe's own ruling, not rejected: 'we go with (c) nothing changes, she does the page again. if it flags in play test, i will bring it back.' This card is the bring-it-back. THE CASE: a find page grows from 3 words to 12, so a girl who finds 11 and taps X re-finds all 11 to get paid. Under (c) that is a chore rather than a punishment, and the bet is that it stays a chore at 12 words. Play-test signal that the bet lost: she stops leaving pages she is finding hard because leaving is expensive, or she leaves and does not come back to the egg at all. WHAT IT WOULD COST, surveyed at the time so a future run does not survey it twice: in-session round state (which targets were found), a change to the ported wordFind renderer to mount with some already struck - which is a PARITY question against tools/smoke/parity.mjs rather than a free one - and nothing at all in the economy, which is what made it the cheapest of the two live alternatives. Reading (a), pro-rata, is NOT parked here: it needs part-items in a currency A7 just re-based to whole ones and it moves pages-per-egg, which the month-walk pins. If (c) ever fails, (b) is the one to build.",
+      "state": "parked",
       "run": ""
     }
   ]
