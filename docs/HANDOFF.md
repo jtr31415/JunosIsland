@@ -545,3 +545,52 @@ desktop, by me, at night. The pacing of ceremonies seen forty times in a
 sitting, whether the golden outline reads as a promise or as clutter, whether
 the sparkles look right in motion — none of that has been seen by the person it
 is for. Treat the look as provisional until she has played it.
+
+---
+
+## Landmines added 28 July
+
+**A closed panel can steal her half-built tile.** `stageFor('sum')` re-parents the
+growing plot onto the overlay's turntable, and the turntable goes away with the
+panel. One `overlay.close()` of five closed without handing it back, so the plot
+stayed alive — still in `flow.plot`, still holding her sums — parented to
+something no longer on screen. Her island showed an empty socket; tapping any
+socket called `askForLand`, which resumes a standing plot and re-staged it, so it
+looked like the tile "came back when you pick a socket". **Every `overlay.close()`
+in main.ts must be preceded by `stageFor(null)`**, and a source assertion in
+`tests/island/retype.test.ts` now enforces it. Every unit involved behaved
+correctly; the fault was entirely in the sequence.
+
+**Widening a value union is invisible to the compiler.** Adding `'rock'` to
+`TileType` silently broke eight places that asked `=== 'grass'` and meant "dry
+land" — including `waterMask`, which builds the coastline itself. They compare
+values rather than switching exhaustively, so `tsc` found none of them and rock
+would have presented open sea to its neighbours, cutting beaches through the
+middle of her island. The land/water question now goes through `isLand()` in
+`grid.ts`. **Read the note there before adding a fourth type**; rock escaped
+needing new coast-table entries only because it can never touch water.
+
+**`isLand` is deliberately not the habitability question.** Rock counts as land
+for the coastline (dry, buildable from) and NOT as lodging for the governors,
+because a mountain hex is planted at native size and covers its own tile — there
+is nowhere on it for a pet to stand. If those two ever agree again, one has been
+changed without the other being considered.
+
+**The two regression gates constrain difficulty work in opposite directions.**
+`golden.json` pins per-level generator BEHAVIOUR — every level, including the
+ones the island never selects — so changing level *selection* is free while
+redefining what a level *is* invalidates the anchor. And `parity.mjs` drives v0's
+own level switch, so adaptive selection must live in the island layer, never in
+`src/core/`, or the 2D shell diverges from the frozen original. See
+`docs/PHASE4.1-EDUCATIONAL-HARNESS.md` §5.
+
+**`git add -A` will swallow `.claude/worktrees/` as embedded repos.** It did once
+this session and had to be amended out. `.claude/` is now in
+`.git/info/exclude`, but stage deliberately (`git add src tests docs`) rather
+than relying on it.
+
+**`agent-browser` hung on every command for the last stretch of 28 July** —
+three sessions, all wedged on `open`, each needing `TaskStop`. Screenshots
+earlier the same session worked, so it is environmental. Budget for it failing
+and keep a non-browser way to verify: `createGrowingPlot` and friends take
+injected deps and can be driven with stubs (`tests/island/increments.test.ts`).

@@ -19,7 +19,61 @@ verdict outranks every document here (brief §18), and the notes below marked
 
 ---
 
-## LATEST — 28 July, late evening. Read this first.
+## LATEST — 28 July, small hours. Read this first, then §4.1 below.
+
+**NEXT PHASE IS 4.1, THE EDUCATIONAL HARNESS**, and Joe has said it outranks
+more animals: *"its the educational harness and therefore takes prio over more
+animals."* He is writing the spec himself from
+`docs/PHASE4.1-EDUCATIONAL-HARNESS.md` and will hand it over to build. **Do not
+start building it before the spec arrives.**
+
+Correct a mistake carried in these docs for days: **item 13 was never blocked on
+a ruling from Joe.** He had said the *spec* for item 13 is essentially the whole
+of Phase 4. Anything still describing it as "blocked, needs Joe's ruling on the
+difficulty currency" is wrong.
+
+The headline from the survey: **escalation is built, golden-pinned at every
+level, and switched off by `level: 1` hardcoded at `main.ts:989` and `:998`.**
+`generateSub` has therefore never run — there is no subtraction in the game, and
+every sum Juno has done totals ten or less.
+
+### Everything below is now merged and live on `main`
+
+Both branches that were waiting on Joe are in, ratified:
+
+| | |
+|---|---|
+| growable-witness backstop | merged `7bc3025`. The narrow socket refusal is RATIFIED. Conflict resolved by keeping the branch's single choke point (`landedType`/`landOffer` in coast.ts) and answering rock *before* delegating to it. |
+| break suggestion | merged `ff665cb`. Fable reviewed and passed it. |
+| mountains as a third tile | `2f9071c`. Native size, centred, base palette so the rock is grey. |
+| tile-to-animal ratio 3:2 | `17ad266`. The cause was an ABSOLUTE corridor in governors.ts, never the cost curves. |
+| change your mind after siting | `efff9fa`. Tap the half-built plot. |
+| shadows pulled away from the sun | `efff9fa`. Joe's rule, as a `max` so hovering pets keep their physical offset. |
+| the plot was stranded on the hidden stage | `d3b7b97`. See the landmine in HANDOFF — this is the one worth reading. |
+
+### Three things to know before touching this code
+
+1. **`overlay.close()` must always be preceded by `stageFor(null)`.** One site of
+   five was not, and it stranded her half-built tile on the hidden turntable —
+   which is why "change your mind" appeared broken (there was no plot on the
+   island to tap). Guarded by a source assertion in `tests/island/retype.test.ts`.
+2. **Widening a value union is invisible to `tsc`.** Adding `'rock'` to
+   `TileType` silently broke eight places that asked `=== 'grass'` and meant
+   "land". They now go through `isLand()` in `grid.ts`. Read the note there
+   before adding a fourth type.
+3. **`isLand` is deliberately NOT the habitability question.** Rock is land for
+   the coastline and not lodging for the governors, because a mountain covers its
+   own hex. If those two ever agree again, one was changed without the other
+   being considered.
+
+**Operational note:** `agent-browser` hung on every command for the last stretch
+of this session (three sessions, all wedged on `open`). Screenshots earlier in the
+session worked fine, so it is environmental rather than broken usage — but budget
+for it failing and have a non-browser way to verify.
+
+---
+
+## Earlier on 28 July
 
 **Live on `main` at `5520da5`, CI green, deployed.** There is still no `v*` tag,
 so the Pages root falls back to `main` — which means **whatever is on `main` is
