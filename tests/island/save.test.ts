@@ -9,7 +9,9 @@ import {
 import type { Flow } from '../../src/island/flow'
 import { count, tileAt } from '../../src/island/world/grid'
 import { createLocalStore } from '../../src/platform/storage'
-import { createAttainment, createHarness } from '../../src/island/harness'
+import {
+  createAttainment, createHarness, LIVE_PATHS, STAGES,
+} from '../../src/island/harness'
 
 class MemStorage implements Storage {
   private m = new Map<string, string>()
@@ -337,5 +339,230 @@ describe('attainment travels with the island (A5)', () => {
     await saveIsland(store, 'p1', playedFlow(), true, 'Juno', null, a)
     const loaded = await loadIsland(store, 'p1')
     expect(createHarness(loaded.attainment).levelFor('sums')).toEqual([1, 2])
+  })
+})
+
+describe('onceFlags — A5\'s reserved space', () => {
+  /*
+   * A SIBLING OF `attainment`, not a field inside it. Everything in that
+   * record is a measurement; "the ten-dot introduction has played" is a
+   * presentation fact, and filing it under competence would be a category
+   * error as well as rippling the `Attainment` type through a grown-ups panel
+   * that has no business rendering it.
+   *
+   * NOTHING CONSUMES IT IN RUN A, which is what reserved space means: the save
+   * carries and re-writes the fact from today so that INTRO-TEN is a string
+   * Run C adds rather than a migration Run C has to write.
+   */
+  const base = () => ({
+    tiles: [['0,0', 'grass']] as Array<[string, 'grass']>,
+    pets: [], bankedTiles: 0, openingSeen: true, tilesEarned: 1,
+  })
+
+  it('is empty on an island that has never had one', () => {
+    expect(fromSave(null).onceFlags).toEqual([])
+    expect(fromSave(base()).onceFlags).toEqual([])
+  })
+
+  it('round-trips the ids it was given', () => {
+    const back = fromSave(toSave(playedFlow(), true, 'Juno', null, undefined,
+      ['INTRO-TEN']))
+    expect(back.onceFlags).toEqual(['INTRO-TEN'])
+  })
+
+  it('round-trips through the real store', async () => {
+    const store = createLocalStore(mem)
+    await saveIsland(store, 'p1', playedFlow(), true, 'Juno', null, undefined,
+      ['INTRO-TEN'])
+    expect((await loadIsland(store, 'p1')).onceFlags).toEqual(['INTRO-TEN'])
+  })
+
+  it('sanitises a hand-edited list rather than trusting it', () => {
+    /*
+     * Untrusted input like everything else read off disk. A non-string where a
+     * flag id belongs must not survive to be compared against one, and a
+     * duplicate must not survive at all — a list is a set that happens to be
+     * ordered.
+     */
+    const wrecked = { ...base(), onceFlags: ['INTRO-TEN', 'INTRO-TEN', 7, null, '', { a: 1 }] }
+    expect(fromSave(wrecked as never).onceFlags).toEqual(['INTRO-TEN'])
+  })
+
+  it('ignores a value that is not a list at all', () => {
+    expect(fromSave({ ...base(), onceFlags: 'INTRO-TEN' } as never).onceFlags).toEqual([])
+  })
+
+  it('is bounded, so a hand-edited save cannot grow without limit', () => {
+    const many = Array.from({ length: 500 }, (_, i) => `FLAG-${i}`)
+    const long = 'x'.repeat(500)
+    const { onceFlags } = fromSave({ ...base(), onceFlags: [long, ...many] } as never)
+    expect(onceFlags).toHaveLength(64)
+    expect(onceFlags).not.toContain(long)
+  })
+})
+
+/**
+ * FIXTURES BOTH DIRECTIONS (A5) — the honest version of the phrase.
+ *
+ * A5 asks for "fixtures both directions", which in an item titled "schema v3"
+ * means a migration walked up and down. There is no migration: `attainment`
+ * and `onceFlags` are additive and the envelope was deliberately left at 2
+ * (see the note above), so a v2→v3 fixture would be a test of a function that
+ * does not and should not exist.
+ *
+ * The honest equivalent is the property the no-bump decision actually rests
+ * on, which is compatibility in both directions of TIME rather than of version
+ * number:
+ *
+ *   - BACKWARDS: a save written by an older build — one that predates these
+ *     fields entirely — loads with the right defaults instead of a blank
+ *     child. The tick half is asserted above; this is the STATS half.
+ *   - FORWARDS: a save written by a LATER build, carrying attainment fields,
+ *     paths, stage ids and once-flags this build has never heard of, is
+ *     sanitised and loaded rather than refused. This is the more important of
+ *     the two, because it is the whole argument for not bumping: a bump makes
+ *     an older build REFUSE the save and reach for the snapshot ring, which
+ *     trades a lost report for a lost island.
+ */
+describe('fixtures both directions (A5)', () => {
+  /** BACKWARDS: an island from before any of this existed. */
+  const oldIsland = () => ({
+    tiles: [['0,0', 'grass']] as Array<[string, 'grass']>,
+    pets: [], bankedTiles: 0, openingSeen: true,
+    sumProgress: 6, readProgress: 4, tilesEarned: 1, pay: 2,
+  })
+
+  /**
+   * FORWARDS: written by a build from a run that has not happened yet.
+   *
+   * Unknown everywhere it could be unknown — a stat on a stage, a stage on a
+   * path, a path in the record, a flag in the reserved space, and a top-level
+   * field beside them all.
+   */
+  const futureIsland = () => ({
+    ...oldIsland(),
+    seasonalMood: 'autumnal',
+    attainment: {
+      sums: {
+        mode: 'manual',
+        stages: {
+          1: {
+            ticked: true, attempts: 12, ewma: 0.8, latencies: [900], early: [900],
+            sessions: [{ date: '2026-09-01', correct: 3, total: 4 }], rescues: [],
+            fluency: 'gold',
+          },
+          7: { ticked: true, attempts: 99 },
+        },
+      },
+      algebra: { mode: 'auto', stages: { 1: { ticked: true, attempts: 40 } } },
+    },
+    onceFlags: ['INTRO-TEN', 'RUN-D-MOMENT-NOBODY-HAS-SPECCED'],
+  })
+
+  it('backwards: an old island keeps what it already deals', () => {
+    const { attainment } = fromSave(oldIsland())
+    expect(attainment.sums.stages[1]?.ticked).toBe(true)
+    expect(attainment.reading.stages[1]?.ticked).toBe(true)
+    expect(attainment.building.stages[1]?.ticked).toBe(true)
+    expect(attainment.takingAway.stages[1]?.ticked).toBe(false)
+  })
+
+  it('backwards: every STAT is an honest zero, on every stage of every path', () => {
+    /*
+     * The correction the field notes made to A5's migration line: the zeroes
+     * are the statistics, not the ticks. Nothing may be invented for work
+     * nobody watched, and the sweep is over the whole table rather than one
+     * sampled stage because a default that is right for `sums` and wrong for
+     * `takingAway` is the kind that ships.
+     */
+    const { attainment } = fromSave(oldIsland())
+    for (const path of LIVE_PATHS) {
+      expect(attainment[path].mode).toBe('auto')
+      for (const id of STAGES[path]) {
+        const st = attainment[path].stages[id]
+        expect(st?.attempts, `${path} ${id} attempts`).toBe(0)
+        expect(st?.ewma, `${path} ${id} ewma`).toBeNull()
+        expect(st?.latencies, `${path} ${id} latencies`).toEqual([])
+        expect(st?.early, `${path} ${id} early`).toEqual([])
+        expect(st?.sessions, `${path} ${id} sessions`).toEqual([])
+        expect(st?.rescues, `${path} ${id} rescues`).toEqual([])
+      }
+    }
+  })
+
+  it('backwards: an old island still has no once-flags rather than a broken one', () => {
+    expect(fromSave(oldIsland()).onceFlags).toEqual([])
+  })
+
+  it('forwards: a save from a later build loads instead of being refused', () => {
+    /*
+     * The island itself arrives intact — this is the half that matters, since
+     * the alternative a schema bump would produce is not "a degraded report"
+     * but "an empty island", the loader having fallen through to the snapshot
+     * ring.
+     */
+    const { flow, attainment } = fromSave(futureIsland() as never)
+    expect(count(flow.island)).toBe(1)
+    expect(flow.sumProgress).toBe(6)
+    expect(attainment.sums.mode).toBe('manual')
+  })
+
+  it('forwards: the measurements it does understand survive the trip', () => {
+    const { attainment } = fromSave(futureIsland() as never)
+    const st = attainment.sums.stages[1]
+    expect(st?.attempts).toBe(12)
+    expect(st?.ewma).toBe(0.8)
+    expect(st?.latencies).toEqual([900])
+    expect(st?.sessions).toEqual([{ date: '2026-09-01', correct: 3, total: 4 }])
+  })
+
+  it('forwards: what it does not understand cannot reach a generator', () => {
+    /*
+     * Sanitised, not trusted. A stage id with nothing behind it and a path
+     * from a later run are both dropped at the door, because `readAttainment`
+     * builds outward from the stage table rather than from the file's keys —
+     * and an unknown stage that survived would eventually be handed to a
+     * generator that cannot render it.
+     */
+    const { attainment } = fromSave(futureIsland() as never)
+    expect(attainment.sums.stages[7]).toBeUndefined()
+    expect(Object.prototype.hasOwnProperty.call(attainment, 'algebra')).toBe(false)
+    expect(Object.prototype.hasOwnProperty.call(
+      attainment.sums.stages[1] ?? {}, 'fluency')).toBe(false)
+    expect(createHarness(attainment).levelFor('sums')).toEqual([1])
+  })
+
+  it('forwards: a once-flag from a later run is KEPT, and written back out', () => {
+    /*
+     * The one place the sanitising deliberately differs from the attainment
+     * record's. An unknown stage id is dangerous because something will try to
+     * deal it; an unknown flag id reaches nothing at all — it is only ever
+     * compared for equality. Dropping one would mean a child who ran a newer
+     * build for an afternoon and came back sits through an introduction the
+     * save already recorded as played, which is the exact harm a once-flag is
+     * for. So it survives the read AND the next write, or the loss simply
+     * happens one save later.
+     */
+    const loaded = fromSave(futureIsland() as never)
+    expect(loaded.onceFlags)
+      .toEqual(['INTRO-TEN', 'RUN-D-MOMENT-NOBODY-HAS-SPECCED'])
+
+    const rewritten = fromSave(toSave(loaded.flow, loaded.openingSeen, 'Juno',
+      null, loaded.attainment, loaded.onceFlags))
+    expect(rewritten.onceFlags).toEqual(loaded.onceFlags)
+  })
+
+  it('forwards: through the real store, which is where a refusal would happen', async () => {
+    /*
+     * `fromSave` proves the payload is read charitably; this proves nothing
+     * upstream of it says no. The envelope is untouched by A5 precisely so
+     * that this path stays open in both directions.
+     */
+    const store = createLocalStore(mem)
+    await store.put('p1', 'save', futureIsland())
+    const loaded = await loadIsland(store, 'p1')
+    expect(count(loaded.flow.island)).toBe(1)
+    expect(loaded.attainment.sums.stages[1]?.attempts).toBe(12)
+    expect(loaded.onceFlags).toContain('INTRO-TEN')
   })
 })

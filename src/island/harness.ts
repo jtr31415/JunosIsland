@@ -30,6 +30,7 @@
 import type { AttemptEvent } from './attempts'
 import { pageKind } from './balance'
 import type { PageKind } from './balance'
+import { dayKey } from '../platform/clock'
 
 /** The paths a child can actually be dealt today. */
 export const LIVE_PATHS = ['sums', 'takingAway', 'reading', 'building'] as const
@@ -314,13 +315,18 @@ export interface Harness {
   noteOffer(path: Path, accepted: boolean): void
 }
 
-/** Local YYYY-MM-DD. A session is a day in the child's own timezone. */
-function dayKey(at: number): string {
-  const d = new Date(at)
-  return d.getFullYear() + '-'
-    + String(d.getMonth() + 1).padStart(2, '0') + '-'
-    + String(d.getDate()).padStart(2, '0')
-}
+/*
+ * A session is a day in the child's own timezone, and `dayKey` is where that
+ * is decided — the platform clock's, imported rather than reimplemented.
+ *
+ * This module had its own copy, byte-identical in behaviour, while
+ * `report.ts` already imported the platform one. Two implementations of one
+ * rule with a third correctly avoided is the shape HANDOFF §5 names as this
+ * project's four-time offender: they agree only for as long as somebody keeps
+ * them agreeing by hand, and the day they drift the sessions a harness WRITES
+ * would stop matching the days the report READS them back on — a consistency
+ * tier that is wrong in a way nothing would flag.
+ */
 
 /** Push onto a ring, dropping from the front once it is full. */
 function ring(xs: number[], v: number, keep: number): void {

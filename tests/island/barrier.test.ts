@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'node:fs'
-import { resolve, dirname } from 'node:path'
+import { readFileSync, readdirSync } from 'node:fs'
+import { resolve, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 /**
@@ -23,10 +23,12 @@ const MAIN = resolve(here, '../../src/island/main.ts')
 const source = readFileSync(MAIN, 'utf8')
 
 /** Lines with the comments stripped, so prose about a rule is not the rule. */
-const code = source
+const stripComments = (text: string): string => text
   .split('\n')
   .filter(l => !/^\s*(\/\/|\/\*|\*)/.test(l))
   .join('\n')
+
+const code = stripComments(source)
 
 const countOf = (needle: string): number => code.split(needle).length - 1
 
@@ -114,5 +116,57 @@ describe('nothing in main.ts reads the calendar directly (item 2)', () => {
     // the one the save was written against.
     expect(code).toContain("debugging\n")
     expect(countOf('createAdjustableClock(')).toBe(1)
+  })
+
+  it('hands the harness the same clock as everything else (A5)', () => {
+    /*
+     * `createHarness` defaults its `now` to `Date.now()`, and main.ts took
+     * that default for a while: the sessions attainment records were bucketed
+     * by the wall clock while the store, the visitor and the save all read
+     * `clock`. Advance-day moved everything except the one record A6's
+     * two-distinct-days gate is computed from. A default that is right in a
+     * pure module and wrong at the only place it is constructed is exactly
+     * what a source assertion is for.
+     */
+    expect(code).toContain('createHarness(attainment, () => clock.now())')
+  })
+})
+
+describe('the harness is constructed exactly once (A9)', () => {
+  /**
+   * Every .ts under src/, so "once" is a claim about the game and not about
+   * one file that happens to be the one we looked at.
+   */
+  const SRC = resolve(here, '../../src')
+  const walk = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap(e =>
+      e.isDirectory() ? walk(join(dir, e.name))
+        : e.name.endsWith('.ts') ? [join(dir, e.name)] : [])
+
+  it('builds one, in main.ts, and nowhere else in src', () => {
+    /*
+     * A9 names this gate, and the reason is that the harness holds
+     * `attainment` BY REFERENCE and mutates it in place. A second
+     * `createHarness` over a second copy of that record would not throw, would
+     * not fail a type check and would not look wrong at either call site: it
+     * would simply mean half the attempts a child made went into a record
+     * nobody persisted, and a grown-ups report that quietly understated her.
+     * Silent divergence between two things that must agree is HANDOFF §5's
+     * four-time offender, and the only cheap defence is counting.
+     */
+    const calls = (text: string): number => {
+      const bare = stripComments(text)
+      // The declaration in harness.ts is not a construction of one.
+      return (bare.split('createHarness(').length - 1)
+        - (bare.split('function createHarness(').length - 1)
+    }
+    const sites = walk(SRC)
+      .map(f => ({
+        file: f.slice(SRC.length + 1).replace(/\\/g, '/'),
+        n: calls(readFileSync(f, 'utf8')),
+      }))
+      .filter(s => s.n > 0)
+
+    expect(sites).toEqual([{ file: 'island/main.ts', n: 1 }])
   })
 })

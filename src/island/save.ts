@@ -80,15 +80,78 @@ interface IslandSave {
    * `tilesEarned` set. v3 arrives the day this shape changes breakingly.
    */
   attainment?: unknown
+  /**
+   * The things that happen once, and have (A5's reserved space).
+   *
+   * A SIBLING OF `attainment`, deliberately, and not a field inside it. Every
+   * other thing in that record is a MEASUREMENT — what she was dealt and how
+   * she did on it — whereas "the ten-dot introduction has played" is a
+   * presentation fact about what the island has already shown her. Filing it
+   * under competence would be a category error a later reader would have to
+   * un-learn, and it would also ripple the `Attainment` type through the
+   * grown-ups panel that was just built against it, for a field the panel has
+   * no business rendering.
+   *
+   * NOTHING CONSUMES IT YET, which is the whole point: INTRO-TEN arrives in
+   * Run C, and reserved space means the save carries and round-trips the fact
+   * from today so that C wires a consumer rather than a migration.
+   */
+  onceFlags?: unknown
+}
+
+/**
+ * Which once-only moments this island has already had.
+ *
+ * A LIST OF IDS RATHER THAN A RECORD OF BOOLEANS, so that Run C can add
+ * INTRO-TEN without touching this file or any save on disk: a new flag is a
+ * new string, absent means not yet, and there is no shape to migrate. A
+ * `{ [id]: boolean }` map would carry the same facts and one extra state
+ * nobody wants to define — a flag explicitly written `false`, which is not
+ * distinguishable in meaning from an absent one but is distinguishable in
+ * code.
+ */
+export type OnceFlags = string[]
+
+/** Bounds on untrusted input: a hand-edited save may not grow without limit. */
+const ONCE_FLAG_KEEP = 64
+const ONCE_FLAG_MAX_LEN = 64
+
+/**
+ * Rebuild the once-flags from whatever was on disk.
+ *
+ * Untrusted input, sanitised the way `readAttainment` sanitises its own: the
+ * result is built here from scratch, non-strings are dropped, duplicates
+ * collapse and the list is bounded, so no hand-edited file can put a
+ * non-string where a flag id is expected.
+ *
+ * IDS THIS BUILD DOES NOT RECOGNISE ARE KEPT, and that is the one place this
+ * departs from `readAttainment`, which builds outward from the stage table and
+ * lets unknown stage ids die. The difference is what the value reaches: an
+ * unknown stage id can arrive at a generator that cannot render it, whereas a
+ * flag id is only ever compared for equality and reaches nothing. Dropping one
+ * written by a later build would mean a downgrade-then-upgrade replays an
+ * introduction the child has already sat through — which is precisely the harm
+ * a once-flag exists to prevent, so preserving it IS the sanitised behaviour.
+ */
+export function readOnceFlags(v: unknown): OnceFlags {
+  if (!Array.isArray(v)) return []
+  const out: string[] = []
+  for (const id of v) {
+    if (typeof id !== 'string' || !id || id.length > ONCE_FLAG_MAX_LEN) continue
+    if (!out.includes(id)) out.push(id)
+    if (out.length >= ONCE_FLAG_KEEP) break
+  }
+  return out
 }
 
 export function toSave(
   flow: Flow, openingSeen: boolean, childName?: string,
   persistGranted: boolean | null = null,
-  attainment?: Attainment,
+  attainment?: Attainment, onceFlags?: OnceFlags,
 ): IslandSave {
   return {
     attainment,
+    onceFlags,
     tiles: [...flow.island.tiles.entries()],
     pets: [...flow.pets],
     bankedTiles: flow.bankedTiles,
@@ -118,6 +181,7 @@ export interface Loaded {
   childName: string
   persistGranted: boolean | null
   attainment: Attainment
+  onceFlags: OnceFlags
 }
 
 export function fromSave(save: IslandSave | null): Loaded {
@@ -126,6 +190,7 @@ export function fromSave(save: IslandSave | null): Loaded {
     return {
       flow: fresh, openingSeen: false, childName: '', persistGranted: null,
       attainment: readAttainment(save?.attainment),
+      onceFlags: readOnceFlags(save?.onceFlags),
     }
   }
   const island: Island = { tiles: new Map(save.tiles) }
@@ -203,6 +268,7 @@ export function fromSave(save: IslandSave | null): Loaded {
     childName: typeof save.childName === 'string' ? save.childName : '',
     persistGranted: typeof save.persistGranted === 'boolean' ? save.persistGranted : null,
     attainment: readAttainment(save.attainment),
+    onceFlags: readOnceFlags(save.onceFlags),
   }
 }
 
@@ -216,8 +282,8 @@ export async function loadIsland(
 export async function saveIsland(
   store: SaveStore, profileId: string, flow: Flow, openingSeen: boolean,
   childName?: string, persistGranted: boolean | null = null,
-  attainment?: Attainment,
+  attainment?: Attainment, onceFlags?: OnceFlags,
 ): Promise<void> {
   await store.put(profileId, 'save',
-    toSave(flow, openingSeen, childName, persistGranted, attainment))
+    toSave(flow, openingSeen, childName, persistGranted, attainment, onceFlags))
 }

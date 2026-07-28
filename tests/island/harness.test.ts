@@ -14,6 +14,7 @@ import { describe, it, expect } from 'vitest'
 import {
   createAttainment, createHarness, readAttainment, STAGES, LIVE_PATHS, RESERVED_PATHS,
 } from '../../src/island/harness'
+import { createFrozenClock, dayKey } from '../../src/platform/clock'
 import type { AttemptEvent } from '../../src/island/attempts'
 
 /** An attempt with everything switched off, so a test states only what it means. */
@@ -315,6 +316,40 @@ describe('sessions — the consistency raw material', () => {
     h.recordAttempt(attempt())
     expect(a.sums.stages[1]?.sessions).toHaveLength(1)
     expect(a.sums.stages[2]?.sessions).toHaveLength(1)
+  })
+
+  it('buckets by the clock it was handed, not by the wall clock', () => {
+    /*
+     * A5's defect, pinned. `createHarness` defaults `now` to `Date.now()`, and
+     * main.ts took that default while threading a real clock — an adjustable
+     * one under ?debug — into everything else it built. The one calendar read
+     * the harness makes, WHICH DAY an attempt's session belongs to, therefore
+     * sat outside the clock: press advance-day and the visitor moved, the save
+     * moved, and attainment's sessions stayed in today. A6's consistency
+     * measure is the two-distinct-days gate over exactly these records, which
+     * clock.ts's header names as calendar time and so as the clock's business,
+     * and which nobody could walk without waiting for real midnight.
+     *
+     * Noon, four hundred days back: far enough from both boundaries that no
+     * daylight-saving shift can reach it, and far enough from today that "not
+     * the wall clock" is a statement about the clock rather than about luck.
+     */
+    const noon = new Date()
+    noon.setHours(12, 0, 0, 0)
+    noon.setDate(noon.getDate() - 400)
+    const then = noon.getTime()
+
+    const clock = createFrozenClock(then)
+    const a = createAttainment()
+    const h = createHarness(a, () => clock.now())
+    h.dealt('sums', 1)
+    h.recordAttempt(attempt())
+    clock.advanceDays(1)
+    h.recordAttempt(attempt())
+
+    const dates = (a.sums.stages[1]?.sessions ?? []).map(s => s.date)
+    expect(dates).toEqual([dayKey(then), dayKey(then + 86_400_000)])
+    expect(dates).not.toContain(dayKey(Date.now()))
   })
 })
 

@@ -311,8 +311,25 @@ async function boot(): Promise<void> {
    * holds it by reference rather than copying, so a tick from the grown-ups
    * panel is live at the very next deal without anything having to be told.
    */
+  /*
+   * ON THE CLOCK, and not on `Date.now()`. `createHarness` defaults its `now`
+   * to the wall clock, and taking that default here would have quietly put the
+   * one calendar read the harness makes — which DAY an attempt's session
+   * belongs to — outside the clock everything else on this island is wired to.
+   * The debug panel's advance-day would move the visitor and the save and
+   * leave attainment's sessions sitting in today, so A6's consistency measure
+   * (last three sessions, two distinct days) could not be walked without
+   * waiting for real midnight. clock.ts's own header names that gate as
+   * calendar time, which is to say as its business.
+   */
   const attainment = loaded.attainment
-  const harness = createHarness(attainment)
+  const harness = createHarness(attainment, () => clock.now())
+  /*
+   * A5's reserved space: the once-only moments this island has already had.
+   * Nothing reads it in Run A — it is carried and re-written so that INTRO-TEN
+   * can be a string Run C adds, rather than a migration Run C has to write.
+   */
+  const onceFlags = loaded.onceFlags
 
   let persistGranted: PersistState = loaded.persistGranted
   async function askToKeepIt(): Promise<void> {
@@ -343,7 +360,7 @@ async function boot(): Promise<void> {
 
   const persist = (): Promise<void> =>
     saveIsland(store, PROFILE, flow, opening.seen(), childName, persistGranted,
-      attainment)
+      attainment, onceFlags)
 
   /**
    * Save, wait for it, and come back with proof.
