@@ -19,7 +19,45 @@ verdict outranks every document here (brief §18), and the notes below marked
 
 ---
 
-## LATEST — 28 July, afternoon. The spec arrived and the workbench is built.
+## LATEST — 28 July, evening. Run A is measuring, and subtraction is dealt.
+
+**The LEDGER in `docs/pet-island-runA.md` is authoritative for Run A** — state
+per item, plus FIELD NOTES carrying the reasoning and every ruling Joe has
+given. This is the summary; that is the record.
+
+**Built: A1 · A2 · A3 · A5 (data half) · A7 · A8.** What changed this evening:
+
+- **A3, the harness** (`src/island/harness.ts`) — the single choke point. The
+  hardcoded `level: 1` in `main.ts` is gone, `deal.ts` no longer decides
+  anything, and `onAttempt` is wired: **measurement exists for the first
+  time**. A2 had been computing every attempt correctly and dropping it,
+  by design, because the sink had nowhere to go until this landed.
+- **Subtraction is dealt for the first time in the island's life.** The
+  generator was already ported with all three v0 levels and `sum.ts` already
+  painted the minus sign — only the choice was missing. **JT-007 (Joe's
+  hand-tick evening) is now blocked on A4's panel, not on machinery.**
+- **A5's data half** — `attainment` persists on the island save. **No schema
+  bump**, deliberately against the item titled "schema v3"; the reasoning is in
+  FIELD NOTES and it is about not trading a lost report for a lost island.
+- **`PB-038` closed** — `readProgress` counts units and was being read as a
+  page index, so the reading mix was sampled at every other slot and the find
+  pages had quietly doubled. Joe ruled 3 build to 1 find; the data was always
+  right.
+- **JT-009 and JT-010 answered and closed.** Two flags for Joe are recorded at
+  the end of the A3 field note: how JT-010(3) was read (deal moment, not path),
+  and why there is no schema v3.
+
+**What is left in this cluster: A4 (the tickbox panel) and A6 (the report).**
+The capability model and every statistic they need are built and tested — what
+is missing is the panel that shows them. That is the next move, and it is what
+unblocks JT-007.
+
+Gates on the last commit: typecheck, 1218 tests, parity renders identically,
+smoke, channel, build. All green.
+
+---
+
+## 28 July, afternoon. The spec arrived and the workbench is built.
 
 `docs/pet-island-runA.md` **supersedes `pet-island-phase4-1-spec.md` in full**
 and is the standing instrument: Run A to build, Runs B–D as context so Run A's
