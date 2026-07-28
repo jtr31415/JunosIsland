@@ -7,8 +7,9 @@
 - **Item 1 (PB-042): IN PROGRESS — split, and the urgent half is SHIPPED AND LIVE.**
   - Half A, the override — **DONE, committed `58425b6`, pushed, deployed, verified
     in the live bundle.** This is the half Juno was stuck on.
-  - Half B, the escalating price — **NOT COMMITTED.** All three numbers are
-    settled and written down; see below for exactly where to pick it up.
+  - Half B, the escalating price — **UNCOMMITTED WORK IN PROGRESS, SITTING IN THE
+    WORKING TREE.** Read "The state of half B" below before you touch anything;
+    the tree is NOT clean and that is deliberate, not an accident.
 - Item 2 (addition/subtraction ladder): NOT STARTED
 - Item 3 (backlog sweep): NOT STARTED
 
@@ -103,6 +104,51 @@ push to main deploys. The moment somebody cuts a `v1` tag that stops being true,
 and pushing to main will only move `/preview/`. See
 `.github/workflows/*.yml` lines 93-106 and 116-121.
 
+## The state of half B — READ THIS FIRST
+
+**The working tree is dirty and the last full test run was red.** I dispatched a
+subagent to build the price against the settled numbers. It was **still editing
+when I stopped**, so what is in the tree is a half-finished build, not a finished
+one I judged and rejected. I stopped because I was at my context ceiling, which
+the orders say to do rather than push through.
+
+Files it touched, uncommitted: `src/island/balance/balance.json` (the `governor`
+block is now `corridor` + `escalation`; the old `maxEmptySurplus`, `tilesPerPet`,
+`petsPerTile` are gone), `src/island/balance/index.ts`, `src/island/flow.ts`,
+`src/island/governors.ts`, `tests/island/governors.test.ts`,
+`tests/island/plot.test.ts`.
+
+Last measured state, and note it was **moving under me** — three consecutive full
+runs gave 11, then 1, then 3 failures as the agent kept writing, so treat these
+as a symptom list rather than a verdict:
+
+```
+ Test Files  1 failed | 70 passed (71)
+      Tests  3 failed | 1319 passed (1322)
+ FAIL  governors.test.ts > leaves a wide corridor between the two walls at every size
+ FAIL  governors.test.ts > is exactly 1 inside the corridor, so a balanced island is unchanged
+ FAIL  governors.test.ts > starts where Fred starts — no rise without an announcement
+```
+
+Two things worth knowing before you decide:
+
+- **The most interesting failure is the agent's own D4 test**, "starts where Fred
+  starts — no rise without an announcement". It passes in isolation and fails in
+  the suite. My strong suspicion, unverified: the **grace period**. During grace
+  `activeGovernor` returns `'none'` so Fred says nothing, but the surcharge is a
+  separate function that does not consult `inGracePeriod` — so a brand-new island
+  can be charged a silent premium. That is the silent tax Joe ruled out, caught
+  by a test the agent wrote against its own spec. If that is the cause, the fix
+  is to make the surcharge return 1 during grace.
+- **Earlier in the build it was breaking `save.test.ts > buys the same tile it
+  was going to buy` and `plot.test.ts > keeps every sum she has already
+  answered`.** Both went green again later, but those two are exactly the N2
+  stranding risk, so re-check them deliberately rather than trusting a green run.
+
+**Your call, and either is defensible.** Finish it — the shape looks right and it
+was down to three tests — or `git checkout -- src tests` and rebuild it from the
+spec below with a clear head. Do not commit it as-is.
+
 ## Where the next manager starts
 
 **Finish PB-042 half B, the escalating price.** The design work is done — do not
@@ -131,6 +177,14 @@ does not speak. Budget for rewriting most of `tests/island/governors.test.ts`;
 roughly twenty of its tests pin the old numbers.
 
 ## What I learned that is not in the code
+
+- **Do not judge a background subagent's work by sampling the working tree.** I
+  read the tree three times while the price agent was still writing and drew a
+  different conclusion each time — I very nearly reverted a build that was two
+  tests from done, on the strength of a failure list that was an artefact of
+  catching it mid-file. Wait for the agent's own report, or do not look. A
+  "stable for three minutes" check is not proof it has finished; it only proves
+  it was thinking.
 
 - **The deploy root is tag-driven with a fallback.** Written up above; it is the
   thing most likely to make a future manager verify the wrong URL and declare
