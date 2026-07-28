@@ -29,10 +29,9 @@ export interface Balance {
   pay: { item: number }
   pages: { wordsPerFindPage: number; mix: PageKind[] }
   governor: {
-    maxWaitingPets: number
     maxEmptySurplus: number
     /**
-     * How many fields the island wants per pet.
+     * How many fields the island wants per pet. THREE TILES FOR TWO ANIMALS.
      *
      * Joe, 28 July: *"for every tile, there needs to be one animal. we can be a
      * bit more relaxed with that, say 3 tiles for 2 animals. bit more maths than
@@ -43,6 +42,25 @@ export interface Balance {
      * `spaceSurplus`.
      */
     tilesPerPet: number
+    /**
+     * How many pets a field can house. THREE ANIMALS FOR TWO TILES (PB-039).
+     *
+     * The other end of the same balance, and it is a SEPARATE ratio rather than
+     * the reciprocal of `tilesPerPet` — the corridor is deliberately wide, and
+     * these two numbers are the two walls of it, tunable apart.
+     *
+     * Joe, PB-039: *"currently the min balance is 3 tiles vs 2 animals... on the
+     * other end of the scale, which i dont think we have bound properly, so she
+     * should be pushed to do maths only at 3 animals on 2 tiles as the other end
+     * of the balance."*
+     *
+     * It REPLACES `maxWaitingPets: 3`, which was an absolute shortfall measured
+     * from `tilesPerPet` — so the floor converged on 1.5 tiles per pet from below
+     * as the island grew and pushed her to maths at 1.2 tiles per pet by ten pets.
+     * That is the same fault the ceiling had before 17ad266, at the other wall.
+     * See `activeGovernor`.
+     */
+    petsPerTile: number
   }
   pets: {
     /**

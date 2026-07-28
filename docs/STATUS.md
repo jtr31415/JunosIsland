@@ -58,10 +58,13 @@ verdict outranks every document here (brief §18), and the notes below marked
 Gates on the last two commits: typecheck, **1294 tests**, parity renders
 identically, smoke, channel, build. All green.
 
-**Not yet seen by eye.** The panel is tested and has never been looked at in a
-browser — `agent-browser` has been wedging on `open` for several sessions, so
-this was verified through jsdom and the gates rather than on screen. It joins
-the standing list below of things tested but unjudged.
+**SEEN BY EYE and passed.** Joe, 28 July, having run it locally: *"the parent
+panel checks out green locally."* That retires the caveat this section carried
+for an hour — the panel had been verified through jsdom and the six gates but
+never looked at, because `agent-browser` has been wedging on `open` for
+several sessions. It has now been looked at. Recorded here rather than left in
+chat, per the provenance lesson below: a verdict nobody can check is worth
+less than no verdict at all.
 
 ---
 

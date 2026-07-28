@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   activeGovernor, inGracePeriod, spaceSurplus, landPaused, eggsPaused, GOVERNOR_LINE,
-  fieldsWanted,
+  fieldsWanted, petsHoused,
 } from '../../src/island/governors'
 import { createFlow, challengePassed, tapEgg, chooseTile, placeTile } from '../../src/island/flow'
 import type { Flow } from '../../src/island/flow'
@@ -33,6 +33,37 @@ function withPets(f: Flow, n: number): Flow {
   return f
 }
 
+/* ------------------------------------------------------------------------- *
+ * The two walls, found by walking rather than by arithmetic.
+ *
+ * Both answer in FIELDS, counting the hex the island is born with — so
+ * `grow(f, n)` leaves `n + 1` of them. `ceiling` used to answer in calls to
+ * `grow` and so read one low, which nothing asserted against it noticed; PB-039
+ * put a `floor` next to it, and two neighbouring helpers that disagree about
+ * what a number means is how the next reader gets caught out.
+ *
+ * They walk the real `activeGovernor` over real flows on purpose. A helper that
+ * recomputed the threshold from `balance` would agree with a broken governor.
+ * ------------------------------------------------------------------------- */
+
+/** The largest field count that does not pause new land, at `pets` pets. */
+function ceiling(pets: number): number {
+  for (let n = 0; n < 400; n++) {
+    const f = withPets(grow(createFlow(), n), pets)
+    if (activeGovernor(f) === 'space-surplus') return n
+  }
+  throw new Error('never paused')
+}
+
+/** The fewest fields that do NOT pause eggs, at `pets` pets — the mirror. */
+function floor(pets: number): number {
+  for (let n = 0; n < 400; n++) {
+    const f = withPets(grow(createFlow(), n), pets)
+    if (activeGovernor(f) !== 'nursery-queue') return n + 1
+  }
+  throw new Error('never freed')
+}
+
 describe('the grace period', () => {
   it('holds while the island is new, so a beginner is never redirected', () => {
     // §5: governors never fire during the first ten minutes
@@ -43,6 +74,25 @@ describe('the grace period', () => {
   it('ends once there is a real island and real friends', () => {
     const f = withPets(grow(createFlow(), 5), 2)
     expect(inGracePeriod(f)).toBe(false)
+  })
+
+  it('suppresses BOTH governors while it lasts, not just the one she is near', () => {
+    /*
+     * §5, and it is asserted over the whole opening rather than at one point,
+     * because the two thresholds are DATA. With the shipped ratios no island
+     * small enough to be in grace can reach either wall — a ceiling needs four
+     * fields and grace ends at four tiles; a floor needs more pets than 1.5
+     * fields will house and grace ends at two pets. So today this guard is a
+     * floor under `balance.json` rather than under any reachable state, and if
+     * either ratio is ever retuned toward the middle this is what catches it.
+     */
+    for (let tiles = 0; tiles <= 6; tiles++) {
+      for (let pets = 0; pets <= 3; pets++) {
+        const f = withPets(grow(createFlow(), tiles), pets)
+        if (!inGracePeriod(f)) continue
+        expect(activeGovernor(f), `${tiles + 1} fields, ${pets} pets`).toBe('none')
+      }
+    }
   })
 })
 
@@ -105,15 +155,6 @@ describe('the corridor is a RATIO, not a fixed gap — Joe, 28 July', () => {
    * the absolute corridor.
    */
 
-  /** The largest field count that does not pause new land, at `pets` pets. */
-  const ceiling = (pets: number): number => {
-    for (let n = 1; n < 400; n++) {
-      const f = withPets(grow(createFlow(), n), pets)
-      if (activeGovernor(f) === 'space-surplus') return n - 1
-    }
-    throw new Error('never paused')
-  }
-
   it('wants half again as many fields as pets', () => {
     expect(fieldsWanted(0)).toBe(0)
     expect(fieldsWanted(2)).toBe(3)
@@ -145,13 +186,147 @@ describe('the corridor is a RATIO, not a fixed gap — Joe, 28 July', () => {
   })
 
   it('keeps the two governors mutually exclusive', () => {
-    // They read one number from opposite ends; if both could fire, the invitation
-    // would depend on evaluation order rather than on the island.
-    for (let tiles = 1; tiles <= 24; tiles++) {
-      for (let pets = 0; pets <= 12; pets++) {
-        const f = withPets(grow(createFlow(), tiles), pets)
+    /*
+     * They are two separate walls now (PB-039), so "mutually exclusive" is no
+     * longer a property of one number read from both ends — it is a claim about
+     * `1.5·pets + 4` lying above `pets / 1.5` everywhere, and it has to be walked.
+     *
+     * The grid is widened past the old 24×12 for that reason: the old floor
+     * converged on the ceiling as pets grew, so the interesting region was the
+     * far end, and 12 pets was not far enough to be convincing. The island is
+     * grown once per tile count and the pets hatched into it one at a time, which
+     * is what keeps a 32×24 sweep cheaper than the 24×12 one it replaces.
+     */
+    for (let tiles = 0; tiles <= 32; tiles++) {
+      let f = grow(createFlow(), tiles)
+      for (let pets = 0; pets <= 24; pets++) {
+        if (pets > 0) f = withPets(f, 1)
         if (inGracePeriod(f)) continue
-        expect(landPaused(f) && eggsPaused(f), `${tiles} fields, ${pets} pets`).toBe(false)
+        expect(landPaused(f) && eggsPaused(f), `${tiles + 1} fields, ${pets} pets`).toBe(false)
+      }
+    }
+  })
+})
+
+/**
+ * The FLOOR is a ratio too — PB-039, Joe, 28 July.
+ *
+ * *"currently the min balance is 3 tiles vs 2 animals, ie for 2 animals, she can
+ * have 3 tiles, ie she will have to do some reading to do more maths. on the
+ * other end of the scale, which i dont think we have bound properly, so she
+ * should be pushed to do maths only at 3 animals on 2 tiles as the other end of
+ * the balance."*
+ *
+ * He was right that it was never bound properly. Both ends used to hang off ONE
+ * target ratio: the ceiling at `1.5·pets + 4`, the floor at `1.5·pets - 3`. An
+ * absolute shortfall measured from the same target converges on that target, so
+ * the floor crept up to 1.2 tiles per pet by ten pets and would have reached 1.4
+ * by twenty — a floor sitting almost on the ceiling's own number.
+ *
+ * The whole ratio suite above was written against `ceiling()` and there was no
+ * `floor()`, which is exactly why the fault survived the fix at the other wall.
+ * This block is the mirror. Like the block above it, these are PROPERTIES of the
+ * ratio rather than assertions about particular tile counts, so `balance.json`
+ * can be retuned without anything failing for the wrong reason.
+ */
+describe('the floor is a RATIO too — PB-039', () => {
+  it('houses three animals for every two tiles', () => {
+    expect(petsHoused(0)).toBe(0)
+    expect(petsHoused(2)).toBe(3)
+    expect(petsHoused(10)).toBe(15)
+    expect(balance.governor.petsPerTile).toBeGreaterThan(1)
+  })
+
+  it("is Joe's number exactly: two fields hold two friends, and stall at three", () => {
+    // The card, read literally. Two tiles is `grow(_, 1)` — the island is born
+    // with one hex.
+    const two = withPets(grow(createFlow(), 1), 2)
+    expect(activeGovernor(two)).toBe('none')
+    expect(eggsPaused(two)).toBe(false)
+
+    const three = withPets(grow(createFlow(), 1), 3)
+    expect(activeGovernor(three)).toBe('nursery-queue')
+    expect(eggsPaused(three)).toBe(true)
+    expect(landPaused(three)).toBe(false)      // it asks for maths, it bars nothing
+  })
+
+  it('rises SLOWER than the pets, which a fixed shortfall could not do', () => {
+    /*
+     * The property the old floor could not have. `1.5·pets - 3` climbs by one and
+     * a half fields per pet, so this difference was 9 across these six pets; a
+     * ratio of two-thirds climbs by two thirds of a field, so it is now 4.
+     */
+    expect(floor(8) - floor(2)).toBeLessThan(8 - 2)
+  })
+
+  it('does not drift toward 1.5 tiles per pet as the island grows', () => {
+    // The actual fault. The floor must stay a floor however many friends she has,
+    // rather than creeping up to meet the ceiling's own target.
+    expect(floor(20) / 20).toBeLessThanOrEqual(floor(4) / 4)
+    expect(floor(20) / 20).toBeLessThan(0.8)
+  })
+
+  it('sits near two thirds of a field per pet at ten pets, not at 1.2', () => {
+    // 1.2 is what the old absolute shortfall gave here, and it is what Joe was
+    // being pushed to maths at. 0.667 is what he asked for; 7 fields is the first
+    // whole number above it.
+    const pets = 10
+    expect(floor(pets)).toBe(7)
+    expect(floor(pets) / pets).toBeLessThan(0.8)
+    expect(floor(pets) / pets).toBeGreaterThan(0.6)
+  })
+
+  it('leaves a wide corridor between the two walls at every size', () => {
+    // The two ends are separate ratios, so the room she has to play in must grow
+    // with the island rather than staying a fixed handful of hexes.
+    for (const pets of [2, 6, 10, 20]) {
+      expect(ceiling(pets) - floor(pets), `${pets} pets`).toBeGreaterThan(2)
+    }
+    expect(ceiling(20) - floor(20)).toBeGreaterThan(ceiling(2) - floor(2))
+  })
+})
+
+/**
+ * No state she cannot leave — the doctrine, walked rather than argued.
+ *
+ * `governors.ts:8-14`: they are INVITATIONS, and an invitation she cannot accept
+ * is a lockout with a friendly voice. Whatever Fred asks for must be the thing
+ * that clears him, and ONE of it must be enough — a six-year-old who does two
+ * sums and finds the same sentence waiting has learnt that the game does not
+ * mean what it says.
+ */
+describe('the tap is diverted, never stranded — PB-039', () => {
+  it('lifts the nursery queue the moment she earns one more field', () => {
+    /*
+     * Walked from the first pet count that trips the floor at each island size,
+     * which is the only way in: eggs are paused past it, so she cannot be deeper
+     * in than one hatch. The assertion is `none` rather than "not the queue",
+     * because being handed the OTHER governor instead would satisfy the letter of
+     * the doctrine and none of it.
+     */
+    for (let tiles = 0; tiles <= 20; tiles++) {
+      let f = grow(createFlow(), tiles)
+      for (let pets = 1; pets <= 40; pets++) {
+        f = withPets(f, 1)
+        if (activeGovernor(f) !== 'nursery-queue') continue
+        expect(eggsPaused(f)).toBe(true)
+        expect(activeGovernor(grow(f, 1)), `${tiles + 1} fields, ${pets} pets`).toBe('none')
+        break
+      }
+    }
+  })
+
+  it('lifts the space surplus the moment one more friend comes home', () => {
+    // The mirror, and the same reasoning: the ceiling is only ever entered by
+    // laying one field too many, so one friend is the whole of the way back out.
+    for (let pets = 0; pets <= 12; pets++) {
+      let f = withPets(createFlow(), pets)
+      for (let tiles = 1; tiles <= 60; tiles++) {
+        f = grow(f, 1)
+        if (activeGovernor(f) !== 'space-surplus') continue
+        expect(landPaused(f)).toBe(true)
+        expect(activeGovernor(withPets(f, 1)), `${tiles + 1} fields, ${pets} pets`).toBe('none')
+        break
       }
     }
   })

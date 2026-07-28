@@ -80,7 +80,7 @@ export function inGracePeriod(f: Flow): boolean {
 }
 
 /**
- * How many fields this many pets want.
+ * How many fields this many pets want — THREE TILES FOR TWO ANIMALS.
  *
  * Joe, 28 July: *"for every tile, there needs to be one animal. we can be a bit
  * more relaxed with that, say 3 tiles for 2 animals."*
@@ -89,7 +89,52 @@ export const fieldsWanted = (pets: number): number =>
   pets * balance.governor.tilesPerPet
 
 /**
- * Land beyond what the current pets want — the number both governors read.
+ * How many pets this much land can house — THREE ANIMALS FOR TWO TILES.
+ *
+ * The mirror of `fieldsWanted`, and it is written as a mirror on purpose: one
+ * says how much land her pets want, the other how many pets her land can hold,
+ * and the corridor between them is the whole of the pacing. A reader should be
+ * able to see "3 tiles per 2 animals" at one wall and "3 animals per 2 tiles"
+ * at the other without doing any algebra.
+ *
+ * Joe, PB-039: *"she should be pushed to do maths only at 3 animals on 2 tiles
+ * as the other end of the balance."*
+ *
+ * NOT the reciprocal of `fieldsWanted`. If it were, the two walls would meet and
+ * every state would pause something. They are two separate ratios with a wide
+ * gap between them, which is what leaves her free to play in the middle.
+ */
+export const petsHoused = (fields: number): number =>
+  fields * balance.governor.petsPerTile
+
+/**
+ * The fields a pet could actually stand on.
+ *
+ * FIELDS ONLY: not rock, which is land but cannot be stood on, and not water.
+ *
+ * Rock is land but it is not LODGING, and the distinction is deliberate rather
+ * than an oversight — `isLand` is the right question for the coastline and the
+ * wrong one here.
+ *
+ * A mountain hex is planted at the model's native size and centred, so the mound
+ * covers its tile and `footprintBelow(WALKING_HEIGHT)` blocks very nearly the
+ * whole hex. There is nowhere on it for a pet to stand. Counting it as room
+ * would have the governor believe she has space she cannot use, and pets would
+ * fail placement quietly — a silent failure rather than a visible shortage,
+ * which is the worse of the two.
+ *
+ * The cost is that mountains do not advance the pet economy: a girl who builds a
+ * range still gets asked to read. That is honest, but it is a pacing decision
+ * Joe should see rather than infer — carded.
+ */
+export function habitableFields(f: Flow): number {
+  let habitable = 0
+  for (const type of f.island.tiles.values()) if (type === 'grass') habitable++
+  return habitable
+}
+
+/**
+ * Land beyond what the current pets want — the number the CEILING reads.
  *
  * IT IS MEASURED AGAINST A RATIO, and that correction is the whole of Joe's
  * report. He said the ratio *"seems to be 1:1, think that was more relaxed
@@ -105,33 +150,16 @@ export const fieldsWanted = (pets: number): number =>
  * A ratio target cannot be written as a constant difference, which is why the
  * cost curves were the wrong place to look: `egg` and `tile` are the same curve
  * to within rounding, and making one dearer would not have changed the
- * equilibrium this function sets. Now the corridor is `wanted ± the two
- * constants`, so at ten pets she may hold 11 to 19 fields — a ratio of 1.1 to
- * 1.9, converging on 1.5 rather than on 1.
+ * equilibrium this function sets. The ceiling is now `wanted + maxEmptySurplus`,
+ * so at ten pets land pauses at 19 fields rather than at 11 — 1.9 tiles per pet.
  *
- * FIELDS ONLY: not rock, which is land but cannot be stood on, and not water.
- * See the note in the loop.
+ * IT IS THE CEILING'S NUMBER ONLY. The floor used to be read off it too, as a
+ * negative surplus, and that was PB-039's fault: see `activeGovernor`.
+ *
+ * FIELDS ONLY — see `habitableFields`, which is where that is decided.
  */
 export function spaceSurplus(f: Flow): number {
-  /*
-   * FIELDS ONLY. Rock is land but it is not LODGING, and the distinction is
-   * deliberate rather than an oversight — `isLand` is the right question for the
-   * coastline and the wrong one here.
-   *
-   * A mountain hex is planted at the model's native size and centred, so the
-   * mound covers its tile and `footprintBelow(WALKING_HEIGHT)` blocks very nearly
-   * the whole hex. There is nowhere on it for a pet to stand. Counting it as room
-   * would have the governor believe she has space she cannot use, and pets would
-   * fail placement quietly — a silent failure rather than a visible shortage,
-   * which is the worse of the two.
-   *
-   * The cost is that mountains do not advance the pet economy: a girl who builds
-   * a range still gets asked to read. That is honest, but it is a pacing decision
-   * Joe should see rather than infer — carded.
-   */
-  let habitable = 0
-  for (const type of f.island.tiles.values()) if (type === 'grass') habitable++
-  return habitable - fieldsWanted(f.pets.length)
+  return habitableFields(f) - fieldsWanted(f.pets.length)
 }
 
 /**
@@ -142,21 +170,38 @@ export function spaceSurplus(f: Flow): number {
  */
 export function activeGovernor(f: Flow): Governor {
   if (inGracePeriod(f)) return 'none'
-  const surplus = spaceSurplus(f)
-  if (surplus >= balance.governor.maxEmptySurplus) return 'space-surplus'
+
+  // The CEILING: more empty land than her friends want. Fred asks her to read.
+  if (spaceSurplus(f) >= balance.governor.maxEmptySurplus) return 'space-surplus'
+
   /*
-   * ...and the mirror. A pet with nowhere of its own to be is "waiting", which
-   * now means the fields fall short of what her pets want by `maxWaitingPets`.
+   * ...and the FLOOR, which is now a ratio of its own — PB-039, and the point of
+   * the change. Her friends outnumber what her fields can house, so Fred asks
+   * her for maths.
    *
-   * Written as the negative surplus rather than as
-   * `pets - Math.max(0, surplus + pets)`, which is what stood here. That
-   * expression reduces to exactly `-surplus` for any non-negative field count —
-   * so it was correct, but it read as though it were computing something else,
-   * and it silently depended on `surplus` being `habitable - pets` with a
-   * coefficient of one. Under a ratio target that identity no longer holds, and
-   * the roundabout form would have quietly gone on meaning the old thing.
+   * IT USED TO BE `-surplus >= maxWaitingPets`: the fields falling short of
+   * `fieldsWanted` by an absolute three. That reads as symmetric with the
+   * ceiling and is not, because both ends were then hung off ONE target ratio.
+   * `1.5 * pets - 3` converges on 1.5 tiles per pet from below as the island
+   * grows, so at ten pets she was pushed to maths the moment she dropped under
+   * twelve fields — 1.2 tiles per pet, which is nearly the ceiling's own target
+   * and nowhere near a floor. Three is generous when she owns four fields and
+   * nothing at all when she owns forty: exactly the fault 17ad266 corrected at
+   * the other wall, left standing at this one.
+   *
+   * Joe, PB-039: *"on the other end of the scale, which i dont think we have
+   * bound properly, so she should be pushed to do maths only at 3 animals on 2
+   * tiles as the other end of the balance."* So the floor is bound to the land
+   * she has, not to the land her pets want — `petsHoused`, three animals for
+   * every two tiles. At ten pets it now sits at seven fields, 0.7 tiles per pet,
+   * and it stays near two-thirds however large the island gets.
+   *
+   * The two walls cannot both stand at once: the ceiling needs
+   * `fields >= 1.5·pets + 4` and the floor needs `fields <= pets / 1.5`, and the
+   * first is above the second for every pet count. Brute-forced in the tests
+   * rather than trusted to that sentence.
    */
-  if (-surplus >= balance.governor.maxWaitingPets) return 'nursery-queue'
+  if (f.pets.length >= petsHoused(habitableFields(f))) return 'nursery-queue'
   return 'none'
 }
 

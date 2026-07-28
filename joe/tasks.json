@@ -146,6 +146,18 @@
       "doneRule": "manual",
       "note": "its a",
       "state": "done"
+    },
+    {
+      "id": "JT-012",
+      "type": "ruling",
+      "title": "Is a governor an invitation or a stop? (PB-042 — you found this one)",
+      "detail": "Your words, 28 July: \"there is currently a hard bound. if there are not enough tiles for the number of animals, it says 'they need more homes' and wont let you do an egg. same probably applies the other way round.\" You are right, and it does apply both ways. THE GAP. governors.ts says of itself: \"They are INVITATIONS, never lockouts. Nothing greys out; Fred asks for the other thing instead, and the child may ignore him.\" The first half is true. The second is not: on a paused egg tap, and on a paused socket tap, the code says Fred's line and returns without opening the round. So nothing greys out, she can tap forever, nothing she has earned is touched - and she still cannot do the thing she asked for. 'The child may ignore him' is exactly what she cannot do. WHY IT IS WORTH YOUR TIME rather than mine. Brief 19 is the rule this whole project bends to: invitations never lockouts, nothing expires, nothing taken back. A doctrine comment that misdescribes its own code is how a future change gets waved through by a rule the code does not actually follow - and this one has been sitting there being quoted. It is also a question about Juno rather than about software, which is why it is yours: a six-year-old who is told 'they need homes first' and then finds the egg simply will not open has been refused, however warm the voice. PB-039 does NOT fix this. It moves WHEN the stop fires - the maths end goes from about 1.2 tiles per animal out to your 3 animals per 2 tiles, so she meets it far less often - and leaves the mechanism exactly as it is. THREE WAYS, and (a) and (b) are opposite answers to the same sentence so nothing gets built until you pick. (a) CODE MATCHES DOCTRINE: Fred asks, and if she taps again the round opens anyway. The ask becomes real and she may override it. Softest and truest to brief 19; the risk is that the corridor stops corridoring and she banks ten animals with nowhere to put them. (b) DOCTRINE MATCHES CODE: keep the hard stop and rewrite the comment to say so plainly. A bound a child cannot cross is a perfectly good design - it just is not an invitation, and the file should stop claiming it is. (c) SPLIT THEM: the ratio corridor is a genuine stop, the break-watch stays an invitation, and the doctrine names the two kinds separately. Answer in the note.",
+      "blocks": [
+        "PB-042"
+      ],
+      "doneRule": "manual",
+      "note": "tough one. it should start with invitation first, the let the user run with whatever they want to do up to a point otherwise we risk breaking the balance of the island. we then make the reward really really tough to reach the reward if it pushes imbalance further if its too far out of balance. with an announcement. match this to PB-042 when we pick it up. target ratio i think should be 1 animal per 2 tiles, with a buffer to 2:3 either way, then it starts to become increasingly tougher to get either.",
+      "state": "done"
     }
   ],
   "archive": []
