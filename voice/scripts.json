@@ -77,6 +77,7 @@
     { "id": "land.counted", "character": "fred", "category": "ceremony", "text": "You have found some land for your friends!" },
 
     { "id": "gov.spaceSurplus", "character": "fred", "category": "governor", "text": "Let's read with the egg to get some more friends!" },
-    { "id": "gov.nurseryQueue", "character": "fred", "category": "governor", "text": "They need homes first!" }
+    { "id": "gov.nurseryQueue", "character": "fred", "category": "governor", "text": "They need homes first!" },
+    { "id": "gov.wriggleBreak", "character": "fred", "category": "governor", "text": "Ooh, my legs have gone all wriggly! Let's jump up and have a run about — then come back, your island will be right here.", "note": "Fired when three pages in a row are mashed (3+ wrongs each). Warmer and slower than the other two governor lines — an invitation to play, not a note about the work. FRED owns the need for the break, never the child: brief §19 forbids shame, and a line about her answers is a scoreboard however kindly it is read. Suggestion only — nothing is locked, nothing expires, and she can carry straight on." }
   ]
 }
