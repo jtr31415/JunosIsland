@@ -168,8 +168,8 @@
         "PB-042"
       ],
       "doneRule": "manual",
-      "note": "",
-      "state": "open"
+      "note": "yes, because now we have more elasticity either way.",
+      "state": "done"
     },
     {
       "id": "JT-014",
@@ -180,8 +180,8 @@
         "PB-042"
       ],
       "doneRule": "manual",
-      "note": "",
-      "state": "open"
+      "note": "actually that probably does need reversing. suggest a number your self at which to start warning and then at which it gets noticibly more expensive, which itself adds some elasticity.",
+      "state": "done"
     },
     {
       "id": "JT-015",
@@ -192,8 +192,8 @@
         "PB-042"
       ],
       "doneRule": "manual",
-      "note": "",
-      "state": "open"
+      "note": "no that sounds about reasonable. mark the location of this explicitly if user testing finds it needs adjusting.",
+      "state": "done"
     },
     {
       "id": "JT-016",
@@ -205,7 +205,7 @@
       ],
       "doneRule": "manual",
       "note": "",
-      "state": "open"
+      "state": "done"
     },
     {
       "id": "JT-017",
@@ -216,8 +216,8 @@
         "PB-042"
       ],
       "doneRule": "manual",
-      "note": "",
-      "state": "open"
+      "note": "agreed",
+      "state": "done"
     },
     {
       "id": "JT-018",
