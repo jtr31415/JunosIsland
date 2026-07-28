@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "tasks": [
+    {
+      "id": "JT-001",
+      "type": "review",
+      "title": "Vet the lesson scripts",
+      "detail": "Red-pen every lesson in the editor, status draft → vetted. Includes the school-verb check: does her school say \"borrow\" or \"take\" for the carry? L-ADD-4 and L-SUB-4 both use \"borrow\".",
+      "blocks": [
+        "C.lessons",
+        "A8.bake"
+      ],
+      "artefact": "joe/lessons/",
+      "doneRule": "artefact",
+      "check": "lessonsVetted",
+      "note": "",
+      "state": "open"
+    },
+    {
+      "id": "JT-002",
+      "type": "config",
+      "title": "AZURE_SPEECH_KEY into .env",
+      "detail": "Unblocks the bake console. Add AZURE_SPEECH_KEY=… and, if not uksouth, AZURE_SPEECH_REGION=…. The file is gitignored; the key never enters the page.",
+      "blocks": [
+        "A8.bake"
+      ],
+      "artefact": ".env",
+      "doneRule": "artefact",
+      "check": "envKey:AZURE_SPEECH_KEY",
+      "note": "",
+      "state": "open"
+    },
+    {
+      "id": "JT-003",
+      "type": "external",
+      "title": "Voice casting: audition, then set joe/voices.json",
+      "detail": "Placeholder en-GB voices are in place so the pipeline runs. Everything re-bakes on change — casting is data, so changing Fred marks every clip stale and one batch bake fixes it.",
+      "blocks": [
+        "C.lessons"
+      ],
+      "artefact": "joe/voices.json",
+      "doneRule": "manual",
+      "check": "voicesCast",
+      "note": "",
+      "state": "open"
+    },
+    {
+      "id": "JT-004",
+      "type": "review",
+      "title": "Red-pen joe/noun-candidates.json",
+      "detail": "Nouns drafted in editor dialect for the words ladder. Blocks Run D top rungs. The file arrives with Run D; this task is open ahead of it so the queue shows what is coming.",
+      "blocks": [
+        "D.rungs"
+      ],
+      "artefact": "joe/noun-candidates.json",
+      "doneRule": "artefact",
+      "check": "fileExists:joe/noun-candidates.json",
+      "note": "",
+      "state": "open"
+    },
+    {
+      "id": "JT-005",
+      "type": "review",
+      "title": "Strike the rejects in joe/pairs-audit.json",
+      "detail": "Every close-spelled trap pair must be distinct in HER accent, not in a dictionary. Blocks Run D trap rungs. File arrives with Run D.",
+      "blocks": [
+        "D.traps"
+      ],
+      "artefact": "joe/pairs-audit.json",
+      "doneRule": "artefact",
+      "check": "fileExists:joe/pairs-audit.json",
+      "note": "",
+      "state": "open"
+    },
+    {
+      "id": "JT-006",
+      "type": "external",
+      "title": "Record the 43 phonemes",
+      "detail": "Sound booth. Eternal — recorded once, used forever. Unblocks Fred-talk clips.",
+      "blocks": [
+        "fred-talk"
+      ],
+      "doneRule": "manual",
+      "note": "",
+      "state": "open"
+    },
+    {
+      "id": "JT-007",
+      "type": "external",
+      "title": "Evening after Run A: hand-tick taking-away 1",
+      "detail": "Grown-ups panel → takingAway → Manual → tick stage 1. This is the QA department getting subtraction. Untick is a parent's hand, not a demotion, so it is safe to try.",
+      "blocks": [
+        "A.qa"
+      ],
+      "doneRule": "manual",
+      "note": "",
+      "state": "open"
+    }
+  ],
+  "archive": []
+}

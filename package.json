@@ -20,6 +20,8 @@
     "parity": "node tools/smoke/parity.mjs",
     "parity:soak": "node tools/smoke/soak.mjs 50",
     "channel": "node tools/smoke/channel.mjs",
+    "workbench": "node tools/workbench/server.mjs",
+    "workbench:seed": "node tools/workbench/seed.mjs",
     "pets:atlas": "node tools/pets/atlas.mjs",
     "pets:reserve": "node tools/pets/reserve.mjs",
     "pets:reserve:check": "node tools/pets/reserve.mjs --check"

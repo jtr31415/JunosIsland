@@ -33,6 +33,40 @@ const MARKERS = [
   ['Pet-o-matic', 'runPetOMatic'],
 ]
 
+/**
+ * Things that must not appear in EITHER channel.
+ *
+ * The flagged features above are meant to be reachable in preview — that is
+ * what preview is for. Joe's workbench is different in kind: it is a local
+ * node server that writes repo files and holds an Azure key, and it has no
+ * business in a bundle that gets uploaded anywhere, flag or no flag. So it is
+ * checked against both builds, not one.
+ */
+const NEVER = [
+  ["Joe's workbench", 'JOE_WORKBENCH_ONLY'],
+]
+
+/**
+ * The other direction: nothing in `src/` may reference the workbench.
+ *
+ * Absence from `dist/` is a fact about today's dead-code elimination. Absence
+ * of a reference in the source is the reason it will still be true tomorrow —
+ * one import from a shipped module and the grep above starts finding things.
+ * Checked before anything is read from dist, so it works without a build.
+ */
+const SRC = resolve(here, '../../src')
+const referrers = everyFile(SRC)
+  .filter(f => /\.(ts|js|html|css|json)$/.test(f))
+  .filter(f => readFileSync(f, 'utf8').includes('tools/workbench'))
+
+if (referrers.length) {
+  console.error('\nFAIL: src/ references the workbench, which is dev-only and never deployed:')
+  for (const f of referrers) console.error('  ' + f.slice(SRC.length + 1))
+  console.error('\nThe workbench is a local node tool. Nothing shipped may import from it.')
+  process.exit(1)
+}
+console.log(`src/ → workbench  no references, as it must be`)
+
 function everyFile(dir) {
   const out = []
   for (const name of readdirSync(dir)) {
@@ -84,6 +118,21 @@ for (const [label, marker] of MARKERS) {
     bad = true
   } else {
     console.log(`${label.padEnd(21)}present`)
+  }
+}
+
+for (const [label, marker] of NEVER) {
+  const leaked = [...bodies.entries()]
+    .filter(([, body]) => body.includes(marker))
+    .map(([f]) => f.slice(DIST.length + 1))
+
+  if (leaked.length) {
+    console.error(`\nFAIL: ${label} reached a ${channel.toUpperCase()} build:`)
+    for (const f of leaked) console.error('  ' + f)
+    console.error('It is dev-only in BOTH channels. There is no flag that makes it shippable.')
+    bad = true
+  } else {
+    console.log(`${label.padEnd(21)}absent from ${channel}, as it must be`)
   }
 }
 

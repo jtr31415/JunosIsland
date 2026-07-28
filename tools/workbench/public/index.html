@@ -1,0 +1,67 @@
+<!doctype html>
+<!--
+  Joe's workbench. JOE_WORKBENCH_ONLY — see tools/smoke/channel.mjs.
+  Plain HTML, one stylesheet, one script, no build step. Deliberately.
+-->
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Workbench — Pet Island</title>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <header>
+    <h1>Workbench</h1>
+    <nav id="tabs">
+      <button data-tab="tasks" class="on">Your queue</button>
+      <button data-tab="backlog">Backlog</button>
+      <button data-tab="lessons">Lessons</button>
+      <button data-tab="bake">Bake</button>
+      <button data-tab="notes">Asset notes</button>
+    </nav>
+    <span id="says"></span>
+  </header>
+
+  <main>
+    <section id="tasks" class="tab on"></section>
+    <section id="backlog" class="tab"></section>
+
+    <section id="lessons" class="tab">
+      <div class="split">
+        <ul id="lessonList"></ul>
+        <form id="lessonForm" hidden>
+          <h2 id="lessonTitle"></h2>
+          <label>Title <input name="title"></label>
+          <label>Exemplar <input name="exemplar"></label>
+          <label>Clip file <input name="file"></label>
+          <label>Approx seconds <input name="approxSeconds" type="number" min="0"></label>
+          <label>Requires <input name="requires" placeholder="e.g. INTRO-TEN"></label>
+          <label>Status
+            <select name="status"><option value="draft">draft</option><option value="vetted">vetted</option></select>
+          </label>
+          <label>Visual beats <textarea name="beats" rows="5"></textarea></label>
+          <label>Script <textarea name="script" rows="9"></textarea></label>
+          <p class="hint">Written for the ear — punctuation is the prosody. Read it aloud once before vetting.</p>
+          <div class="row"><button type="submit">Save</button><button type="button" id="lessonBake">Bake this one</button></div>
+        </form>
+      </div>
+    </section>
+
+    <section id="bake" class="tab"></section>
+
+    <section id="notes" class="tab">
+      <form id="noteForm" class="row">
+        <input name="assetId" placeholder="canonical asset id, e.g. animal-fox" required>
+        <input name="note" placeholder="what is wrong with it" required>
+        <button type="submit">Add note</button>
+      </form>
+      <p class="hint">The galleries are not built yet (PB-033). Until they are, the ID is typed by hand
+        and the note lands in <code>joe/asset-notes.json</code> keyed exactly the same way.</p>
+      <ul id="noteList"></ul>
+    </section>
+  </main>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

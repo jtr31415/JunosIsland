@@ -1,0 +1,251 @@
+{
+  "schemaVersion": 1,
+  "nextId": 36,
+  "cards": [
+    {
+      "id": "PB-001",
+      "title": "The item-13 difficulty currency disagrees with itself",
+      "detail": "pet-island-difficulty.md §5 and slice-1 §4 are in the same currency and disagree. Today one sum banks one unit against a tile costing 1–16. §5 sets easy=2, tricky=3, honeymoon=4; Phase 3 adds mastered=1. Either the cost curve re-bases or session length halves. Run A7 re-bases units ×2 invisibly; this card is the REMAINING question about differential pay.",
+      "state": "open",
+      "run": "B"
+    },
+    {
+      "id": "PB-002",
+      "title": "Does v1 ship without adaptive difficulty?",
+      "detail": "Fable's view: yes, since today's fixed difficulty is the v0 behaviour she already plays. Joe's call.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-003",
+      "title": "The two overlays behave differently",
+      "detail": "Tapping outside a tile offer returns to the island (zero-cost menu). Tapping outside a CHALLENGE does nothing (work in progress). Recorded as a rule in HANDOFF §6, but it is a feel judgement and Juno is the only real judge.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-004",
+      "title": "A camera gesture is live that was never ruled on",
+      "detail": "Tapping her own land turns the island about that tile. Costless, cannot start a round, but it is a product change to a gesture Joe had explicitly ruled on. Veto is one line in interactions.ts (the focusOn call in the tile case).",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-005",
+      "title": "Lighting review, tilt-shift, more fog, visual options menu (#43)",
+      "detail": "END OF PHASE 4. What is missing is measured fps on the actual mid-range Android tablet — nothing in this project has ever been measured there. Order: measure → amend the brief → build. ?flat already exists reserved for this. The DEFAULTS matter more than the options, because she will never open a settings menu.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-006",
+      "title": "Get it in front of Juno again (#34)",
+      "detail": "The highest-value action that is not code. Everything she reported on 27 July is fixed. It is also the only way to judge what was decided on a DPR-1 desktop at night by one person: the font, the prop shadows, the tap target, the 3:1 ratio, the camera gesture.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-007",
+      "title": "One found word banks the whole page (#44)",
+      "detail": "earned is set by flyToScore, which the word-find fires on EVERY found word, not on completion. Run A1 fixes the scoring semantics; this card closes when A1 lands with its regression test.",
+      "state": "planned",
+      "run": "A"
+    },
+    {
+      "id": "PB-008",
+      "title": "void async over a loop — three more sites (#46)",
+      "detail": "props.ts water-piece and cloud load, pets.ts sync(), album.ts portraits.shoot. One rejection abandons every item after it AND surfaces unhandled. Also: the scatter comment claims a lost cover piece is re-dressed next sync — FALSE, placed.add(k) runs before scatter().",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-009",
+      "title": "A quarter of dead trunks flicker shadowless (#47)",
+      "detail": "VARY has no real floor — (dh >> 13) % span is a signed shift on an unsigned hash, so 48.8% of pieces get a negative term. Do NOT fix by flipping the shift: that re-rolls the size of half the scenery on every island that already exists. Fix by shadowing by KIND, or correct the test.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-010",
+      "title": "Batch the blob shadows before the 40-tile island (#47b)",
+      "detail": "createBlobShadow makes fresh geometry AND material per blob; +1 draw call each, ~70 extra at 40 tiles. Must exclude pets, whose castShadow mutates opacity per frame. Natural home: beside the Phase 5 lighting rework.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-011",
+      "title": "Album pop-out (#31)",
+      "detail": "Tap a pet for a larger card: rotating pet, NAME, SPECIES, find-it-on-the-map, speak-its-name. Five things already established — see docs/BACKLOG.md. Notably: no display name exists for a species, and a rotating pop-out means a live loop on a second WebGL context.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-012",
+      "title": "Pure play elements as a session reward (#39)",
+      "detail": "PARKED — not to be built without Joe. The observation matters as much as the idea: after an hour of earning, the reward she chose for herself was unstructured looking. The cheapest \"pure play element\" may be to stop obstructing the play she has already invented.",
+      "state": "parked",
+      "run": ""
+    },
+    {
+      "id": "PB-013",
+      "title": "Release engineering (#35)",
+      "detail": "No item exists for: cutting the first v* tag; verifying npm run channel against a TAGGED build; an on-tablet pass; a pre-session backup from the gear; deleting the redundant docs/nextphase.zip.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-014",
+      "title": "Prop glTFs 404 on a texture that is never used (#45)",
+      "detail": "props/*.gltf reference hexagons_medieval.png but the folder ships only the _Summer variant. Harmless, but it has cost two agents time. A clean console is a debugging tool. Cheapest fix is the loading manager.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-015",
+      "title": "Tablet screenshot wanted: a rim mountain's shadow",
+      "detail": "Hills and mountains throw an ellipse landing ~3.7 units from the base, spanning neighbours and overhanging the sea. Arithmetic is right for a 35° sun. If it reads broken on the tablet, cap stretch/radius for big features rather than inventing clipping.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-016",
+      "title": "Progressive album + set unlocks (brief item 7)",
+      "detail": "Owns wiring variants onto live pets, and now owns a SHORTER ladder: 600 creatures, not ~1,000, because the spotted twelve were dropped once it was proved the atlas cannot express a spot. Either a third wearing arrives or the pacing re-bases on 600.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-017",
+      "title": "Habitats, nursery, move-in (brief item 8)",
+      "detail": "Phase 5.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-018",
+      "title": "Pet quests v1 (brief item 9)",
+      "detail": "Phase 5.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-019",
+      "title": "The daily visitor (brief item 10)",
+      "detail": "Phase 5.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-020",
+      "title": "Small ports (brief item 11)",
+      "detail": "Phase 5; scope grew. Owns the text half of the splice law — script.ts still speaks [NAME].",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-021",
+      "title": "Per-item records + scheduler (brief item 12)",
+      "detail": "Phase 5. Overlaps the Run A attempt model — check what A5 persistence already gives this before rebuilding it.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-022",
+      "title": "Biome & tile ladder (brief item 14)",
+      "detail": "docs/rock-hexes-proposal.md is a down-payment, and carries two questions: what a rock tile is FOR (if not habitable, choosing it silently slows her pet progress, which a six-year-old cannot weigh), and that \"pure grey\" is not available — bare mountain variants sample the atlas rock swatch, which Summer renders TAN.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-023",
+      "title": "Stardust, the Star Pool, the first wonder (brief item 15)",
+      "detail": "Phase 5.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-024",
+      "title": "Persona simulator (brief item 16)",
+      "detail": "Phase 5. Would pay for itself against the Run B progression gates — a simulated child is how you test a ratchet that must never demote.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-025",
+      "title": "Blossom enchantment I (brief item 17)",
+      "detail": "Phase 5.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-026",
+      "title": "Enclosed ponds are no longer constructible",
+      "detail": "A gameplay change Joe should veto if it is wrong. Confining water to the 19 drawable neighbourhoods is what lets the water cell carry its whole beach — but water now grows as coastline and never as a hole in the middle of her island.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-027",
+      "title": "Four things tested but never looked at",
+      "detail": "The rebuilt egg, one-tap tile siting, the grown-ups PIN keypad, and the grown-ups menu. Run A6 adds a great deal to that last one, so the eyeball pass is worth more now than it was.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-028",
+      "title": "The splice law has not reached the voice",
+      "detail": "Amended brief §3 rewrites opening beats 6 and 7. The text half folds into item 11 (PB-020); the voice half needs this bake pipeline and Joe's key.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-029",
+      "title": "The legendary ten sets",
+      "detail": "Deliberately absent — creatures wearing props, around 750 challenges in, belonging with the wonders work.",
+      "state": "parked",
+      "run": ""
+    },
+    {
+      "id": "PB-030",
+      "title": "Run B — automatic progression",
+      "detail": "Gates on the A6 signals; probes; the universal offer line; taking-away introduced by offer then dealt MIXED; weakness-lean bounded 65/35; invisible mercy runs; whisper retirement; \"what Auto would do\" goes live. Nothing demotes, ever.",
+      "state": "planned",
+      "run": "B"
+    },
+    {
+      "id": "PB-031",
+      "title": "Run C — new maths content + lessons",
+      "detail": "Appended generators; the ten-dot with SNAP and un-SNAP; the box re-order; the lesson player with the ❓ second step and the five-error OFFER. Blocked on JT-001 to JT-003.",
+      "state": "planned",
+      "run": "C"
+    },
+    {
+      "id": "PB-032",
+      "title": "Run D — the words ladder",
+      "detail": "word-grades.json tags over frozen arrays; rejection-sampling; close-spelled trap sets; find-before-build debut rule; the accent audit. Blocked on JT-004 and JT-005.",
+      "state": "planned",
+      "run": "D"
+    },
+    {
+      "id": "PB-033",
+      "title": "The asset viewer galleries (deferred from A8)",
+      "detail": "DEFERRED OUT OF RUN A, deliberately: three orbitable galleries (24 species, both tile types with every coast variant and plot increment, every FEATURES/COVER prop) reusing the game's own loaders and registries. It is a three.js surface, not a form, and it would have eaten the run. The comment box and joe/asset-notes.json ARE built — the notes tab already accepts an ID and a note, so the API half is proved and only the gallery is missing.",
+      "state": "open",
+      "run": "B"
+    },
+    {
+      "id": "PB-034",
+      "title": "Story sums as a presentation path",
+      "detail": "A presentation path OVER the arithmetic: numbers always drawn from currently ticked sums/takingAway stages; text always with speech; help step one reveals the translated equation, after which the pure-maths ladder applies; post-reveal answers feed neither estimate. Tickbox slot reserved in Run A.",
+      "state": "planned",
+      "run": "C"
+    },
+    {
+      "id": "PB-035",
+      "title": "Fractions, multiplication, division",
+      "detail": "Reserved, greyed tickbox slots only. \"Coming later\" in the panel.",
+      "state": "parked",
+      "run": ""
+    }
+  ]
+}

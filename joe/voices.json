@@ -1,0 +1,25 @@
+{
+  "outDir": "src/island/public/voice/lessons",
+  "manifest": "src/island/public/voice/manifest.json",
+  "region": "uksouth",
+  "cast": {
+    "fred": {
+      "voice": "en-GB-RyanNeural",
+      "rate": "-8%",
+      "pitch": "0%",
+      "cast": false
+    },
+    "teacher": {
+      "voice": "en-GB-SoniaNeural",
+      "rate": "0%",
+      "pitch": "0%",
+      "cast": false
+    },
+    "owl": {
+      "voice": "en-GB-ThomasNeural",
+      "rate": "-4%",
+      "pitch": "0%",
+      "cast": false
+    }
+  }
+}

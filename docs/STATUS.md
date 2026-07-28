@@ -19,7 +19,41 @@ verdict outranks every document here (brief §18), and the notes below marked
 
 ---
 
-## LATEST — 28 July, small hours. Read this first, then §4.1 below.
+## LATEST — 28 July, afternoon. The spec arrived and the workbench is built.
+
+`docs/pet-island-runA.md` **supersedes `pet-island-phase4-1-spec.md` in full**
+and is the standing instrument: Run A to build, Runs B–D as context so Run A's
+architecture does not paint into corners, and a ledger at the bottom updated on
+every field report.
+
+**A8 — Joe's workbench — is built and green.** `npm run workbench` →
+<http://127.0.0.1:4173>. A local node server that reads and WRITES repo files
+directly: his task queue (`joe/tasks.json`, seven tasks seeded from the spec's
+own queue), the Product Backlog (`joe/backlog.json`, 35 cards seeded from this
+file, `BACKLOG.md` and the run spec, deduped against what shipped), the lesson
+editor (`joe/lessons/*.md`, seeded by parsing Appendix L), the export to
+`docs/fred-lessons-plan.md`, and the Azure bake console. Dev-only and provably
+so: `npm run channel` now greps BOTH shipped bundles for its sentinel and greps
+`src/` for any reference to `tools/workbench`.
+
+Two things to know:
+
+1. **The asset viewer galleries were NOT built** — deferred as `PB-033`. The
+   notes half is built and proved (`joe/asset-notes.json`, keyed by canonical
+   ID); the three orbitable galleries are a three.js surface and would have
+   consumed the run that the harness itself needs.
+2. **Bake output goes to `src/island/public/voice/lessons/`, not
+   `assets/voice/`** — a root `assets/` case-collides with `Assets/` on Windows
+   against Linux CI, which the gitignore has recorded since Phase 3. Set as
+   `outDir` in `joe/voices.json`.
+
+**A1–A7 are specced and not yet built.** The measurement, the tickboxes, the
+harness, schema v3, the grown-ups report and the economy re-base are the next
+run.
+
+---
+
+## 28 July, small hours.
 
 **NEXT PHASE IS 4.1, THE EDUCATIONAL HARNESS**, and Joe has said it outranks
 more animals: *"its the educational harness and therefore takes prio over more
