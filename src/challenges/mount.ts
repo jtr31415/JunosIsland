@@ -27,6 +27,33 @@ export interface Holds {
 }
 
 /**
+ * The ways a child can ask a round for help — the one thing the attempt model
+ * could not already see.
+ *
+ * Every help affordance is PRIVATE to its renderer: the dot-boxes toggle a
+ * local `shown` (sum.ts), Fred-talk lives behind the returned handle
+ * (build.ts), and the grey `?` sets `solved` and nothing else. None of it ever
+ * left the module, so a host counting attempts could not tell an answer that
+ * was worked out from one that was revealed.
+ *
+ * `sayAgain` is deliberately absent. It repeats the PROMPT and adds nothing to
+ * it — on a listen-then-tap page, hearing the word again is the task rather
+ * than a hint (and it is the host's own button, `overlay.ts`, so it never
+ * needed a channel out of a renderer in the first place).
+ */
+export type HelpKind =
+  /** A counting dot-box was opened, by her hand or by the mash rescue. */
+  | 'dots'
+  /** Fred sounded the word out, grapheme by grapheme (build only). */
+  | 'fred'
+  /**
+   * The grey `?` was tapped and the answer revealed. NOT help — the round goes
+   * inert and she never answers it at all, which is why it needs its own kind
+   * rather than a flag on one. See `attempts.ts` for what the host does with it.
+   */
+  | 'peek'
+
+/**
  * Everything a challenge needs from its host. The 2D shell and the island
  * overlay supply different implementations; the challenge itself is identical.
  */
@@ -55,6 +82,13 @@ export interface ChallengeDeps {
    * the island overlay can react to a stumble.
    */
   onWrong(): void
+  /**
+   * A help affordance was used. Optional, and additive on exactly the same
+   * argument that sanctioned `onWrong`: words2d does not pass it, an unpassed
+   * optional dep is a no-op, and no attribute or node changes — so
+   * `npm run parity` still diffs like with like.
+   */
+  onHelp?(kind: HelpKind): void
   /** The round is finished; the host advances to the next item. */
   onAdvance(): void
   /** No voice available: show the word instead of saying it (v0:900-904). */

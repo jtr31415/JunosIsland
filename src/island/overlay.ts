@@ -46,6 +46,8 @@ import type { BuildItem } from '../core/generators/build'
 import type { SumItem } from '../core/generators/sums'
 import { balance } from './balance'
 import { createBreakWatch } from './governors'
+import { createAttemptTally } from './attempts'
+import type { AttemptEvent } from './attempts'
 
 export interface OverlayHost {
   speech: Speaker
@@ -71,6 +73,16 @@ export interface OverlayHost {
   onPassed(more: boolean): void
   /** Fired when the overlay is dismissed without finishing. Costs nothing. */
   onDismissed(): void
+  /**
+   * One resolved attempt, as it resolves (A2).
+   *
+   * Optional because the thing that consumes it does not exist yet: A3's
+   * harness owns `recordAttempt`, and until it lands the island simply does
+   * not listen. Measurement is deliberately a SEPARATE channel from
+   * `onPassed` — what she answered and what she was paid for are different
+   * questions, and a find page emits several of these against one payment.
+   */
+  onAttempt?(evt: AttemptEvent): void
 }
 
 export interface Overlay {
@@ -321,6 +333,33 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
   const breaks = createBreakWatch()
   /** True from the end of a mashed run until the next page is mounted. */
   let stretch = false
+  /**
+   * The attempt model (A2). Fed by the same hooks the break watch reads, plus
+   * `onHelp` — see `attempts.ts` for why the judgement lives there and only
+   * the wiring lives here.
+   */
+  const tally = createAttemptTally(e => host.onAttempt?.(e))
+  /**
+   * The host's Speaker, with one line added: saying something to the child IS
+   * the question being put, and that is where the latency clock starts.
+   *
+   * Wrapped rather than hooked, because the alternative is a new dep on all
+   * three renderers to report a prompt they already announce by speaking it.
+   * The clock only ever starts once per attempt (`prompted` is idempotent), so
+   * the re-reads — `sayAgain`, the 650ms retry after a wrong tap, the slow
+   * rescue, Fred's graphemes — pass straight through without resetting it.
+   */
+  const speech: Speaker = {
+    speak: (txt, rate, onend) => {
+      const ok = host.speech.speak(txt, rate, onend)
+      tally.prompted()
+      return ok
+    },
+    ready: () => host.speech.ready(),
+    cancel: () => host.speech.cancel(),
+    noticeShown: () => host.speech.noticeShown(),
+    markNoticeShown: () => host.speech.markNoticeShown(),
+  }
   const holds: Holds = {
     rewardUntil: () => 0,
     quietUntil: () => 0,
@@ -337,7 +376,7 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
 
   const deps = (): ChallengeDeps => ({
     el: panel,
-    speech: host.speech,
+    speech,
     sfx: host.sfx,
     holds,
     isActive: () => !layer.classList.contains('hide'),
@@ -357,15 +396,30 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
      * answered, the star has flown, and tapping the X must not throw it away
      * (§18). Moving those to completion would trade this bug for a worse one.
      */
-    flyToScore: () => { if (mounted !== 'find') earned = true },
-    /* Every wrong tap, from all three renderers. The only thing that reads it
-       is the cross-page break watch — see `breaks` above. */
-    onWrong: () => { breaks.wrong() },
+    flyToScore: () => {
+      if (mounted !== 'find') earned = true
+      /*
+       * ...and on every renderer, this is the right answer landing, which is
+       * what resolves the attempt. Note the asymmetry above is about PAYMENT
+       * and this line is about MEASUREMENT: a five-word find page banks once
+       * and is measured five times, because she answered five questions and
+       * turned one page.
+       */
+      tally.right()
+    },
+    /* Every wrong tap, from all three renderers. Read by the cross-page break
+       watch (see `breaks` above) and by the attempt model, which uses it for
+       exactly one thing: whether the first tap was the right one. */
+    onWrong: () => { breaks.wrong(); tally.wrong() },
+    onHelp: kind => tally.help(kind),
     /* For a sum, the first correct answer completes the round. */
     onAdvance: () => { finish() },
     showTarget: html => {
       targetCard.innerHTML = html
       targetCard.classList.remove('hide')
+      /* The voiceless half of "the question was put" — on a device with no UK
+         voice this IS the prompt, and the clock must start somewhere. */
+      tally.prompted()
     },
     hideTarget: () => targetCard.classList.add('hide'),
     toast,
@@ -397,6 +451,13 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
     busy = false
     if (handle) { handle.teardown(); handle = null }
     mounted = null
+    /*
+     * Whatever she was halfway through is let go, unmeasured — the single
+     * choke point for it, so no exit can forget: the X, the host closing up,
+     * and the next page's own mount all arrive here. Everything she FINISHED
+     * was emitted as it landed and is already gone upstairs.
+     */
+    tally.pageEnded()
     layer.classList.add('hide')
     layer.classList.remove('staged')
     targetCard.classList.add('hide')
@@ -443,9 +504,10 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
    * suggestion unexpressible — there is no flag anyone has to remember to reset,
    * and a line about getting up cannot surface halfway through a later sitting.
    */
-  function startPage(): void {
+  function startPage(kind: 'find' | 'build' | 'sum'): void {
     breaks.pageStarted()
     stretch = false
+    tally.pageStarted(kind)
   }
 
   again.onclick = () => { handle?.sayAgain() }
@@ -491,7 +553,7 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
   return {
     openWordFind(picks, staged = false) {
       teardown()
-      startPage()
+      startPage('find')
       earned = false
       mounted = 'find'
       layer.classList.toggle('staged', staged)
@@ -502,7 +564,7 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
 
     openBuild(item, staged = false) {
       teardown()
-      startPage()
+      startPage('build')
       earned = false
       mounted = 'build'
       layer.classList.toggle('staged', staged)
@@ -513,7 +575,7 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
 
     openSum(item, staged = false) {
       teardown()
-      startPage()
+      startPage('sum')
       earned = false
       mounted = 'sum'
       layer.classList.toggle('staged', staged)

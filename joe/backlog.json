@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "nextId": 37,
+  "nextId": 38,
   "cards": [
     {
       "id": "PB-001",
@@ -251,6 +251,13 @@
       "id": "PB-036",
       "title": "New animals",
       "detail": "Build new sets of animals for the collection in the same style as the existing ones. they should be in sets that go together and should be shown as pages in the album. never all collections in one go, max 5 incomplete collections. new collection opens up when one is completed. collections should be thematically consistent, eg UK garden. Birds, Africa, Ocean, etc. A list with the collections and the animals in them will be provided.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-037",
+      "title": "Fred-talk has no way in",
+      "detail": "Joe, ruling JT-008(2): 'we have no fred talk set up, open a card for that.' He is right, and the machinery is not the missing part — build.ts still has fredTalk(), FRED_SOUNDS and a fred() handle, and A2 now reports it through onHelp('fred'). What is missing is any affordance that reaches it: the overlay wires 'say it again' and nothing else, and the mash rescue was deliberately changed to say the whole word slowly instead (build.ts header, product owner's call: TTS stop consonants bark). So the code path is live and unreachable. Two halves to decide together: (a) the WAY IN, which Run C already specs as the second step of the hint ladder ('Fred, show me?'), so building a button now may be building it twice; (b) the VOICE, which is JT-006 - the 43 recorded phonemes are what make sounding-out pleasant rather than merely available. Sequencing note: A2's help reporting is already wired, so whenever this lands it is measured on arrival with no further work.",
       "state": "open",
       "run": ""
     }

@@ -41,8 +41,8 @@
       "artefact": "joe/voices.json",
       "doneRule": "manual",
       "check": "voicesCast",
-      "note": "",
-      "state": "open"
+      "note": "oliver as Fred, olivia as the teacher and thomas as the owl",
+      "state": "done"
     },
     {
       "id": "JT-004",
@@ -104,6 +104,18 @@
       "blocks": [
         "A2",
         "A6.report"
+      ],
+      "doneRule": "manual",
+      "note": "1) peeking is not rewarded - it is counted as no attempt 2) we have no fred talk set up, open a card for that. answering with a hint counts. as it takes longer, it would be picked up in the proficiency measures, but it does not hamper the reward. 3) abandoned challenges should be measured as paused and answers made so far count towards proficiency and the reward progress.",
+      "state": "done"
+    },
+    {
+      "id": "JT-009",
+      "type": "ruling",
+      "title": "The other half of JT-008(3): what does a paused page PAY?",
+      "detail": "Your ruling said an abandoned challenge is paused and answers made so far count towards proficiency AND the reward progress. The proficiency half is built (A2): every word she answered was recorded as it landed, and only the unfinished one is dropped. The reward half is not, because it cannot be decided without you. THE GAP, exactly. Reading pays by the PAGE, not by the word: challengePassed adds one item to readProgress when a page completes. Build and sum pages are one question each, so leaving after answering already collects (A1 kept that deliberately). A FIND page is 3 words at first and grows to 12 - so a girl who finds 11 of 12 and taps the X banks nothing at all toward the egg. That single case is the whole of the gap. Three ways it could go, and they cost very different things. (a) PRO-RATA: pay 11/12 of a page. Needs part-items in a currency A7 just re-based to whole ones, and it moves pages-per-egg, which the month-walk pins. (b) RESUME - your word was paused: the same page comes back with the 11 words still found, she finds the twelfth, the page pays in full. Nothing in the economy moves. Costs in-session round state and a change to the ported wordFind renderer, which is a parity question rather than a free one. (c) NOTHING CHANGES: readHeld already brings the same card back, so she re-reads 11 words she can already read - which is not a punishment so much as a chore. Answer in the note and the build reads it, exactly as JT-008 did.",
+      "blocks": [
+        "A2.reward"
       ],
       "doneRule": "manual",
       "note": "",

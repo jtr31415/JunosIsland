@@ -66,12 +66,14 @@ export function mountSum(p: SumItem, deps: ChallengeDeps): ChallengeHandle {
       h.appendChild(d)
     }
     let shown = false
+    /* Opening is the reportable half; closing it again tells the host nothing
+       it does not already know, and would double-count a fidget. */
+    const open = (): void => { shown = true; dots(); deps.onHelp?.('dots') }
     h.addEventListener('pointerdown', e => {
       e.stopPropagation()
-      shown = !shown
-      shown ? dots() : chip()
+      if (shown) { shown = false; chip() } else open()
     })
-    dotOpeners.push(() => { if (!shown) { shown = true; dots() } })
+    dotOpeners.push(() => { if (!shown) open() })
     chip()
     return h
   }
@@ -95,6 +97,10 @@ export function mountSum(p: SumItem, deps: ChallengeDeps): ChallengeHandle {
     if (solved) return
     revealAns()
     deps.sfx.play('win')
+    /* Reported AFTER the reveal, so a host that reacts sees the round already
+       inert. It earns nothing here and it is counted as nothing upstairs —
+       Joe's ruling, JT-008(1): a peeked sum is no attempt at all. */
+    deps.onHelp?.('peek')
   })
 
   pad.className = 'numpad'

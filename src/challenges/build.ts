@@ -69,6 +69,7 @@ export function mountBuild(item: BuildItem, deps: ChallengeDeps): ChallengeHandl
   /* Fred talk: sound the word out, one grapheme at a time (v0:1213). */
   const fredTalk = (): void => {
     if (torn || !deps.isActive()) return
+    deps.onHelp?.('fred')
     const token = ++fredToken
     const seq = item.segs.map(sg => FRED_SOUNDS[sg] ?? sg)
     let k = 0

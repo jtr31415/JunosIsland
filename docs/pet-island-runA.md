@@ -44,10 +44,24 @@ narration straight into the repo.
   first tap is right · build = one per word, correct iff completed
   with zero wrong tile taps · sum = one, correct iff first pad tap is
   right.
-- **Help is free but uncounted**: any attempt where dot-hints were
+- ~~**Help is free but uncounted**: any attempt where dot-hints were
   opened or Fred-talk invoked is correct-if-completed, pays normally,
   and is excluded from every estimate. Attempts during a rescue
-  context likewise excluded.
+  context likewise excluded.~~ **OVERRULED by Joe, JT-008(2)**: *"answering
+  with a hint counts. as it takes longer, it would be picked up in the
+  proficiency measures, but it does not hamper the reward."* Help is free
+  and COUNTED — it pays normally and it enters every estimate, and the
+  cost of it shows up where it honestly is, in speed. The rescue
+  exclusion goes with it, and loses nothing: a rescue takes three wrong
+  taps to summon, so the attempt it lands on is already incorrect under
+  the rules above. Rescues are recorded per attempt for A6's consistency
+  tier, which is the channel that always wanted them.
+- **A peeked sum is no attempt at all** (JT-008(1)) — nothing recorded,
+  nothing paid. A peeked stage therefore reads as unpractised rather
+  than as fine, which is the honest reading.
+- **Abandonment is a pause, not a failure** (JT-008(3)) — every target
+  she resolved stands; the one in flight is discarded, never failed.
+  The reward half of that ruling is open as **JT-009**.
 - Latency captured per attempt (question-shown → first tap), stored
   raw; correct-only medians are computed by the report, never the mean
   (butterfly-gap immunity). Per-session accuracy snippets kept for the
@@ -353,10 +367,14 @@ Two consequences worth carrying forward:
   the same one-liner. Additive and tolerant: a rolled-back build still reads
   the save, just generously, which is the safe direction.
 
-# FIELD NOTES — A2 (surveyed 28 Jul, not yet built)
+# FIELD NOTES — A2 (surveyed 28 Jul, BUILT 28 Jul)
 
 Same discipline as A1: traced to the line before the session was cleared, so
-the next one starts at the edit. Nothing below is built yet.
+the next one started at the edit. **The survey held** — correctness fell out of
+the existing signals exactly as written below, `onHelp` was the only new
+plumbing, and the parity gate is green. What the survey could not know is what
+Joe's three rulings would say, and one of them changed a spec bullet rather
+than filling a gap in it. That is recorded at the foot of this section.
 
 ### The finding that shrinks A2: correctness is already on the wire
 
@@ -401,6 +419,9 @@ these — it does not need a new notion of rescue. Note that a mash-rescued SUM
 is excluded twice over (rescue *and* help), since `:141` opens the dots.
 
 ### Open questions — Joe's call, not mine
+*(All three answered in JT-008 on 28 Jul. The answers, and what they cost, are
+at the foot of this section — the questions are kept because the reasoning
+behind them is why the answers are the shape they are.)*
 
 1. **The peek.** `sum.ts:92-98`: tapping the grey `?` reveals the answer, sets
    `solved`, and then the round is inert — no `flyToScore`, no `onAdvance`, it
@@ -438,6 +459,83 @@ is excluded twice over (rescue *and* help), since `:141` opens the dots.
 STATUS quotes `:989`/`:998` from an older tree; the line has moved. This is
 the single choke point A3's `levelFor` replaces.
 
+### JT-008 answered (28 Jul) — and one of the three is a spec change
+
+**(1) The peek — reading (a), no attempt at all.** Joe: *"peeking is not
+rewarded — it is counted as no attempt."* `sum.ts` now reports the reveal as
+`onHelp('peek')` and the tally VOIDS the attempt rather than marking it, so
+nothing is emitted even if the pad fires afterwards. The consequence Joe was
+choosing between is worth stating plainly: a stage she has only ever peeked at
+shows **dashes**, not a tier — the report says she has not practised it, which
+is true, rather than saying she is fine, which would be a lie told by silence.
+
+**(2) A hinted answer counts — and this OVERRULES the spec.** The spec said
+help is *"excluded from every estimate"*. Joe: *"answering with a hint counts.
+as it takes longer, it would be picked up in the proficiency measures, but it
+does not hamper the reward."* That is not a gap being filled, it is a bullet
+being replaced, and the argument in it is better than the one it replaces:
+exclusion protects a number by throwing away an answer, and the cost of needing
+help is already measured honestly by the clock. `helped` is still recorded on
+every attempt — free to carry, expensive to reconstruct — but no Run A estimate
+reads it.
+
+Three things follow, and none of them needed a further ruling:
+
+- **The rescue exclusion goes too, and costs nothing.** A rescue takes
+  `MASH_WRONGS` wrong taps to summon, and one wrong tap already loses the
+  attempt under all three correctness rules. There is no reachable
+  rescued-and-correct attempt, so "exclude it" and "count it" describe the same
+  set. `rescued` is recorded per attempt, which is what A6's consistency tier
+  wanted from it all along. Pinned in `attempts.test.ts`.
+- **`sayAgain` (the survey's question 2) is moot.** With exclusion gone, its
+  classification has no behavioural consequence anywhere in Run A. It is
+  reported as nothing: repeating the prompt is the task on a listen-then-tap
+  page, and marking it would set `helped` on very nearly every find attempt in
+  the game, which would make the field useless the day something wanted it.
+- **Fred-talk is reachable in code and unreachable in play**, which Joe caught
+  in the same breath (*"we have no fred talk set up, open a card for that"*).
+  `PB-037`. The hook is wired now, so whenever a way in lands it is measured on
+  arrival.
+
+**(3) Abandonment is a pause — proficiency half built, reward half open.**
+Joe: *"abandoned challenges should be measured as paused and answers made so
+far count towards proficiency and the reward progress."* The proficiency half
+needed almost no code, because the model already had the right shape: every
+target is emitted the moment it resolves, so walking away cannot reach back and
+unmake one. Only the in-flight attempt is dropped, and dropped silently —
+counting it would make guessing the safest thing a stuck child could do.
+
+The **reward** half is a different question and it is Joe's, so it is carded
+rather than assumed: **JT-009**. Reading pays by the PAGE, and a find page is
+3 words at first and 12 later, so the one live case is a girl who finds 11 of
+12 and leaves with nothing banked toward the egg. Build and sum pages are one
+question each and already collect on the way out (A1 kept that deliberately).
+The three readings — pro-rata, resume-where-she-left-it, or leave it — cost
+very different things, and one of them moves numbers the A7 month-walk pins.
+
+### What A2 actually cost
+
+- `src/island/attempts.ts` — new, the tally. The rules live here as arithmetic
+  over an event order; the overlay keeps only the wiring. Split because the
+  overlay's tests need jsdom, fake timers and a stubbed WAAPI before they can
+  say anything, and a rule tested through all that is a rule tested weakly.
+- `ChallengeDeps.onHelp?(kind)` — the one new dep, exactly as surveyed, fired
+  at three sites (`sum.ts` dots ×2 paths, `sum.ts` peek, `build.ts` fredTalk).
+  words2d passes none; `npm run parity` green, every step rendering identically.
+- **Latency needed no dep at all.** The survey said the clock starts when the
+  question is PUT, and the overlay already supplies the `Speaker` — so it wraps
+  it and starts the clock on the first `speak()` (or `showTarget()`) of each
+  attempt. `prompted()` is idempotent within an attempt, so the re-reads —
+  `sayAgain`, the 650ms retry, the slow rescue, Fred's graphemes — pass through
+  without resetting it, while the 800ms re-speak for the NEXT find target lands
+  after `flyToScore` has already opened a fresh attempt and correctly starts its
+  clock. That is the survey's per-target rule falling out of the existing order
+  of events rather than being enforced.
+- `OverlayHost.onAttempt?(evt)` — the sink, optional because A3 owns
+  `recordAttempt` and has not landed. Deliberately a separate channel from
+  `onPassed`: what she answered and what she was paid for are different
+  questions, and a find page emits several of the first against one of the second.
+
 ---
 
 # LEDGER (updated on every field report)
@@ -445,7 +543,7 @@ the single choke point A3's `levelFor` replaces.
 |---|---|
 | A1 | **BUILT** (28 Jul, `PB-007` closed) — find pages bank on completion; both in-round floaters are `.floater`, out of the `.say` hiding rule. Four regression tests in `tests/island/overlay.test.ts`. Six gates green. |
 | **A7** | **BUILT** (28 Jul) — costs now in units at 2/item, provably invisible: `tests/island/economy.test.ts` walks a month and pins items-per-tile and items-per-egg to the pre-A7 values at every n. The spec's "×2 is exact by construction" was **false** and is corrected in FIELD NOTES; `cost()` rounds in items, and a pre-A7 save is migrated by `save.pay`. |
-| **A2** | **SURVEYED** (28 Jul) — see FIELD NOTES. Correctness for all three paths falls out of `flyToScore`/`onWrong`/`mounted`, which already exist: no ported renderer changes for the tally. Help is the only new plumbing — one optional `onHelp?` dep, parity-safe on the `onWrong` precedent. **Three questions await Joe** (the sum peek, whether `sayAgain` is help, abandonment). |
+| **A2** | **BUILT** (28 Jul, on JT-008's answers) — `src/island/attempts.ts` + one optional `onHelp?` dep; latency needed no dep at all (the overlay wraps its own `Speaker`). 27 unit tests on the rules, 13 wiring tests through the real renderers. Six gates green, parity renders identically. **The spec changed under it**: help no longer excludes (JT-008(2)), and the rescue exclusion goes with it having never been reachable. **JT-009 open** — the reward half of the abandonment ruling. |
 | A3 · A4 · A5 · A6 | SPECCED — awaiting build. These four interlock (harness, tickboxes, schema v3, report) and do not split cleanly; A2 feeds them. |
 | **A8 Workbench** | **BUILT** (28 Jul) — `npm run workbench`. Queue, backlog, lesson editor, export, bake console, voices & key. |
 | **A8 asset viewer** | **BUILT** (28 Jul, `PB-033` closed) — `/viewer.html`. Three galleries, orbitable, searchable, every ID canonical by construction. |
@@ -455,7 +553,9 @@ the single choke point A3's `levelFor` replaces.
 | Run C | Context-specced; lessons blocked on Joe #1–3 |
 | Run D | Context-specced; rungs blocked on Joe #4–5 |
 | Joe #1–7 | Open — now **JT-001…JT-007** in the workbench, not in prose |
-| Product Backlog | Seeded, 35 cards, `PB-001…PB-035`. Awaiting Joe's triage. |
+| **JT-008** | **ANSWERED** (28 Jul) — the three attempt-model rulings; A2 built on them. |
+| **JT-009** | **OPEN** — what a paused page pays. The reward half of JT-008(3). |
+| Product Backlog | Seeded, now 37 cards, `PB-001…PB-037` (`PB-036` Joe's, `PB-037` Fred-talk has no way in). Awaiting Joe's triage. |
 | Superseded docs | `pet-island-phase4-1-spec.md` (rulings changed) |
 
 **A8 ruling changed by Joe, 28 Jul.** The spec says the Azure key comes from

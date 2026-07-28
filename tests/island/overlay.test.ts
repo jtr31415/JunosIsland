@@ -37,6 +37,7 @@ function setup() {
     sfx: { play: vi.fn(), enabled: true, setTheme: vi.fn() },
     onPassed: vi.fn(),
     onDismissed: vi.fn(),
+    onAttempt: vi.fn(),
   } satisfies OverlayHost
 
   const overlay: Overlay = createOverlay(root, host)
@@ -430,5 +431,196 @@ describe('with no voice on the device', () => {
     const floaters = [...root.querySelectorAll('.floater')] as HTMLElement[]
     expect(floaters).toHaveLength(2)
     for (const el of floaters) expect(el.classList.contains('say')).toBe(false)
+  })
+})
+
+/**
+ * A2 — the attempt model, through the real renderers.
+ *
+ * `attempts.test.ts` owns the rules; this owns the WIRING, which is the half
+ * that has no other witness. Every assertion below would still pass against a
+ * broken tally and vice versa, and that is the point of keeping them apart: a
+ * hook attached to the wrong event is invisible to a unit test of either side.
+ */
+describe('the attempt model is wired to what actually happens', () => {
+  /**
+   * Exactly when the round asks for its first word (wordFind.ts:116), because
+   * the latency assertions below are measured FROM it — the block above can
+   * round up to "some time after", this one cannot.
+   */
+  const FIRST_PROMPT_MS = 900 + PICKS.length * 60
+
+  const tap = (el: HTMLElement): void =>
+    void el.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+
+  /** The word the round is currently asking for, per the spoken prompt. */
+  function target(root: HTMLElement, host: ReturnType<typeof setup>['host']): HTMLElement {
+    const calls = host.speech.speak.mock.calls as unknown as string[][]
+    const asked = calls[calls.length - 1]?.[0] ?? ''
+    const words = [...root.querySelectorAll('#words .word')] as HTMLElement[]
+    return words.find(w => w.textContent === asked && !w.classList.contains('found'))!
+  }
+
+  /** A wrong chip on the number pad. */
+  function missSum(root: HTMLElement): void {
+    const chips = [...root.querySelectorAll('.nchip')] as HTMLElement[]
+    tap(chips.find(c => c.textContent !== String(SUM_ANSWER))!)
+  }
+
+  const attempts = (host: ReturnType<typeof setup>['host']) =>
+    host.onAttempt.mock.calls.map(c => c[0])
+
+  it('reports one attempt for an answered sum', () => {
+    const { root, overlay, host } = setup()
+    overlay.openSum(SUM)
+    vi.advanceTimersByTime(3000)
+    solve(root, SUM_ANSWER)
+
+    expect(attempts(host)).toHaveLength(1)
+    expect(attempts(host)[0]).toMatchObject({
+      kind: 'sum', index: 0, correct: true, helped: false, rescued: false,
+    })
+    // The sum is on screen at the mount, so the clock has been running since.
+    expect(attempts(host)[0]?.latencyMs).toBe(3000)
+  })
+
+  it('marks a sum incorrect when a wrong chip landed first', () => {
+    const { root, overlay, host } = setup()
+    overlay.openSum(SUM)
+    missSum(root)
+    solve(root, SUM_ANSWER)
+    expect(attempts(host)[0]).toMatchObject({ correct: false })
+  })
+
+  it('reports one attempt per WORD on a find page, not one per page', () => {
+    const { root, overlay, host } = setup()
+    overlay.openWordFind(PICKS)              // two targets
+    vi.advanceTimersByTime(FIRST_PROMPT_MS)
+    tap(target(root, host))
+    vi.advanceTimersByTime(800)              // the next word is asked for
+    tap(target(root, host))
+
+    // One page, one payment (A1) — and two questions answered.
+    expect(attempts(host)).toHaveLength(2)
+    expect(attempts(host).map(a => a.index)).toEqual([0, 1])
+    expect(attempts(host).every(a => a.kind === 'find' && a.correct)).toBe(true)
+  })
+
+  it('times each find target from its own prompt, not from the mount', () => {
+    const { root, overlay, host } = setup()
+    overlay.openWordFind(PICKS)
+    vi.advanceTimersByTime(FIRST_PROMPT_MS)  // the timer, not her thinking
+    vi.advanceTimersByTime(400)
+    tap(target(root, host))
+    vi.advanceTimersByTime(800)              // wordFind.ts:68 asks for word two
+    vi.advanceTimersByTime(2500)
+    tap(target(root, host))
+
+    expect(attempts(host).map(a => a.latencyMs)).toEqual([400, 2500])
+  })
+
+  it('does not restart the clock when she asks to hear it again', () => {
+    const { root, overlay, host } = setup()
+    overlay.openWordFind(PICKS)
+    vi.advanceTimersByTime(FIRST_PROMPT_MS)
+    vi.advanceTimersByTime(1000)
+    root.querySelector<HTMLElement>('.overlay-again')!.click()
+    vi.advanceTimersByTime(1000)
+    tap(target(root, host))
+
+    // Reading it again is the task, not a hint — and it is certainly not a
+    // reason to record her as having answered in one second.
+    expect(attempts(host)[0]?.latencyMs).toBe(2000)
+    expect(attempts(host)[0]?.helped).toBe(false)
+  })
+
+  it('JT-008(1): a peeked sum is not reported at all', () => {
+    const { root, overlay, host } = setup()
+    overlay.openSum(SUM)
+    tap(root.querySelector<HTMLElement>('.mystery')!)
+
+    expect(root.querySelector('#words')?.textContent).toContain(String(SUM_ANSWER))
+    expect(host.onAttempt).not.toHaveBeenCalled()
+  })
+
+  it('JT-008(1): and leaving a peeked sum still reports nothing', () => {
+    const { root, overlay, host } = setup()
+    overlay.openSum(SUM)
+    tap(root.querySelector<HTMLElement>('.mystery')!)
+    root.querySelector<HTMLElement>('.overlay-x')!.click()
+
+    expect(host.onAttempt).not.toHaveBeenCalled()
+    expect(host.onPassed).not.toHaveBeenCalled()   // peeking earns nothing either
+  })
+
+  it('JT-008(2): opening the counting dots does not exclude the answer', () => {
+    const { root, overlay, host } = setup()
+    overlay.openSum(SUM)
+    tap(root.querySelector<HTMLElement>('.helper')!)
+    vi.advanceTimersByTime(8000)
+    solve(root, SUM_ANSWER)
+
+    expect(attempts(host)).toHaveLength(1)
+    expect(attempts(host)[0]).toMatchObject({ correct: true, helped: true, latencyMs: 8000 })
+  })
+
+  it('JT-008(3): leaving mid-page keeps the words she found and drops the rest', () => {
+    const { root, overlay, host } = setup()
+    overlay.openWordFind(PICKS)
+    vi.advanceTimersByTime(FIRST_PROMPT_MS)
+    tap(target(root, host))                  // one of two
+    vi.advanceTimersByTime(800)
+    root.querySelector<HTMLElement>('.overlay-x')!.click()
+
+    expect(attempts(host)).toHaveLength(1)
+    expect(attempts(host)[0]).toMatchObject({ index: 0, correct: true })
+  })
+
+  it('JT-008(3): and a page she never answered reports nothing', () => {
+    const { root, overlay, host } = setup()
+    overlay.openWordFind(PICKS)
+    vi.advanceTimersByTime(FIRST_PROMPT_MS)
+    root.querySelector<HTMLElement>('.overlay-x')!.click()
+    expect(host.onAttempt).not.toHaveBeenCalled()
+  })
+
+  it('flags the attempt the mash rescue landed on', () => {
+    const { root, overlay, host } = setup()
+    overlay.openSum(SUM)
+    missSum(root); missSum(root); missSum(root)     // MASH_WRONGS — the dots open
+    vi.advanceTimersByTime(2000)                    // ride out the input lock
+    solve(root, SUM_ANSWER)
+
+    expect(attempts(host)[0]).toMatchObject({ rescued: true, correct: false })
+    // The rescue opens the dots itself, so it reads as helped as well as rescued.
+    expect(attempts(host)[0]?.helped).toBe(true)
+  })
+
+  it('carries nothing from one page into the next', () => {
+    const { root, overlay, host } = setup()
+    overlay.openSum(SUM)
+    missSum(root)
+    overlay.openSum(SUM)                     // remounted without ever answering
+    solve(root, SUM_ANSWER)
+
+    expect(attempts(host)).toHaveLength(1)
+    expect(attempts(host)[0]).toMatchObject({ index: 0, correct: true, rescued: false })
+  })
+
+  it('an unheard host is not a broken one', () => {
+    // A3 owns recordAttempt and has not landed; until it does, nothing listens.
+    const root = document.createElement('div')
+    document.body.append(root)
+    const overlay = createOverlay(root, {
+      speech: {
+        speak: vi.fn(() => true), ready: () => true, cancel: vi.fn(),
+        noticeShown: () => false, markNoticeShown: vi.fn(),
+      },
+      sfx: { play: vi.fn(), enabled: true, setTheme: vi.fn() },
+      onPassed: vi.fn(),
+      onDismissed: vi.fn(),
+    })
+    overlay.openSum(SUM)
+    expect(() => solve(root, SUM_ANSWER)).not.toThrow()
   })
 })
