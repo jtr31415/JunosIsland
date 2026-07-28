@@ -95,6 +95,19 @@
       "doneRule": "manual",
       "note": "",
       "state": "open"
+    },
+    {
+      "id": "JT-008",
+      "type": "ruling",
+      "title": "Three rulings the attempt model needs (A2)",
+      "detail": "The A2 survey hit three cases the spec does not cover. Answer in the note; A2's build reads them. (1) THE PEEK — tapping the grey ? on a sum reveals the answer and the round goes inert; she never answers. Is that no attempt at all, an attempt excluded like help, or an incorrect one? It decides whether a peeked stage reads as unpractised or as fine. (2) IS 'SAY IT AGAIN' HELP? The spec names dot-hints and Fred-talk only. If repeating the prompt is not help, find pages — which have no other affordance — are never help-excluded at all. (3) ABANDONMENT — she taps the X mid-page. Absent a ruling CC records nothing, on the grounds that silence is not evidence of getting it wrong; say if you want it counted. Full reasoning in docs/pet-island-runA.md, FIELD NOTES — A2.",
+      "blocks": [
+        "A2",
+        "A6.report"
+      ],
+      "doneRule": "manual",
+      "note": "",
+      "state": "open"
     }
   ],
   "archive": []

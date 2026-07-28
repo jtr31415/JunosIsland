@@ -353,6 +353,85 @@ Two consequences worth carrying forward:
   the same one-liner. Additive and tolerant: a rolled-back build still reads
   the save, just generously, which is the safe direction.
 
+# FIELD NOTES — A2 (surveyed 28 Jul, not yet built)
+
+Same discipline as A1: traced to the line before the session was cleared, so
+the next one starts at the edit. Nothing below is built yet.
+
+### The finding that shrinks A2: correctness is already on the wire
+
+The attempt model's three correctness rules can be derived **entirely from
+deps signals that exist today**, with no edit to any ported renderer:
+
+| Path | Rule | Signals it falls out of |
+|---|---|---|
+| find | one attempt per TARGET, correct iff its first tap is right | `flyToScore` fires per correct word (`wordFind.ts:64`), `onWrong` per wrong tap (`:75`). Target *k* is correct iff no `onWrong` landed between its start and its `flyToScore`. |
+| build | one per word, correct iff completed with zero wrong tile taps | `onWrong` per wrong tile (`build.ts:149`), one `flyToScore` at completion (`:131`). Correct iff the wrong-count is zero at that point. |
+| sum | one, correct iff the first pad tap is right | `onWrong` per wrong chip (`sum.ts:136`), `flyToScore` on the right one (`:117`). Same test. |
+
+`overlay.ts:288` already tracks `mounted: 'find' | 'build' | 'sum'` (A1 put it
+there), which is exactly the discriminator the tally needs. So A2's counter is
+a small host-side state machine in the overlay, fed by hooks already wired.
+
+### The one thing NOT on the wire: help
+
+The exclusion rule ("help is free but uncounted") is the part that needs new
+plumbing, because every help affordance is **private to the renderer** and
+never surfaces:
+
+- `sum.ts:69-73` — tapping a `helper` toggles its dot-box open. Local `shown`.
+- `sum.ts:74` — `dotOpeners`, fired by the 3-wrong mash rescue (`:141`).
+- `build.ts:70` — `fredTalk()`, reachable via the returned `fred()` handle.
+- `wordFind.ts` — **no help affordance exists at all.**
+
+So A2 adds exactly one optional dep, `onHelp?(kind)`, to `ChallengeDeps`,
+fired at those three sites. **This is parity-safe by the same argument that
+sanctioned `onWrong`** (`mount.ts:52-57`): `tools/smoke/parity.mjs` boots v0
+against `dist/words/junos-words.html` and diffs the rendered `#words` DOM;
+words2d passes no `onHelp`, an unpassed optional dep is a no-op, and no
+attribute changes. The hook is additive observability, the established
+pattern, not a port deviation.
+
+### Rescue context is already computed
+
+`overlay.ts:321` (`breaks`, governors.ts) and the `stretch` flag at `:434` are
+the cross-page mash memory; the renderers' own 3-wrong guards write
+`holds.lockInput`. A2's "attempts during a rescue context are excluded" reads
+these — it does not need a new notion of rescue. Note that a mash-rescued SUM
+is excluded twice over (rescue *and* help), since `:141` opens the dots.
+
+### Open questions — Joe's call, not mine
+
+1. **The peek.** `sum.ts:92-98`: tapping the grey `?` reveals the answer, sets
+   `solved`, and then the round is inert — no `flyToScore`, no `onAdvance`, it
+   just sits until she leaves. The spec's attempt model has no case for it: it
+   is not help-then-completed (she never answers), and it is not a wrong
+   answer. Three readings: (a) no attempt at all, as if the page never
+   happened; (b) an attempt, excluded like help; (c) counted incorrect. The
+   comment at `:91` says peeking is "free, not profitable", which argues (a)
+   or (b) — but which one changes whether a peeked stage looks *unpractised*
+   or looks *fine*, and that is a judgement about what you want the report to
+   tell you.
+2. **Is `sayAgain` help?** The spec names dot-hints and Fred-talk. `btnSay`
+   (`overlay.ts:451`) just repeats the prompt. If it is not help, then find
+   pages — which have no other affordance — are never help-excluded at all.
+   Reading again is arguably the task rather than a hint, but it is a ruling.
+3. **Abandonment.** She taps the X mid-page. Absent a ruling I will record
+   nothing (an unresolved attempt is discarded, not a failure) — silence is
+   not evidence of getting it wrong, and the alternative punishes leaving.
+   Flagged rather than assumed silently; say if you want it counted.
+
+### Mechanical calls made at the survey (no ruling needed)
+
+- **Latency starts when the question is actually PUT, not at mount.** On find
+  and build the prompt is spoken from a timer that `quietUntil` can defer
+  (`wordFind.ts:37-42`, `build.ts:55-59`), so mount-time would measure the
+  timer, not the child. Clock starts when `speak()` is issued — or, on a
+  voiceless device, when `showTarget()` paints. For sum the question is on
+  screen at mount, so mount-time is correct there.
+- Per-target latency on a find page restarts at each target's own prompt
+  (`wordFind.ts:68`, the 800ms re-speak), not once per page.
+
 ### Where the level is pinned
 
 `main.ts:923` — `{ rng: defaultRng, drawGreen, drawRed, neigh, level: 1 }`.
@@ -366,7 +445,8 @@ the single choke point A3's `levelFor` replaces.
 |---|---|
 | A1 | **BUILT** (28 Jul, `PB-007` closed) — find pages bank on completion; both in-round floaters are `.floater`, out of the `.say` hiding rule. Four regression tests in `tests/island/overlay.test.ts`. Six gates green. |
 | **A7** | **BUILT** (28 Jul) — costs now in units at 2/item, provably invisible: `tests/island/economy.test.ts` walks a month and pins items-per-tile and items-per-egg to the pre-A7 values at every n. The spec's "×2 is exact by construction" was **false** and is corrected in FIELD NOTES; `cost()` rounds in items, and a pre-A7 save is migrated by `save.pay`. |
-| A2 · A3 · A4 · A5 · A6 | SPECCED — awaiting build. These five interlock (harness, attempt model, tickboxes, schema v3, report) and do not split cleanly. |
+| **A2** | **SURVEYED** (28 Jul) — see FIELD NOTES. Correctness for all three paths falls out of `flyToScore`/`onWrong`/`mounted`, which already exist: no ported renderer changes for the tally. Help is the only new plumbing — one optional `onHelp?` dep, parity-safe on the `onWrong` precedent. **Three questions await Joe** (the sum peek, whether `sayAgain` is help, abandonment). |
+| A3 · A4 · A5 · A6 | SPECCED — awaiting build. These four interlock (harness, tickboxes, schema v3, report) and do not split cleanly; A2 feeds them. |
 | **A8 Workbench** | **BUILT** (28 Jul) — `npm run workbench`. Queue, backlog, lesson editor, export, bake console, voices & key. |
 | **A8 asset viewer** | **BUILT** (28 Jul, `PB-033` closed) — `/viewer.html`. Three galleries, orbitable, searchable, every ID canonical by construction. |
 | A8a Joe-work protocol | **IN FORCE** — `joe/tasks.json`, seven tasks seeded, evidence-based Done. |
