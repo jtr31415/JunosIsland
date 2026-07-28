@@ -9,6 +9,7 @@ import {
 import type { Flow } from '../../src/island/flow'
 import { count, tileAt } from '../../src/island/world/grid'
 import { createLocalStore } from '../../src/platform/storage'
+import { createAttainment, createHarness } from '../../src/island/harness'
 
 class MemStorage implements Storage {
   private m = new Map<string, string>()
@@ -206,5 +207,135 @@ describe('progress written under the old economy', () => {
 
   it('stamps the scale it wrote, so the next re-base can migrate too', () => {
     expect(toSave(playedFlow(), false).pay).toBe(itemPay())
+  })
+})
+
+describe('attainment travels with the island (A5)', () => {
+  /*
+   * WHY THERE IS NO SCHEMA v3 HERE, though A5 is titled for one.
+   *
+   * `attainment` is purely ADDITIVE: a build that has never heard of it reads
+   * a save containing it without complaint. Bumping the envelope to 3 would
+   * change that from "an older build ignores a field" into "an older build
+   * REFUSES the save" — `durable.ts:119` migrates only upward and returns null
+   * downward, which sends the loader to the snapshot ring, which is the empty
+   * island HANDOFF §6 names as the cost of a version. So the bump would trade
+   * a lost REPORT for a lost ISLAND, and only one of those is hers.
+   *
+   * envelope.ts's own rule agrees: *"Bumped whenever a migration is added."*
+   * There is no migration to add — the default is computed by the loader,
+   * exactly the precedent `tilesEarned` set. v3 arrives the day the attainment
+   * SHAPE changes breakingly, and the ladder point is free until then.
+   */
+  /** A save written before this field existed at all. */
+  const priorSave = () => ({
+    tiles: [['0,0', 'grass']] as Array<[string, 'grass']>,
+    pets: [], bankedTiles: 0, openingSeen: true,
+    sumProgress: 6, readProgress: 4, tilesEarned: 1,
+  })
+
+  it('writes what she has done and reads it back unchanged', () => {
+    const a = createAttainment()
+    const h = createHarness(a, () => Date.parse('2026-07-28T09:00:00Z'))
+    h.dealt('sums', 1)
+    h.recordAttempt({
+      kind: 'sum', index: 0, correct: true, latencyMs: 800,
+      helped: false, rescued: false, at: 0,
+    })
+
+    const back = fromSave(toSave(playedFlow(), true, 'Juno', null, a)).attainment
+    expect(back.sums.stages[1]?.attempts).toBe(1)
+    expect(back.sums.stages[1]?.ewma).toBe(1)
+    expect(back.sums.stages[1]?.latencies).toEqual([800])
+    expect(back.sums.stages[1]?.sessions).toEqual([
+      { date: '2026-07-28', correct: 1, total: 1 },
+    ])
+  })
+
+  it('gives a save that predates it the stages the island already deals', () => {
+    /*
+     * The spec's migration line, corrected. Read literally — "sums 1 ticked,
+     * everything else honest zeroes" — every island already in existence would
+     * wake up unable to deal a reading page, so the egg could never hatch
+     * again. What she is already playing is what she keeps.
+     */
+    const { attainment } = fromSave(priorSave())
+    expect(attainment.sums.stages[1]?.ticked).toBe(true)
+    expect(attainment.reading.stages[1]?.ticked).toBe(true)
+    expect(attainment.building.stages[1]?.ticked).toBe(true)
+  })
+
+  it('does not hand her subtraction on the strength of a migration', () => {
+    // The island has never dealt one. JT-007 is Joe ticking it himself.
+    const { attainment } = fromSave(priorSave())
+    for (const s of [1, 2, 3]) {
+      expect(attainment.takingAway.stages[s]?.ticked).toBe(false)
+    }
+  })
+
+  it('gives a fresh island honest zeroes, not invented history', () => {
+    const { attainment } = fromSave(null)
+    expect(attainment.sums.stages[1]?.attempts).toBe(0)
+    expect(attainment.sums.stages[1]?.ewma).toBeNull()
+  })
+
+  it('survives a hand-edited save without dealing a stage that cannot render', () => {
+    /*
+     * Anything read off disk is untrusted input (envelope.ts). A stage id with
+     * no generator behind it must not reach one, and a garbage value must not
+     * take the island down with it — a corrupt save yields a fresh island, not
+     * an error (save.ts header).
+     */
+    const wrecked = {
+      ...priorSave(),
+      attainment: {
+        sums: { mode: 'nonsense', stages: { 1: { ticked: true, attempts: 'lots' }, 99: { ticked: true } } },
+        reading: 'not an object',
+        fractions: { mode: 'manual', stages: { 1: { ticked: true } } },
+      },
+    } as unknown as Parameters<typeof fromSave>[0]
+
+    const { attainment } = fromSave(wrecked)
+    const h = createHarness(attainment)
+    expect(h.levelFor('sums')).toEqual([1])
+    expect(attainment.sums.stages[99]).toBeUndefined()
+    expect(attainment.sums.stages[1]?.attempts).toBe(0)
+    expect(attainment.sums.mode).toBe('auto')
+    expect(attainment.reading.stages[1]?.ticked).toBe(true)
+    expect(Object.prototype.hasOwnProperty.call(attainment, 'fractions')).toBe(false)
+  })
+
+  it('keeps a tick a parent set, which is the whole point of persisting it', () => {
+    const a = createAttainment()
+    a.takingAway.stages[1]!.ticked = true
+    a.takingAway.mode = 'manual'
+    const { attainment } = fromSave(toSave(playedFlow(), true, 'Juno', null, a))
+    expect(attainment.takingAway.stages[1]?.ticked).toBe(true)
+    expect(attainment.takingAway.mode).toBe('manual')
+  })
+
+  it('does not lose the rings when they are full', () => {
+    const a = createAttainment()
+    const h = createHarness(a)
+    h.dealt('sums', 1)
+    for (let i = 0; i < 40; i++) {
+      h.recordAttempt({
+        kind: 'sum', index: 0, correct: true, latencyMs: i,
+        helped: false, rescued: true, at: 0,
+      })
+    }
+    const { attainment } = fromSave(toSave(playedFlow(), true, 'Juno', null, a))
+    expect(attainment.sums.stages[1]?.latencies).toHaveLength(30)
+    expect(attainment.sums.stages[1]?.early).toHaveLength(10)
+    expect(attainment.sums.stages[1]?.rescues).toHaveLength(10)
+  })
+
+  it('round-trips through the real store', async () => {
+    const store = createLocalStore(mem)
+    const a = createAttainment()
+    a.sums.stages[2]!.ticked = true
+    await saveIsland(store, 'p1', playedFlow(), true, 'Juno', null, a)
+    const loaded = await loadIsland(store, 'p1')
+    expect(createHarness(loaded.attainment).levelFor('sums')).toEqual([1, 2])
   })
 })

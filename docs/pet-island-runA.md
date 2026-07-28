@@ -680,6 +680,76 @@ regression no one asked for. Flagged here rather than done quietly.
    `building` and the egg cannot hatch. Forbid the last untick, or allow it and
    have the island quietly decline the round?
 
+### JT-010 answered (28 Jul) — and A3 built on it
+
+**(1) The share of maths stays by tick.** Joe: *"one easy sum, one easy sub and
+one medium sum, is 2/3 sum 1/3 sub. but as soon as sub becomes proficient for
+the next level, the next triggers and the share is 1:1 again."* So `dealMaths`
+puts the ticked stages of BOTH maths paths in one pool and draws uniformly over
+it. He was shown the drift — ticking another sum rung quietly cuts subtraction's
+share — and chose it, because the second half of his sentence is the answer to
+it: the ladder is what levels the ratio again, so the drift is a symptom of
+progress rather than of the mechanism. Pinned four ways in `harness.test.ts`,
+including his own worked example at 2:1 and the 1:1 it returns to.
+
+**(2) Three builds to one find, and `PB-038` was real.** Joe: *"reading mix
+should be 3 build, 1 find. period."* — which is what `balance.json` has said all
+along. The data was never the bug; the DENOMINATION was. `main.ts` handed
+`readProgress` over as a page index and A7 had re-based it into units at 2 per
+item, so the index advanced 0, 2, 4, 6 and read the four-long mix at every other
+slot: one find page in two. `balance.pagesRead()` is the conversion, exact
+because a reading page pays exactly one item, and the new tests walk
+`readProgress` the way the game moves it rather than asking `pageKind(0..3)`
+directly — which is why the old suite could not see it. `PB-038` closed.
+
+**(3) The last tick is protected — read as the deal MOMENT.** Joe: *"prevent
+unticking the last tick on each path."* Taken as the moment rather than the
+single path, and his own earlier card is the reason: JT-007 has him ticking
+`takingAway 1` to try it and says in terms that *"untick is a parent's hand, not
+a demotion, so it is safe to try"* — a literal per-path guard would make that
+tick permanent the instant he made it, which is the opposite of safe to try. The
+harm he was shown is a child tapping a plot, or an egg, and finding nothing
+there. So each moment keeps one ticked stage and either path inside it may go
+empty: reading off with building on is a coherent thing to want, and the egg
+still hatches. **Say so if you meant it literally** — it is one predicate,
+`canUntick`, and one line to change.
+
+### What A3 actually cost
+
+- `src/island/harness.ts` — the module. `levelFor` · `pick` · `dealMaths` ·
+  `dealReading` · `canUntick` / `setTicked` · `dealt` / `recordAttempt` ·
+  `noteRescue`, plus the Run B surface declared and pinned inert. 54 tests.
+- **`deal.ts` stopped deciding.** It used to read `pageKind` itself; the kind
+  now arrives from the harness, because the choice has to answer to the
+  tickboxes as well as to the mix. What survives is the property that made the
+  page index right: the harness is asked with the same stable number, so an X
+  and a re-tap still cannot re-roll the alternation.
+- **Subtraction is dealt for the first time**, and cost one argument.
+  `dealSum` takes an `op`; one store still, because `SumItem` carries its own
+  and two stores would need two held bits and would let an X flip a take-away
+  into an addition — the exact skip `deal.ts` exists to prevent.
+- **The circuit A2 left open is closed**: `onAttempt: evt =>
+  harness.recordAttempt(evt)`. Every attempt since A2 landed had been computed
+  correctly and dropped, by design, because the sink had nowhere to go.
+- **A5's data half shipped with it** (the harness is useless unpersisted) —
+  `attainment` on the island save, sanitised on the way in by
+  `readAttainment`. **No schema bump**, and that is a deliberate departure from
+  the item titled "schema v3": the field is purely additive, so an older build
+  IGNORES it, where a bump would make that build REFUSE the save
+  (`durable.ts:119` migrates upward only) and send the loader to the snapshot
+  ring — the empty island HANDOFF §6 names as the cost of a version. The bump
+  would trade a lost report for a lost island. `envelope.ts`'s own rule agrees:
+  *"bumped whenever a migration is added"*, and there is no migration to add.
+  v3 arrives the day the shape changes breakingly, and the ladder point is free
+  until then.
+- **One hazard found and closed at the build.** `openRead`/`openSum` decline a
+  moment with nothing ticked, and a port that declines strands the flow in
+  'challenge' with no overlay and no way out but a reload — a fault this island
+  has had once already. The panel cannot reach that state, but a hand-edited
+  save can, so `readAttainment` repairs it where the untrusted data comes in:
+  an empty moment is corruption, not a preference. The ticks are repaired and
+  the STATS are not — measurement is the record of what she actually did.
+
 ---
 
 # LEDGER (updated on every field report)
@@ -688,7 +758,9 @@ regression no one asked for. Flagged here rather than done quietly.
 | A1 | **BUILT** (28 Jul, `PB-007` closed) — find pages bank on completion; both in-round floaters are `.floater`, out of the `.say` hiding rule. Four regression tests in `tests/island/overlay.test.ts`. Six gates green. |
 | **A7** | **BUILT** (28 Jul) — costs now in units at 2/item, provably invisible: `tests/island/economy.test.ts` walks a month and pins items-per-tile and items-per-egg to the pre-A7 values at every n. The spec's "×2 is exact by construction" was **false** and is corrected in FIELD NOTES; `cost()` rounds in items, and a pre-A7 save is migrated by `save.pay`. |
 | **A2** | **BUILT** (28 Jul, on JT-008's answers) — `src/island/attempts.ts` + one optional `onHelp?` dep; latency needed no dep at all (the overlay wraps its own `Speaker`). 27 unit tests on the rules, 13 wiring tests through the real renderers. Six gates green, parity renders identically. **The spec changed under it**: help no longer excludes (JT-008(2)), and the rescue exclusion goes with it having never been reachable. **JT-009 now closed** — a paused page pays nothing (see FIELD NOTES). |
-| A3 · A4 · A5 · A6 | SPECCED — awaiting build. These four interlock (harness, tickboxes, schema v3, report) and do not split cleanly; A2 feeds them. |
+| **A3** | **BUILT** (28 Jul, on JT-010's answers) — `src/island/harness.ts`, the single choke point. `main.ts:923`'s `level: 1` and `dealSum(…, 1, …)` are gone; `deal.ts` no longer decides anything; `onAttempt` is wired, so measurement exists for the first time. **Subtraction is dealt for the first time.** 54 harness tests, `PB-038` closed with it. Six gates green, parity renders identically. |
+| **A5 (data half)** | **BUILT with A3** — `attainment` on the island save, sanitised in by `readAttainment`, defaults computed by the loader. **No schema bump**, deliberately: see FIELD NOTES — the bump would trade a lost report for a lost island. |
+| A4 · A6 | SPECCED — awaiting build. The capability MODEL is built and tested (ticks, modes, the untick guard, the stats a report reads); what is missing is the panel that shows it and the tiers that read it. JT-007 waits on A4's tickbox list. |
 | **A8 Workbench** | **BUILT** (28 Jul) — `npm run workbench`. Queue, backlog, lesson editor, export, bake console, voices & key. |
 | **A8 asset viewer** | **BUILT** (28 Jul, `PB-033` closed) — `/viewer.html`. Three galleries, orbitable, searchable, every ID canonical by construction. |
 | A8a Joe-work protocol | **IN FORCE** — `joe/tasks.json`, seven tasks seeded, evidence-based Done. |
@@ -698,6 +770,7 @@ regression no one asked for. Flagged here rather than done quietly.
 | Run D | Context-specced; rungs blocked on Joe #4–5 |
 | Joe #1–7 | Open — now **JT-001…JT-007** in the workbench, not in prose |
 | **JT-008** | **ANSWERED** (28 Jul) — the three attempt-model rulings; A2 built on them. |
+| **JT-010** | **ANSWERED and CLOSED** (28 Jul) — the share of maths stays by tick; the reading mix is 3 build to 1 find (`PB-038` was real); the last tick of a deal moment is protected. A3 built on all three. |
 | **JT-009** | **ANSWERED and CLOSED** (28 Jul) — reading (c), a paused page pays nothing and she does it again. Zero lines to build; three tests to pin. `PB-041` parks reading (b), resume, against Joe's *"if it flags in play test, i will bring it back"*. |
 | Product Backlog | Seeded, now 41 cards, `PB-001…PB-041` (`PB-036` and `PB-039` Joe's own, `PB-037` Fred-talk has no way in, `PB-038` the A7 page-mix regression, `PB-040` re-done pages are re-measured, `PB-041` resume, parked by ruling). Awaiting Joe's triage. |
 | Superseded docs | `pet-island-phase4-1-spec.md` (rulings changed) |

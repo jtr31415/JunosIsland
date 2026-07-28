@@ -14,6 +14,8 @@ import type { Flow, Pet } from './flow'
 import type { Island, TileType } from './world/grid'
 import type { Axial } from './world/hex'
 import type { SaveStore } from '../platform/storage'
+import { readAttainment } from './harness'
+import type { Attainment } from './harness'
 
 /** The serialised shape. Plain JSON — no Maps, no class instances. */
 interface IslandSave {
@@ -63,13 +65,30 @@ interface IslandSave {
    * she plays. Null means never asked or no answer available.
    */
   persistGranted?: boolean | null
+  /**
+   * What she can be dealt, and how she has been doing on it (A3/A5).
+   *
+   * ADDITIVE, AND DELIBERATELY NOT A SCHEMA BUMP, though A5 is titled
+   * "schema v3". A build that has never heard of this field reads a save
+   * containing it without complaint; bumping the envelope to 3 would change
+   * that into a REFUSAL, because `durable.ts:119` migrates only upward and
+   * returns null downward — which sends the loader to the snapshot ring, which
+   * is the empty island HANDOFF §6 names as the cost of a version. The bump
+   * would trade a lost report for a lost island, and only one of those is
+   * hers. envelope.ts's own rule agrees ("bumped whenever a migration is
+   * added"): the default is computed here by the loader, exactly the precedent
+   * `tilesEarned` set. v3 arrives the day this shape changes breakingly.
+   */
+  attainment?: unknown
 }
 
 export function toSave(
   flow: Flow, openingSeen: boolean, childName?: string,
   persistGranted: boolean | null = null,
+  attainment?: Attainment,
 ): IslandSave {
   return {
+    attainment,
     tiles: [...flow.island.tiles.entries()],
     pets: [...flow.pets],
     bankedTiles: flow.bankedTiles,
@@ -93,12 +112,21 @@ function readPlot(v: unknown): Flow['plot'] {
   return { at: { q: p.at.q, r: p.at.r }, type: p.type }
 }
 
-export function fromSave(
-  save: IslandSave | null,
-): { flow: Flow; openingSeen: boolean; childName: string; persistGranted: boolean | null } {
+export interface Loaded {
+  flow: Flow
+  openingSeen: boolean
+  childName: string
+  persistGranted: boolean | null
+  attainment: Attainment
+}
+
+export function fromSave(save: IslandSave | null): Loaded {
   const fresh = createFlow()
   if (!save || !Array.isArray(save.tiles) || save.tiles.length === 0) {
-    return { flow: fresh, openingSeen: false, childName: '', persistGranted: null }
+    return {
+      flow: fresh, openingSeen: false, childName: '', persistGranted: null,
+      attainment: readAttainment(save?.attainment),
+    }
   }
   const island: Island = { tiles: new Map(save.tiles) }
   /*
@@ -174,12 +202,13 @@ export function fromSave(
     openingSeen: save.openingSeen === true,
     childName: typeof save.childName === 'string' ? save.childName : '',
     persistGranted: typeof save.persistGranted === 'boolean' ? save.persistGranted : null,
+    attainment: readAttainment(save.attainment),
   }
 }
 
 export async function loadIsland(
   store: SaveStore, profileId: string,
-): Promise<{ flow: Flow; openingSeen: boolean; childName: string; persistGranted: boolean | null }> {
+): Promise<Loaded> {
   const raw = await store.get<IslandSave>(profileId, 'save')
   return fromSave(raw)
 }
@@ -187,6 +216,8 @@ export async function loadIsland(
 export async function saveIsland(
   store: SaveStore, profileId: string, flow: Flow, openingSeen: boolean,
   childName?: string, persistGranted: boolean | null = null,
+  attainment?: Attainment,
 ): Promise<void> {
-  await store.put(profileId, 'save', toSave(flow, openingSeen, childName, persistGranted))
+  await store.put(profileId, 'save',
+    toSave(flow, openingSeen, childName, persistGranted, attainment))
 }

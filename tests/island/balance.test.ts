@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { eggCost, tileCost, itemsFor, pageKind, balance } from '../../src/island/balance'
+import { eggCost, tileCost, itemsFor, pageKind, pagesRead, itemPay, balance } from '../../src/island/balance'
 
 /*
  * These tables are in ITEMS — sums and pages, the things a child answers.
@@ -95,5 +95,50 @@ describe('page kinds', () => {
     // §1 beat 2 and §3: egg #1 is the scripted single word
     expect(itemsFor(balance.egg, 1)).toBe(1)
     expect(pageKind(0)).toBe('find')
+  })
+})
+
+describe('the reading mix a child actually sees — PB-038', () => {
+  /*
+   * Joe, JT-010(2): *"reading mix should be 3 build, 1 find. period."* Which
+   * is what balance.json has said all along — the data was never the bug.
+   *
+   * The bug was DENOMINATION. `main.ts` handed `readProgress` to the deal path
+   * as the page index, and A7 re-based `readProgress` into units at 2 per
+   * item, so the index went 0, 2, 4, 6 and read the four-long mix at every
+   * OTHER slot: find, build, find, build. One find page in two, where the data
+   * says one in four, and nobody chose that.
+   *
+   * A7's own field note names this trap exactly — *"anything asserting pacing
+   * should ask in items, or it is asserting the denomination instead"* — and
+   * the month-walk pinned costs in items while the page mix was never asked.
+   * The existing tests above ask `pageKind(0..3)` directly and therefore
+   * cannot see it. This one walks `readProgress` the way the game moves it.
+   */
+  const asSeen = (pages: number): string[] =>
+    Array.from({ length: pages }, (_, i) => pageKind(pagesRead(i * itemPay())))
+
+  it('gives one find page in four across a whole egg', () => {
+    expect(asSeen(8)).toEqual(
+      ['find', 'build', 'build', 'build', 'find', 'build', 'build', 'build'])
+  })
+
+  it('counts three builds to every find, whatever an item is worth', () => {
+    const seen = asSeen(40)
+    expect(seen.filter(k => k === 'find')).toHaveLength(10)
+    expect(seen.filter(k => k === 'build')).toHaveLength(30)
+  })
+
+  it('is the regression, named: reading units as pages doubled the find pages', () => {
+    // What the game was actually doing. Kept as the proof this test has teeth.
+    const wrong = Array.from({ length: 8 }, (_, i) => pageKind(i * itemPay()))
+    expect(wrong.filter(k => k === 'find')).toHaveLength(4)
+    expect(asSeen(8).filter(k => k === 'find')).toHaveLength(2)
+  })
+
+  it('is exact, because a reading page pays exactly one item', () => {
+    for (let page = 0; page < 12; page++) {
+      expect(pagesRead(page * itemPay())).toBe(page)
+    }
   })
 })

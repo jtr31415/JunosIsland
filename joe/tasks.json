@@ -132,8 +132,8 @@
         "PB-038"
       ],
       "doneRule": "manual",
-      "note": "",
-      "state": "open"
+      "note": "1) share of maths stays by tick, one easy sum, one easy sub and one medium sum, is 2/3 sum 1/3 sub. but as soon as sub becomes proficient for the next level, the next triggers and the share is 1:1 again. 2) reading mix should be 3 build, 1 find. period. 3) prevent unticking the last tick on each path",
+      "state": "done"
     }
   ],
   "archive": []

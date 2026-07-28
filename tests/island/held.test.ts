@@ -42,7 +42,8 @@ import type { ReadState } from '../../src/core/generators/read'
 import type { BuildState } from '../../src/core/generators/build'
 import type { SumState } from '../../src/core/generators/sums'
 import { plainWord } from '../../src/core/segmentation'
-import { balance } from '../../src/island/balance'
+import { balance, pageKind, pagesRead } from '../../src/island/balance'
+import type { PageKind } from '../../src/island/balance'
 
 /** Exactly what main.ts builds, seeded so a run is reproducible. */
 function reading(seed = 7) {
@@ -60,14 +61,23 @@ function reading(seed = 7) {
 const sums = (seed = 11): { store: SumState; rng: () => number } =>
   ({ store: { history: [], idx: -1 } as SumState, rng: mulberry32(seed) })
 
-/** The page index of the first FIND page and the first BUILD page in the mix. */
-const firstOf = (kind: 'find' | 'build'): number => {
-  const at = balance.pages.mix.indexOf(kind)
-  // The mix is Joe's, and it currently runs one find to three builds. If a
-  // future mix drops one of the two entirely, say so rather than test page −1.
-  expect(at, `the page mix has no "${kind}" page`).toBeGreaterThanOrEqual(0)
-  return at
+/**
+ * The kind of page to deal, having checked the mix still contains it.
+ *
+ * A3 moved the find/build choice out of `dealReading` and into the harness,
+ * which answers to the tickboxes as well as to the mix — so these tests name
+ * the kind directly rather than the page index that used to imply it. The
+ * assertion stays: the mix is Joe's, and if a future one drops a kind entirely
+ * these tests should say so rather than quietly stop covering it.
+ */
+const firstOf = (kind: PageKind): PageKind => {
+  expect(balance.pages.mix, `the page mix has no "${kind}" page`).toContain(kind)
+  return kind
 }
+
+/** What the game deals at a given point of an egg — the harness's own answer. */
+const kindFor = (readProgress: number): PageKind =>
+  pageKind(pagesRead(readProgress))
 
 /** A flat, comparable rendering of a reading card. */
 const asText = (c: ReturnType<typeof dealReading>): string =>
@@ -266,11 +276,11 @@ describe('leaving does not inflate the difficulty', () => {
 describe('the same sum comes back', () => {
   it('deals the identical sum after an X, and history does not grow', () => {
     const { store, rng } = sums()
-    const first = dealSum(store, rng, 1, false)
+    const first = dealSum(store, rng, 1, 'add', false)
     expect(store.history).toHaveLength(1)
 
     for (let i = 0; i < 6; i++) {
-      const again = dealSum(store, rng, 1, true)
+      const again = dealSum(store, rng, 1, 'add', true)
       expect(again).toEqual(first)
     }
     expect(store.history).toHaveLength(1)
@@ -278,8 +288,8 @@ describe('the same sum comes back', () => {
 
   it('deals a new one after she answers', () => {
     const { store, rng } = sums(17)
-    dealSum(store, rng, 1, false)
-    dealSum(store, rng, 1, false)
+    dealSum(store, rng, 1, 'add', false)
+    dealSum(store, rng, 1, 'add', false)
     expect(store.history).toHaveLength(2)
   })
 })
@@ -326,18 +336,18 @@ describe('the whole gesture, flow and card together', () => {
     let f: Flow = createFlow()
 
     f = tapEgg(f)
-    const dealt = asText(dealReading(stores, deps, f.readProgress, f.readHeld))
+    const dealt = asText(dealReading(stores, deps, kindFor(f.readProgress), f.readHeld))
 
     f = challengeFailed(f)
     expect(f.phase).toBe('free')
 
     f = tapEgg(f)
-    expect(asText(dealReading(stores, deps, f.readProgress, f.readHeld))).toBe(dealt)
+    expect(asText(dealReading(stores, deps, kindFor(f.readProgress), f.readHeld))).toBe(dealt)
     expect(stores.read.history.length + stores.build.history.length).toBe(1)
 
     f = challengePassed(f, { name: 'Bo', species: 'animal-fox' })
     f = tapEgg(f)
-    expect(asText(dealReading(stores, deps, f.readProgress, f.readHeld))).not.toBe(dealt)
+    expect(asText(dealReading(stores, deps, kindFor(f.readProgress), f.readHeld))).not.toBe(dealt)
   })
 
   it('gives her the same sum back across an X, at no cost to the plot', () => {
@@ -350,14 +360,14 @@ describe('the whole gesture, flow and card together', () => {
     expect(sumsForTile(f)).toBeGreaterThan(1)
 
     f = tapSum({ ...f, phase: 'free' })
-    const dealt = dealSum(store, rng, 1, f.sumHeld)
+    const dealt = dealSum(store, rng, 1, 'add', f.sumHeld)
 
     f = challengeFailed(f)
     expect(f.plot).not.toBeNull()
     expect(f.sumProgress).toBe(0)
 
     f = tapSum({ ...f, phase: 'free' })
-    expect(dealSum(store, rng, 1, f.sumHeld)).toEqual(dealt)
+    expect(dealSum(store, rng, 1, 'add', f.sumHeld)).toEqual(dealt)
     expect(store.history).toHaveLength(1)
   })
 })
@@ -384,7 +394,7 @@ describe('what a paused page pays — JT-009', () => {
     let f: Flow = createFlow()
 
     f = tapEgg(f)
-    const card = dealReading(stores, deps, f.readProgress, f.readHeld)
+    const card = dealReading(stores, deps, kindFor(f.readProgress), f.readHeld)
     expect(card.kind).toBe('find')
     const targets = card.kind === 'find' ? card.picks.length : 0
     expect(targets).toBeGreaterThan(1)
@@ -409,7 +419,7 @@ describe('what a paused page pays — JT-009', () => {
 
     // And she comes back to the same page, whole — every word to find again.
     f = tapEgg(f)
-    const again = dealReading(stores, deps, f.readProgress, f.readHeld)
+    const again = dealReading(stores, deps, kindFor(f.readProgress), f.readHeld)
     expect(asText(again)).toBe(asText(card))
     expect(again.kind === 'find' ? again.picks.length : -1).toBe(targets)
   })

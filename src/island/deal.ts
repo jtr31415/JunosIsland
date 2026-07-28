@@ -24,10 +24,10 @@ import { generateRead } from '../core/generators/read'
 import type { ReadDeps, ReadPick, ReadState } from '../core/generators/read'
 import { generateBuild } from '../core/generators/build'
 import type { BuildItem, BuildState } from '../core/generators/build'
-import { generateAdd } from '../core/generators/sums'
+import { generateAdd, generateSub } from '../core/generators/sums'
 import type { SumItem, SumState } from '../core/generators/sums'
 import type { Rng } from '../core/rng'
-import { pageKind } from './balance'
+import type { PageKind } from './balance'
 
 /** The shape every generator state shares: a history, and a finger in it. */
 interface Dealt<T> { history: T[]; idx: number }
@@ -57,16 +57,19 @@ export type ReadingCard =
 /**
  * A reading page: find a heard word, or build one from graphemes.
  *
- * WHICH of the two is decided by `page` — how many pages this egg has already
- * taken — so it is stable across a reload rather than random, and stable
- * across a dismissal for free: leaving does not touch `readProgress`, so the
- * same page index asks for the same kind of card and finds it in the same
- * store. The alternation cannot be re-rolled either.
+ * WHICH OF THE TWO IS NO LONGER DECIDED HERE (A3). It used to be `pageKind` of
+ * the page index, read straight off this file; it is now the harness's, because
+ * the choice has to answer to the tickboxes as well as to the mix — a parent
+ * who says his daughter cannot build words yet outranks a data file that would
+ * like her to. What is preserved is the property that made the index right in
+ * the first place: the harness is asked with the same stable page number, so
+ * leaving a page and coming back asks for the same kind of card and finds it in
+ * the same store. The alternation still cannot be re-rolled by an X.
  */
 export function dealReading(
-  s: ReadingStores, d: ReadDeps, page: number, held: boolean,
+  s: ReadingStores, d: ReadDeps, kind: PageKind, held: boolean,
 ): ReadingCard {
-  if (pageKind(page) === 'build') {
+  if (kind === 'build') {
     const item = deal(s.build, held,
       () => generateBuild(s.build, { rng: d.rng, drawGreen: d.drawGreen, level: d.level }))
     return { kind: 'build', item }
@@ -74,7 +77,19 @@ export function dealReading(
   return { kind: 'find', picks: deal(s.read, held, () => generateRead(s.read, d)) }
 }
 
-/** A sum. Same rule, one store. */
-export function dealSum(s: SumState, rng: Rng, level: number, held: boolean): SumItem {
-  return deal(s, held, () => generateAdd(s, rng, level))
+/**
+ * A sum. Same rule, one store, and now either operation.
+ *
+ * ONE STORE FOR BOTH, deliberately. `SumItem` carries its own `op`, the
+ * anti-repeat guard reads the last entry whatever it was, and `held` +
+ * `history[idx]` therefore hand back the very take-away she walked away from
+ * with no further machinery. Two stores would need two held bits and would let
+ * an X flip a subtraction she did not fancy into an addition — which is the
+ * exact skip this file exists to prevent.
+ */
+export function dealSum(
+  s: SumState, rng: Rng, level: number, op: 'add' | 'sub', held: boolean,
+): SumItem {
+  return deal(s, held, () =>
+    op === 'sub' ? generateSub(s, rng, level) : generateAdd(s, rng, level))
 }

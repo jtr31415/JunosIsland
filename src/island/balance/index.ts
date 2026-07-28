@@ -184,8 +184,24 @@ export const eggCost = (n: number): number => cost(balance.egg, n)
 export const tileCost = (n: number): number => cost(balance.tile, n)
 
 /**
+ * How many reading PAGES the progress toward an egg represents.
+ *
+ * `readProgress` is denominated in units and a page pays one item, so the two
+ * are the same number only while an item is worth one unit — which it stopped
+ * being at A7. Without this conversion the page index advances 0, 2, 4, 6 and
+ * reads the four-long mix at every other slot: one find page in two, where the
+ * data says one in four (`PB-038`, Joe's ruling JT-010(2)).
+ *
+ * Exact rather than rounded, because a reading page pays exactly one item.
+ * `floor` guards only the case of a save re-denominated across a re-base
+ * leaving a part-item behind, which cannot buy a page either.
+ */
+export const pagesRead = (readProgress: number): number =>
+  Math.floor(readProgress / itemPay())
+
+/**
  * Pages alternate find/build (§3), so reading practice is never all one shape.
- * Which kind the nth page of an egg is.
+ * Which kind the nth page of an egg is — the index is in PAGES, not units.
  */
 export function pageKind(pageIndex: number): PageKind {
   const mix = balance.pages.mix

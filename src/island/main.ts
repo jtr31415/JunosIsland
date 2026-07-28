@@ -22,11 +22,13 @@ import { createPropField, footprintBelow, WALKING_HEIGHT } from './world/props'
 import { createPlotHost } from './plot'
 import { createAlbum } from './album'
 import { hatchProgress, landProgress, sumsForTile, pagesForEgg } from './flow'
-import { balance, applyDevBalance } from './balance'
+import { balance, applyDevBalance, pagesRead } from './balance'
 import { landPaused, eggsPaused, GOVERNOR_LINE } from './governors'
 import type { Nudge } from './governors'
 import { OPENING, HATCH_LINES, TILE_QUESTION, fill } from './script'
 import { loadIsland, saveIsland } from './save'
+import { createHarness } from './harness'
+import type { Path } from './harness'
 import { openingGate } from './opening'
 import { commit, ceremony } from './ceremony'
 import { askPin, askChoice, askConfirm } from './grownups'
@@ -301,6 +303,17 @@ async function boot(): Promise<void> {
    * rather than at boot: some browsers prompt, and a prompt on the opening
    * screen is the one most likely to be dismissed.
    */
+  /*
+   * The harness (A3): the single place that decides what she may be dealt, and
+   * the only thing that hears how it went.
+   *
+   * `attainment` is the record it mutates and `persist()` writes; the harness
+   * holds it by reference rather than copying, so a tick from the grown-ups
+   * panel is live at the very next deal without anything having to be told.
+   */
+  const attainment = loaded.attainment
+  const harness = createHarness(attainment)
+
   let persistGranted: PersistState = loaded.persistGranted
   async function askToKeepIt(): Promise<void> {
     if (!shouldRequest(persistGranted, flow.pets.length, flow.tilesEarned)) return
@@ -329,7 +342,8 @@ async function boot(): Promise<void> {
   if (childName) document.title = `${childName}'s Island`
 
   const persist = (): Promise<void> =>
-    saveIsland(store, PROFILE, flow, opening.seen(), childName, persistGranted)
+    saveIsland(store, PROFILE, flow, opening.seen(), childName, persistGranted,
+      attainment)
 
   /**
    * Save, wait for it, and come back with proof.
@@ -417,6 +431,19 @@ async function boot(): Promise<void> {
   const overlay = createOverlay(document.body, {
     speech, sfx,
     onPassed: more => { void passed(more) },
+    /*
+     * A3 CLOSES THE CIRCUIT A2 LEFT OPEN.
+     *
+     * A2 computed an attempt per target, correctly and completely, and had
+     * nowhere to send it: the sink was declared optional precisely because the
+     * harness had not landed, so every answer Juno gave was measured and then
+     * dropped. This one line is where measurement starts existing.
+     *
+     * Deliberately separate from `onPassed`: what she ANSWERED and what she
+     * was PAID for are different questions, and a find page emits several of
+     * the first against one of the second.
+     */
+    onAttempt: evt => { harness.recordAttempt(evt) },
     onDismissed: () => {
       stageFor(null)
       // Leaving costs nothing (brief section 18) — but the story must not stay
@@ -912,16 +939,45 @@ async function boot(): Promise<void> {
    * passed straight through; the decision itself lives in deal.ts, where it can
    * be tested against the real generators rather than a mock.
    */
+  /*
+   * WHAT THE HARNESS WAS DEALT LAST, one slot per deal moment (A3).
+   *
+   * Needed because `held` means "hand back the card at `history[idx]`", and
+   * that card was chosen under whatever was ticked at the time — so a held
+   * round must be ATTRIBUTED to the stage it was originally dealt at, not to
+   * whatever a fresh draw would pick now. Two slots rather than the harness's
+   * one `current`, because the rounds interleave: she can leave a sum, read a
+   * page, and come back to the sum, and a single slot would by then be holding
+   * the reading page.
+   */
+  let dealtRead: { path: Path; stage: number } | null = null
+  let dealtSum: { path: Path; stage: number } | null = null
+
   function openRead(state: Flow = flow): void {
     if (state.phase !== 'challenge' || state.challenge !== 'read') return
+    /*
+     * The page index is in PAGES, not units (`PB-038`). `readProgress` counts
+     * units and A7 made an item worth two of them, so handing it over raw read
+     * the four-long mix at every other slot and doubled the find pages —
+     * one in two where Joe's ruling and the data both say one in four.
+     */
+    const kind = harness.dealReading(pagesRead(state.readProgress))
+    // Nothing in reading is ticked. Can only be reached by a hand-edited save:
+    // the panel refuses the last untick (JT-010(3)).
+    if (kind === null) return
+    if (!state.readHeld || dealtRead === null) {
+      dealtRead = { path: kind === 'build' ? 'building' : 'reading', stage: 1 }
+    }
+    harness.dealt(dealtRead.path, dealtRead.stage)
+
     overlay.clearSay()
     // Put the egg on the turntable first, then mount the round WITH the
     // layout — one call, so the mount's own teardown cannot drop it.
     const staged = stageFor('read', state)
     const card = dealReading(
       { read: readStore, build: buildStore },
-      { rng: defaultRng, drawGreen, drawRed, neigh, level: 1 },
-      state.readProgress, state.readHeld,
+      { rng: defaultRng, drawGreen, drawRed, neigh, level: dealtRead.stage },
+      kind, state.readHeld,
     )
     if (card.kind === 'build') overlay.openBuild(card.item, staged)
     else overlay.openWordFind(card.picks, staged)
@@ -929,7 +985,18 @@ async function boot(): Promise<void> {
 
   function openSum(state: Flow = flow): void {
     if (state.phase !== 'challenge' || state.challenge !== 'sum') return
-    const item = dealSum(sumStore, defaultRng, 1, state.sumHeld)
+    if (!state.sumHeld || dealtSum === null) {
+      // Joe, JT-010(1): the ticked stages of sums and takingAway go in one
+      // pool and the draw is uniform over it, so the share of take-aways is a
+      // consequence of the ladder rather than a number anyone sets.
+      const got = harness.dealMaths(defaultRng)
+      if (got === null) return
+      dealtSum = got
+    }
+    harness.dealt(dealtSum.path, dealtSum.stage)
+
+    const item = dealSum(sumStore, defaultRng, dealtSum.stage,
+      dealtSum.path === 'takingAway' ? 'sub' : 'add', state.sumHeld)
     overlay.clearSay()
     const staged = stageFor('sum', state)
     overlay.openSum(item, staged)
