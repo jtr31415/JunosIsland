@@ -375,45 +375,674 @@ describe('noteRescue — transient, in-session only', () => {
   })
 })
 
-describe('the Run B surface, declared and inert', () => {
+/* ------------------------------------------------------ Run B, live and headless */
+
+/**
+ * An island with a clock a test can walk, day by day, without waiting.
+ *
+ * Every Run B rule is a rule about DAYS — two distinct ones on the source
+ * stage, a decline honoured for two sessions, one offer per session, a
+ * honeymoon of two — so a test that cannot move the calendar cannot state any
+ * of them. Noon-ish UTC on each day, the convention the session tests above
+ * already use, so no timezone can push a day key over a boundary.
+ */
+const island = () => {
+  const a = createAttainment()
+  let today = '2026-07-01'
+  const h = createHarness(a, () => Date.parse(`${today}T09:00:00Z`))
+  return { a, h, on: (d: string) => { today = d } }
+}
+
+type Island = ReturnType<typeof island>
+
+/**
+ * Twenty right answers on sums 1 across two days: the mastery half of the
+ * gate, and nothing else. No probes, no rescues.
+ */
+const masterSums1 = ({ h, on }: Island, days = ['2026-07-01', '2026-07-02']): void => {
+  h.dealt('sums', 1)
+  for (const d of days) {
+    on(d)
+    for (let i = 0; i < 10; i++) h.recordAttempt(attempt({ correct: true }))
+  }
+}
+
+/** Probes on sums 2: `n` of them, `right` correct. Eight at .875 clears .70. */
+const probeSums2 = ({ h }: Island, right = 7, n = 8): void => {
+  h.dealt('sums', 2, true)
+  for (let i = 0; i < n; i++) h.recordAttempt(attempt({ correct: i < right }))
+  h.dealt('sums', 1)
+}
+
+/**
+ * The whole gate passed, with subtraction already open.
+ *
+ * takingAway 1 is ticked up front deliberately: its INTRODUCTION outranks a
+ * trickier offer, so a test about the same-path gate has to take that offer
+ * off the table or it would be measuring the other rule.
+ */
+const gateReady = (): Island => {
+  const it = island()
+  it.a.takingAway.stages[1]!.ticked = true
+  masterSums1(it)
+  probeSums2(it)
+  it.on('2026-07-03')
+  return it
+}
+
+/** A roll that reads from a script, then settles on 0. */
+const rolls = (...xs: number[]) => {
+  let i = 0
+  return () => xs[i++] ?? 0
+}
+
+describe('Run B — probes, the taste of the next rung', () => {
+  it('wants one once the rung below is comfortable rather than mastered', () => {
+    // runA.md:229 — probes start at .75, which is well under the .85 that
+    // promotes. The point is to have evidence ready by the time the gate asks.
+    const it = island()
+    it.h.dealt('sums', 1)
+    for (let i = 0; i < 10; i++) it.h.recordAttempt(attempt({ correct: true }))
+    expect(it.h.probeWanted('sums')).toBe(true)
+  })
+
+  it('wants none while the rung below is still shaky', () => {
+    const it = island()
+    it.h.dealt('sums', 1)
+    for (let i = 0; i < 10; i++) it.h.recordAttempt(attempt({ correct: i % 2 === 0 }))
+    expect(it.a.sums.stages[1]!.ewma!).toBeLessThan(0.75)
+    expect(it.h.probeWanted('sums')).toBe(false)
+  })
+
+  it('wants none where there is no rung above — reading has exactly one', () => {
+    const it = island()
+    it.h.dealt('reading', 1)
+    for (let i = 0; i < 20; i++) it.h.recordAttempt(attempt({ kind: 'find' }))
+    expect(it.h.probeWanted('reading')).toBe(false)
+  })
+
+  it('wants none on a path a parent took off Auto — JT-011(a)', () => {
+    // Joe: "Manual persists, and Run B must skip it." A parent who said he
+    // moves this path's ticks is not to be answered back by extra questions.
+    const it = island()
+    masterSums1(it)
+    for (const mode of ['manual', 'hold'] as const) {
+      it.h.setMode('sums', mode)
+      expect(it.h.probeWanted('sums')).toBe(false)
+    }
+    it.h.setMode('sums', 'auto')
+    expect(it.h.probeWanted('sums')).toBe(true)
+  })
+
+  it('wants none on taking away, which has no rung to earn from', () => {
+    // Nothing ticked means no top rung, so no probe can ever be wanted here —
+    // which is exactly why its introduction is gated on sums instead.
+    const it = island()
+    masterSums1(it)
+    expect(it.h.probeWanted('takingAway')).toBe(false)
+  })
+
+  it('swaps the stage, and only the stage, on the one round in eight', () => {
+    const it = island()
+    masterSums1(it)
+    // First roll draws from the pool (one entry), second is the 1-in-8.
+    expect(it.h.dealMaths(rolls(0, 0.1)))
+      .toEqual({ path: 'sums', stage: 2, probe: true })
+  })
+
+  it('leaves the other seven rounds exactly as they were', () => {
+    const it = island()
+    masterSums1(it)
+    expect(it.h.dealMaths(rolls(0, 0.9)))
+      .toEqual({ path: 'sums', stage: 1, probe: false })
+  })
+
+  it('never probes across paths, so the share of maths is untouched', () => {
+    /*
+     * A probe swaps the STAGE within the path that was drawn. If it could
+     * swap the path it would be dealing subtraction nobody had introduced —
+     * and it would also silently move JT-010(1)'s split.
+     */
+    const it = island()
+    masterSums1(it)
+    for (let i = 0; i < 200; i++) {
+      const got = it.h.dealMaths(rolls(i / 200, (i % 8) / 8))
+      expect(got?.path).toBe('sums')
+    }
+  })
+
+  it('does not spend a roll it has no use for', () => {
+    /*
+     * The rng is one shared sequence, and main.ts hands `defaultRng` to the
+     * generators straight after this call. A probe check that drew a number
+     * even when no probe was possible would shift every downstream draw on the
+     * island — the kind of change that makes a deterministic test flaky and
+     * nobody's fault findable.
+     */
+    let drawn = 0
+    const counted = () => { drawn++; return 0 }
+    const it = island()
+    it.h.dealMaths(counted)
+    expect(drawn).toBe(1)
+    masterSums1(it)
+    it.h.dealMaths(counted)
+    expect(drawn).toBe(3)
+  })
+
+  it('records a probe in its own ring and moves nothing else', () => {
+    /*
+     * THE RULE THE WHOLE PROBE DESIGN RESTS ON. A wrong first probe that
+     * seeded `ewma` would leave the unticked stage at 0 and take dozens of
+     * real attempts to climb out — brief §19 says wrong answers cost nothing,
+     * and that would be the ledger charging for one. `early` is worse: it
+     * freezes, so a slow probe would sit in A6's speed baseline forever.
+     */
+    const it = island()
+    it.h.dealt('sums', 2, true)
+    it.h.recordAttempt(attempt({ correct: false, latencyMs: 9000, rescued: true }))
+    const st = it.a.sums.stages[2]!
+    expect(st.probes).toEqual([0])
+    expect(st.attempts).toBe(0)
+    expect(st.ewma).toBeNull()
+    expect(st.latencies).toEqual([])
+    expect(st.early).toEqual([])
+    expect(st.sessions).toEqual([])
+    expect(st.rescues).toEqual([])
+  })
+
+  it('leaves the SOURCE stage alone too — a probe is nobody\'s attempt', () => {
+    const it = island()
+    masterSums1(it)
+    const before = JSON.stringify(it.a.sums.stages[1])
+    it.h.dealt('sums', 2, true)
+    for (let i = 0; i < 5; i++) it.h.recordAttempt(attempt({ correct: false }))
+    expect(JSON.stringify(it.a.sums.stages[1])).toBe(before)
+  })
+
+  it('keeps the last twelve probe outcomes and no more', () => {
+    const it = island()
+    it.h.dealt('sums', 2, true)
+    for (let i = 0; i < 20; i++) it.h.recordAttempt(attempt({ correct: i >= 18 }))
+    expect(it.a.sums.stages[2]!.probes).toHaveLength(12)
+    expect(it.a.sums.stages[2]!.probes.slice(-2)).toEqual([1, 1])
+  })
+
+  it('goes back to plain recording as soon as a plain round is dealt', () => {
+    const it = island()
+    it.h.dealt('sums', 2, true)
+    it.h.recordAttempt(attempt({ correct: true }))
+    it.h.dealt('sums', 1)
+    it.h.recordAttempt(attempt({ correct: true }))
+    expect(it.a.sums.stages[2]!.probes).toEqual([1])
+    expect(it.a.sums.stages[1]!.attempts).toBe(1)
+    expect(it.a.sums.stages[2]!.attempts).toBe(0)
+  })
+})
+
+describe('Run B — the promotion gate', () => {
   /*
-   * Shipped now so Run B's shape is pinned while A4–A6 are built against it,
-   * and pinned INERT so a half-wired probe cannot start dealing extra
-   * questions or paying 3 for them before the policy that governs it exists.
+   * runA.md:226-228: EWMA ≥ .85, ≥ 20 attempts, probe accuracy ≥ .70 over
+   * ≥ 8, zero-rescue recent sessions, ≥ 2 distinct days. Every clause below
+   * is knocked out on its own from a passing island, because a gate that
+   * passes for the wrong reason is a gate that promotes a child who is not
+   * ready and calls it evidence.
    */
-  it('never wants a probe', () => {
-    const a = createAttainment()
-    const h = createHarness(a)
-    h.dealt('sums', 1)
-    for (let i = 0; i < 50; i++) h.recordAttempt(attempt({ correct: true }))
-    for (const p of LIVE_PATHS) expect(h.probeWanted(p)).toBe(false)
+  const trickier = { path: 'sums', stage: 2, kind: 'trickier' }
+
+  it('offers trickier questions when the whole of it is passed', () => {
+    const it = gateReady()
+    expect(it.h.pendingOffer()).toEqual(trickier)
+    expect(it.h.offerDue('sums')).toBe(true)
   })
 
-  it('never has an offer due', () => {
-    const a = createAttainment()
-    const h = createHarness(a)
-    h.dealt('sums', 1)
-    for (let i = 0; i < 50; i++) h.recordAttempt(attempt({ correct: true }))
-    for (const p of LIVE_PATHS) expect(h.offerDue(p)).toBe(false)
+  it('refuses on accuracy under .85', () => {
+    const it = gateReady()
+    it.h.dealt('sums', 1)
+    it.h.recordAttempt(attempt({ correct: false }))
+    it.h.recordAttempt(attempt({ correct: false }))
+    expect(it.a.sums.stages[1]!.ewma!).toBeLessThan(0.85)
+    expect(it.h.pendingOffer()).toBeNull()
   })
 
-  it('records nothing when an offer is noted, accepted or not', () => {
-    const a = createAttainment()
-    const h = createHarness(a)
-    const before = JSON.stringify(a)
-    h.noteOffer('sums', true)
-    h.noteOffer('sums', false)
-    expect(JSON.stringify(a)).toBe(before)
-    expect(h.offerDue('sums')).toBe(false)
+  it('refuses under twenty attempts', () => {
+    const it = island()
+    it.a.takingAway.stages[1]!.ticked = true
+    it.h.dealt('sums', 1)
+    for (const d of ['2026-07-01', '2026-07-02']) {
+      it.on(d)
+      for (let i = 0; i < 9; i++) it.h.recordAttempt(attempt({ correct: true }))
+    }
+    probeSums2(it)
+    it.on('2026-07-03')
+    expect(it.a.sums.stages[1]!.attempts).toBe(18)
+    expect(it.h.pendingOffer()).toBeNull()
   })
 
-  it('cannot tick a stage by itself — auto only ever ticks in Run B', () => {
-    const a = createAttainment()
-    const h = createHarness(a)
-    h.dealt('sums', 1)
-    for (let i = 0; i < 200; i++) h.recordAttempt(attempt({ correct: true }))
-    expect(a.sums.stages[2]?.ticked).toBe(false)
-    expect(h.levelFor('sums')).toEqual([1])
+  it('refuses on fewer than eight probes, however good they are', () => {
+    const it = island()
+    it.a.takingAway.stages[1]!.ticked = true
+    masterSums1(it)
+    probeSums2(it, 7, 7)
+    it.on('2026-07-03')
+    expect(it.h.pendingOffer()).toBeNull()
+  })
+
+  it('refuses on probe accuracy under .70', () => {
+    const it = island()
+    it.a.takingAway.stages[1]!.ticked = true
+    masterSums1(it)
+    probeSums2(it, 5, 8)
+    it.on('2026-07-03')
+    expect(it.h.pendingOffer()).toBeNull()
+  })
+
+  it('refuses while a rescue sits in either of the last two sessions', () => {
+    const it = island()
+    it.a.takingAway.stages[1]!.ticked = true
+    it.h.dealt('sums', 1)
+    it.on('2026-07-01')
+    it.h.recordAttempt(attempt({ correct: false, rescued: true }))
+    for (let i = 0; i < 10; i++) it.h.recordAttempt(attempt({ correct: true }))
+    it.on('2026-07-02')
+    for (let i = 0; i < 15; i++) it.h.recordAttempt(attempt({ correct: true }))
+    probeSums2(it)
+    it.on('2026-07-03')
+    expect(it.h.pendingOffer()).toBeNull()
+  })
+
+  it('lets a rescue age out of the last two sessions', () => {
+    // The clause is zero-rescue RECENT, not zero-rescue ever. A child who
+    // needed a hand a week ago has since shown she does not.
+    const it = island()
+    it.a.takingAway.stages[1]!.ticked = true
+    it.h.dealt('sums', 1)
+    it.on('2026-07-01')
+    it.h.recordAttempt(attempt({ correct: false, rescued: true }))
+    for (const d of ['2026-07-02', '2026-07-03']) {
+      it.on(d)
+      for (let i = 0; i < 12; i++) it.h.recordAttempt(attempt({ correct: true }))
+    }
+    probeSums2(it)
+    it.on('2026-07-04')
+    expect(it.a.sums.stages[1]!.rescues).toHaveLength(1)
+    expect(it.h.pendingOffer()).toEqual(trickier)
+  })
+
+  it('refuses on a single day of work, however much of it there is', () => {
+    const it = island()
+    it.a.takingAway.stages[1]!.ticked = true
+    masterSums1(it, ['2026-07-01', '2026-07-01'])
+    probeSums2(it)
+    it.on('2026-07-02')
+    expect(it.a.sums.stages[1]!.attempts).toBe(20)
+    expect(it.h.pendingOffer()).toBeNull()
+  })
+
+  it('refuses a path a parent took off Auto — JT-011(a)', () => {
+    const it = gateReady()
+    it.h.setMode('sums', 'manual')
+    expect(it.h.offerDue('sums')).toBe(false)
+    expect(it.h.pendingOffer()?.path).not.toBe('sums')
+    it.h.setMode('sums', 'hold')
+    expect(it.h.offerDue('sums')).toBe(false)
+    it.h.setMode('sums', 'auto')
+    expect(it.h.offerDue('sums')).toBe(true)
+  })
+
+  it('has nothing to offer once the top rung is ticked', () => {
+    const it = gateReady()
+    it.h.setTicked('sums', 2, true)
+    expect(it.h.pendingOffer()).toBeNull()
+  })
+})
+
+describe('Run B — the cadence of an offer', () => {
+  it('ticks the target and stamps the honeymoon when she says yes', () => {
+    const it = gateReady()
+    it.h.noteOffer('sums', true)
+    expect(it.a.sums.stages[2]!.ticked).toBe(true)
+    expect(it.h.levelFor('sums')).toEqual([1, 2])
+    expect(it.a.sums.honeymoonFrom).toBe('2026-07-03')
+    expect(it.h.honeymoonActive('sums')).toBe(true)
+  })
+
+  it('asks nothing else that session, accepted or declined', () => {
+    // runA.md:230, max 1/session. Two questions in one sitting is a sales
+    // pitch, and the second is the one she agrees to to make it stop.
+    for (const answer of [true, false]) {
+      const it = gateReady()
+      it.h.noteOffer('sums', answer)
+      expect(it.h.pendingOffer()).toBeNull()
+    }
+  })
+
+  it('asks nothing else that session on ANY path, accepted or declined', () => {
+    /*
+     * The cadence is stored per path, because a decline is about a path — but
+     * the LIMIT is about the child. With subtraction due to be introduced and
+     * a trickier sums offer standing behind it, answering the first must end
+     * the questions for the sitting whichever way she answered: a second ask
+     * is the one she says yes to only to make it stop.
+     */
+    for (const answer of [true, false]) {
+      const it = island()
+      masterSums1(it)
+      probeSums2(it)
+      it.on('2026-07-03')
+      expect(it.h.pendingOffer()?.kind).toBe('takingAway')
+      it.h.noteOffer('takingAway', answer)
+      expect(it.h.pendingOffer()).toBeNull()
+      expect(it.h.offerDue('sums')).toBe(false)
+    }
+  })
+
+  it('costs her nothing to decline', () => {
+    const it = gateReady()
+    const stats = JSON.stringify(it.a.sums.stages)
+    it.h.noteOffer('sums', false)
+    expect(JSON.stringify(it.a.sums.stages)).toBe(stats)
+    expect(it.a.sums.honeymoonFrom).toBeNull()
+  })
+
+  it('honours a decline for two sessions, then asks once more', () => {
+    const it = gateReady()
+    it.h.noteOffer('sums', false)
+    it.h.dealt('sums', 1)
+
+    // The session she declined in is not one of the two: the count starts on
+    // the next day she plays, and reaches 2 on the second of them.
+    it.on('2026-07-04')
+    it.h.recordAttempt(attempt({ correct: true }))
+    expect(it.a.sums.offer.daysSinceDecline).toBe(1)
+    expect(it.h.pendingOffer()).toBeNull()
+    it.on('2026-07-05')
+    it.h.recordAttempt(attempt({ correct: true }))
+    expect(it.a.sums.offer.daysSinceDecline).toBe(2)
+    expect(it.h.pendingOffer()).toEqual({ path: 'sums', stage: 2, kind: 'trickier' })
+  })
+
+  it('counts the cooldown in days she played, not days on the calendar', () => {
+    // A child who did not open the island for a fortnight has not declined
+    // anything twice. Two SESSIONS is what the spec says and what she gets.
+    const it = gateReady()
+    it.h.noteOffer('sums', false)
+    it.on('2026-07-20')
+    expect(it.h.pendingOffer()).toBeNull()
+  })
+
+  it('counts a day once, however much of it she plays', () => {
+    const it = gateReady()
+    it.h.noteOffer('sums', false)
+    it.h.dealt('sums', 1)
+    it.on('2026-07-04')
+    for (let i = 0; i < 30; i++) it.h.recordAttempt(attempt({ correct: true }))
+    expect(it.a.sums.offer.daysSinceDecline).toBe(1)
+    expect(it.h.pendingOffer()).toBeNull()
+  })
+
+  it('does nothing at all when nothing is due', () => {
+    const it = island()
+    const before = JSON.stringify(it.a)
+    it.h.noteOffer('sums', true)
+    it.h.noteOffer('sums', false)
+    expect(JSON.stringify(it.a)).toBe(before)
+  })
+
+  it('refuses an answer to an offer it is not making', () => {
+    // A stale overlay, a double tap, a replayed event: none of them may tick a
+    // stage, because a tick is the one thing here that changes what she gets.
+    const it = gateReady()
+    it.h.noteOffer('takingAway', true)
+    expect(it.a.takingAway.stages[2]!.ticked).toBe(false)
+    expect(it.h.pendingOffer()).toEqual({ path: 'sums', stage: 2, kind: 'trickier' })
+  })
+
+  it('runs the honeymoon for two sessions and then stops', () => {
+    const it = gateReady()
+    it.h.noteOffer('sums', true)
+    it.h.dealt('sums', 2)
+    expect(it.h.honeymoonActive('sums')).toBe(true)
+    it.h.recordAttempt(attempt({ correct: true }))
+    expect(it.h.honeymoonActive('sums')).toBe(true)
+    it.on('2026-07-04')
+    it.h.recordAttempt(attempt({ correct: true }))
+    expect(it.h.honeymoonActive('sums')).toBe(true)
+    it.on('2026-07-05')
+    it.h.recordAttempt(attempt({ correct: true }))
+    expect(it.h.honeymoonActive('sums')).toBe(false)
+  })
+
+  it('has no honeymoon on a path nobody accepted anything for', () => {
+    const it = gateReady()
+    for (const p of LIVE_PATHS) expect(it.h.honeymoonActive(p)).toBe(false)
+  })
+
+  it('leaves the economy alone, which is the next slice\'s half', () => {
+    // runA.md:233 is "pay 3, 2 sessions, cost-index frozen" and only the WHEN
+    // of that lives here. A harness that reached into balance/ would be the
+    // second write path this project has been bitten by four times.
+    const it = gateReady()
+    it.h.noteOffer('sums', true)
+    expect(Object.keys(it.a.sums).sort())
+      .toEqual(['honeymoonFrom', 'mode', 'offer', 'stages'])
+  })
+})
+
+describe('Run B — introducing taking away', () => {
+  const intro = { path: 'takingAway', stage: 1, kind: 'takingAway' }
+
+  it('offers it on sums 1 alone, with no subtraction probes at all', () => {
+    /*
+     * Fable's ruling. takingAway starts with NOTHING ticked, so it can never
+     * accumulate a probe ring of its own and the probe clause has to be
+     * dropped rather than faked.
+     *
+     * REJECTED: dealing subtraction probes before the path is open — that
+     * ambushes a five-year-old with a minus sign nobody introduced and spends
+     * the debut (runA.md:234-236) on an accident. REJECTED: waiting for sums
+     * 2 — Joe's JT-010 worked example has subtraction arriving ALONGSIDE the
+     * second sum rung, not queued behind it.
+     */
+    const it = island()
+    masterSums1(it)
+    it.on('2026-07-03')
+    expect(it.a.takingAway.stages[1]!.probes).toEqual([])
+    expect(it.h.pendingOffer()).toEqual(intro)
+  })
+
+  it('never deals a subtraction before the offer is accepted', () => {
+    const it = island()
+    masterSums1(it)
+    it.on('2026-07-03')
+    for (let i = 0; i < 200; i++) {
+      expect(it.h.dealMaths(rolls(i / 200, (i % 8) / 8))?.path).toBe('sums')
+    }
+  })
+
+  it('wins the session when a trickier offer is due as well', () => {
+    // Only one offer may be made, so the two have to be ordered, and this one
+    // is the larger event: a whole new kind of maths against one rung more of
+    // the kind she is already doing.
+    const it = island()
+    masterSums1(it)
+    probeSums2(it)
+    it.on('2026-07-03')
+    expect(it.h.pendingOffer()).toEqual(intro)
+    expect(it.h.offerDue('sums')).toBe(false)
+  })
+
+  it('lets the trickier offer through the next session once it is settled', () => {
+    const it = island()
+    masterSums1(it)
+    probeSums2(it)
+    it.on('2026-07-03')
+    it.h.noteOffer('takingAway', true)
+    expect(it.a.takingAway.stages[1]!.ticked).toBe(true)
+    it.on('2026-07-04')
+    expect(it.h.pendingOffer()).toEqual({ path: 'sums', stage: 2, kind: 'trickier' })
+  })
+
+  it('splits the deal moment evenly the moment it is accepted — JT-007\'s evening', () => {
+    const it = island()
+    masterSums1(it)
+    it.on('2026-07-03')
+    it.h.noteOffer('takingAway', true)
+    const seen = new Set<string>()
+    for (let i = 0; i < 200; i++) {
+      const got = it.h.dealMaths(rolls(i / 200, 0.9))
+      seen.add(`${got?.path}:${got?.stage}`)
+    }
+    expect([...seen].sort()).toEqual(['sums:1', 'takingAway:1'])
+  })
+
+  it('stops offering it once it is open', () => {
+    const it = island()
+    it.a.takingAway.stages[1]!.ticked = true
+    masterSums1(it)
+    it.on('2026-07-03')
+    expect(it.h.pendingOffer()).toBeNull()
+  })
+
+  it('does not offer it when a parent holds the path himself — JT-011(a)', () => {
+    const it = island()
+    masterSums1(it)
+    it.h.setMode('takingAway', 'manual')
+    it.on('2026-07-03')
+    expect(it.h.pendingOffer()).toBeNull()
+    expect(it.a.takingAway.stages[1]!.ticked).toBe(false)
+  })
+
+  it('comes round again after a decline, though she plays no subtraction', () => {
+    /*
+     * THE ONE THAT WOULD HAVE SHIPPED BROKEN. The cooldown counts days she
+     * played, and before this offer is accepted she cannot play takingAway at
+     * all — nothing on it is ticked, so nothing on it is ever recorded. Counted
+     * per path, a declined introduction would never be made again.
+     */
+    const it = island()
+    masterSums1(it)
+    it.on('2026-07-03')
+    it.h.noteOffer('takingAway', false)
+    it.h.dealt('sums', 1)
+    for (const d of ['2026-07-04', '2026-07-05']) {
+      it.on(d)
+      it.h.recordAttempt(attempt({ correct: true }))
+    }
+    expect(it.h.pendingOffer()).toEqual(intro)
+  })
+})
+
+describe('Run B — nothing demotes, ever', () => {
+  /*
+   * runA.md:240, and the whole reason Auto is safe to leave on. A child who
+   * has a bad fortnight — accuracy collapsing, rescue after rescue, a run of
+   * wrong answers — loses NOTHING she has already been given. Untick is a
+   * parent's hand and Auto has no hand at all.
+   */
+  it('leaves every tick standing through a collapse, a rescue storm and a wrong streak', () => {
+    const it = island()
+    it.a.sums.stages[2]!.ticked = true
+    it.a.takingAway.stages[1]!.ticked = true
+    const ticksBefore = LIVE_PATHS.map(p => it.h.levelFor(p))
+
+    for (const [path, stage] of [['sums', 1], ['sums', 2], ['takingAway', 1]] as const) {
+      it.h.dealt(path, stage)
+      for (let d = 4; d <= 9; d++) {
+        it.on(`2026-07-0${d}`)
+        for (let i = 0; i < 20; i++) {
+          it.h.recordAttempt(attempt({ correct: false, rescued: true }))
+        }
+      }
+      expect(it.a[path].stages[stage]!.ewma).toBeLessThan(0.05)
+    }
+    it.h.dealt('sums', 2, true)
+    for (let i = 0; i < 20; i++) it.h.recordAttempt(attempt({ correct: false }))
+
+    expect(LIVE_PATHS.map(p => it.h.levelFor(p))).toEqual(ticksBefore)
+    expect(it.h.pendingOffer()).toBeNull()
+  })
+
+  it('never unticks on a decline either', () => {
+    const it = gateReady()
+    const before = LIVE_PATHS.map(p => it.h.levelFor(p))
+    it.h.noteOffer('sums', false)
+    expect(LIVE_PATHS.map(p => it.h.levelFor(p))).toEqual(before)
+  })
+})
+
+describe('Run B\'s bookkeeping survives a save', () => {
+  /*
+   * `attainment` is persisted wholesale, but `readAttainment` rebuilds outward
+   * from STAGES and copies field by field — so a field it does not name is a
+   * field that silently does not come back. These are the fields.
+   */
+  const roundTrip = (a: ReturnType<typeof createAttainment>) =>
+    readAttainment(JSON.parse(JSON.stringify(a)))
+
+  it('carries the probe ring, the offer state and the honeymoon', () => {
+    const it = gateReady()
+    it.h.noteOffer('sums', true)
+    const back = roundTrip(it.a)
+    expect(back.sums.stages[2]?.probes).toEqual(it.a.sums.stages[2]!.probes)
+    expect(back.sums.offer.lastOfferDay).toBe('2026-07-03')
+    expect(back.sums.honeymoonFrom).toBe('2026-07-03')
+  })
+
+  it('carries a decline, so a reload is not a way to be asked again', () => {
+    const it = gateReady()
+    it.h.noteOffer('sums', false)
+    const back = roundTrip(it.a)
+    expect(back.sums.offer.declinedDay).toBe('2026-07-03')
+    expect(back.sums.offer.daysSinceDecline).toBe(0)
+    expect(createHarness(back, () => Date.parse('2026-07-04T09:00:00Z')).pendingOffer())
+      .toBeNull()
+  })
+
+  it('wakes a save written before any of this existed with honest defaults', () => {
+    // The pre-Run-B shape, exactly: mode and stages, and no idea that probes
+    // or offers were ever going to exist.
+    const back = readAttainment({
+      sums: {
+        mode: 'auto',
+        stages: { 1: { ticked: true, attempts: 42, ewma: 0.9 }, 2: { ticked: false } },
+      },
+    })
+    expect(back.sums.stages[1]?.attempts).toBe(42)
+    expect(back.sums.stages[1]?.probes).toEqual([])
+    expect(back.sums.offer)
+      .toEqual({ lastOfferDay: null, declinedDay: null, daysSinceDecline: 0, lastCountedDay: null })
+    expect(back.sums.honeymoonFrom).toBeNull()
+  })
+
+  it('drops garbage rather than letting it decide what a child is given', () => {
+    /*
+     * A hand-edited save is untrusted input. A probe ring of strings would
+     * make the .70 mean meaningless; a `daysSinceDecline` of -5 is a cooldown
+     * that never ends; a `declinedDay` of "soon" is a suppression with no day
+     * behind it to ever clear it.
+     */
+    const back = readAttainment({
+      sums: {
+        mode: 'auto',
+        offer: {
+          lastOfferDay: 'yesterday', declinedDay: 'soon',
+          daysSinceDecline: -5, lastCountedDay: 7,
+        },
+        honeymoonFrom: 'forever',
+        stages: { 1: { ticked: true, probes: ['1', null, 3, 1, 0] }, 2: { ticked: false } },
+      },
+    })
+    expect(back.sums.stages[1]?.probes).toEqual([1, 0])
+    expect(back.sums.offer)
+      .toEqual({ lastOfferDay: null, declinedDay: null, daysSinceDecline: 0, lastCountedDay: null })
+    expect(back.sums.honeymoonFrom).toBeNull()
+  })
+
+  it('keeps a probe ring to twelve however long the file says it is', () => {
+    const back = readAttainment({
+      sums: { mode: 'auto', stages: { 2: { ticked: false, probes: Array(40).fill(1) } } },
+    })
+    expect(back.sums.stages[2]?.probes).toHaveLength(12)
   })
 })
 
@@ -540,7 +1169,8 @@ describe('the last tick is protected — JT-010(3)', () => {
     h.setTicked('takingAway', 1, true)
     expect(h.canUntick('sums', 1)).toBe(true)
     expect(h.setTicked('sums', 1, false)).toBe(true)
-    expect(createHarness(a).dealMaths(() => 0)).toEqual({ path: 'takingAway', stage: 1 })
+    expect(createHarness(a).dealMaths(() => 0))
+      .toEqual({ path: 'takingAway', stage: 1, probe: false })
   })
 
   it('lets Joe undo the evening he tried subtraction — JT-007 stays safe to try', () => {
@@ -592,7 +1222,8 @@ describe('a save can never strand her in a round that cannot be dealt', () => {
       sums: { mode: 'manual', stages: { 1: { ticked: false }, 2: { ticked: false } } },
       takingAway: { mode: 'manual', stages: { 1: { ticked: false } } },
     })
-    expect(createHarness(a).dealMaths(() => 0)).toEqual({ path: 'sums', stage: 1 })
+    expect(createHarness(a).dealMaths(() => 0))
+      .toEqual({ path: 'sums', stage: 1, probe: false })
   })
 
   it('gives reading back its first rung the same way', () => {

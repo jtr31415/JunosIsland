@@ -24,7 +24,7 @@ import { dayKey } from '../../src/platform/clock'
 /** A stage with nothing on it, so a test states only what it varies. */
 const stage = (over: Partial<StageStats> = {}): StageStats => ({
   ticked: true, attempts: 0, ewma: null,
-  latencies: [], early: [], sessions: [], rescues: [], ...over,
+  latencies: [], early: [], sessions: [], rescues: [], probes: [], ...over,
 })
 
 /** Noon local on a given day — far enough from both boundaries to be stable. */

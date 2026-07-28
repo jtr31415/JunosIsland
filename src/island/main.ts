@@ -1008,7 +1008,7 @@ async function boot(): Promise<void> {
    * the reading page.
    */
   let dealtRead: { path: Path; stage: number } | null = null
-  let dealtSum: { path: Path; stage: number } | null = null
+  let dealtSum: { path: Path; stage: number; probe: boolean } | null = null
 
   function openRead(state: Flow = flow): void {
     if (state.phase !== 'challenge' || state.challenge !== 'read') return
@@ -1050,7 +1050,7 @@ async function boot(): Promise<void> {
       if (got === null) return
       dealtSum = got
     }
-    harness.dealt(dealtSum.path, dealtSum.stage)
+    harness.dealt(dealtSum.path, dealtSum.stage, dealtSum.probe)
 
     const item = dealSum(sumStore, defaultRng, dealtSum.stage,
       dealtSum.path === 'takingAway' ? 'sub' : 'add', state.sumHeld)
