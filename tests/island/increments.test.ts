@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
-import { INCREMENTS, incrementsShown, isComplete, createGrowingPlot } from '../../src/island/world/increments'
+import {
+  INCREMENTS, incrementsShown, isComplete, createGrowingPlot, PALETTE,
+} from '../../src/island/world/increments'
 
 describe('the increment sequence', () => {
   it('has ten steps, and puts the TILE down first', () => {
@@ -393,5 +395,97 @@ describe('a build is its own build', () => {
     expect(grown.position.x).toBe(2)
     expect(grown.position.y).toBe(0)
     expect(grown.position.z).toBe(1)
+  })
+})
+
+/**
+ * A mountain tile builds AS a mountain.
+ *
+ * Joe, 28 July: *"when selecting a mountain tile, the incremental build goes back
+ * to a gras tile with props on. we need to make sure the proper rock/mountain
+ * tile is already set up there so it gets placed on completion."*
+ *
+ * The plot was growing eight scattered stones from `PALETTE.rock` while the
+ * finished hex grew a peak — the two placement paths disagreeing about what she
+ * was building (HANDOFF §6). The peak is passed in from `props.mountainHexFor`
+ * so both paths name the same model; these tests pin what the plot then does
+ * with it.
+ */
+describe('a mountain plot grows the peak she was promised', () => {
+  const models = {
+    size: 1.1547,
+    geometry: { grass: new THREE.BufferGeometry(), water: new THREE.BufferGeometry() },
+    material: new THREE.MeshStandardMaterial(),
+  } as never
+
+  /** Let the prop promises settle; the pieces are installed in `.then`. */
+  const settle = (): Promise<void> => new Promise(r => { setTimeout(r, 0) })
+
+  it('asks for exactly the named mountain, and for nothing else', async () => {
+    const asked: string[] = []
+    createGrowingPlot('rock', 1.1547, {
+      models,
+      prop: n => { asked.push(n); return Promise.resolve(new THREE.Group()) },
+    }, 7, null, { name: 'mountain_B_grass', spin: Math.PI / 3 })
+    await settle()
+    expect(asked).toEqual(['mountain_B_grass'])
+  })
+
+  it('never draws the scattered rock palette when a peak is named', async () => {
+    // The mound covers four fifths of the hex, so cover placed on it would be
+    // cover placed INSIDE it — trees-inside-rocks by another name.
+    const asked: string[] = []
+    createGrowingPlot('rock', 1.1547, {
+      models,
+      prop: n => { asked.push(n); return Promise.resolve(new THREE.Group()) },
+    }, 7, null, { name: 'mountain_C_grass', spin: 0 })
+    await settle()
+    expect(asked.filter(n => PALETTE.rock.includes(n))).toEqual([])
+  })
+
+  it('centres it, at native size, facing where it was told', async () => {
+    const obj = new THREE.Group()
+    createGrowingPlot('rock', 1.1547, {
+      models, prop: () => Promise.resolve(obj),
+    }, 7, null, { name: 'mountain_A_grass', spin: (2 * Math.PI) / 3 })
+    await settle()
+    // Dead centre: it IS the tile, so there is no rim to preserve.
+    expect(obj.position.x).toBe(0)
+    expect(obj.position.z).toBe(0)
+    // NATIVE. The pack already sized these to a hex; every factor on top is a
+    // shrink, which is the bug Joe reported.
+    expect(obj.scale.x).toBe(1)
+    expect(obj.userData.fullScale).toBe(1)
+    // ...and the facing came from the shared chooser, not from a local roll.
+    expect(obj.rotation.y).toBeCloseTo((2 * Math.PI) / 3, 9)
+  })
+
+  it('stands there as a golden ghost before she has earned it', async () => {
+    /*
+     * "already set up there" — the promise is the point. A plot with no progress
+     * shows the outline of the peak it will become, and the outline turns to
+     * stone on her first sum.
+     */
+    const obj = new THREE.Group()
+    obj.add(new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshStandardMaterial()))
+    const plot = createGrowingPlot('rock', 1.1547, {
+      models, prop: () => Promise.resolve(obj),
+    }, 7, null, { name: 'mountain_A_grass', spin: 0 })
+    await settle()
+    expect(obj.visible, 'the real peak is not shown before it is earned').toBe(false)
+    // Something IS drawn in its place, and it is not the peak itself.
+    const ghosts = plot.group.children.filter(c => c !== obj && c.visible)
+    expect(ghosts.length).toBeGreaterThan(0)
+  })
+
+  it('leaves a grass plot growing its eight scattered pieces', async () => {
+    // The regression guard: the feature path must not swallow the ordinary one.
+    const asked: string[] = []
+    createGrowingPlot('grass', 1.1547, {
+      models,
+      prop: n => { asked.push(n); return Promise.resolve(new THREE.Group()) },
+    }, 7)
+    await settle()
+    expect(asked.length).toBe(8)
   })
 })
