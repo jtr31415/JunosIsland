@@ -242,6 +242,20 @@
       "doneRule": "manual",
       "note": "",
       "state": "open"
+    },
+    {
+      "id": "JT-020",
+      "type": "ruling",
+      "title": "Taking away is offered off sums 1 alone, before sums 2. Right rung? (PB-030)",
+      "detail": "Run B's promotion gate is ewma .85, 20 attempts, 8 probes at .70, no recent rescue, 2 distinct days. Taking away CANNOT meet it: nothing on that path has ever been ticked, so it can never accumulate probes on itself. Something else has to introduce it. Fable chose: gate the introduction on SUMS STAGE 1 alone (ewma .85, 20 attempts, no recent rescue, 2 distinct days), drop the probe clause, and offer 'takingAway 1'. If a trickier-sums offer is due the same session, taking away wins - one offer per session forces the choice. Rejected (b): deal subtraction probes before the path is open, so the probe clause CAN be met. Failure mode - she meets a minus sign nobody introduced, and the debut ritual ('the minus sign popping on debut') becomes a re-run. Rejected (c): wait until sums 2 is proficient. Failure mode - it contradicts your own JT-010 worked example, 'one easy sum, one easy sub and one medium sum, is 2/3 sum 1/3 sub', which has sub arriving ALONGSIDE sums 2 rather than queued behind it. WHAT IS BUILT ON IT: commit 1cf4e71, the whole introduction branch in src/island/harness.ts. Reversing to (c) is a one-line change to which stage the intro gate reads. Reversing to (b) is a slice. SECOND, SMALLER CALL inside the same commit, flag it if it is wrong: the introduction requires TAKING AWAY to be on Auto, but does not require SUMS to be - so a parent who put sums on Manual still gets subtraction offered, because JT-011 governs which path Auto may TICK and sums is only the witness. The opposite reading is one predicate.",
+      "blocks": [
+        "PB-030"
+      ],
+      "artefact": "src/island/harness.ts",
+      "doneRule": "manual",
+      "check": "",
+      "note": "",
+      "state": "open"
     }
   ],
   "archive": []
