@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "nextId": 36,
+  "nextId": 37,
   "cards": [
     {
       "id": "PB-001",
@@ -245,6 +245,13 @@
       "title": "Fractions, multiplication, division",
       "detail": "Reserved, greyed tickbox slots only. \"Coming later\" in the panel.",
       "state": "parked",
+      "run": ""
+    },
+    {
+      "id": "PB-036",
+      "title": "New animals",
+      "detail": "Build new sets of animals for the collection in the same style as the existing ones. they should be in sets that go together and should be shown as pages in the album. never all collections in one go, max 5 incomplete collections. new collection opens up when one is completed. collections should be thematically consistent, eg UK garden. Birds, Africa, Ocean, etc. A list with the collections and the animals in them will be provided.",
+      "state": "open",
       "run": ""
     }
   ]
