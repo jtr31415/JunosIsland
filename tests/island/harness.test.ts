@@ -590,3 +590,53 @@ describe('a save can never strand her in a round that cannot be dealt', () => {
     expect(a.sums.stages[1]?.ewma).toBe(0.9)
   })
 })
+
+describe('who moves a path’s ticks', () => {
+  it('sets the mode and says that it took', () => {
+    const a = createAttainment()
+    const h = createHarness(a)
+    expect(a.sums.mode).toBe('auto')
+    expect(h.setMode('sums', 'manual')).toBe(true)
+    expect(a.sums.mode).toBe('manual')
+    expect(h.setMode('sums', 'hold')).toBe(true)
+    expect(a.sums.mode).toBe('hold')
+  })
+
+  it('is per path, so one hand does not move the others', () => {
+    const a = createAttainment()
+    const h = createHarness(a)
+    h.setMode('takingAway', 'manual')
+    expect(a.takingAway.mode).toBe('manual')
+    expect(a.sums.mode).toBe('auto')
+    expect(a.reading.mode).toBe('auto')
+    expect(a.building.mode).toBe('auto')
+  })
+
+  it('refuses a path that is not live, so a reserved slot cannot grow a mode', () => {
+    // The panel renders the reserved slots; nothing about rendering one should
+    // be able to give it state a save would then carry.
+    const a = createAttainment()
+    const h = createHarness(a)
+    expect(h.setMode('fractions' as never, 'manual')).toBe(false)
+    expect(Object.prototype.hasOwnProperty.call(a, 'fractions')).toBe(false)
+  })
+
+  it('changes nothing about what she may be dealt', () => {
+    // Mode says WHO moves the ticks. It is not itself a tick, and a panel
+    // switching to Hold must not quietly narrow what she is given.
+    const a = createAttainment()
+    const h = createHarness(a)
+    const before = LIVE_PATHS.map(p => h.levelFor(p))
+    for (const mode of ['manual', 'hold', 'auto'] as const) {
+      for (const p of LIVE_PATHS) h.setMode(p, mode)
+      expect(LIVE_PATHS.map(q => h.levelFor(q))).toEqual(before)
+    }
+  })
+
+  it('survives the trip through a save', () => {
+    const a = createAttainment()
+    createHarness(a).setMode('reading', 'hold')
+    const back = readAttainment(JSON.parse(JSON.stringify(a)))
+    expect(back.reading.mode).toBe('hold')
+  })
+})

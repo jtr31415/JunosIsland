@@ -64,6 +64,33 @@ export interface Balance {
     speciesMemory: number
   }
   /**
+   * Where the grown-ups panel's three measures turn into words (Run A6).
+   *
+   * These are thresholds on a child's numbers, which is precisely why they are
+   * data. The spec asks for them here in terms — *"thresholds in balance,
+   * tunable"* — because the honest answer to "is .84 steady or solid?" is that
+   * nobody knows yet, and a number nobody knows yet does not belong in a
+   * compiled constant where changing it is a code change and a test rewrite.
+   *
+   * `accuracy` and `consistency` are the spec's own numbers. TWO of these are
+   * not, and are flagged as chosen where they are used in `report.ts`: the spec
+   * names one speed threshold (15%) and a three-tier scale needs two, so
+   * `speed.solid` is a mechanical call; and the spec defines consistency as one
+   * boolean, so the middle rung `report.ts` reads out of it is likewise. Both
+   * sit here rather than in code so that retuning them is an edit to a data
+   * file and not an argument with the type checker.
+   *
+   * `samples` is the small-sample honesty gate — below these counts the panel
+   * shows dashes rather than a tier, because a verdict drawn from four attempts
+   * is a statement about the sample and not about the child.
+   */
+  report: {
+    accuracy: { steady: number; solid: number }
+    speed: { steady: number; solid: number }
+    consistency: { session: number; sessions: number; days: number }
+    samples: { accuracy: number; speed: number; sessions: number }
+  }
+  /**
    * How long the opening story waits on each of Fred's lines before moving
    * itself on. Scaled to the LINE, not flat: a flat wait makes a short line
    * sit there as long as a long one, which is what makes an intro drag.
@@ -207,3 +234,11 @@ export function pageKind(pageIndex: number): PageKind {
   const mix = balance.pages.mix
   return mix[pageIndex % mix.length] as PageKind
 }
+
+/**
+ * The A6 report's thresholds, read through a function for the same reason
+ * `itemPay` is: the dev overlay may replace `balance.report` wholesale after
+ * import (see `applyDevBalance`), and a module that destructured it at load
+ * time would go on reading the original and quietly ignore the tuning.
+ */
+export const reportRules = (): Balance['report'] => balance.report

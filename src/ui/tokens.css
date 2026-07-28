@@ -606,3 +606,166 @@ body:has(.overlay:not(.hide)) .album-button { display: none; }
   color: #fff;
   border-color: #8f3229;
 }
+
+/* ------------------------------------- what she is working on (A4 / A6) ---
+ *
+ * The one panel here that is READ rather than answered: a mode switch, a
+ * tickbox list and three measures per stage. So it is wider than the keypad,
+ * it scrolls, and it sets itself left-aligned — a paragraph centred is a
+ * poster, and this is a page.
+ *
+ * NOTE for anyone adding to it: nothing in this panel may take the class
+ * `.say`. Line 115 hides `.say` under any open `.overlay`, and the grown-ups
+ * wrapper IS an `.overlay` — that selector has eaten visible text three times.
+ */
+.grownups-learning {
+  max-width: min(34rem, 94vw);
+  max-height: 86vh;
+  overflow-y: auto;
+  text-align: left;
+}
+
+.grownups-learning > .grownups-title,
+.grownups-learning > .grownups-note { text-align: center; }
+
+.grownups-paths {
+  display: flex;
+  flex-direction: column;
+  gap: .9rem;
+  margin-bottom: .9rem;
+}
+
+.grownups-path {
+  border-top: 1px solid rgba(35, 64, 79, .18);
+  padding-top: .6rem;
+}
+
+.grownups-path-title {
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-bottom: .35rem;
+}
+
+.grownups-modes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: .4rem;
+  margin-bottom: .6rem;
+}
+
+.grownups-mode {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .1rem;
+  text-align: left;
+  padding: .45rem .55rem;
+  opacity: .68;
+}
+
+/* The one that is actually running, marked by weight rather than by colour. */
+.grownups-mode.on {
+  opacity: 1;
+  box-shadow: inset 0 0 0 2px rgba(35, 64, 79, .4);
+}
+
+.grownups-mode-label { font-weight: 700; }
+.grownups-mode-detail { font-size: .74rem; opacity: .8; line-height: 1.3; }
+
+.grownups-stages {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+
+.grownups-row {
+  display: flex;
+  align-items: flex-start;
+  gap: .55rem;
+}
+
+.grownups-row-off { opacity: .72; }
+
+/* There is no checkbox in this game. A button with an on class, like a dot. */
+.grownups-tick {
+  flex: 0 0 auto;
+  width: 2.1rem;
+  height: 2.1rem;
+  padding: 0;
+  font-size: 1.05rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.grownups-tick.on { background: rgba(35, 64, 79, .12); }
+.grownups-tick-held { cursor: default; opacity: .8; }
+
+.grownups-stage {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.grownups-stage-label { font-weight: 600; }
+.grownups-stage-meta { font-size: .74rem; opacity: .7; }
+
+.grownups-measures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .1rem .9rem;
+  margin: .15rem 0;
+}
+
+.grownups-measure {
+  display: flex;
+  align-items: center;
+  gap: .3rem;
+  font-size: .78rem;
+}
+
+.grownups-measure-name { opacity: .7; }
+
+.grownups-measure-dots {
+  display: inline-flex;
+  gap: .15rem;
+}
+
+/*
+ * Ink, not a verdict. A6 forbids colours-as-verdict, so a filled dot is only
+ * darker than an empty one — nothing in this report is red or green, because
+ * the person reading it loves the person it is about.
+ */
+.grownups-dot {
+  width: .45rem;
+  height: .45rem;
+  border-radius: 50%;
+  border: 1px solid rgba(35, 64, 79, .5);
+}
+
+.grownups-dot.on { background: rgba(35, 64, 79, .8); }
+
+.grownups-dashes { letter-spacing: .12rem; opacity: .55; }
+.grownups-word { opacity: .85; }
+
+/* Only shown while the tick is actually held down, and only to the hand that
+ * could otherwise move it. */
+.grownups-held {
+  display: none;
+  font-size: .74rem;
+  opacity: .8;
+  margin-top: .15rem;
+}
+
+.grownups-held.grownups-show { display: block; }
+.grownups-nudge { animation: grownups-shake .4s; }
+
+.grownups-auto {
+  font-size: .78rem;
+  opacity: .7;
+  margin-top: .45rem;
+}
+
+/* Named, empty, and plainly not yet a thing you can switch on. */
+.grownups-reserved { opacity: .45; }
+.grownups-reserved .grownups-tick { pointer-events: none; }

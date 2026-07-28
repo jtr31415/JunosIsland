@@ -31,7 +31,7 @@ import { createHarness } from './harness'
 import type { Path } from './harness'
 import { openingGate } from './opening'
 import { commit, ceremony } from './ceremony'
-import { askPin, askChoice, askConfirm } from './grownups'
+import { askPin, askChoice, askConfirm, showLearning, stageLabel } from './grownups'
 import type { Committed, Exits } from './ceremony'
 import { createLocalStore } from '../platform/storage'
 import { createDurableStore } from '../platform/durable'
@@ -696,6 +696,7 @@ async function boot(): Promise<void> {
     const n = flow.pets.length
     const friends = `${n} friend${n === 1 ? '' : 's'}`
     const choice = await askChoice(document.body, 'Grown-ups', [
+      { id: 'learning', label: 'What she is working on', detail: 'what she is dealt, and how it is going' },
       { id: 'backup', label: 'Back up to a file', detail: `${friends} and this island` },
       { id: 'restore', label: 'Restore from a backup', detail: 'replaces what is here' },
       { id: 'story', label: 'Play the story again', detail: 'the opening, from the top' },
@@ -703,6 +704,7 @@ async function boot(): Promise<void> {
     ])
     if (choice === null) return
 
+    if (choice === 'learning') { await learning(); return }
     if (choice === 'backup') { await backup(); return }
     if (choice === 'restore') { await restore(); return }
     /*
@@ -727,6 +729,44 @@ async function boot(): Promise<void> {
      * the safe direction. removeProfile clears both copies and the ring.
      */
     void store.removeProfile(PROFILE).then(() => location.reload())
+  }
+
+  /**
+   * The capability model and the report, in Joe's hands (A4/A6).
+   *
+   * Everything the panel can change goes through the HARNESS, never into
+   * `attainment` directly: it is the single choke point for that record, and a
+   * panel that mutated the object itself would be a second set of rules that
+   * has to agree with the first — including the one that refuses the last
+   * untick, which is the only thing standing between a tap on a plot and
+   * nothing happening.
+   */
+  async function learning(): Promise<void> {
+    await showLearning(document.body, {
+      attainment,
+      setTicked: (path, stage, ticked) => harness.setTicked(path, stage, ticked),
+      canUntick: (path, stage) => harness.canUntick(path, stage),
+      setMode: (path, mode) => harness.setMode(path, mode),
+      /*
+       * Through a receipt, not through a bare `persist()`.
+       *
+       * A5: *"the tick action persists via Committed token before any
+       * announcement plays."* Minting the token is what forces the write to be
+       * AWAITED rather than fired off, and the awaited write is the whole rule
+       * here: the row does not show a tick until the disk already holds it.
+       *
+       * It commits the ATTAINMENT and not `commitState()`'s flow, for two
+       * reasons that happen to agree. The value in a receipt is meant to be the
+       * thing that was saved, and what a tick saves is this record. And
+       * `commitState()`'s receipts are counted one-for-one against ceremonies
+       * (barrier.test.ts) because an unspent one there means something was
+       * awarded and then celebrated by hand — a panel a parent reads awards
+       * nothing and celebrates nothing, so it must not be minting from that
+       * pool.
+       */
+      persist: async () => { await commit(attainment, () => persist()) },
+      stageLabel,
+    })
   }
 
   /**

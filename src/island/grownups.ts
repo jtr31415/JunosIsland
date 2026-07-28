@@ -14,7 +14,15 @@
  * Deliberately NOT part of `overlay.ts`. That owns the challenge surface —
  * what the child sees while she is working — and this is the one part of the
  * game she is not meant to be using.
+ *
+ * `showLearning` (A4/A6) is the exception to "dialogs": it is a panel a parent
+ * READS as much as taps. It lives here anyway, because it is behind the same
+ * PIN, wears the same bones, and belongs to the same audience.
  */
+import { LIVE_PATHS, RESERVED_PATHS, STAGES } from './harness'
+import type { Attainment, Mode, Path, ReservedPath } from './harness'
+import { TIER_WORDS, autoWouldDo, stageReport } from './report'
+import type { Measure } from './report'
 
 /** A modal panel over the world, dismissible by tapping outside it. */
 function panel(root: HTMLElement, build: (box: HTMLElement) => void,
@@ -209,5 +217,376 @@ export function askConfirm(
       row.append(go, back)
       box.append(row)
     }, () => resolve(false))
+  })
+}
+
+/* ------------------------------------------- A4/A6: what she is working on */
+
+/**
+ * The stages, in words a parent can act on.
+ *
+ * The harness knows stages as numbers because that is what a generator takes;
+ * nobody outside it should have to. "sums 2" is a fact about an array index,
+ * "bridging ten (to twenty)" is the thing Joe is actually deciding to switch
+ * on, and the tick he is about to make is only as good as the sentence next
+ * to it.
+ */
+export const STAGE_LABELS: Record<Path, Record<number, string>> = {
+  sums: { 1: 'to ten', 2: 'bridging ten (to twenty)' },
+  takingAway: { 1: 'to ten', 2: 'teens minus units', 3: 'anything to twenty' },
+  reading: { 1: 'reading words' },
+  building: { 1: 'building words' },
+}
+
+/** The wording for one stage, with a plain fallback if a rung outruns the table. */
+export function stageLabel(path: Path, stage: number): string {
+  return STAGE_LABELS[path]?.[stage] ?? `stage ${stage}`
+}
+
+const PATH_TITLES: Record<Path, string> = {
+  sums: 'Sums',
+  takingAway: 'Taking away',
+  reading: 'Reading',
+  building: 'Building words',
+}
+
+const RESERVED_TITLES: Record<ReservedPath, string> = {
+  storySums: 'Story sums',
+  fractions: 'Fractions',
+  multiplication: 'Multiplication',
+  division: 'Division',
+}
+
+/** The three modes, in the order they are offered, each with its one line. */
+const MODES: ReadonlyArray<{ mode: Mode; label: string; detail: string }> = [
+  {
+    mode: 'auto', label: 'Auto',
+    detail: 'Moves her on by itself, and only ever forward. Right now it is watching, not ticking.',
+  },
+  {
+    mode: 'manual', label: 'Manual',
+    detail: 'Your hand. Tick or untick any stage yourself.',
+  },
+  {
+    mode: 'hold', label: 'Hold',
+    detail: 'Pins her exactly where she is. Nothing moves on its own.',
+  },
+]
+
+/**
+ * Everything the panel needs, handed to it.
+ *
+ * The panel is the one grown-up surface with real consequences behind it, so
+ * it is built to be driven by a test rather than by the game: the harness, the
+ * save and the wording all arrive as functions. Nothing here reaches for a
+ * module-level singleton, which is what lets the persist-before-announce rule
+ * below be proved with a promise a test controls.
+ */
+export interface LearningDeps {
+  attainment: Attainment
+  setTicked(path: Path, stage: number, ticked: boolean): boolean
+  canUntick(path: Path, stage: number): boolean
+  setMode(path: Path, mode: Mode): boolean
+  /** Resolves when the change is durably written. Rejects if it was not. */
+  persist(): Promise<void>
+  stageLabel(path: Path, stage: number): string
+}
+
+/** Three dots and a soft word, or dashes when there is not enough to say. */
+function measure(name: string, m: Measure): HTMLElement {
+  const el = document.createElement('div')
+  el.className = 'grownups-measure'
+
+  const label = document.createElement('span')
+  label.className = 'grownups-measure-name'
+  label.textContent = name
+  el.append(label)
+
+  /*
+   * A6's small-sample honesty, rendered rather than computed: no tier means
+   * dashes. NOT zero dots and NOT a word — an empty row of dots reads as
+   * "measured, and bad", which is a verdict on a child nobody has watched long
+   * enough to have one about.
+   */
+  if (m.tier === null) {
+    const dashes = document.createElement('span')
+    dashes.className = 'grownups-dashes'
+    dashes.textContent = '–––'
+    el.append(dashes)
+    return el
+  }
+
+  const dots = document.createElement('span')
+  dots.className = 'grownups-measure-dots'
+  for (let i = 0; i < 3; i++) {
+    const d = document.createElement('span')
+    d.className = 'grownups-dot'
+    // The `.stage-dot` precedent from overlay.ts: a class, not a checkbox.
+    d.classList.toggle('on', i < m.filled)
+    dots.append(d)
+  }
+
+  const word = document.createElement('span')
+  word.className = 'grownups-word'
+  word.textContent = TIER_WORDS[m.tier]
+
+  el.append(dots, word)
+  return el
+}
+
+const pathTitle = (text: string): HTMLElement => {
+  const el = document.createElement('div')
+  el.className = 'grownups-path-title'
+  el.textContent = text
+  return el
+}
+
+/** How much work a stage has had, in a line. */
+function stageMeta(attempts: number, lastActive: string | null): string {
+  if (attempts === 0) return 'not tried yet'
+  const tries = `${attempts} ${attempts === 1 ? 'try' : 'tries'}`
+  return lastActive ? `${tries} · last ${lastActive}` : tries
+}
+
+/** One live path: its mode switch, its stages, and what Auto would do. */
+function livePathSection(path: Path, deps: LearningDeps): HTMLElement {
+  const section = document.createElement('div')
+  section.className = 'grownups-path'
+  section.dataset.path = path
+  section.append(pathTitle(PATH_TITLES[path]))
+
+  /*
+   * ONE WRITE AT A TIME, per path.
+   *
+   * Every change here is "set it, wait for the disk, then show it", and a
+   * second tap arriving inside that window would race the first one's revert.
+   * A parent tapping twice is not a bug she should pay for, so the second tap
+   * is simply ignored until the first one has landed.
+   */
+  let busy = false
+  const redraws: Array<() => void> = []
+  const redraw = (): void => { for (const f of redraws) f() }
+
+  const modes = document.createElement('div')
+  modes.className = 'grownups-modes'
+  for (const { mode, label, detail } of MODES) {
+    const b = document.createElement('button')
+    b.className = 'chunk chunk-button grownups-mode'
+    b.dataset.mode = mode
+
+    const name = document.createElement('span')
+    name.className = 'grownups-mode-label'
+    name.textContent = label
+    const why = document.createElement('span')
+    why.className = 'grownups-mode-detail'
+    why.textContent = detail
+    b.append(name, why)
+
+    redraws.push(() => {
+      const on = deps.attainment[path].mode === mode
+      b.classList.toggle('on', on)
+      b.setAttribute('aria-pressed', String(on))
+    })
+
+    b.onclick = () => { void chooseMode(mode) }
+    modes.append(b)
+  }
+  section.append(modes)
+
+  async function chooseMode(mode: Mode): Promise<void> {
+    const was = deps.attainment[path].mode
+    if (busy || mode === was) return
+    busy = true
+    if (!deps.setMode(path, mode)) { busy = false; return }
+    try {
+      // A5: the change is on the disk before the panel says it happened.
+      await deps.persist()
+    } catch {
+      deps.setMode(path, was)
+    }
+    busy = false
+    redraw()
+  }
+
+  const stages = document.createElement('div')
+  stages.className = 'grownups-stages'
+  for (const stage of STAGES[path]) stages.append(stageRow(path, stage))
+  section.append(stages)
+
+  const auto = document.createElement('div')
+  auto.className = 'grownups-auto'
+  auto.textContent = `What Auto would do: ${autoWouldDo(path)}`
+  section.append(auto)
+
+  redraw()
+  return section
+
+  function stageRow(path2: Path, stage: number): HTMLElement {
+    const row = document.createElement('div')
+    row.className = 'grownups-row'
+    row.dataset.stage = String(stage)
+
+    const tick = document.createElement('button')
+    tick.className = 'chunk chunk-button grownups-tick'
+    tick.setAttribute('aria-label', deps.stageLabel(path2, stage))
+
+    const body = document.createElement('div')
+    body.className = 'grownups-stage'
+
+    const label = document.createElement('div')
+    label.className = 'grownups-stage-label'
+    label.textContent = deps.stageLabel(path2, stage)
+    body.append(label)
+
+    const stats = deps.attainment[path2].stages[stage]
+    const report = stats ? stageReport(stats) : null
+
+    const measures = document.createElement('div')
+    measures.className = 'grownups-measures'
+    if (report) {
+      measures.append(
+        measure('accuracy', report.accuracy),
+        measure('speed', report.speed),
+        measure('consistency', report.consistency))
+    }
+    body.append(measures)
+
+    const meta = document.createElement('div')
+    meta.className = 'grownups-stage-meta'
+    meta.textContent = report ? stageMeta(report.attempts, report.lastActive) : ''
+    body.append(meta)
+
+    /*
+     * WHY A TICK CAN REFUSE TO COME OFF, said out loud.
+     *
+     * The last ticked stage of a deal moment is held down (JT-010(3)): a child
+     * tapping a plot, or an egg, must never find nothing there. A tap that
+     * quietly did nothing would read as the panel being broken, so the reason
+     * is on screen the whole time the tick is protected, and the tap nudges it.
+     */
+    const held = document.createElement('div')
+    held.className = 'grownups-held'
+    held.textContent =
+      'Kept on — it is the last one here, and a tap must always find something to do.'
+    body.append(held)
+
+    row.append(tick, body)
+
+    redraws.push(() => {
+      const st = deps.attainment[path2].stages[stage]
+      const ticked = st?.ticked === true
+      const manual = deps.attainment[path2].mode === 'manual'
+      const protectedTick = ticked && !deps.canUntick(path2, stage)
+      tick.classList.toggle('on', ticked)
+      tick.classList.toggle('grownups-tick-held', !manual || protectedTick)
+      tick.textContent = ticked ? '✓' : ''
+      tick.setAttribute('aria-pressed', String(ticked))
+      row.classList.toggle('grownups-row-off', !ticked)
+      held.classList.toggle('grownups-show', manual && protectedTick)
+    })
+
+    const nudge = (): void => {
+      held.classList.add('grownups-nudge')
+      setTimeout(() => held.classList.remove('grownups-nudge'), 400)
+    }
+
+    tick.onclick = () => { void toggle() }
+
+    async function toggle(): Promise<void> {
+      const st = deps.attainment[path2].stages[stage]
+      if (busy || !st) return
+      /*
+       * A4: Auto only ever ticks and Hold pins, so neither of them is a thing
+       * a finger does. The row still SHOWS its state in those modes — the
+       * report is worth reading whoever is driving — it just does not move.
+       */
+      if (deps.attainment[path2].mode !== 'manual') return
+
+      const wanted = !st.ticked
+      if (!wanted && !deps.canUntick(path2, stage)) { nudge(); return }
+
+      busy = true
+      if (!deps.setTicked(path2, stage, wanted)) { busy = false; nudge(); return }
+      try {
+        /*
+         * A5, spec line 107: the tick persists BEFORE anything announces it.
+         * Nothing is redrawn between the setter and this await, so the row
+         * cannot show a tick that is still in flight — and if the write fails
+         * the model goes back to what the disk still says, because a tick that
+         * did not survive is not a tick a parent made.
+         */
+        await deps.persist()
+      } catch {
+        deps.setTicked(path2, stage, !wanted)
+        busy = false
+        redraw()
+        return
+      }
+      busy = false
+      redraw()
+    }
+
+    return row
+  }
+}
+
+/** A named slot with nothing behind it yet. Greyed, empty, unreachable. */
+function reservedSection(path: ReservedPath): HTMLElement {
+  const section = document.createElement('div')
+  section.className = 'grownups-path grownups-reserved'
+  section.dataset.path = path
+  section.append(pathTitle(RESERVED_TITLES[path]))
+
+  const row = document.createElement('div')
+  row.className = 'grownups-row grownups-row-off'
+
+  const tick = document.createElement('button')
+  tick.className = 'chunk chunk-button grownups-tick grownups-tick-held'
+  // Disabled as well as unbound: a slot with no generator behind it should not
+  // even take a focus ring, let alone a tap that has to be explained away.
+  tick.disabled = true
+  tick.setAttribute('aria-disabled', 'true')
+
+  const label = document.createElement('div')
+  label.className = 'grownups-stage-label'
+  label.textContent = 'coming later'
+
+  row.append(tick, label)
+  section.append(row)
+  return section
+}
+
+/**
+ * What she is working on: the capability model and the report, in one panel.
+ *
+ * A4 and A6 are one screen because they are one decision. The tickbox says
+ * what she may be dealt and the three measures beside it are the only honest
+ * grounds for moving it, so putting them on separate screens would mean asking
+ * a parent to remember a number between two taps.
+ *
+ * It is never child-facing, it leaves the device nowhere, and it carries no
+ * colours-as-verdict: the dots are ink, the words are soft, and a stage nobody
+ * has watched long enough shows dashes rather than a score of nothing.
+ */
+export function showLearning(root: HTMLElement, deps: LearningDeps): Promise<void> {
+  return new Promise(resolve => {
+    const close = panel(root, box => {
+      // Wider than a keypad or a confirmation: this one is read, not answered.
+      box.classList.add('grownups-learning')
+      box.append(heading('What she is working on'))
+      box.append(note('Only you see this. Nothing on this page is shown to her.'))
+
+      const list = document.createElement('div')
+      list.className = 'grownups-paths'
+      for (const path of LIVE_PATHS) list.append(livePathSection(path, deps))
+      for (const path of RESERVED_PATHS) list.append(reservedSection(path))
+      box.append(list)
+
+      const back = document.createElement('button')
+      back.className = 'chunk chunk-button overlay-back'
+      back.textContent = 'close'
+      back.onclick = () => { close(); resolve() }
+      box.append(back)
+    }, () => resolve())
   })
 }

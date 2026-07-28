@@ -290,6 +290,17 @@ export interface Harness {
   canUntick(path: Path, stage: number): boolean
   /** Set it, if allowed. Returns whether it took. */
   setTicked(path: Path, stage: number, ticked: boolean): boolean
+  /**
+   * Who moves this path's ticks: Auto, a parent's hand, or nobody.
+   *
+   * It lives here for the same reason the ticks do. Mode is per-path persisted
+   * state, and this module is the single choke point for every read and write
+   * of `attainment` — a panel reaching into the record directly would be a
+   * SECOND path that has to agree with the first one, which is precisely the
+   * shape that has bitten this project three times. Returns false when the path
+   * is not live, so a reserved slot cannot quietly grow a mode.
+   */
+  setMode(path: Path, mode: Mode): boolean
   /** What was just dealt, so the attempts that follow have somewhere to go. */
   dealt(path: Path, stage: number): void
   /** An attempt resolved. Attributed to the last `dealt`. */
@@ -423,6 +434,13 @@ export function createHarness(
       if (st.ticked === ticked) return true
       if (!ticked && !this.canUntick(path, stage)) return false
       st.ticked = ticked
+      return true
+    },
+
+    setMode(path, mode) {
+      const p = live(path) ? state[path] : undefined
+      if (!p) return false
+      p.mode = mode
       return true
     },
 
