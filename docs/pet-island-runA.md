@@ -261,10 +261,82 @@ in editor dialect for red-pen; sentences remain a reserved slot.
 6. The 43 phonemes (booth; eternal; unblocks Fred-talk clips).
 7. Evening after Run A: hand-tick taking-away 1 for the QA department.
 
+# FIELD NOTES — A1 surveyed, not built (28 Jul)
+
+Both A1 faults were traced to the line before the session was cleared. No
+code was written; this is the survey, so the next session starts at the
+edit rather than at the search.
+
+### A1 fault 1 — one found word banks the whole page (`PB-007`, BACKLOG #44)
+
+`overlay.ts`, in the `deps()` block: `flyToScore: () => { earned = true }`.
+`wordFind.ts:64` calls `flyToScore` on **every** correct word and
+`celebrate()` (`:67`) only when `round.ti` reaches the end — so a five-word
+page banks on the first word.
+
+**The fix is NOT to move banking to completion for all three renderers**,
+and this is the trap. `build.ts:131` and `sum.ts:117` call `flyToScore`
+and then `onAdvance` a second or two later (`SUM_ADVANCE_MS`), and
+`earned` is exactly what protects that gap — she has answered, the star
+has flown, and tapping the X must not discard it (§18, and the comment
+above `let earned` says so). Moving it would trade one bug for a worse one.
+
+Shape that works: track which renderer is mounted (`'find' | 'build' |
+'sum'`, set in the three `open*()` methods at `overlay.ts:462-492`) and
+make `flyToScore` set `earned` only when it is **not** `'find'`.
+`celebrate()` already sets it, which is the find page's completion.
+One target → bank at once; several → bank when the last lands.
+
+### A1 fault 2 — the dead voice channel is a CSS rule, not missing logic
+
+The fallback logic already exists and is correct: `wordFind.ts:45-52`
+calls `deps.showTarget()` and `deps.toast()` when `speech.speak()` returns
+false. What kills it is `tokens.css:115-117`:
+
+```css
+body:has(.overlay:not(.hide)) .say { display: none; }
+```
+
+`overlay.ts:264` and `:269` give **both** `toastEl` and `targetCard` the
+class `chunk say hide`. A challenge IS an `.overlay`, so both are
+`display: none` for exactly as long as a round is open — which is the only
+time either is ever used. This is the third time this selector has eaten a
+element; `tokens.css:153` documents the same fault being fixed for the tile
+offer's question by giving it its own class (`.offer-ask`).
+
+Follow that precedent: give the two floaters a class that is not `.say`
+(e.g. `.floater`) carrying `.say`'s layout — `position: fixed; left: 50%;
+transform: translateX(-50%); width: min(92vw, 46rem); text-align: center;
+font-size: clamp(1.2rem, 3.4vmin, 2rem); font-weight: 800; line-height:
+1.35; z-index: 12`. Stacking is already fine: `.overlay` is z-index 10,
+so 12 sits above it. `toastEl`'s inline `bottom:auto; top:4vh` still applies.
+
+Acceptance is the spec's: with `speechSynthesis` stubbed absent, the
+target text is visible and the rescue toast renders. `tests/island/
+overlay.test.ts` is the right home — jsdom, and it already stubs
+`Element.prototype.animate` and fakes timers.
+
+### A7 verified as an exact doubling
+
+`balance.json` today is `tile {base 1, cap 16, tau 6}` and `egg {base 1,
+cap 14, tau 5}`. A7's `{2, 32, 6}` / `{2, 28, 5}` with every item paying 2
+is therefore a clean ×2 on both sides with the taus untouched, so the
+month-walk should come out identical at every n by construction rather
+than by tuning. No open question here.
+
+### Where the level is pinned
+
+`main.ts:923` — `{ rng: defaultRng, drawGreen, drawRed, neigh, level: 1 }`.
+STATUS quotes `:989`/`:998` from an older tree; the line has moved. This is
+the single choke point A3's `levelFor` replaces.
+
+---
+
 # LEDGER (updated on every field report)
 | Item | State |
 |---|---|
-| A1 · A2 · A3 · A4 · A5 · A6 · A7 | SPECCED — awaiting build |
+| A1 | **SURVEYED, not built** — both faults traced to the line; see FIELD NOTES above. Start here. |
+| A2 · A3 · A4 · A5 · A6 · A7 | SPECCED — awaiting build. A7 is independent of the rest and verified as an exact ×2. |
 | **A8 Workbench** | **BUILT** (28 Jul) — `npm run workbench`. Queue, backlog, lesson editor, export, bake console, voices & key. |
 | **A8 asset viewer** | **BUILT** (28 Jul, `PB-033` closed) — `/viewer.html`. Three galleries, orbitable, searchable, every ID canonical by construction. |
 | A8a Joe-work protocol | **IN FORCE** — `joe/tasks.json`, seven tasks seeded, evidence-based Done. |
