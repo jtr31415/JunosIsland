@@ -5,6 +5,14 @@ import {
 } from '../../src/island/flow'
 import { hatchProgress, landProgress, pagesForEgg, sumsForTile } from '../../src/island/flow'
 import type { Flow } from '../../src/island/flow'
+import { itemPay } from '../../src/island/balance'
+
+/*
+ * A7 put every price in UNITS, at 2 per completed item. These tests count the
+ * things a child actually answers — pages and sums — so they ask in items.
+ */
+const pagesInItems = (f: Flow): number => Math.ceil(pagesForEgg(f) / itemPay())
+const sumsInItems = (f: Flow): number => Math.ceil(sumsForTile(f) / itemPay())
 import { count } from '../../src/island/world/grid'
 
 /**
@@ -13,7 +21,9 @@ import { count } from '../../src/island/world/grid'
  * a test that hardcoded 5 would quietly rot the moment balance.json changed.
  */
 function readUntilHatch(f: Flow, name = 'Bimo', species = 'animal-fox'): Flow {
-  const need = pagesForEgg(f)
+  // In ITEMS: pagesForEgg is a price in units, and answering that many pages
+  // would hatch the egg and then bank the surplus toward the next one.
+  const need = pagesInItems(f)
   for (let i = 0; i < need; i++) f = challengePassed(tapEgg({ ...f, phase: 'free' }), { name, species })
   return f
 }
@@ -59,7 +69,7 @@ describe('flow — the earn loop', () => {
 
   it('later eggs cost progressively more', () => {
     let f = readUntilHatch(createFlow())
-    const second = pagesForEgg(f)
+    const second = pagesInItems(f)
     expect(second).toBeGreaterThan(1)
     for (let i = 1; i < second; i++) {
       f = challengePassed(tapEgg({ ...f, phase: 'free' }), { name: 'Two', species: 'animal-bee' })
@@ -72,7 +82,7 @@ describe('flow — the earn loop', () => {
 
   it('reports progress toward the next hatch and the next tile', () => {
     let f = readUntilHatch(createFlow())          // past the free first egg
-    const need = pagesForEgg(f)
+    const need = pagesInItems(f)
     f = challengePassed(tapEgg({ ...f, phase: 'free' }), { name: 'B', species: 'animal-bee' })
     expect(hatchProgress(f)).toBeCloseTo(1 / need)
     expect(landProgress(createFlow())).toBe(0)
@@ -194,7 +204,7 @@ describe('flow — the earn loop', () => {
      */
     let f = askForLand(createFlow())
     f = placeTile(chooseTile(f, 'grass'), { q: 1, r: 0 })
-    expect(sumsForTile(f)).toBe(1)
+    expect(sumsInItems(f)).toBe(1)
     expect(f.plot).not.toBeNull()
 
     f = challengePassed(tapSum({ ...f, phase: 'free' }))
@@ -205,7 +215,7 @@ describe('flow — the earn loop', () => {
 
   it('later tiles are built by sums, one plot at a time', () => {
     let f = buildTile(createFlow())                    // the free intro tile
-    const need = sumsForTile(f)
+    const need = sumsInItems(f)
     expect(need).toBeGreaterThan(1)
 
     f = askForLand({ ...f, phase: 'free' })

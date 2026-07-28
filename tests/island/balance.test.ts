@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { eggCost, tileCost, pageKind, balance } from '../../src/island/balance'
+import { eggCost, tileCost, itemsFor, pageKind, balance } from '../../src/island/balance'
+
+/*
+ * These tables are in ITEMS — sums and pages, the things a child answers.
+ * A7 re-denominated costs into units at 2 per item, so the prices moved and
+ * the pacing did not; `itemsFor` is the conversion back to what she does.
+ */
 
 describe('the cost curve', () => {
   it('matches the spec formula for tiles', () => {
@@ -16,7 +22,7 @@ describe('the cost curve', () => {
     const table: Array<[number, number]> = [
       [1, 1], [2, 3], [3, 5], [4, 7], [5, 8], [6, 9], [8, 11], [12, 14], [20, 15],
     ]
-    for (const [n, expected] of table) expect(tileCost(n)).toBe(expected)
+    for (const [n, expected] of table) expect(itemsFor(balance.tile, n)).toBe(expected)
   })
 
   it('matches the spec table for eggs', () => {
@@ -24,7 +30,7 @@ describe('the cost curve', () => {
     const table: Array<[number, number]> = [
       [1, 1], [2, 3], [3, 5], [4, 7], [5, 8], [6, 9], [8, 11], [12, 13],
     ]
-    for (const [n, expected] of table) expect(eggCost(n)).toBe(expected)
+    for (const [n, expected] of table) expect(itemsFor(balance.egg, n)).toBe(expected)
   })
 
   it('starts at base and never exceeds cap', () => {
@@ -87,7 +93,7 @@ describe('page kinds', () => {
 
   it('the first egg is a single page, so its only page is a find', () => {
     // §1 beat 2 and §3: egg #1 is the scripted single word
-    expect(eggCost(1)).toBe(1)
+    expect(itemsFor(balance.egg, 1)).toBe(1)
     expect(pageKind(0)).toBe('find')
   })
 })

@@ -28,7 +28,7 @@
       "doneRule": "artefact",
       "check": "envKey:AZURE_SPEECH_KEY",
       "note": "",
-      "state": "open"
+      "state": "done"
     },
     {
       "id": "JT-003",

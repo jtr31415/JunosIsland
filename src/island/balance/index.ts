@@ -13,6 +13,20 @@ export interface CostCurve { base: number; cap: number; tau: number }
 export interface Balance {
   tile: CostCurve
   egg: CostCurve
+  /**
+   * What one completed item is worth (Run A7).
+   *
+   * Costs used to be denominated in items: one sum paid 1, and a tile cost 8
+   * sums. They are now denominated in UNITS, and one item pays 2 — every cost
+   * on both curves doubled with it, so nothing about the pacing changed. It
+   * exists to buy fractions the old denomination could not express: Run B pays
+   * 3 for probe questions and honeymoon periods, and there is no such thing as
+   * paying 1.5.
+   *
+   * This is also the curve's rounding quantum — see `cost()`, which is where
+   * the invisibility is actually enforced.
+   */
+  pay: { item: number }
   pages: { wordsPerFindPage: number; mix: PageKind[] }
   governor: {
     maxWaitingPets: number
@@ -116,18 +130,52 @@ export async function applyDevBalance(enabled: boolean): Promise<boolean> {
 }
 
 /**
- * cost(n) = round(cap − (cap − base) · e^((1 − n) / tau))
+ * cost(n) = pay · round((cap − (cap − base) · e^((1 − n) / tau)) / pay)
  *
- * The nth thing of its kind costs this many pages or sums. Asymptotic to
- * `cap`, so the curve flattens rather than running away: the twentieth tile
- * is a fair amount of work, the fiftieth is not punishment.
+ * The nth thing of its kind costs this many UNITS. Asymptotic to `cap`, so the
+ * curve flattens rather than running away: the twentieth tile is a fair amount
+ * of work, the fiftieth is not punishment.
  *
  * `n` is 1-based — the first egg costs `base`.
+ *
+ * **Why it rounds in items and not in units.** The A7 re-base doubled `base`,
+ * `cap` and the payment together, and the survey called that invisible "by
+ * construction". It is not: rounding does not commute with doubling, because
+ * `round(2x) ≠ 2·round(x)`. Rounding the doubled curve directly gives the
+ * second tile a cost of 7 units — and at 2 a sum that is FOUR sums where it
+ * has always been three, a 33% rise on the most visible price in the game.
+ * Ten values on the tile curve and five on the egg curve moved that way.
+ *
+ * So the curve rounds to a whole ITEM and then converts. `exact / pay` is
+ * identically the old pre-A7 exact curve (halving `base` and `cap` gives it
+ * back exactly), so this returns `2 ×` the old cost at every n, and the items
+ * a child actually answers are unchanged everywhere. That is the sense in
+ * which the re-base is invisible, and `tests/island/economy.test.ts` walks a
+ * month of play to hold it there.
+ *
+ * It also means a cost is always a whole number of standard items, so the
+ * curve never asks for a half-answer. Run B's pay-3 items spend against the
+ * same units without moving any price.
  */
 export function cost(curve: CostCurve, n: number): number {
   const i = Math.max(1, n)
-  return Math.round(curve.cap - (curve.cap - curve.base) * Math.exp((1 - i) / curve.tau))
+  const pay = Math.max(1, balance.pay.item)
+  const exact = curve.cap - (curve.cap - curve.base) * Math.exp((1 - i) / curve.tau)
+  return pay * Math.round(exact / pay)
 }
+
+/**
+ * What one completed item pays, in units. Read through a function because the
+ * dev overlay may replace `balance.pay` after import (see `applyDevBalance`).
+ */
+export const itemPay = (): number => Math.max(1, balance.pay.item)
+
+/**
+ * How many ordinary items the nth thing actually costs — the number a child
+ * experiences, and the one the pacing tests pin.
+ */
+export const itemsFor = (curve: CostCurve, n: number): number =>
+  Math.ceil(cost(curve, n) / Math.max(1, balance.pay.item))
 
 /** Pages needed for the nth egg (1-based). */
 export const eggCost = (n: number): number => cost(balance.egg, n)

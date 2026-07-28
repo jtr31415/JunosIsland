@@ -1,6 +1,7 @@
 {
-  "tile":     { "base": 1, "cap": 16, "tau": 6 },
-  "egg":      { "base": 1, "cap": 14, "tau": 5 },
+  "tile":     { "base": 2, "cap": 32, "tau": 6 },
+  "egg":      { "base": 2, "cap": 28, "tau": 5 },
+  "pay":      { "item": 2 },
   "pages":    { "wordsPerFindPage": 3,
                 "mix": ["find", "build", "build", "build"] },
   "governor": { "maxWaitingPets": 3, "maxEmptySurplus": 4, "tilesPerPet": 1.5 },

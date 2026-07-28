@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { toSave, fromSave, loadIsland, saveIsland } from '../../src/island/save'
+import { itemPay, tileCost } from '../../src/island/balance'
+import { sumsForTile } from '../../src/island/flow'
 import {
   createFlow, challengePassed, tapEgg, tapSum, askForLand, chooseTile, placeTile,
   pagesForEgg,
@@ -161,5 +163,48 @@ describe('island save — land already earned survives visibly', () => {
     const { flow } = await loadIsland(store, 'p1')
     expect(flow.phase).toBe('free')
     expect(flow.plot).toBeNull()
+  })
+})
+
+/**
+ * A7 — a save written before the re-base holds work in the old denomination.
+ *
+ * One sum used to pay 1 and now pays 2, with every price doubled to match. A
+ * save that records `sumProgress: 3` therefore means three sums, which is now
+ * worth six units — and reading it as 3 would charge her for those sums a
+ * second time. Brief §18: nothing she owns can be lost.
+ */
+describe('progress written under the old economy', () => {
+  const oldSave = (sumProgress: number, readProgress: number) => ({
+    tiles: [['0,0', 'grass']] as Array<[string, 'grass']>,
+    pets: [], bankedTiles: 0, openingSeen: true,
+    sumProgress, readProgress, tilesEarned: 1,
+  })
+
+  it('is re-denominated, not re-read at face value', () => {
+    // No `pay` field: pre-A7, when one item paid 1.
+    const { flow } = fromSave(oldSave(3, 2))
+    expect(flow.sumProgress).toBe(6)      // three sums, still three sums
+    expect(flow.readProgress).toBe(4)     // two pages, still two pages
+  })
+
+  it('buys the same tile it was going to buy', () => {
+    /*
+     * The failure in the terms that matter: she was three sums into a tile
+     * that cost eight. She must still owe five, not eight.
+     */
+    const { flow } = fromSave(oldSave(3, 0))
+    const owed = Math.ceil((sumsForTile(flow) - flow.sumProgress) / itemPay())
+    expect(owed).toBe(tileCost(flow.tilesEarned + 1) / itemPay() - 3)
+  })
+
+  it('leaves a save written after the re-base alone', () => {
+    const { flow } = fromSave({ ...oldSave(6, 4), pay: 2 })
+    expect(flow.sumProgress).toBe(6)
+    expect(flow.readProgress).toBe(4)
+  })
+
+  it('stamps the scale it wrote, so the next re-base can migrate too', () => {
+    expect(toSave(playedFlow(), false).pay).toBe(itemPay())
   })
 })

@@ -23,7 +23,7 @@ import { buildableSockets, landedType, landOffer, canBeRock } from './world/coas
  * itself, and later ones should be real work. The curve does both and
  * flattens rather than running away (slice-1 spec §4).
  */
-import { eggCost, tileCost, balance } from './balance'
+import { eggCost, tileCost, itemPay, balance } from './balance'
 
 /** Pages this egg costs. Eggs are counted by how many have already hatched. */
 export const pagesForEgg = (f: Flow): number => eggCost(f.pets.length + 1)
@@ -198,7 +198,7 @@ export function challengePassed(f: Flow, hatch?: HatchDetails): Flow {
   if (f.phase !== 'challenge') return f
 
   if (f.challenge === 'read' && hatch) {
-    const readProgress = f.readProgress + 1
+    const readProgress = f.readProgress + itemPay()
     // The card was ANSWERED, so it is spent: the next page is a fresh draw.
     if (readProgress < pagesForEgg(f)) {
       // Not yet. The egg is closer, and that progress can never be lost.
@@ -224,7 +224,7 @@ export function challengePassed(f: Flow, hatch?: HatchDetails): Flow {
   }
 
   if (f.challenge === 'sum') {
-    const sumProgress = f.sumProgress + 1
+    const sumProgress = f.sumProgress + itemPay()
     const next = {
       ...f, phase: 'free' as Phase, challenge: null, sumProgress, sumHeld: false,
     }

@@ -8,6 +8,7 @@
  * Nothing a child owns can be lost (brief section 18), so a corrupt or absent
  * save yields a fresh island rather than an error.
  */
+import { itemPay } from './balance'
 import { createFlow } from './flow'
 import type { Flow, Pet } from './flow'
 import type { Island, TileType } from './world/grid'
@@ -24,6 +25,20 @@ interface IslandSave {
    *  survive a reload or the child silently starts over (brief section 18). */
   readProgress?: number
   sumProgress?: number
+  /**
+   * What one item was worth when this save was written (Run A7).
+   *
+   * The two progress numbers above are denominated in units, and A7 changed
+   * what a unit is worth. Without this marker a save written the day before
+   * would be read as half the work it records: three sums toward a tile that
+   * now costs six units, and she silently pays for the same tile twice —
+   * exactly the loss brief §18 forbids.
+   *
+   * Absent means pre-A7, when one item paid 1. Kept as the scale itself
+   * rather than a version number so any future re-base is the same one-line
+   * migration: multiply by how much the unit shrank.
+   */
+  pay?: number
   tilesEarned?: number
   /**
    * The plot under construction.
@@ -61,6 +76,7 @@ export function toSave(
     openingSeen,
     readProgress: flow.readProgress,
     sumProgress: flow.sumProgress,
+    pay: itemPay(),
     tilesEarned: flow.tilesEarned,
     plot: flow.plot,
     childName,
@@ -85,13 +101,22 @@ export function fromSave(
     return { flow: fresh, openingSeen: false, childName: '', persistGranted: null }
   }
   const island: Island = { tiles: new Map(save.tiles) }
+  /*
+   * A7: re-denominate work done under an older unit. A pre-A7 save recorded 3
+   * sums as 3; a sum is now worth 2, so the same three sums are 6. Whole
+   * numbers throughout — the scale is a ratio of two item payments, and both
+   * are integers.
+   */
+  const rescale = itemPay() / Math.max(1, typeof save.pay === 'number' ? save.pay : 1)
+  const inUnits = (v: unknown): number =>
+    typeof v === 'number' ? Math.round(v * rescale) : 0
   return {
     flow: {
       ...fresh,
       island,
       pets: Array.isArray(save.pets) ? save.pets : [],
       bankedTiles: typeof save.bankedTiles === 'number' ? save.bankedTiles : 0,
-      readProgress: typeof save.readProgress === 'number' ? save.readProgress : 0,
+      readProgress: inUnits(save.readProgress),
       /*
        * Falls back to the island's own size, not to zero. A save written
        * before this field existed would otherwise reset the cost curve and
@@ -120,7 +145,7 @@ export function fromSave(
        * would destroy the sums already spent on that plot. The credit lives
        * in bankedTiles, which placeTile spends once and commitPlot clears.
        */
-      sumProgress: typeof save.sumProgress === 'number' ? save.sumProgress : 0,
+      sumProgress: inUnits(save.sumProgress),
       challenge: null,
       chosen: null,
       /*

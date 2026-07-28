@@ -71,10 +71,26 @@ voiceless fallback is alive: both in-round floaters carry `.floater` rather than
 the word-to-find and the rescue toast for exactly as long as they are wanted.
 Third time that selector has done this; `.offer-ask` was the precedent followed.
 
-**A2–A7 are specced and not yet built.** The measurement, the tickboxes, the
-harness, schema v3, the grown-ups report and the economy re-base are the rest of
-the run. A7 is independent of the other five and verified as an exact ×2, so it
-is the cheapest next slice.
+**A7 is built** (28 Jul). Costs are denominated in UNITS now, not items: every
+price doubled and one completed item pays 2, so Run B can pay 3 for a probe
+without inventing a half-answer. Nothing about the pacing moved — the same sums
+buy the same tile at every n, which `tests/island/economy.test.ts` proves by
+walking a month of play against an independent reimplementation of the old
+curve.
+
+Two things the spec did not anticipate, both now handled:
+
+- **The ×2 is not invisible if you do it naively.** `round(2x) ≠ 2·round(x)`, so
+  doubling `base`/`cap` and rounding the doubled curve raises ten tile prices
+  and five egg prices — the second tile would have gone from 3 sums to 4. `cost()`
+  rounds to a whole item and then converts, which makes the doubling exact.
+- **Pre-A7 saves are migrated.** Progress is persisted, and it was written in the
+  old unit; read at face value she would have paid for the tile she was halfway
+  through a second time. `save.pay` records the scale; absent means pre-A7.
+
+**A2–A6 are specced and not yet built.** The harness, the attempt model, the
+tickboxes, schema v3 and the grown-ups report interlock and do not split cleanly
+— that is the next real run, not a slice.
 
 ---
 

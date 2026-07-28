@@ -318,13 +318,40 @@ target text is visible and the rescue toast renders. `tests/island/
 overlay.test.ts` is the right home — jsdom, and it already stubs
 `Element.prototype.animate` and fakes timers.
 
-### A7 verified as an exact doubling
+### A7 — the "exact doubling" was not exact (corrected 28 Jul, at the build)
 
-`balance.json` today is `tile {base 1, cap 16, tau 6}` and `egg {base 1,
-cap 14, tau 5}`. A7's `{2, 32, 6}` / `{2, 28, 5}` with every item paying 2
-is therefore a clean ×2 on both sides with the taus untouched, so the
-month-walk should come out identical at every n by construction rather
-than by tuning. No open question here.
+The survey said: `{2, 32, 6}` / `{2, 28, 5}` with every item paying 2 is a
+clean ×2 on both sides, so the month-walk holds "by construction rather than
+by tuning. No open question here."
+
+**That was wrong, and the arithmetic says so.** Rounding does not commute with
+scaling: `round(2x) ≠ 2·round(x)`. Doubling `base` and `cap` and then rounding
+the doubled curve moves **ten** prices on the tile curve and **five** on the
+egg curve — and the worst is the second tile, the most visible price in the
+game, which goes from 3 sums to 7 units, i.e. **4 sums**. A 33% rise, in the
+first ten minutes of play, from a change specced to be invisible.
+
+The fix is one line in `cost()`: round to a whole ITEM, then convert to units.
+`exact / pay` is identically the old pre-A7 exact curve, so the result is `2 ×`
+the old cost at every n — a real exact doubling, this time genuinely by
+construction. Every cost is an even number of units, so nothing ever asks for
+half an answer, and Run B's pay-3 items spend against the same units without
+moving a price.
+
+Two consequences worth carrying forward:
+
+- **Costs are denominated in UNITS now, not items.** `tileCost`/`eggCost` and
+  `sumsForTile`/`pagesForEgg` return units; `itemsFor(curve, n)` converts back
+  to the number a child actually answers. Anything asserting pacing should ask
+  in items, or it is asserting the denomination instead. Four existing tests
+  were pinning units-as-items and were re-expressed, not relaxed.
+- **A pre-A7 save needed migrating**, which the spec did not anticipate.
+  Progress is persisted, so a save holding `sumProgress: 3` would have been
+  read as 1½ sums against a doubled price — she pays for the same tile twice
+  (§18). `save.pay` records the scale the numbers were written in; absent means
+  pre-A7. Kept as the scale rather than a version number so the next re-base is
+  the same one-liner. Additive and tolerant: a rolled-back build still reads
+  the save, just generously, which is the safe direction.
 
 ### Where the level is pinned
 
@@ -338,7 +365,8 @@ the single choke point A3's `levelFor` replaces.
 | Item | State |
 |---|---|
 | A1 | **BUILT** (28 Jul, `PB-007` closed) — find pages bank on completion; both in-round floaters are `.floater`, out of the `.say` hiding rule. Four regression tests in `tests/island/overlay.test.ts`. Six gates green. |
-| A2 · A3 · A4 · A5 · A6 · A7 | SPECCED — awaiting build. A7 is independent of the rest and verified as an exact ×2. |
+| **A7** | **BUILT** (28 Jul) — costs now in units at 2/item, provably invisible: `tests/island/economy.test.ts` walks a month and pins items-per-tile and items-per-egg to the pre-A7 values at every n. The spec's "×2 is exact by construction" was **false** and is corrected in FIELD NOTES; `cost()` rounds in items, and a pre-A7 save is migrated by `save.pay`. |
+| A2 · A3 · A4 · A5 · A6 | SPECCED — awaiting build. These five interlock (harness, attempt model, tickboxes, schema v3, report) and do not split cleanly. |
 | **A8 Workbench** | **BUILT** (28 Jul) — `npm run workbench`. Queue, backlog, lesson editor, export, bake console, voices & key. |
 | **A8 asset viewer** | **BUILT** (28 Jul, `PB-033` closed) — `/viewer.html`. Three galleries, orbitable, searchable, every ID canonical by construction. |
 | A8a Joe-work protocol | **IN FORCE** — `joe/tasks.json`, seven tasks seeded, evidence-based Done. |

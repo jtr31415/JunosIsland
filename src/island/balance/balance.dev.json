@@ -1,7 +1,7 @@
 {
   "__devOverlayMarker": "PREVIEW_ONLY_BALANCE_OVERLAY",
-  "tile": { "base": 1, "cap": 3, "tau": 2 },
-  "egg": { "base": 1, "cap": 3, "tau": 2 },
+  "tile": { "base": 2, "cap": 6, "tau": 2 },
+  "egg": { "base": 2, "cap": 6, "tau": 2 },
   "story": { "beatMinMs": 300, "beatPerCharMs": 8, "beatMaxMs": 1200 },
   "stage": {
     "spinSec": 9,
