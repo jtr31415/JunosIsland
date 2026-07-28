@@ -388,7 +388,9 @@ describe('the finished mountain hex is the pack\'s pre-assembled one', () => {
  * she must be given. So there is ONE chooser, and both callers use it.
  */
 describe('the mountain on the plot is the mountain she gets', () => {
-  const MAIN = resolve(here, '../../src/island/main.ts')
+  // The plot lifecycle moved out of main.ts into its own testable host; the
+  // naming of the peak went with it. See plot.ts.
+  const HOST = resolve(here, '../../src/island/plot.ts')
   const PROPS = resolve(here, '../../src/island/world/props.ts')
   const INCREMENTS = resolve(here, '../../src/island/world/increments.ts')
   const code = (p: string): string => readFileSync(p, 'utf8')
@@ -440,8 +442,8 @@ describe('the mountain on the plot is the mountain she gets', () => {
     // would be one edit away from disagreeing, and nothing would fail.
     expect(code(PROPS)).toContain('mountainHexFor(a)')
     expect(code(PROPS)).toContain('mountainSpinFor(a)')
-    expect(code(MAIN)).toContain('mountainHexFor(state.plot.at)')
-    expect(code(MAIN)).toContain('mountainSpinFor(state.plot.at)')
+    expect(code(HOST)).toContain('mountainHexFor(state.plot.at)')
+    expect(code(HOST)).toContain('mountainSpinFor(state.plot.at)')
   })
 
   it('the plot takes a pre-assembled feature instead of eight scattered pieces', () => {

@@ -18,12 +18,8 @@ import { createEgg } from './egg'
 import { createFred } from './fred'
 import { createSign } from './sign'
 import { createStage, dotsFilled, DOT_COUNT } from './stage'
-import {
-  createPropField, footprintBelow, WALKING_HEIGHT, mountainHexFor, mountainSpinFor,
-} from './world/props'
-import { createGrowingPlot } from './world/increments'
-import { plannedLook } from './world/coast'
-import type { GrowingPlot } from './world/increments'
+import { createPropField, footprintBelow, WALKING_HEIGHT } from './world/props'
+import { createPlotHost } from './plot'
 import { createAlbum } from './album'
 import { hatchProgress, landProgress, sumsForTile, pagesForEgg } from './flow'
 import { balance, applyDevBalance } from './balance'
@@ -171,93 +167,31 @@ async function boot(): Promise<void> {
   /*
    * The plot under construction (spec §2). Sited as soon as the child picks a
    * socket, then GROWN by each sum, so arithmetic visibly becomes ground.
+   *
+   * THE LIFECYCLE LIVES IN `plot.ts`, behind ports. Three faults in two days have
+   * been in this seam and not one of them was visible to the unit tests either
+   * side of it: the plot builds correctly whatever it is told to build, the flow
+   * records correctly what is being built, and every bug was in the sentence
+   * between them. The host holds the rule that closes them — what stands on the
+   * island tracks what the flow SAYS, so a plot she has retyped is rebuilt rather
+   * than left standing there depicting her old answer.
    */
-  let plot: GrowingPlot | null = null
-  /** Where the current plot is sited, remembered past the flow clearing it. */
-  let plotAt: Axial | null = null
-  /** Set while a finished plot is showing its flourish before being removed. */
-  let plotFarewell: ReturnType<typeof setTimeout> | null = null
-  /** Tear a plot down now, cancelling any farewell in progress. */
-  function dropPlot(): void {
-    if (plotFarewell) { clearTimeout(plotFarewell); plotFarewell = null }
-    if (!plot) return
-    // It may be on the stage rather than in the world. Detach from wherever
-    // it actually is, and make sure the stage is not left holding a corpse.
-    if (stage.holds(plot.group)) { stage.release(); overlay.setStaged(false) }
-    plot.group.removeFromParent()
-    plot.dispose()
-    plot = null
-    // Stop offering taps on a plot that no longer exists — a stale reference here
-    // would raycast against a disposed group.
-    world.setPlotPickable(null)
-  }
-
-  function showPlot(state: Flow = flow): void {
-    if (!state.plot) {
-      /*
-       * The plot is paid for and the tile is real. LET THE LAST STEP PLAY.
-       *
-       * The flow machine commits the tile in the same transition that reaches
-       * full payment, so a plot never exists in a finished state — which meant
-       * the tenth increment, the completion flourish, could not once be seen
-       * and the intro tile showed no build at all. So the scaffolding stays up
-       * for a beat at full progress before it comes down.
-       */
-      if (plot && !plotFarewell) {
-        plot.setProgress(1, 1)
-        const going = plot
-        plotFarewell = setTimeout(() => {
-          if (stage.holds(going.group)) stage.release()
-          going.group.removeFromParent()
-          going.dispose()
-          if (plot === going) plot = null
-          plotFarewell = null
-        }, PLOT_FAREWELL_MS)
-      }
-      return
-    }
-    // A new plot while the old one is still bowing: clear it out at once, or
-    // two hexes overlap and the farewell disposes the wrong one.
-    if (plotFarewell) dropPlot()
-    if (!plot) {
-      // Seeded from the socket: the same hex always grows the same thing, but
-      // no two hexes grow the same thing as each other.
-      const seed = (state.plot.at.q * 73856093) ^ (state.plot.at.r * 19349663)
-      plot = createGrowingPlot(state.plot.type, world.models.size, {
-        models: world.models,
-        prop: name => props.load(name),
-        /*
-         * The look the finished tile WILL have, solved over the island with this
-         * plot already on it. Without it a water plot built as a flat slab and
-         * then arrived as a coast piece, which is a discontinuity at the one
-         * moment §2 wants continuity.
-         */
-      }, seed >>> 0, plannedLook(state.island, state.plot.at, state.plot.type),
-      /*
-       * A mountain hex builds AS a mountain. Named through the shared chooser so
-       * the peak she watches rise is the one props.ts plants at touchdown — the
-       * two placement paths agreeing by construction rather than by luck.
-       */
-      state.plot.type === 'rock'
-        ? { name: mountainHexFor(state.plot.at), spin: mountainSpinFor(state.plot.at) }
-        : null)
-      const w = world.worldOf(state.plot.at)
-      plot.group.position.copy(w)
-      plotAt = state.plot.at
-      world.scene.add(plot.group)
-      // Tappable, so she can change her mind about what is being built here.
-      world.setPlotPickable(plot.group)
-    }
-    plot.setProgress(state.sumProgress, sumsForTile(state))
+  const plots = createPlotHost({
+    models: world.models,
+    scene: world.scene,
+    worldOf: a => world.worldOf(a),
+    prop: name => props.load(name),
+    setPickable: o => { world.setPlotPickable(o) },
     /*
-     * NOT hovering. The transparent container already says "not placed yet"
-     * — that is its whole job — and raising the plot as well lifted it clean
-     * out of the vignette's frame. The hover belonged to the world-space
-     * version this replaced; the launch height it defined is still what the
-     * fly-back falls from.
+     * Off the challenge stage before it is destroyed, or the stage is left
+     * holding a corpse (the 28 July landmine). One route destroys a plot now, so
+     * this is stated once rather than remembered at each caller.
      */
-    plot.float(false)
-  }
+    unstage: g => { if (stage.holds(g)) { stage.release(); overlay.setStaged(false) } },
+    farewellMs: PLOT_FAREWELL_MS,
+  })
+  /** Make the island show the plot this flow describes. */
+  const showPlot = (state: Flow = flow): void => { plots.show(state) }
 
   const egg = createEgg()
   world.scene.add(egg.group)
@@ -946,7 +880,7 @@ async function boot(): Promise<void> {
      * rather than sitting in a box with its own grass and sky.
      */
     const piece = kind === 'read' ? egg.group
-      : kind === 'sum' ? plot?.group ?? null
+      : kind === 'sum' ? plots.current()?.group ?? null
         : null
     stage.show(piece ?? null, world.scene)
     if (!piece) return false
@@ -1280,8 +1214,8 @@ async function boot(): Promise<void> {
           world.lighting.celebrationBump()
 
           // The flourish plays while the plot is still on the turntable.
-          const finished = plot
-          const sited = plotAt
+          const finished = plots.current()
+          const sited = plots.sitedAt()
           finished?.setProgress(1, 1)
           await wait(balance.stage.flourishMs)
 
@@ -1345,7 +1279,7 @@ async function boot(): Promise<void> {
            * same beat, so there is never a frame with two hexes in one place
            * — coincident faces flicker, and she would see it.
            */
-          dropPlot()
+          plots.drop()
           world.lighting.celebrationBump()   // the move-in lift (lighting §4)
           refresh()
         })
@@ -1721,7 +1655,7 @@ async function boot(): Promise<void> {
 
   world.onFrame((dt, t) => {
     stage.update(dt, t)
-    plot?.update(dt)
+    plots.update(dt)
     props.update(dt, t)
     egg.update(dt, t)
     // Before update, so a tap arriving this frame meets a target sized for the

@@ -140,6 +140,7 @@ src/words2d/       the 2D shell, which ships from core/ + challenges/
 src/island/        the 3D game
   flow.ts          the state machine — pure, immutable, testable
   interactions.ts  tap handling; the wiring seam, extracted so it can be tested
+  plot.ts          the growing plot's lifecycle, behind ports, for the same reason
   main.ts          composition root; where the async ceremonies live
   scene.ts         renderer, camera, per-frame loop
   stage.ts         the challenge vignette (transparent container)
@@ -583,6 +584,21 @@ redefining what a level *is* invalidates the anchor. And `parity.mjs` drives v0'
 own level switch, so adaptive selection must live in the island layer, never in
 `src/core/`, or the 2D shell diverges from the frozen original. See
 `docs/PHASE4.1-EDUCATIONAL-HARNESS.md` §5.
+
+**A plot that is only ever BUILT ONCE will show her last week's answer.** main.ts
+created the growing plot when none was standing and never again, so `chooseTile`
+retyping a standing plot — the change-your-mind feature — changed the flow and
+nothing else. She picked mountains and watched a grass tile grow; `props.adopt`
+then handed the finished hex exactly what the scaffolding had grown AND marked it
+dressed, so `props.sync` never planted the peak, and only a reload (which re-dresses
+from the save, where the type was 'rock' all along) corrected it. Both halves of
+Joe's report, one fault. The lifecycle now lives in `src/island/plot.ts` behind
+ports and compares what is on screen against what the flow says by SITE AND KIND;
+a difference rebuilds it. **Three faults in two days have been in this seam** —
+the dead-on-arrival plot, the plot stranded on a closed panel, and this — and none
+of them was visible to the unit tests either side, because the plot builds whatever
+it is told and the flow records whatever is chosen. Only a test that drives both
+together catches this class: `tests/island/plot.test.ts`.
 
 **`git add -A` will swallow `.claude/worktrees/` as embedded repos.** It did once
 this session and had to be amended out. `.claude/` is now in
