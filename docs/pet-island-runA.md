@@ -261,11 +261,13 @@ in editor dialect for red-pen; sentences remain a reserved slot.
 6. The 43 phonemes (booth; eternal; unblocks Fred-talk clips).
 7. Evening after Run A: hand-tick taking-away 1 for the QA department.
 
-# FIELD NOTES — A1 surveyed, not built (28 Jul)
+# FIELD NOTES — A1 (surveyed, then built, 28 Jul)
 
-Both A1 faults were traced to the line before the session was cleared. No
-code was written; this is the survey, so the next session starts at the
-edit rather than at the search.
+Both A1 faults were traced to the line before the session was cleared, then
+built from that survey in the next one. **Both are now fixed exactly as
+written below** — the survey held, no surprises at the edit. Kept in full
+because the reasoning is the reason the fixes are the shape they are, and
+the trap in fault 1 is the kind of thing a later run would walk into again.
 
 ### A1 fault 1 — one found word banks the whole page (`PB-007`, BACKLOG #44)
 
@@ -335,7 +337,7 @@ the single choke point A3's `levelFor` replaces.
 # LEDGER (updated on every field report)
 | Item | State |
 |---|---|
-| A1 | **SURVEYED, not built** — both faults traced to the line; see FIELD NOTES above. Start here. |
+| A1 | **BUILT** (28 Jul, `PB-007` closed) — find pages bank on completion; both in-round floaters are `.floater`, out of the `.say` hiding rule. Four regression tests in `tests/island/overlay.test.ts`. Six gates green. |
 | A2 · A3 · A4 · A5 · A6 · A7 | SPECCED — awaiting build. A7 is independent of the rest and verified as an exact ×2. |
 | **A8 Workbench** | **BUILT** (28 Jul) — `npm run workbench`. Queue, backlog, lesson editor, export, bake console, voices & key. |
 | **A8 asset viewer** | **BUILT** (28 Jul, `PB-033` closed) — `/viewer.html`. Three galleries, orbitable, searchable, every ID canonical by construction. |

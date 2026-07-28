@@ -139,6 +139,29 @@ body:has(.overlay:not(.hide)) .album-button { display: none; }
   z-index: 12;
 }
 
+/*
+ * The two in-round floaters: the mash-rescue toast, and the "Find: word" card
+ * shown when the device has no voice.
+ *
+ * `.say`'s layout without `.say`'s name, for the same reason `.offer-ask`
+ * exists — the hide-while-an-overlay-is-open rule above would blank both of
+ * them for precisely the time they are on screen, since a challenge is an
+ * overlay and neither is ever used outside one. z-index 12 clears `.overlay`
+ * at 10. The toast overrides `bottom` inline to sit at the top instead.
+ */
+.floater {
+  position: fixed;
+  left: 50%;
+  bottom: 6vh;
+  transform: translateX(-50%);
+  width: min(92vw, 46rem);
+  text-align: center;
+  font-size: clamp(1.2rem, 3.4vmin, 2rem);
+  font-weight: 800;
+  line-height: 1.35;
+  z-index: 12;
+}
+
 /* The pick-of-three tile offer. */
 .offer {
   display: flex;

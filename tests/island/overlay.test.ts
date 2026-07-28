@@ -318,3 +318,117 @@ describe('while a ceremony is playing', () => {
     expect(host.onDismissed).toHaveBeenCalled()
   })
 })
+
+/**
+ * A1 fault 1 — one found word banked the whole page (PB-007, BACKLOG #44).
+ *
+ * `flyToScore` fires per WORD on a find page but once per answer on the other
+ * two, and the overlay was treating all three the same: the first correct word
+ * of five armed "collect on the way out", so a child who found one word and
+ * tapped the X was paid for the page. v0's own semantics are that a find page
+ * completes when ALL its targets are found.
+ */
+describe('a find page banks on completion, not on the first word', () => {
+  /** The round asks for its first word at 900 + 60/word (wordFind.ts:116). */
+  const FIRST_PROMPT_MS = 1100
+
+  /** The word the round is currently asking for, per the spoken prompt. */
+  function target(root: HTMLElement, host: ReturnType<typeof setup>['host']): HTMLElement {
+    // The stub is declared argument-less, so its recorded calls type as `[]`.
+    const calls = host.speech.speak.mock.calls as unknown as string[][]
+    const asked = calls[calls.length - 1]?.[0] ?? ''
+    const words = [...root.querySelectorAll('#words .word')] as HTMLElement[]
+    return words.find(w => w.textContent === asked && !w.classList.contains('found'))!
+  }
+
+  const tap = (el: HTMLElement): void =>
+    void el.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+
+  it('does NOT collect when only some of the words have been found', () => {
+    const { root, overlay, host } = setup()
+    overlay.openWordFind(PICKS)          // two targets
+    vi.advanceTimersByTime(FIRST_PROMPT_MS)
+
+    tap(target(root, host))              // one of two
+
+    root.querySelector<HTMLElement>('.overlay-x')!.click()
+
+    // Leaving now is an abandonment, not a completed page.
+    expect(host.onPassed).not.toHaveBeenCalled()
+    expect(host.onDismissed).toHaveBeenCalled()
+  })
+
+  it('collects once the last word lands', () => {
+    const { root, overlay, host } = setup()
+    overlay.openWordFind(PICKS)
+    vi.advanceTimersByTime(FIRST_PROMPT_MS)
+
+    tap(target(root, host))
+    vi.advanceTimersByTime(800)          // the next word is asked for
+    tap(target(root, host))
+
+    vi.runAllTimers()                    // the celebrate hold, then finish
+    expect(host.onPassed).toHaveBeenCalledWith(true)
+  })
+
+  it('still banks a sum the moment it is answered, before the advance', () => {
+    /*
+     * The trap in the obvious fix. Build and sum fly the star and call
+     * onAdvance a beat later, and `earned` is exactly what protects that gap —
+     * she has answered, and tapping the X must not throw the work away (§18).
+     * Moving these to completion too would trade one bug for a worse one.
+     */
+    const { root, overlay, host } = setup()
+    overlay.openSum(SUM)
+
+    solve(root, SUM_ANSWER)              // correct, but the advance has not run
+    root.querySelector<HTMLElement>('.overlay-x')!.click()
+
+    expect(host.onPassed).toHaveBeenCalledWith(false)   // collect it, and let me out
+    expect(host.onDismissed).not.toHaveBeenCalled()
+  })
+})
+
+/**
+ * A1 fault 2 — the dead voice channel.
+ *
+ * The fallback logic was always right: no voice, so show the word and say so.
+ * What killed it was CSS. `body:has(.overlay:not(.hide)) .say { display: none }`
+ * hides Fred's speech line while a round is open, and both floaters were built
+ * as `.say` — but a challenge IS an overlay, and these two are used ONLY inside
+ * one. They were invisible for exactly as long as they were wanted. Third time
+ * that selector has eaten an element; `.offer-ask` is the precedent.
+ */
+describe('with no voice on the device', () => {
+  it('shows the word to find, and says why', () => {
+    const { root, overlay, host } = setup()
+    host.speech.speak.mockReturnValue(false)
+
+    overlay.openWordFind(PICKS)
+    vi.advanceTimersByTime(1100)   // the round asks for its first word
+
+    const shown = [...root.children].filter(
+      el => !el.classList.contains('overlay') && !el.classList.contains('hide'),
+    ) as HTMLElement[]
+    const text = shown.map(el => el.textContent).join(' | ')
+
+    expect(text).toContain('Find:')
+    expect(text).toContain('showing the word instead')
+  })
+
+  it('keeps both floaters out of the hide-while-an-overlay-is-open rule', () => {
+    /*
+     * The assertion the browser would make, made where jsdom can: these two
+     * carry no class the rule selects on. If someone gives them `.say` back
+     * for its layout, this fails instead of the fallback silently dying again.
+     */
+    const { root, overlay, host } = setup()
+    host.speech.speak.mockReturnValue(false)
+    overlay.openWordFind(PICKS)
+    vi.advanceTimersByTime(1100)
+
+    const floaters = [...root.querySelectorAll('.floater')] as HTMLElement[]
+    expect(floaters).toHaveLength(2)
+    for (const el of floaters) expect(el.classList.contains('say')).toBe(false)
+  })
+})

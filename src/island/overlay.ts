@@ -260,17 +260,32 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
   const nameEl = document.createElement('div')
   nameEl.className = 'chunk hatch-name hide'
 
+  /*
+   * `floater`, not `say`, and this is the third time the same rule has eaten an
+   * element: `body:has(.overlay:not(.hide)) .say { display: none }` in
+   * tokens.css hides Fred's speech line while a round is open. But a challenge
+   * IS an `.overlay`, and these two are used ONLY during a round — the rescue
+   * toast and the voiceless fallback that shows the word to find. As `.say`
+   * they were invisible for exactly as long as they were wanted, which is the
+   * whole of their life. `.offer-ask` (tokens.css) is the precedent: same
+   * layout, its own class, out of the blast radius.
+   */
   const toastEl = document.createElement('div')
-  toastEl.className = 'chunk say hide'
+  toastEl.className = 'chunk floater hide'
   toastEl.style.bottom = 'auto'
   toastEl.style.top = '4vh'
 
   const targetCard = document.createElement('div')
-  targetCard.className = 'chunk say hide'
+  targetCard.className = 'chunk floater hide'
 
   root.append(layer, sayEl, nameEl, toastEl, targetCard)
 
   let handle: ChallengeHandle | null = null
+  /**
+   * Which renderer is on screen, because "a correct answer" means a different
+   * thing on a find page than it does on the other two — see `flyToScore`.
+   */
+  let mounted: 'find' | 'build' | 'sum' | null = null
   let toastTimer: ReturnType<typeof setTimeout> | null = null
   let nameTimer: ReturnType<typeof setTimeout> | null = null
   /**
@@ -326,10 +341,23 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
     sfx: host.sfx,
     holds,
     isActive: () => !layer.classList.contains('hide'),
-    /* No score bar on the island — finishing the round is the reward, and the
-       world itself changes. But this is also the renderer's signal that an
-       answer was CORRECT, which is what makes leaving safe below. */
-    flyToScore: () => { earned = true },
+    /*
+     * No score bar on the island — finishing the round is the reward, and the
+     * world itself changes. But this is also the renderer's signal that an
+     * answer was CORRECT, which is what makes leaving safe below.
+     *
+     * Except on a find page, where it fires per WORD (wordFind.ts) while the
+     * page holds several. Banking on the first one paid a five-word page for
+     * one tap. A find page's completion is `celebrate()`, which sets `earned`
+     * itself — one target banks immediately, several bank when the last lands.
+     *
+     * It stays immediate for build and sum, and that is not an inconsistency:
+     * both fly the star and then call `onAdvance` a beat later
+     * (SUM_ADVANCE_MS), and `earned` is what protects that gap — she has
+     * answered, the star has flown, and tapping the X must not throw it away
+     * (§18). Moving those to completion would trade this bug for a worse one.
+     */
+    flyToScore: () => { if (mounted !== 'find') earned = true },
     /* Every wrong tap, from all three renderers. The only thing that reads it
        is the cross-page break watch — see `breaks` above. */
     onWrong: () => { breaks.wrong() },
@@ -368,6 +396,7 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
   function teardown(): void {
     busy = false
     if (handle) { handle.teardown(); handle = null }
+    mounted = null
     layer.classList.add('hide')
     layer.classList.remove('staged')
     targetCard.classList.add('hide')
@@ -464,6 +493,7 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
       teardown()
       startPage()
       earned = false
+      mounted = 'find'
       layer.classList.toggle('staged', staged)
       again.classList.remove('hide')
       layer.classList.remove('hide')
@@ -474,6 +504,7 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
       teardown()
       startPage()
       earned = false
+      mounted = 'build'
       layer.classList.toggle('staged', staged)
       again.classList.remove('hide')
       layer.classList.remove('hide')
@@ -484,6 +515,7 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
       teardown()
       startPage()
       earned = false
+      mounted = 'sum'
       layer.classList.toggle('staged', staged)
       // A sum is on screen to be read, so there is no prompt to repeat — and
       // a button that does nothing is worse than no button.

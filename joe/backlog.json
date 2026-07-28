@@ -48,7 +48,7 @@
       "id": "PB-007",
       "title": "One found word banks the whole page (#44)",
       "detail": "earned is set by flyToScore, which the word-find fires on EVERY found word, not on completion. Run A1 fixes the scoring semantics; this card closes when A1 lands with its regression test.",
-      "state": "planned",
+      "state": "done",
       "run": "A"
     },
     {

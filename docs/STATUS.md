@@ -63,9 +63,18 @@ Two more things to know:
    against Linux CI, which the gitignore has recorded since Phase 3. Set as
    `outDir` in `joe/voices.json`.
 
-**A1–A7 are specced and not yet built.** The measurement, the tickboxes, the
-harness, schema v3, the grown-ups report and the economy re-base are the next
-run.
+**A1 is built** (28 Jul). A find page now banks when the LAST target is found,
+not the first — build and sum still bank the instant the star flies, because
+`earned` is what protects the second between that and the auto-advance. And the
+voiceless fallback is alive: both in-round floaters carry `.floater` rather than
+`.say`, so `body:has(.overlay:not(.hide)) .say { display: none }` no longer eats
+the word-to-find and the rescue toast for exactly as long as they are wanted.
+Third time that selector has done this; `.offer-ask` was the precedent followed.
+
+**A2–A7 are specced and not yet built.** The measurement, the tickboxes, the
+harness, schema v3, the grown-ups report and the economy re-base are the rest of
+the run. A7 is independent of the other five and verified as an exact ×2, so it
+is the cheapest next slice.
 
 ---
 
