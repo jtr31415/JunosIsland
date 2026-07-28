@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "nextId": 38,
+  "nextId": 39,
   "cards": [
     {
       "id": "PB-001",
@@ -258,6 +258,13 @@
       "id": "PB-037",
       "title": "Fred-talk has no way in",
       "detail": "Joe, ruling JT-008(2): 'we have no fred talk set up, open a card for that.' He is right, and the machinery is not the missing part — build.ts still has fredTalk(), FRED_SOUNDS and a fred() handle, and A2 now reports it through onHelp('fred'). What is missing is any affordance that reaches it: the overlay wires 'say it again' and nothing else, and the mash rescue was deliberately changed to say the whole word slowly instead (build.ts header, product owner's call: TTS stop consonants bark). So the code path is live and unreachable. Two halves to decide together: (a) the WAY IN, which Run C already specs as the second step of the hint ladder ('Fred, show me?'), so building a button now may be building it twice; (b) the VOICE, which is JT-006 - the 43 recorded phonemes are what make sounding-out pleasant rather than merely available. Sequencing note: A2's help reporting is already wired, so whenever this lands it is measured on arrival with no further work.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-038",
+      "title": "A7 regression: the reading page mix quietly doubled the find pages",
+      "detail": "Found while surveying A3's deal path, not yet fixed. main.ts passes state.readProgress to dealReading as the PAGE INDEX, and deal.ts:69 asks pageKind(page), which is mix[page % 4] over ['find','build','build','build']. Since A7 readProgress counts UNITS and advances by pay.item = 2 per page, so the index goes 0,2,4,6 and the mix reads find,build,find,build - one find page in two, where the data says one in four. Demonstrated: pre-A7 'find build build build find build' vs today 'find build find build find build'. This is exactly the trap A7's own field note names ('anything asserting pacing should ask in items, or it is asserting the denomination instead'); the month-walk pinned COSTS in items and the page mix was never asked. Fix is at the deal path, not in balance.json - the index wants converting from units to items (readProgress / itemPay(), exact because a reading page pays exactly one item) - and it needs a test that pins the mix a child actually SEES across an egg, since the existing balance.test.ts pins pageKind(0..3) directly and cannot see this. Note before changing it: alternating find/build may well be the nicer mix. The bug is that nobody chose it.",
       "state": "open",
       "run": ""
     }
