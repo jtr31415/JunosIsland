@@ -114,6 +114,7 @@ describe('the workbench serves Joe his own files', () => {
     expect(results[0].error).not.toMatch(/at .*\.mjs/)
   })
 
+
   it('derives Done from the artefact and warns instead of overriding', async () => {
     const s = await api('/api/state')
     const vet = s.tasks.find((t: any) => t.id === 'JT-001')
@@ -127,6 +128,46 @@ describe('the workbench serves Joe his own files', () => {
     writeFileSync(join(root, '.env'), 'AZURE_SPEECH_KEY=not-a-real-key\n')
     const after = await api('/api/state')
     expect(after.tasks.find((t: any) => t.id === 'JT-002').ok).toBe(true)
+  })
+
+  /*
+   * These run AFTER the artefact test above, which asserts the "no key" warning
+   * and then writes one. Ordering is load-bearing: setting a key earlier would
+   * make that assertion pass for the wrong reason.
+   */
+  it('takes the Azure key from the page and never hands it back', async () => {
+    await post('/api/secrets', { AZURE_SPEECH_KEY: 'sk-not-a-real-key-9876', AZURE_SPEECH_REGION: 'westeurope' })
+
+    /* It reaches .env, which is gitignored — the only place it is written. */
+    expect(readFileSync(join(root, '.env'), 'utf8')).toContain('sk-not-a-real-key-9876')
+
+    const s = await api('/api/state')
+    expect(s.hasKey).toBe(true)
+    expect(s.keyTail).toBe('…9876')
+    expect(s.region).toBe('westeurope')
+    /* The whole response, searched: the key itself must not appear anywhere in it. */
+    expect(JSON.stringify(s)).not.toContain('sk-not-a-real-key-9876')
+  })
+
+  it('replaces a key rather than stacking a second line under it', async () => {
+    await post('/api/secrets', { AZURE_SPEECH_KEY: 'second-key' })
+    const env = readFileSync(join(root, '.env'), 'utf8')
+    expect(env.match(/AZURE_SPEECH_KEY=/g)).toHaveLength(1)
+    expect(env).toContain('second-key')
+    expect(env).not.toContain('sk-not-a-real-key-9876')
+    /* And it did not eat the region set alongside it. */
+    expect(env).toContain('AZURE_SPEECH_REGION=westeurope')
+  })
+
+  it('lists what is actually on disk, per pack', async () => {
+    const assets = await api('/api/assets')
+    expect(assets.pets).toHaveLength(24)
+    expect(assets.pets).toContain('animal-fox')
+    /* Basenames, no extensions — the viewer compares them against registry ids. */
+    expect(assets.pets.every((n: string) => !n.includes('.'))).toBe(true)
+    expect(assets.tiles).toContain('hex_grass')
+    expect(assets.props.length).toBeGreaterThan(20)
+    expect(assets.forest.length).toBeGreaterThan(80)
   })
 
   it('surfaces what each run is waiting on', async () => {

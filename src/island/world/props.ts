@@ -58,7 +58,16 @@ const CHARACTERS: Array<{ kind: Character; weight: number }> = [
  * wider radius and carry the island's skyline. A flat plane of hexes has no
  * silhouette under an orbit camera, and silhouette is what makes a diorama.
  */
-const FEATURES: Record<Character, Array<{ name: string; weight: number; big?: boolean }>> = {
+/*
+ * Exported for the workbench asset viewer, and for nothing else in the game.
+ *
+ * The viewer's whole claim is that every ID it shows is canonical by
+ * construction — it reads the registries rather than a list someone typed. A
+ * table it cannot see is a table that silently goes unreviewed, which is how
+ * `hexagons_medieval.png` went missing for two agents. Read-only: nothing
+ * outside this file may add to it.
+ */
+export const FEATURES: Record<Character, Array<{ name: string; weight: number; big?: boolean }>> = {
   meadow: [
     /*
      * Open ground was weight 8 of 17 — nearly half of all meadow tiles grew no
@@ -283,7 +292,7 @@ export const BARE_TREES = [
 ]
 
 /** What grows on water. The same set the growing plot builds a pond from. */
-const WATER_PIECES = [
+export const WATER_PIECES = [
   'waterlily_A', 'waterlily_B', 'waterplant_A', 'waterplant_B', 'waterplant_C',
 ]
 
@@ -763,8 +772,13 @@ export interface PropField {
    * trees and rocks it will keep once finished — building it out of stand-in
    * primitives and swapping them at the end would make completion a visual
    * discontinuity rather than the last step of a sequence.
+   *
+   * `grey` binds the base palette rather than Summer, exactly as a mountain
+   * hex does — see `stoneAtlas`. Optional and defaulting to the old behaviour,
+   * because the only caller that wants it is the asset viewer, where "is that
+   * rock actually grey?" is a live question with a backlog card on it.
    */
-  load(name: string): Promise<THREE.Object3D>
+  load(name: string, grey?: boolean): Promise<THREE.Object3D>
   /**
    * Take over the scenery a plot grew, as that tile's own.
    *
@@ -1317,7 +1331,8 @@ export function createPropField(base = ''): PropField {
       }
     },
 
-    load: (name: string) => (/^[A-Z]/.test(name) ? forestModel(name) : model(name)),
+    load: (name: string, grey = false) =>
+      (/^[A-Z]/.test(name) ? forestModel(name) : model(name, grey)),
 
     obstacles: () => blocks,
 

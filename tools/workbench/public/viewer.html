@@ -1,0 +1,54 @@
+<!doctype html>
+<!-- JOE_WORKBENCH_ONLY — the asset viewer. Dev-only; see tools/smoke/channel.mjs. -->
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Assets — Workbench</title>
+  <link rel="stylesheet" href="/viewer.css">
+</head>
+<body>
+  <header>
+    <a class="back" href="/">← bench</a>
+    <nav id="galleries">
+      <button data-gallery="species" class="on">Species</button>
+      <button data-gallery="tiles">Tiles</button>
+      <button data-gallery="props">Props</button>
+    </nav>
+    <input id="search" placeholder="search ids…" autocomplete="off">
+    <span id="count" class="meta"></span>
+    <span id="says" class="meta"></span>
+  </header>
+
+  <div id="layout">
+    <aside id="rail"><ul id="list"></ul></aside>
+
+    <main>
+      <canvas id="stage"></canvas>
+      <div id="controls" class="row">
+        <label id="setPick" hidden>Set <select id="setSelect"></select></label>
+        <label id="seasonPick" hidden>Season <select id="seasonSelect">
+          <option>base</option><option selected>Summer</option><option>Fall</option><option>Winter</option>
+        </select></label>
+        <label id="greyPick" hidden><input type="checkbox" id="greyToggle"> grey atlas</label>
+        <button id="spin">pause spin</button>
+        <button id="reset">reset view</button>
+        <button id="grid">grid this group</button>
+      </div>
+      <p id="hint" class="meta">drag to orbit · wheel to zoom · ↑ ↓ to page · space to stop spinning</p>
+    </main>
+
+    <aside id="detail">
+      <h2 id="assetId">—</h2>
+      <dl id="facts"></dl>
+      <form id="noteForm">
+        <textarea name="note" rows="3" placeholder="what is wrong with it" required></textarea>
+        <button type="submit">Add note for this asset</button>
+      </form>
+      <ul id="notes"></ul>
+    </aside>
+  </div>
+
+  <script type="module" src="/viewer.ts"></script>
+</body>
+</html>

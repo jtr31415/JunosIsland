@@ -29,7 +29,7 @@ let picked = null
 
 async function refresh() {
   S = await api('/api/state')
-  drawTasks(); drawBacklog(); drawLessons(); drawBake(); drawNotes()
+  drawTasks(); drawBacklog(); drawLessons(); drawBake(); drawVoices(); drawNotes()
 }
 
 const save = (what, value) => api('/api/save', { body: { what, value } }).then(r => { say(`saved ${r.saved}`); return refresh() })
@@ -193,6 +193,103 @@ async function bake(ids) {
 }
 
 const exportPlan = async () => { const r = await api('/api/export'); say(`wrote ${r.saved}`) }
+
+/* --------------------------------------------------------------- voices & key */
+
+/**
+ * The shortlist, for before there is a key to ask Azure with.
+ *
+ * Enough to cast and bake on day one; the moment a key is set the real
+ * catalogue replaces it, because a hard-coded voice list is a list that goes
+ * stale the next time Microsoft ships a neural voice.
+ */
+const FALLBACK_VOICES = [
+  'en-GB-RyanNeural', 'en-GB-ThomasNeural', 'en-GB-AlfieNeural', 'en-GB-ElliotNeural',
+  'en-GB-SoniaNeural', 'en-GB-LibbyNeural', 'en-GB-MaisieNeural', 'en-GB-OliviaNeural',
+  'en-GB-AbbiNeural', 'en-GB-BellaNeural', 'en-GB-HollieNeural', 'en-GB-NoahNeural',
+]
+let catalogue = null
+
+function drawVoices() {
+  const root = $('#voices')
+  root.replaceChildren()
+
+  /* ---- the key ---- */
+  const keyBox = el('div', { className: 'card' })
+  keyBox.append(el('h3', {}, 'Azure Speech'))
+  keyBox.append(el('p', { className: 'meta' }, S.hasKey
+    ? `a key is set (${S.keyTail}) · region ${S.region}`
+    : 'no key set — the bake console cannot run'))
+
+  const key = el('input', { type: 'password', placeholder: S.hasKey ? 'replace the key…' : 'paste the key…' })
+  const region = el('input', { value: S.region, placeholder: 'region, e.g. uksouth', style: 'max-width:9rem' })
+  const set = el('button', {}, 'Save to .env')
+  set.onclick = async () => {
+    await api('/api/secrets', { body: { AZURE_SPEECH_KEY: key.value, AZURE_SPEECH_REGION: region.value } })
+    key.value = ''
+    catalogue = null
+    say('written to .env')
+    refresh()
+  }
+  keyBox.append(el('div', { className: 'row' }, [key, region, set]))
+  /*
+   * It goes IN from here and never comes back out.
+   *
+   * Joe overruled the spec's "never in the page", rightly — hand-editing a
+   * dotfile to use a GUI is silly. What is kept is the direction of travel:
+   * the server writes it to a gitignored .env and reports only the last four,
+   * so a screenshot of this page cannot leak the account.
+   */
+  keyBox.append(el('p', { className: 'hint' },
+    'Written to .env, which is gitignored. The page never receives it back — only the last four digits.'))
+  root.append(keyBox)
+
+  /* ---- the casting ---- */
+  const names = catalogue?.length
+    ? catalogue.filter(v => v.locale.startsWith('en')).map(v => v.name)
+    : FALLBACK_VOICES
+
+  for (const [who, cast] of Object.entries(S.voices.cast ?? {})) {
+    const card = el('div', { className: 'card' })
+    card.append(el('h3', {}, who))
+
+    const voice = el('select')
+    for (const name of [...new Set([cast.voice, ...names])].filter(Boolean)) {
+      voice.append(el('option', { value: name, selected: name === cast.voice }, name))
+    }
+    const rate = el('input', { value: cast.rate ?? '0%', style: 'max-width:5rem' })
+    const pitch = el('input', { value: cast.pitch ?? '0%', style: 'max-width:5rem' })
+    const done = el('input', { type: 'checkbox', checked: Boolean(cast.cast) })
+
+    const apply = () => saveCast(who, {
+      voice: voice.value, rate: rate.value, pitch: pitch.value, cast: done.checked,
+    })
+    for (const control of [voice, rate, pitch, done]) control.onchange = apply
+
+    card.append(el('div', { className: 'row' }, [
+      voice, el('span', { className: 'meta' }, 'rate'), rate,
+      el('span', { className: 'meta' }, 'pitch'), pitch,
+      el('label', { className: 'row', style: 'margin:0' }, [done, ' auditioned']),
+    ]))
+    if (who === 'fred') {
+      card.append(el('p', { className: 'hint' },
+        'Casting is data: change this and every one of his clips shows stale, then one batch re-bake fixes it.'))
+    }
+    root.append(card)
+  }
+
+  const fetchList = el('button', {}, catalogue ? `${catalogue.length} voices from Azure` : 'Fetch the voice list from Azure')
+  fetchList.onclick = async () => {
+    const r = await api('/api/voices/list')
+    catalogue = r.voices ?? []
+    say(r.error ? r.error : `${catalogue.length} voices`, Boolean(r.error))
+    drawVoices()
+  }
+  root.append(el('div', { className: 'row' }, [fetchList]))
+}
+
+const saveCast = (who, patch) =>
+  save('voices', { ...S.voices, cast: { ...S.voices.cast, [who]: { ...S.voices.cast[who], ...patch } } })
 
 /* ------------------------------------------------------------------ notes */
 

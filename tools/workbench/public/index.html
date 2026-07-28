@@ -18,7 +18,9 @@
       <button data-tab="backlog">Backlog</button>
       <button data-tab="lessons">Lessons</button>
       <button data-tab="bake">Bake</button>
+      <button data-tab="voices">Voices &amp; key</button>
       <button data-tab="notes">Asset notes</button>
+      <a class="tablink" href="/viewer.html">Assets ↗</a>
     </nav>
     <span id="says"></span>
   </header>
@@ -49,6 +51,7 @@
     </section>
 
     <section id="bake" class="tab"></section>
+    <section id="voices" class="tab"></section>
 
     <section id="notes" class="tab">
       <form id="noteForm" class="row">
@@ -56,8 +59,9 @@
         <input name="note" placeholder="what is wrong with it" required>
         <button type="submit">Add note</button>
       </form>
-      <p class="hint">The galleries are not built yet (PB-033). Until they are, the ID is typed by hand
-        and the note lands in <code>joe/asset-notes.json</code> keyed exactly the same way.</p>
+      <p class="hint">Easier from the <a href="/viewer.html">asset viewer</a>, where the ID is
+        filled in by whatever you are looking at. Either way the note lands in
+        <code>joe/asset-notes.json</code> keyed the same.</p>
       <ul id="noteList"></ul>
     </section>
   </main>

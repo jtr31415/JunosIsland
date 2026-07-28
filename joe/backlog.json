@@ -228,9 +228,9 @@
     },
     {
       "id": "PB-033",
-      "title": "The asset viewer galleries (deferred from A8)",
-      "detail": "DEFERRED OUT OF RUN A, deliberately: three orbitable galleries (24 species, both tile types with every coast variant and plot increment, every FEATURES/COVER prop) reusing the game's own loaders and registries. It is a three.js surface, not a form, and it would have eaten the run. The comment box and joe/asset-notes.json ARE built — the notes tab already accepts an ID and a note, so the API half is proved and only the gallery is missing.",
-      "state": "open",
+      "title": "The asset viewer galleries",
+      "detail": "BUILT 28 Jul. Three galleries at /viewer.html — species (24, turntable, dressed in any of the 40 sets), tiles (6 render kinds incl. every coast variant, switchable across all four seasonal atlases), props (130 entries across both packs). Every ID comes from the game's own registries and every model through the game's own loader. Reports both directions: registry names with no file, and files no table names (30 forest pieces, on purpose). Notes POST straight to joe/asset-notes.json keyed by canonical ID.",
+      "state": "done",
       "run": "B"
     },
     {

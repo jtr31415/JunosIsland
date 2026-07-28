@@ -33,7 +33,13 @@ export interface TileModels {
   material: THREE.Material
 }
 
-const TILE_URL: Record<RenderKind, string> = {
+/*
+ * Exported for the workbench asset viewer, which needs the ID→file mapping
+ * rather than either half alone: the code says `grass`, the disk says
+ * `hex_grass.gltf`, and a viewer holding only one of those reports every tile
+ * as missing and every file as unused. Read-only outside this module.
+ */
+export const TILE_URL: Record<RenderKind, string> = {
   grass: 'tiles/hex_grass.gltf',
   water: 'tiles/hex_water.gltf',
   /*

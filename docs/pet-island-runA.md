@@ -265,8 +265,8 @@ in editor dialect for red-pen; sentences remain a reserved slot.
 | Item | State |
 |---|---|
 | A1 · A2 · A3 · A4 · A5 · A6 · A7 | SPECCED — awaiting build |
-| **A8 Workbench** | **BUILT** (28 Jul) — `npm run workbench`. Queue, backlog, lesson editor, export, bake console. 1,215 lines. |
-| A8 asset viewer | **NOT BUILT** — deferred as `PB-033`. The notes half (`joe/asset-notes.json` + API + a tab) IS built; the three galleries are not. A three.js surface would have eaten the run. |
+| **A8 Workbench** | **BUILT** (28 Jul) — `npm run workbench`. Queue, backlog, lesson editor, export, bake console, voices & key. |
+| **A8 asset viewer** | **BUILT** (28 Jul, `PB-033` closed) — `/viewer.html`. Three galleries, orbitable, searchable, every ID canonical by construction. |
 | A8a Joe-work protocol | **IN FORCE** — `joe/tasks.json`, seven tasks seeded, evidence-based Done. |
 | A9 | Partial — workbench round-trip test green, `npm run channel` extended both ways. The rest lands with A1–A7. |
 | Run B | Context-specced; blocked on Run A |
@@ -275,6 +275,21 @@ in editor dialect for red-pen; sentences remain a reserved slot.
 | Joe #1–7 | Open — now **JT-001…JT-007** in the workbench, not in prose |
 | Product Backlog | Seeded, 35 cards, `PB-001…PB-035`. Awaiting Joe's triage. |
 | Superseded docs | `pet-island-phase4-1-spec.md` (rulings changed) |
+
+**A8 ruling changed by Joe, 28 Jul.** The spec says the Azure key comes from
+`.env` and is *"never in the page"*. Joe: *"regarding azure key and voice
+model, make that definable UI side pls."* Done — the Voices & key tab sets
+both. What survives of the original rule is the direction of travel: the key
+goes IN from the page and never comes back out. The server writes it to the
+(gitignored) `.env`, `/api/state` reports only the last four digits, and the
+bake still happens server-side, so a screenshot of the workbench cannot leak
+the account. Voices are picked from Azure's own catalogue when a key is set,
+from a built-in en-GB shortlist before that.
+
+**Also grown past the lightweight law, with cause.** The spec caps the
+workbench at ~1,500 lines. It is now ~2,100, and Joe lifted the cap
+explicitly for the viewer (*"there can be more than 1500 lines"*). The
+non-viewer workbench is unchanged at ~1,250; the galleries are the excess.
 
 **One deviation from A8, deliberate.** The spec says clips land in
 `assets/voice/lessons/`. This repo cannot have a root `assets/`: the

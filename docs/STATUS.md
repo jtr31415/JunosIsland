@@ -36,12 +36,28 @@ editor (`joe/lessons/*.md`, seeded by parsing Appendix L), the export to
 so: `npm run channel` now greps BOTH shipped bundles for its sentinel and greps
 `src/` for any reference to `tools/workbench`.
 
-Two things to know:
+**The asset viewer is built too** (`PB-033` closed), at `/viewer.html`: three
+orbitable galleries — 24 species on turntables dressed in any of the 40 sets,
+the 6 tile render kinds across all four seasonal atlases, and 130 props across
+both packs. It imports `SPECIES`, `FEATURES`, `COVER`, `MOUNTAIN_HEXES`,
+`LEAFY_TREES`, `BARE_TREES`, `WATER_PIECES`, `PALETTE`, `INCREMENTS` and
+`TILE_URL` straight out of `src/`, and loads every model through the game's own
+loader — so an ID it shows is an ID the game deals, and a colour it shows is
+under the island's own lighting rig. It reports both directions of drift: a
+registry name with no file (none, today) and a file no table names (30 forest
+pieces, deliberately). `tests/island/assets.test.ts` now pins the first of
+those in CI.
 
-1. **The asset viewer galleries were NOT built** — deferred as `PB-033`. The
-   notes half is built and proved (`joe/asset-notes.json`, keyed by canonical
-   ID); the three orbitable galleries are a three.js surface and would have
-   consumed the run that the harness itself needs.
+That needed three additive exports in the game — `FEATURES`, `WATER_PIECES`,
+`TILE_URL` — plus an optional `grey` argument on `PropField.load`. No
+behaviour changed; `npm run parity` is still identical.
+
+Two more things to know:
+
+1. **The Azure key and the voice casting are set from the page**, at Joe's
+   instruction, overriding the spec's "never in the page". The key goes in and
+   never comes back out: the server writes it to the gitignored `.env` and the
+   page only ever sees the last four digits.
 2. **Bake output goes to `src/island/public/voice/lessons/`, not
    `assets/voice/`** — a root `assets/` case-collides with `Assets/` on Windows
    against Linux CI, which the gitignore has recorded since Phase 3. Set as
