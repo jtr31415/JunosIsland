@@ -566,6 +566,122 @@ child who leaves a lot, this is the first place to look. `PB-040`.
 
 ---
 
+# FIELD NOTES — A3 (surveyed 28 Jul)
+
+## The finding that reshapes A3: `levelFor(path)` cannot be called
+
+The spec's harness is keyed by path — `levelFor(path): StageSet` — and A4 names
+four live paths: `sums`, `takingAway`, `reading`, `building`. That presumes the
+caller knows which path it is dealing. **At both deal moments, nothing does.**
+
+The island has exactly two ways into a challenge, and each covers two paths:
+
+| She taps | `flow.challenge` | Could be | Chosen today by |
+|---|---|---|---|
+| an empty plot / the sum sign | `'sum'` | `sums` · `takingAway` | **nothing — `takingAway` has never been dealt** |
+| the egg | `'read'` | `reading` · `building` | `pageKind(page)`, a mix in `balance.json` |
+
+So A3 needs one function the spec does not name: something that picks the PATH
+before `levelFor` can pick the stage within it. That is not a detail — it is the
+knob that decides how much subtraction Juno sees and how much word-building, and
+it is the same question twice. One half already has an answer in data
+(`pages.mix`); the other half has no answer anywhere, because the case has never
+existed.
+
+**This is JT-010.** Three questions, at the foot of this section.
+
+## Subtraction is fully built and has never been dealt
+
+`generateSub` (`core/generators/sums.ts:31`) is ported, golden-pinned, and has
+all three v0 levels — to-ten, teens-minus-units, and the mixed twenty. The sum
+renderer already handles it end to end: `sum.ts:38` paints `−` and `:40`
+computes `a - b`. `words2d/shell.ts:96` deals it. **The island does not**:
+`deal.ts:79` calls `generateAdd` and nothing else.
+
+So JT-007 — *"Evening after Run A: hand-tick taking-away 1"* — costs A3 less
+than it looks. There is no generator to write, no renderer to teach, no golden
+to re-capture. What is missing is the choice, which is the finding above.
+
+One store, not two, and deliberately: `SumItem` carries its own `op`, the
+anti-repeat guard reads the last entry whatever its op, and `sumHeld` +
+`history[idx]` then hand back the SAME take-away she walked away from with no
+further work. Two stores would need two held bits and would let an X flip a
+subtraction into an addition — the exact skip `deal.ts` exists to prevent.
+
+## What A2 left on the floor for A3
+
+`OverlayHost.onAttempt?` exists (`overlay.ts:85`), the tally is wired
+(`overlay.ts:341`), and **`main.ts` passes no handler**. Every attempt Juno has
+made since A2 landed has been computed correctly and dropped on the floor. That
+is by design — A2's ledger note says the sink is optional *"because A3 owns
+`recordAttempt` and has not landed"* — but it means A3's wiring is one line at
+the host literal (`main.ts:1620`) plus the harness behind it.
+
+## Where the level is pinned — confirmed, and it is worse than one line
+
+`main.ts:923` for reading (`level: 1`, a literal inside the deps object) and
+`main.ts:932` for sums (`dealSum(sumStore, defaultRng, 1, state.sumHeld)`, a
+literal argument). Both are single expressions, so both are clean replacements.
+Note `level: 1` on the reading side is doing real work: `generateRead` level 2
+is the ALIEN generator (`read.ts:29`) and `generateBuild` level 2 likewise
+(`build.ts:25`). The no-aliens ruling and A4's *"reading [1] · building [1]"*
+are therefore the same fact — those two paths have exactly one dealable stage
+each, and the tickbox for them is a capability switch with no ladder behind it.
+
+## Schema v3 slots in cleanly
+
+`envelope.ts` already has the machinery: `SCHEMA_VERSION = 2`, a `MIGRATIONS`
+map keyed by from-version, and `migrate()` that walks one step at a time with
+the explicit comment that *"adding v3 means writing one function and adding one
+entry"*. A5 is that function. The island payload (`save.ts`) has no version of
+its own and does not need one.
+
+**But the spec's migration is wrong and would break every existing island.**
+A5 says *"existing saves get sums 1 ticked, everything else honest zeroes."*
+Read as written — nothing ticked but sums 1 — a migrated save cannot deal a
+reading page at all, so the egg never hatches and Juno's island stops paying
+her for reading overnight. The honest migration is *what this island already
+deals*: `sums 1`, `reading 1`, `building 1` ticked, `takingAway` none. "Honest
+zeroes" then applies where it was surely meant — to the STATS (attempts, EWMA,
+rings, sessions), which must not be invented for work nobody has watched. Taken
+as a mechanical correction rather than a ruling, because the spec's own A4 line
+lists `reading [1]` and `building [1]` as Run A stages and the alternative is a
+regression no one asked for. Flagged here rather than done quietly.
+
+## Mechanical calls made at the survey (no ruling needed)
+
+- **A tickbox is a capability, the mix is a preference.** Where the two
+  disagree — `building` unticked but the page index says `build` — the tickbox
+  wins and the mix chooses among what is left. The other way round would let a
+  data file overrule a parent's statement that his daughter cannot do a thing.
+- **`noteRescue(path)` is in-session only**, as specced, so it is a plain
+  closure variable. A5 persists `rescues` per stage from the attempt events;
+  those are different facts and the ring in the save is the one A6 reads.
+- **The Run B declarations ship inert**, with tests asserting inertness:
+  `probeWanted` false, `offerDue` false, `noteOffer` a no-op that records
+  nothing. Declared now so B's shape is pinned while A4–A6 are built against it.
+
+## Open questions — Joe's call, not mine (JT-010)
+
+1. **How much taking-away?** Once `takingAway 1` is ticked beside `sums 1`,
+   what share of maths rounds are take-aways? The spec says *"selection draws
+   uniformly across ticked stages"*, which answers it arithmetically and has a
+   consequence worth seeing before it ships: the share drifts as a side effect
+   of unrelated ticks — ticking `sums 2` later would silently cut subtraction
+   from a half to a third. A fixed mix in `balance.json`, the way reading
+   already has one, would hold the ratio still.
+2. **The reading mix — `PB-038` forced open.** A3 rebuilds the deal path, so it
+   must land on one. The data says `find, build, build, build` — one find page
+   in four. A7's unit re-base means she has actually been getting one in two.
+   Neither was chosen; the tickboxes make it sharper still, because `reading`
+   and `building` become independently switchable.
+3. **Can a parent empty a path?** Untick every stage of `sums` and
+   `takingAway` and tapping a plot has nothing to deal; untick `reading` and
+   `building` and the egg cannot hatch. Forbid the last untick, or allow it and
+   have the island quietly decline the round?
+
+---
+
 # LEDGER (updated on every field report)
 | Item | State |
 |---|---|

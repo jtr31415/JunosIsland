@@ -120,6 +120,20 @@
       "doneRule": "manual",
       "note": "we go with C) nothing changes, she does the page again. if it flags in play test, i will bring it back, but close after implementation for now.",
       "state": "done"
+    },
+    {
+      "id": "JT-010",
+      "type": "ruling",
+      "title": "Three rulings the harness needs (A3) — how much of each thing she gets",
+      "detail": "The A3 survey found one thing the spec does not cover, and it turns out to be the same question twice. The harness is keyed by PATH - levelFor('sums'), levelFor('reading') - but the island has only TWO ways into a challenge and each of them covers two paths: tapping a plot could be sums or takingAway, tapping the egg could be reading (find a word) or building (make one from letters). So before the harness can pick a STAGE, something has to pick the PATH, and that is the knob that decides what she actually plays. The reading half already has an answer sitting in balance.json that nobody chose; the maths half has no answer anywhere, because taking-away has never once been dealt on the island. Worth knowing before you answer: subtraction is entirely BUILT - the generator is ported with all three levels, the sum page already paints the minus sign and marks it correctly. Nothing is missing but the choice. Full reasoning in docs/pet-island-runA.md, FIELD NOTES - A3. (1) HOW MUCH TAKING-AWAY? You hand-tick takingAway 1 next to sums 1 (that is JT-007). What share of her maths is then take-aways? The spec says draw evenly across every ticked stage, which gives a half - but the share then DRIFTS as a side effect of unrelated ticks: the day you tick sums 2 as well, subtraction quietly drops from a half to a third, because it is one stage in three rather than one in two. The alternative is a fixed ratio in balance.json, the way reading already has one, which holds still no matter what else you tick. (2) THE READING MIX - this is PB-038 and A3 forces it open, because A3 rebuilds the very line the bug lives on. balance.json says find, build, build, build - one find page in four. Since A7 re-based the currency she has actually been getting one in two. Nobody chose either. Which do you want: one find in four as written, one in two as played, or something else? (3) CAN A PARENT EMPTY A PATH? Untick every maths stage and tapping a plot has nothing to deal; untick reading AND building and the egg can never hatch. Two ways: refuse the last untick (the panel simply will not let you), or allow it and have the island quietly stop offering that kind of round - no error, no child-facing anything, the egg just sits there. The second is more honest to 'untick is a parent's hand, not a demotion'; the first cannot be walked into by accident. Answer in the note and the build reads it, exactly as JT-008 and JT-009 did.",
+      "blocks": [
+        "A3.select",
+        "A4.untick",
+        "PB-038"
+      ],
+      "doneRule": "manual",
+      "note": "",
+      "state": "open"
     }
   ],
   "archive": []
