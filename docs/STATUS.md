@@ -19,7 +19,52 @@ verdict outranks every document here (brief §18), and the notes below marked
 
 ---
 
-## LATEST — 28 July, evening. Run A is measuring, and subtraction is dealt.
+## LATEST — 28 July, late. Run A is BUILT, and the panel is waiting for Joe.
+
+**Every item of Run A is now built: A1–A8.** The ledger in
+`docs/pet-island-runA.md` remains authoritative; this is the summary.
+
+- **A4 · A6 — the panel.** Grown-ups → **What she is working on**. Per path: a
+  mode switch (Auto · Manual · Hold), a tickbox per built stage, and the three
+  measures — accuracy, speed, consistency — as filled dots with soft words
+  (settling · steady · solid). The four reserved paths are greyed slots.
+  `src/island/report.ts` computes the tiers and is pure, so the rules that
+  decide what a parent is told about his daughter are testable as rules.
+  Thresholds are in `balance.json`'s new `report` block, tunable without a
+  diff.
+- **JT-007 IS READY TO DO.** The route is gear → What she is working on →
+  Taking away → **Manual** → tick *to ten*. That is the QA department getting
+  subtraction, and nothing else is needed.
+- **A5 — the rest of persistence,** and two of its three items were faults.
+  `onceFlags` is reserved as a sibling of `attainment`, not a member, because a
+  once-flag is a presentation fact and everything else in that record is a
+  measurement. **The harness had never been given the island's clock** — so
+  A6's own two-distinct-days gate keyed off the wall clock and the debug
+  advance-day could not walk it. And `dayKey` existed twice, which is the
+  four-time-offender shape.
+- **Three honesty rules worth knowing before reading the panel.** It shows
+  DASHES, not a tier, until 15 attempts / 10 early latencies / 3 sessions — a
+  tier off four attempts is a statement about the sample. Speed is a MEDIAN
+  against her own early baseline, never a mean, because one four-minute
+  butterfly makes a mean report a child who got faster as having got slower.
+  And a tick does not appear until the write has landed.
+- **`JT-011` raised, and it is Joe's.** Manual is a persistent per-path mode
+  and Auto is the only thing that ever ticks by itself — so the path he
+  hand-ticks becomes the one path Run B's ladder will never promote. Built
+  spec-literal; the alternatives are one predicate each. It is in the
+  workbench, per A8a.
+
+Gates on the last two commits: typecheck, **1294 tests**, parity renders
+identically, smoke, channel, build. All green.
+
+**Not yet seen by eye.** The panel is tested and has never been looked at in a
+browser — `agent-browser` has been wedging on `open` for several sessions, so
+this was verified through jsdom and the gates rather than on screen. It joins
+the standing list below of things tested but unjudged.
+
+---
+
+## 28 July, evening. Run A is measuring, and subtraction is dealt.
 
 **The LEDGER in `docs/pet-island-runA.md` is authoritative for Run A** — state
 per item, plus FIELD NOTES carrying the reasoning and every ruling Joe has

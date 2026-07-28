@@ -752,6 +752,176 @@ still hatches. **Say so if you meant it literally** — it is one predicate,
 
 ---
 
+# FIELD NOTES — A4 · A6 (surveyed and BUILT, 28 Jul)
+
+A4 and A6 were built together because they are one panel: the tickboxes are
+the half a parent writes with and the report is the half he reads, and neither
+is worth opening on its own.
+
+## The survey's headline: nothing was missing from the MODEL
+
+Every statistic A6 asks for was already being recorded and persisted by A3 —
+`attempts`, the EWMA at α .15, a thirty-deep ring of correct latencies, the
+last six days, the last ten rescues (`harness.ts`, `StageStats`). A3 had also
+shipped one field the spec never asked for and A6 cannot work without:
+`early`, the first ten correct latencies, frozen once filled. The speed
+measure is *"recent correct-median vs the stage's own early-attempt
+baseline"*, and a baseline computed from a ring that keeps overwriting itself
+is not a baseline. So what A4/A6 cost was the panel, the tiers, and one
+addition to the harness — nothing had to be re-measured.
+
+## `src/island/report.ts` — the tiers are pure, and deliberately
+
+A `StageStats` in, a `StageReport` out. No DOM, no clock of its own, no
+storage. The reason to split it out rather than compute in the panel is that
+these rules decide what a parent is told about his daughter, and rules that
+decide that should be testable as rules, at the boundary, without a browser in
+the way. 35 tests do exactly that.
+
+**Median, never mean, and it is not a stylistic preference.** She gets up
+mid-question, or a butterfly goes past, and one latency comes back at four
+minutes. A mean over a ring of thirty is dragged far enough by that single
+number to report a child who has genuinely got faster as having got *slower*,
+and the parent reading it has no way to know a butterfly caused it. There is a
+test named for the butterfly: on that data the mean reports a 4,760% loss and
+the median reads `solid`.
+
+**The small-sample dashes are the honest part.** No tier at all until 15
+attempts (accuracy), 10 early latencies (speed), 3 sessions (consistency).
+A tier drawn from four attempts is a statement about the sample, and the
+person reading it would take it as a statement about a five-year-old.
+`tier: null` is therefore a first-class answer and not an error case.
+
+## Two mechanical calls, both pushed into data
+
+Neither needed a ruling and both are flagged as calls in the code:
+
+- **The spec names one speed threshold and a three-tier scale needs two.**
+  *"Settling until trend flattens ≥ 15% below baseline"* gives the middle
+  rung; `solid` at 30% is chosen.
+- **Consistency is specced as a single boolean** — *"last 3 sessions each
+  ≥ .75 AND no rescue in them AND ≥ 2 distinct days"* — so its middle rung is
+  a reading: accurate across the window but short of a second day, or accurate
+  but rescued, reads `steady`.
+
+Both live in `balance.json`'s new `report` block (`balance.json:9`) precisely
+so the first month of real use can retune them without a diff.
+
+One reading worth recording because it is a reading: *"no rescue in them"* is
+taken as the distinct DATES of the three sessions, not the wall-clock span
+between them. A rescue on a day she did no work on that stage does not count
+against her.
+
+## The panel, and the one thing it must never do
+
+`showLearning` (`grownups.ts:571`) follows the existing `panel()` /
+`askChoice` conventions exactly, and sits as the first entry of the grown-ups
+menu (`main.ts:716`). Ticking bites only in Manual, which is spec-literal and
+is JT-007's route.
+
+**Everything it changes goes through the HARNESS.** `setTicked`, `canUntick`
+and the new `setMode` (`harness.ts:304`) — never a write into `attainment`
+itself. A panel that mutated the record directly would be a second set of
+rules that has to agree with the first, including the one that refuses the
+last untick of a deal moment, which is the only thing standing between a tap
+on a plot and nothing happening. §7.2 names that shape as this project's
+repeat offender and it did not need a fourth outing.
+
+**A tick does not show until the disk holds it.** Setter, await the write,
+*then* redraw; a rejected write puts the model back and the row never lied. A
+second tap arriving inside that window is dropped.
+
+**It commits the attainment, not `commitState()`, and that is deliberate.**
+`barrier.test.ts` counts `commitState()` receipts one-for-one against
+ceremonies, because an unspent receipt there means something was awarded and
+then celebrated by hand. A panel a parent reads awards nothing and celebrates
+nothing, so it must not mint from that pool — and the receipt naming the
+attainment is the truer receipt anyway, since that is the record being saved.
+Flagged here rather than done quietly, because "I changed how it commits and
+the gate went green" is exactly the sentence that should never pass unread.
+
+## Open for Joe — JT-011, and it is invisible at the moment it bites
+
+Manual is a persistent, per-path mode, and per the spec Auto is the only thing
+that ever ticks by itself. So the path Joe reaches in to hand-tick becomes the
+one path Run B's ladder will never promote — the one he cared about most. It
+is built spec-literal, it may well be right, and it is flagged because the
+consequence is invisible at the moment of the tick and only shows up weeks
+later as a rung she is never offered. Three answers offered in the task; each
+of the other two is one predicate in the harness.
+
+---
+
+# FIELD NOTES — A5 (BUILT, 28 Jul — and two of its three items were faults)
+
+The stats half shipped with A3, because a harness is useless unpersisted and
+the two could not honestly be separated. What was left turned out to be one
+feature and two defects.
+
+## `onceFlags` — a sibling, not a member
+
+The spec reads *"`attainment: {…}` + reserved `onceFlags` space"*. It is
+built as its own top-level field on the island save (`save.ts:99`,
+`readOnceFlags` at `:136`), a sibling of `attainment` rather than a field
+inside it. A once-flag — *the ten-dot introduction has played* — is a
+presentation fact, and every other field in `Attainment` is a measurement;
+putting it there would be a category error, and it would also have rippled the
+`Attainment` type through the panel built the same evening.
+
+A list of ids rather than a boolean map, so Run C adds INTRO-TEN by writing
+one string instead of a migration.
+
+**Unknown ids are KEPT, which inverts `readAttainment`'s rule on purpose.**
+An unknown STAGE id must die at the door because it can reach a generator that
+cannot render it. A flag id reaches nothing — it is only ever compared for
+equality — and dropping one written by a later build would replay an
+introduction the child has already sat through, which is the single harm a
+once-flag exists to prevent. Preserving it *is* the sanitised behaviour.
+Bounded at 64 ids of 64 characters, because a hand-edited save may not grow
+the file without limit.
+
+Nothing reads it in Run A. That is what reserved means.
+
+## The harness never had the island's clock
+
+`createHarness(attainment)` took its default `now`, so the one calendar read
+the harness makes — which DAY an attempt's session belongs to — sat outside
+the clock the store, the visitor and the save are all wired to. The debug
+panel's advance-day moved everything *except* the records A6's consistency
+measure is computed from, so the two-distinct-days gate could not be walked
+without waiting for real midnight. `clock.ts`'s own header names that gate as
+its business. Fixed at `main.ts:326`, with a source assertion pinning the
+argument so it cannot regress to the default.
+
+## `dayKey` existed twice
+
+`harness.ts` reimplemented what `clock.ts` already exports, while `report.ts`
+imported the platform one — two implementations of a single rule with a third
+narrowly avoided. Deleted (`harness.ts:33` is now the import); every
+pre-existing session test passed unchanged, verified rather than assumed.
+
+## The two A9 obligations nobody had written
+
+- **The harness is constructed exactly once** (`barrier.test.ts:135`), by
+  source scan over all of `src/`. Two harnesses over two copies of
+  `attainment` would silently disagree, and `main.ts` is the untested glue
+  HANDOFF §5 names as the four-time offender.
+- **"Fixtures both directions"** (`save.test.ts:427`) is implemented as what
+  it honestly can be, and the test prose says so: there is no migration to
+  fixture against, so the directions are of TIME. Backwards, an old island
+  loads with `sums 1` / `reading 1` / `building 1` ticked and honest zeroes
+  throughout. Forwards — the load-bearing one, because it is the entire reason
+  there is no schema bump — a save from a later build carrying an unknown
+  stat, stage id, path, top-level field and two once-flags loads intact, keeps
+  what it understands, drops only what could reach a generator, and carries
+  the flags back out through the real store.
+
+No migration was added and `SCHEMA_VERSION` is untouched. That decision was
+taken at A3 and it stands: the bump would trade a lost report for a lost
+island.
+
+---
+
 # LEDGER (updated on every field report)
 | Item | State |
 |---|---|
@@ -759,8 +929,8 @@ still hatches. **Say so if you meant it literally** — it is one predicate,
 | **A7** | **BUILT** (28 Jul) — costs now in units at 2/item, provably invisible: `tests/island/economy.test.ts` walks a month and pins items-per-tile and items-per-egg to the pre-A7 values at every n. The spec's "×2 is exact by construction" was **false** and is corrected in FIELD NOTES; `cost()` rounds in items, and a pre-A7 save is migrated by `save.pay`. |
 | **A2** | **BUILT** (28 Jul, on JT-008's answers) — `src/island/attempts.ts` + one optional `onHelp?` dep; latency needed no dep at all (the overlay wraps its own `Speaker`). 27 unit tests on the rules, 13 wiring tests through the real renderers. Six gates green, parity renders identically. **The spec changed under it**: help no longer excludes (JT-008(2)), and the rescue exclusion goes with it having never been reachable. **JT-009 now closed** — a paused page pays nothing (see FIELD NOTES). |
 | **A3** | **BUILT** (28 Jul, on JT-010's answers) — `src/island/harness.ts`, the single choke point. `main.ts:923`'s `level: 1` and `dealSum(…, 1, …)` are gone; `deal.ts` no longer decides anything; `onAttempt` is wired, so measurement exists for the first time. **Subtraction is dealt for the first time.** 54 harness tests, `PB-038` closed with it. Six gates green, parity renders identically. |
-| **A5 (data half)** | **BUILT with A3** — `attainment` on the island save, sanitised in by `readAttainment`, defaults computed by the loader. **No schema bump**, deliberately: see FIELD NOTES — the bump would trade a lost report for a lost island. |
-| A4 · A6 | SPECCED — awaiting build. The capability MODEL is built and tested (ticks, modes, the untick guard, the stats a report reads); what is missing is the panel that shows it and the tiers that read it. JT-007 waits on A4's tickbox list. |
+| **A5** | **BUILT** — the data half with A3 (`attainment` on the island save, sanitised in by `readAttainment`); the rest on 28 Jul. `onceFlags` is reserved as a top-level SIBLING of attainment, a list of ids, unknown ids deliberately KEPT. Two defects found and fixed with it: the harness had never been given the island's clock, so A6's two-distinct-days gate keyed off the wall clock and ignored the debug day-advance; and `dayKey` existed twice. Both A9 obligations written — harness-constructed-once by source scan, and "fixtures both directions" as directions of TIME, since there is no migration to fixture against. **No schema bump, and that stands**: it would trade a lost report for a lost island. |
+| **A4 · A6** | **BUILT** (28 Jul) — one panel, first entry of the grown-ups menu: mode switch, tickbox list, and the three measures per stage as filled dots and soft words. `src/island/report.ts` is the tiers, pure and 35-tested; thresholds live in `balance.json`'s new `report` block. Dashes until 15 attempts / 10 early latencies / 3 sessions, because a tier off four attempts is a statement about the sample. Ticks bite only in Manual and go through the harness, never into `attainment`. A tick does not render until the write lands. **JT-007 is unblocked** — the route is Taking away → Manual → tick *to ten*. Two mechanical calls (the second speed threshold, consistency's middle rung) are in data, not code. **JT-011 raised**: Manual persists, so the hand-ticked path is the one Run B will never promote. |
 | **A8 Workbench** | **BUILT** (28 Jul) — `npm run workbench`. Queue, backlog, lesson editor, export, bake console, voices & key. |
 | **A8 asset viewer** | **BUILT** (28 Jul, `PB-033` closed) — `/viewer.html`. Three galleries, orbitable, searchable, every ID canonical by construction. |
 | A8a Joe-work protocol | **IN FORCE** — `joe/tasks.json`, seven tasks seeded, evidence-based Done. |
@@ -772,6 +942,7 @@ still hatches. **Say so if you meant it literally** — it is one predicate,
 | **JT-008** | **ANSWERED** (28 Jul) — the three attempt-model rulings; A2 built on them. |
 | **JT-010** | **ANSWERED and CLOSED** (28 Jul) — the share of maths stays by tick; the reading mix is 3 build to 1 find (`PB-038` was real); the last tick of a deal moment is protected. A3 built on all three. |
 | **JT-009** | **ANSWERED and CLOSED** (28 Jul) — reading (c), a paused page pays nothing and she does it again. Zero lines to build; three tests to pin. `PB-041` parks reading (b), resume, against Joe's *"if it flags in play test, i will bring it back"*. |
+| **JT-011** | **OPEN** (28 Jul, raised by A4) — what does Manual mean once it has been used? It is a persistent per-path mode and Auto is the only thing that ever ticks by itself, so the path Joe hand-ticks is the one Run B's ladder will never promote. Built spec-literal as (a) leave it; (b) snap back to Auto on close and (c) Manual-is-additive are one predicate each. **Shapes Run B.** |
 | Product Backlog | Seeded, now 41 cards, `PB-001…PB-041` (`PB-036` and `PB-039` Joe's own, `PB-037` Fred-talk has no way in, `PB-038` the A7 page-mix regression, `PB-040` re-done pages are re-measured, `PB-041` resume, parked by ruling). Awaiting Joe's triage. |
 | Superseded docs | `pet-island-phase4-1-spec.md` (rulings changed) |
 
