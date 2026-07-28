@@ -934,7 +934,7 @@ island.
 | **A8 Workbench** | **BUILT** (28 Jul) — `npm run workbench`. Queue, backlog, lesson editor, export, bake console, voices & key. |
 | **A8 asset viewer** | **BUILT** (28 Jul, `PB-033` closed) — `/viewer.html`. Three galleries, orbitable, searchable, every ID canonical by construction. |
 | A8a Joe-work protocol | **IN FORCE** — `joe/tasks.json`, seven tasks seeded, evidence-based Done. |
-| A9 | Partial — workbench round-trip test green, `npm run channel` extended both ways. The rest lands with A1–A7. |
+| A9 | **Tests done; the review is not.** Every test A9 names now exists: attempt-model per page type, harness single-instance by source scan, B-inertness, migration fixtures (as directions of time), the month-walk economy assertion, tier computation including the small-sample dashes, the workbench round-trip, `npm run channel` both ways. Six gates green on every commit of the run. **What is outstanding is the Fable-5 review**, with A9's own attack orders: attempt exclusions, tick-persistence token, re-base maths, workbench file-write safety, B-inertness. |
 | Run B | Context-specced; blocked on Run A |
 | Run C | Context-specced; lessons blocked on Joe #1–3 |
 | Run D | Context-specced; rungs blocked on Joe #4–5 |
