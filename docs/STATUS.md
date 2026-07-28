@@ -19,10 +19,61 @@ verdict outranks every document here (brief §18), and the notes below marked
 
 ---
 
-## LATEST — 28 July, late. Run A is BUILT, and the panel is waiting for Joe.
+## START HERE — 28 July, late. Run A is BUILT and SHIPPED.
 
-**Every item of Run A is now built: A1–A8.** The ledger in
-`docs/pet-island-runA.md` remains authoritative; this is the summary.
+*Written as a handoff. `docs/HANDOFF.md` is still how to work on this without
+breaking it; the ledger in `docs/pet-island-runA.md` is still authoritative for
+Run A. This is where the next session picks up.*
+
+**It is on Juno's tablet.** `main` was pushed at `29bb22b` and CI deployed it —
+the first deploy since before Run A began, **twenty commits in one go**. The
+live bundle was checked, not assumed: it contains the new panel. There is still
+no `v*` tag, so production continues to fall back to `main` and every future
+push lands on her device with no release step in between.
+
+### The four things to pick up, in the order they are ready
+
+1. **`PB-042` — the governors' hard stop becomes a PRICE.** Joe's JT-012 ruling
+   re-shapes it and the **build is explicitly held by him** until it is picked
+   up. Invitation first, she may override, and past the buffer the thing she is
+   over-buying gets progressively dearer — announced, never a silent tax.
+   **Three numbers must be settled with Joe before any code**, and they are on
+   the card: (1) his target of **one animal per two tiles** contradicts
+   `balance.json`'s `tilesPerPet: 1.5`, which is his own earlier ruling and what
+   PB-039 just shipped against; (2) *"a buffer to 2:3 either way"* needs writing
+   out as two explicit ratios; (3) the escalation curve needs a shape and a cap.
+   Note `17ad266` established the cost curves are the wrong place to look for
+   the equilibrium — but a deliberate divergence between `egg` and `tile` is
+   exactly what this ruling asks for, which has never been true before.
+2. **A9's Fable-5 review** — the only unfinished piece of Run A. Every test A9
+   names now exists; the review does not. Its attack orders, from the spec:
+   attempt exclusions, the tick-persistence token, the re-base maths, workbench
+   file-write safety (path-jailed to repo), B-inertness.
+3. **Run B** — automatic progression, context-specced in `pet-island-runA.md`.
+   It inherits one hard constraint from JT-011: **it must not promote a path
+   whose mode is Manual.**
+4. **`JT-007` is Joe's own and is now doable on the tablet** — gear → What she
+   is working on → Taking away → Manual → tick *to ten*. Nothing is blocked on
+   it; it is the QA department getting subtraction.
+
+### What landed tonight
+
+`1025aad` A4·A6 · `21355ba` A5 · `29bb22b` PB-039, plus the docs commits
+between them. **1303 tests**, up from 1218 at the start of the session. Six
+gates green on every commit; parity renders identically throughout.
+
+**`PB-039` — the other end of the balance is a ratio too.** Joe's own card. The
+floor was `1.5·pets − 3`, an absolute shortfall measured off the ceiling's
+target, so it converged on 1.5 tiles per pet from below: at ten pets she was
+pushed to maths the moment she dropped under twelve fields. It is now bound to
+the land she HAS — `petsHoused`, three animals per two tiles — which moves that
+wall from thirteen fields to seven at ten pets and keeps it near two-thirds
+however large the island grows. The ceiling is untouched, deliberately. The
+fault survived the matching fix at the other wall because the entire ratio
+property suite was written against a `ceiling()` helper and there was no
+`floor()`; there is now.
+
+**Every item of Run A is built: A1–A8.** The summary of the rest follows.
 
 - **A4 · A6 — the panel.** Grown-ups → **What she is working on**. Per path: a
   mode switch (Auto · Manual · Hold), a tickbox per built stage, and the three
@@ -55,8 +106,9 @@ verdict outranks every document here (brief §18), and the notes below marked
   and returning one to Auto is a deliberate act. No code changed; it is a
   decision now instead of a default.
 
-Gates on the last two commits: typecheck, **1294 tests**, parity renders
-identically, smoke, channel, build. All green.
+Gates on every commit of this session: typecheck, tests (1218 → **1303**),
+parity renders identically, smoke, channel, build. All green, and CI green on
+the push.
 
 **SEEN BY EYE and passed.** Joe, 28 July, having run it locally: *"the parent
 panel checks out green locally."* That retires the caveat this section carried
