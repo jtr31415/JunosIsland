@@ -8,6 +8,19 @@
  * Three rules make them acceptable under the guardrails:
  *   1. They are INVITATIONS, never lockouts. Nothing greys out; Fred asks for
  *      the other thing instead, and the child may ignore him.
+ *
+ *      THIS SENTENCE USED TO BE HALF FALSE, and PB-042 is the card that caught
+ *      it. `activeGovernor` answered honestly, but both call sites in
+ *      `interactions.ts` invited and then returned the flow unchanged — so
+ *      nothing greyed out, nothing was taken away, and the tap could be
+ *      repeated forever, yet the round she asked for never opened. Ignoring
+ *      Fred was the one thing she could not do. Joe found it deployed, with
+ *      Juno on it: *"erroneously forcing tile building"*.
+ *      The override lives in `invite()` in `main.ts` and is asserted in
+ *      `tests/island/interactions.test.ts`: Fred asks once, and the next tap
+ *      on the same thing goes through. This file decides WHEN he asks; it has
+ *      never been the thing that refused, and now nothing is.
+
  *   2. They are SYMMETRIC. Too much land pauses land; too many waiting pets
  *      pauses eggs. Neither half is privileged.
  *   3. They never fire in the first ten minutes, because a child still

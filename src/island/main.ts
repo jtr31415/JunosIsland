@@ -1695,13 +1695,36 @@ async function boot(): Promise<void> {
    * A governor never blocks a tap — it answers it with Fred asking for the
    * other half of the loop instead (slice-1 spec §5). The child can ignore
    * him and tap again; nothing is greyed out and nothing is refused twice.
+   *
+   * AND NOW THAT SENTENCE IS TRUE. `asked` is Fred's memory of the last thing
+   * he asked for, and it is the whole of the override: the first tap spends
+   * itself on hearing him, the very next tap on the same thing returns `'again'`
+   * and `interactions.ts` opens the round regardless. PB-042/JT-012 — Joe:
+   * *"it should start with invitation first, then let the user run with whatever
+   * they want to do."*
+   *
+   * IT CLEARS ITSELF ON THE OVERRIDE, which is deliberate and not laziness. If
+   * the memory persisted, she would be asked once in a session and silently
+   * waved through forever after — a silent tax, and Joe asked for an
+   * announcement. Clearing it means every single override is preceded by Fred
+   * saying why, and costs exactly one extra tap. Ask, override, ask, override.
+   *
+   * The wriggle-break is NOT a governor and is exempt: it reads the child, not
+   * the island, there is nothing to override, and `offerAStretch` would fall
+   * silent on two consecutive offers if it shared this memory.
    */
-  function invite(which: Nudge): void {
+  let asked: Nudge | null = null
+  function invite(which: Nudge): 'asked' | 'again' {
+    if (which !== 'wriggle-break') {
+      if (asked === which) { asked = null; return 'again' }
+      asked = which
+    }
     const line = GOVERNOR_LINE[which]
     overlay.say(line)
     speech.speak(line)
     fred.talk(2.6)
     fred.hop()
+    return 'asked'
   }
 
   /**

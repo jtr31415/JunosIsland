@@ -1,4 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import {
   handleWorldTap, handleChallengePassed, handleChallengeDismissed,
 } from '../../src/island/interactions'
@@ -10,12 +13,30 @@ import {
 import type { Flow } from '../../src/island/flow'
 import { count } from '../../src/island/world/grid'
 
+/**
+ * A FAITHFUL `invite`, not a stub that always says the same thing.
+ *
+ * The real one in `main.ts` remembers the last thing Fred asked for and clears
+ * that memory the moment she overrides it, so the sequence is ask, override,
+ * ask, override. A `vi.fn()` returning `undefined` would make every tap an
+ * override and every one of these tests pass for the wrong reason — which is
+ * HANDOFF §5, the mock that hid four dead features. Assert the contract.
+ */
+function askOnce() {
+  let asked: string | null = null
+  return vi.fn((which: 'space-surplus' | 'nursery-queue'): 'asked' | 'again' => {
+    if (asked === which) { asked = null; return 'again' }
+    asked = which
+    return 'asked'
+  })
+}
+
 function ports(over: Partial<InteractionPorts> = {}): InteractionPorts {
   return {
     challengeOpen: () => false,
     eggsPaused: () => false,
     landPaused: () => false,
-    invite: vi.fn(),
+    invite: askOnce(),
     storyPlaying: () => false,
     openRead: vi.fn(),
     openSum: vi.fn(),
@@ -269,7 +290,7 @@ describe('tapping a socket', () => {
     expect(p.say).toHaveBeenCalled()
   })
 
-  it('respects the land governor when asked from a socket', () => {
+  it('lets the land governor have its say before building', () => {
     // The governor guards the path that STARTS new land, and that path moved.
     const p = ports()
     p.landPaused = vi.fn(() => true)
@@ -504,6 +525,101 @@ describe('a governor diverts a tap, it never strands one', () => {
     expect(next.phase).toBe('free')
     expect(p.invite).toHaveBeenCalledWith('space-surplus')
   })
+})
+
+/*
+ * PB-042 / JT-012 — THE OVERRIDE. The half of rule 1 that was never true.
+ *
+ * Joe: *"it should start with invitation first, then let the user run with
+ * whatever they want to do up to a point."* He found the missing half deployed,
+ * with a six-year-old on it: *"erroneously forcing tile building"*. Fred asking
+ * and then refusing forever is a lockout with a warm line on it.
+ *
+ * The tap that overrides is a SECOND tap on the SAME thing, so the ask is never
+ * skipped and the override is never silent — Joe asked for an announcement, and
+ * this is how it stays one.
+ */
+describe('she can ignore Fred and go ahead anyway', () => {
+  it('opens the egg on the second tap even while the nursery is queued', () => {
+    const p = ports({ eggsPaused: () => true })
+    const before = createFlow()
+
+    const first = handleWorldTap(before, { kind: 'egg' }, p)
+    expect(first).toBe(before)                    // the ask spends the first tap
+    expect(p.openRead).not.toHaveBeenCalled()
+
+    const second = handleWorldTap(first, { kind: 'egg' }, p)
+    expect(second).not.toBe(first)                // ...and the second overrides
+    expect(second.phase).toBe('challenge')
+    expect(second.challenge).toBe('read')
+    expect(p.openRead).toHaveBeenCalledOnce()
+  })
+
+  it('starts land on the second tap even while there is spare land', () => {
+    const p = ports({ landPaused: () => true })
+    const before = createFlow()
+
+    const first = handleWorldTap(before, { kind: 'socket', axial: { q: 1, r: 0 } }, p)
+    expect(first).toBe(before)
+    expect(p.openSum).not.toHaveBeenCalled()
+
+    const second = handleWorldTap(first, { kind: 'socket', axial: { q: 1, r: 0 } }, p)
+    expect(second).not.toBe(first)
+    expect(second.phase).toBe('placing')
+  })
+
+  it('asks again next time rather than waving her through in silence', () => {
+    /*
+     * The memory clears ON the override, so every override costs one tap and
+     * comes with Fred's line. A memory that persisted would make the second and
+     * every later override SILENT, which is the silent tax Joe ruled out.
+     */
+    const p = ports({ eggsPaused: () => true })
+    let f = createFlow()
+    for (let round = 0; round < 3; round++) {
+      const asked = handleWorldTap(f, { kind: 'egg' }, p)
+      expect(asked).toBe(f)                       // asked, every single round
+      f = handleWorldTap(asked, { kind: 'egg' }, p)
+      expect(f.phase).toBe('challenge')           // and overridden, every round
+      f = { ...f, phase: 'free', challenge: null }
+    }
+    expect(p.invite).toHaveBeenCalledTimes(6)
+  })
+
+  it('does not let one governor unlock the other', () => {
+    /*
+     * Fred's memory is keyed on WHICH thing he asked for. Tapping the egg then
+     * the socket must not count as "she tapped twice"; each ask is overridden
+     * only by a repeat of itself.
+     */
+    const p = ports({ eggsPaused: () => true, landPaused: () => true })
+    const f = createFlow()
+    const afterEgg = handleWorldTap(f, { kind: 'egg' }, p)
+    const afterSocket = handleWorldTap(afterEgg, { kind: 'socket', axial: { q: 1, r: 0 } }, p)
+    expect(afterSocket).toBe(f)                   // an ask, not an override
+    expect(p.openSum).not.toHaveBeenCalled()
+  })
+
+  it('is wired that way in main.ts, not only in the mock', () => {
+    /*
+     * `askOnce` above is a faithful copy of the real port, but a faithful copy
+     * is still a copy — HANDOFF §5 is four dead features shipped because a mock
+     * was asserted. `main.ts` needs a browser to run, so the real `invite` is
+     * pinned by its source, exactly as the wriggle-break delivery is in
+     * `stretch.test.ts`. If someone reverts it to `void`, this fails.
+     */
+    const here = dirname(fileURLToPath(import.meta.url))
+    const main = readFileSync(resolve(here, '../../src/island/main.ts'), 'utf8')
+    const body = main.slice(main.indexOf('function invite(which: Nudge)'))
+    const impl = body.slice(0, body.indexOf('\n  }'))
+    expect(impl).toContain("'asked' | 'again'")     // it reports, it does not just do
+    expect(impl).toContain("return 'again'")        // ...and the override is real
+    expect(impl).toContain('asked = null')          // ...and it clears, so Fred asks again
+    expect(impl).toContain("which !== 'wriggle-break'")  // the break is exempt
+  })
+})
+
+describe('a governor diverts a tap, it never strands one (continued)', () => {
 
   it('never pauses a plot that is already under construction', () => {
     // §5: work in progress always finishes. The pause is on STARTING land.

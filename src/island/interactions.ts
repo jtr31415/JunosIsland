@@ -49,8 +49,24 @@ export interface InteractionPorts {
    */
   eggsPaused(f: Flow): boolean
   landPaused(f: Flow): boolean
-  /** Fred asks for the other thing instead. Never a lockout. */
-  invite(which: 'space-surplus' | 'nursery-queue'): void
+  /**
+   * Fred asks for the other thing instead — and she may say no.
+   *
+   * Returns `'asked'` the first time, when Fred has just spoken and the tap is
+   * spent on hearing him; `'again'` when she has tapped the same thing straight
+   * back, which is her overriding him, and the caller must then let the round
+   * open exactly as if no governor existed.
+   *
+   * PB-042/JT-012: the ask is real, the refusal is not. Before this, both call
+   * sites invited and returned the flow unchanged forever, so "the child may
+   * ignore him" was the one thing she could not do. Joe found it in the wild
+   * with a six-year-old on it: *"erroneously forcing tile building"*. An
+   * invitation she cannot decline is a lockout with a warm line on it.
+   *
+   * On `'again'` Fred says NOTHING, deliberately: the round is about to speak
+   * its own prompt, and speech cancels speech (HANDOFF §5).
+   */
+  invite(which: 'space-surplus' | 'nursery-queue'): 'asked' | 'again'
   /** Fred hops and says his name, like any other friend. */
   greetFred(): void
   bouncePet(id: string): void
@@ -81,7 +97,8 @@ export function handleWorldTap(flow: Flow, hit: Hit | null, p: InteractionPorts)
   switch (hit.kind) {
     case 'egg': {
       // Reading hatches eggs (brief section 4).
-      if (p.eggsPaused(flow)) { p.invite('nursery-queue'); return flow }
+      // Fred may ask her to build instead — once. Tap again and the egg opens.
+      if (p.eggsPaused(flow) && p.invite('nursery-queue') === 'asked') return flow
       const next = tapEgg(flow)
       if (next === flow) return flow          // wrong phase: do nothing, loudly
       p.openRead(next)
@@ -138,7 +155,10 @@ export function handleWorldTap(flow: Flow, hit: Hit | null, p: InteractionPorts)
        * be visible before she has already started.
        */
       if (flow.phase !== 'placing' || !flow.chosen) {
-        if (!flow.plot && p.landPaused(flow)) { p.invite('space-surplus'); return flow }
+        // As with the egg: Fred asks once, and a second tap builds anyway.
+        if (!flow.plot && p.landPaused(flow) && p.invite('space-surplus') === 'asked') {
+          return flow
+        }
         const asked = askForLand(flow, hit.axial)
         if (asked === flow) return flow
         if (asked.phase === 'challenge') p.openSum(asked)
