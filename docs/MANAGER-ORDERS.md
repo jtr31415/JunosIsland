@@ -74,7 +74,44 @@ handoff.
    per-level generator *behaviour*, and `parity.mjs` drives v0's own level
    switch, so adaptive **selection** must live in the island layer and never in
    `src/core/`.
-3. **The rest of the backlog**, highest value first, skipping anything the
+3. **When the last B slice lands, STOP BUILDING AND UPDATE THE BACKLOG.** Joe's
+   instruction, 29 July: *"once all B run items are done, hold the work and
+   update the PB."* This is a real queue item, not housekeeping to squeeze in.
+   Reconcile `joe/backlog.json` and `docs/BACKLOG.md` against what B1–B3
+   actually shipped: close what is done, correct what is now wrong, and delete
+   claims that the code has outgrown. A backlog that describes a build from
+   three days ago is how work gets done twice. Commit it alone as
+   `data(backlog):`.
+
+4. **PB-036 — themed animal collections.** Joe's own card, and he has given the
+   requirement in one sentence: *"i cannot run out of animal rewards."* That is
+   the acceptance test. The reward supply must not be exhaustible by a child who
+   keeps playing.
+
+   **He is providing the list of animals himself, and it does not exist yet.**
+   So do not invent species, and do not let a subagent quietly generate a
+   plausible list — a guessed list is worse than no list, because it looks like
+   a decision that was made. Build everything that does not depend on knowing
+   the names: the collection data shape, the set/variant machinery, generation
+   and caching, the unlock ladder, the tests, and a small seeded sample so the
+   machinery can be exercised. Then say plainly in the handoff that the list is
+   the blocker and what shape it needs to arrive in.
+
+   **His review of this will likely happen OUTSIDE this drumbeat**, in a session
+   of his own: *"lots of manual review work that i may do in a separate
+   session."* Design for that. His review must be resumable, must not require a
+   manager to be running, and must not be a wall of prose — it belongs in the
+   workbench, in reviewable units, the way `joe/noun-candidates.json` and
+   `joe/pairs-audit.json` already work (see JT-004 and JT-005 for the pattern he
+   has used before). Read how those are presented before you design the surface.
+
+   Two facts already measured and expensive to re-derive — read HANDOFF §6 in
+   full before designing, but especially: **a set is ONE recoloured atlas**, not
+   a per-variant texture, because every species shares a single material; and
+   **set textures are cached and detached, never disposed**, because disposing
+   one breaks every pet of that set including ones she already owns (brief §19).
+
+5. **The rest of the backlog**, highest value first, skipping anything the
    backlog marks as waiting on Joe.
 
 ---
