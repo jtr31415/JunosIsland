@@ -41,7 +41,7 @@
  *     boundary is the plane `y = at` across every face and every chamfer, dead
  *     level, whatever the tessellation underneath it. Kenney could not do that:
  *     his boundary has to follow triangle edges, and the tiger's own belly line
- *     wanders over 0.067 of its hull height as a result (see `assembled.ts`).
+ *     wanders over 0.067 of its hull height as a result (see `assembled/animal-squirrel.ts`).
  *   - **It costs no vertices except on the seam.** The weld key carries the uv,
  *     so a patched part splits a vertex only where two rows actually meet.
  *   - **`SLOT_PX` is 16 because the pack is authored on a 1/16 grid.** Sixteen
@@ -127,7 +127,7 @@ function splitRow(slot: string, s: SlotSplit): number {
  * original UVs away and writes `slotUv()` on every corner — so what a lifted
  * part's triangles ARE is carried, and what colour they were is not. The eye
  * card arrives already split into sclera and pupil (bands 3 and 15), and then
- * `assembled.ts` said `pupil: 0x000000`, a number nobody measured. §4 says we
+ * the species records said `pupil: 0x000000`, a number nobody measured. §4 says we
  * own the texture; owning it means we are answerable for every colour in it.
  *
  * So this is measured off the real files rather than picked: 544 eye-card

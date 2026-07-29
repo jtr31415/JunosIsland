@@ -1,11 +1,16 @@
 /**
- * The assembled squirrel, checked against the bank and the pack it claims to be
- * made of.
+ * The assembled squirrel — what is true of THIS animal and nothing else.
  *
- * The hedgehog proved repeat-and-sink. This animal exists to prove the other
- * half (`docs/building-animals-from-parts.md` §6), so the assertions that matter
- * are the ones about those two things and nothing here asserts that a function
- * was called:
+ * The eight invariants every assembled species carries are `assertAssembly` in
+ * `assembly-assert.ts`, called once below: one mass, lineage back to the bank,
+ * the absolute eye card, no transform on a placed node, rule 9's budgets, the
+ * detached texture, the measured pupil, the leg row, and the height band checked
+ * first. They were four hundred lines of the hedgehog's file and two hundred of
+ * this one, re-derived, and about to be re-derived eleven more times.
+ *
+ * The hedgehog proved repeat-and-sink. This animal exists to prove the other half
+ * (`docs/building-animals-from-parts.md` §6), so the assertions left here are the
+ * ones about those two things, and nothing asserts that a function was called:
  *
  *   1. THE TAIL WAS FOUND BY MEASUREMENT. `BRUSH_QUERY` names no species, no
  *      role and no form, and this file pins what it returns — three shapes out
@@ -25,20 +30,41 @@
  *      the eye card each land on the offset the pack recorded for that shape.
  *      Where that is a recovery rather than a copy — the ear — the recovery is
  *      what is asserted, because it is evidence and the copy would not be.
- *   5. NOTHING IS AUTHORED, AND NOTHING IS PLACED WITH A TRANSFORM. Same two
- *      guards the hedgehog carries, because they are the two that scrapped 72
- *      animals and 133 nodes between them.
  */
 import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
 import {
   assembledSpecies, buildAssembled, buildAssembly, findShapes, BRUSH_QUERY,
-  SQUIRREL_ASSEMBLY, PACK_PUPIL, SLOT_PX, SLOT_W, patchUv, type AssemblyBuild,
+  SQUIRREL_ASSEMBLY, PACK_PUPIL, SLOT_PX, SLOT_W, patchUv, EYE_CARD_Z,
+  type AssemblyBuild,
 } from '../../src/island/species/parts'
 import { PARTS_BANK, partById, type BakedPart }
   from '../../src/island/species/parts/bank.generated'
 import { GARDEN_SPECIES } from '../../src/island/species/collections/garden'
-import { SPECIES_NAMES, SPECIES_COLLECTION } from '../../src/island/species/roster'
+import { SPECIES_NAMES } from '../../src/island/species/roster'
+import { assertAssembly } from './assembly-assert'
+
+/* ------------------------------------------------------ the shared floor --- */
+
+/**
+ * Every invariant the method has, on this animal. Unlike the hedgehog it strains
+ * none of the budgets, so there is nothing to declare.
+ */
+assertAssembly({
+  id: 'animal-squirrel',
+  parts: ['box-01', 'box-03', 'box-23', 'cone-01', 'plate-01', 'tube-01', 'wedge-06'],
+  height: 1.9763,
+  verts: 452,
+  tris: 597,
+  // The tail is the biggest thing after the hull — it is meant to be — but a
+  // squirrel is not two bodies. The 72 were scrapped for a head box beside a body
+  // box at roughly a quarter of its volume; this is under a third of it and it is
+  // not on the neck. `assertAssembly` also checks the exact guard that catches
+  // the real fault: no feature wears a shape the pack used as a hull.
+  massRatio: 3,
+  // One spun feature, and it is the whole silhouette.
+  spinsAtLeast: 1,
+})
 
 /* ---------------------------------------------------------------- tools --- */
 
@@ -119,18 +145,13 @@ const thinnest = (p: BakedPart): number => Math.min(...p.size)
 /* ------------------------------------------------------------- the mass --- */
 
 describe('the assembled squirrel is ONE mass, and it is cubic', () => {
-  it('has one hull, and the tail is a detail on it rather than a second body', () => {
-    const g = build()
-    expect(meshesOf(g).filter(m => m.userData['role'] === 'hull')).toHaveLength(1)
-    const hull = worldBox(g.getObjectByName('hull')!).getSize(new THREE.Vector3())
-    const tail = worldBox(named(g, 'tail')[0]!).getSize(new THREE.Vector3())
-    // The tail is the biggest thing after the hull — it is meant to be — but a
-    // squirrel is not two bodies. The 72 were scrapped for a head box beside a
-    // body box at roughly a quarter of its volume; this is a fifth of it and it
-    // is not on the neck.
-    const ratio = (hull.x * hull.y * hull.z) / (tail.x * tail.y * tail.z)
-    expect(ratio).toBeGreaterThan(3)
+  it('carries exactly one tail, and it is a detail rather than a second body', () => {
     expect(SQUIRREL_ASSEMBLY.features.filter(f => f.name === 'tail')).toHaveLength(1)
+    // `box-23` is filed `tail`, never `hull` — which is the exact statement
+    // `assertAssembly` makes about the fault that scrapped the 72, and the
+    // reason a raised tail a third of the hull's volume is not that fault.
+    expect(partById('box-23')!.roles).toContain('tail')
+    expect(partById('box-23')!.roles).not.toContain('hull')
   })
 
   it('wears the authored 1.250 cube with no stretch and nothing to explain', () => {
@@ -498,23 +519,18 @@ describe('every other placement is a donor\'s own recorded number', () => {
     expect(partById('cone-06')!.shape.taper).toBe(0)
   })
 
-  it('puts the eye card at ITS OWN recorded offset, absolute and unscaled', () => {
+  it('puts the eye card at ITS OWN recorded offset, in all three axes', () => {
+    // `assertAssembly` pins z, the card's own size and the absence of any scale
+    // on every species. What is the squirrel's is that it did not CHOOSE the
+    // height: the hedgehog picked 0.95, and this lands on `plate-01`'s own
+    // recorded x and y, the one point the sixteen species that donate it share.
     const g = build()
     const card = partById('plate-01')!
-    const eyes = named(g, 'eye')
-    expect(eyes).toHaveLength(2)
-    for (const e of eyes) {
-      // z = 0.6350, standard deviation 0.0000 across all 48 cards in the pack.
-      expect(world(e).z).toBeCloseTo(0.635, 4)
+    for (const e of named(g, 'eye')) {
+      expect(world(e).z).toBeCloseTo(EYE_CARD_Z, 4)
       expect(world(e).y).toBeCloseTo(card.offset[1], 4)
       expect(Math.abs(world(e).x)).toBeCloseTo(card.offset[0], 4)
-      const s = worldBox(e).getSize(new THREE.Vector3())
-      expect(s.x).toBeCloseTo(card.size[0], 4)
-      expect(s.y).toBeCloseTo(card.size[1], 4)
-      expect(e.userData['stretch']).toEqual([1, 1, 1])
-      expect(e.userData['sink']).toBe(0)
     }
-    expect(SQUIRREL_ASSEMBLY.features.find(f => f.name === 'eye')!.stretch).toBeUndefined()
     expect(SQUIRREL_ASSEMBLY.palette['pupil']).toBe(PACK_PUPIL)
   })
 
@@ -539,52 +555,15 @@ describe('every other placement is a donor\'s own recorded number', () => {
     expect(named(g, 'tuft')).toHaveLength(2)
   })
 
-  it('stands on four legs, feet on zero, sunk into the belly', () => {
-    const g = build()
-    const legs = named(g, 'leg')
-    expect(legs).toHaveLength(4)
-    const part = partById('box-01')!
-    for (const l of legs) {
-      expect(worldBox(l).min.y).toBeCloseTo(0, 3)
-      expect(world(l).y).toBeCloseTo(part.offset[1], 4)
-      // Under the MIDDLE, not at the corners (§3, the leg note).
-      expect(Math.abs(world(l).x)).toBeLessThan(1.25 / 2)
-      expect(Math.abs(world(l).z)).toBeLessThan(1.25 / 2)
-    }
-  })
 })
 
 /* --------------------------------------------------------- the discipline --- */
 
-describe('nothing is authored and nothing is placed with a transform', () => {
-  it('matches every mesh back to the bank shape it claims', () => {
-    const g = build()
-    const found = new Set<string>()
-    for (const m of meshesOf(g)) {
-      const id = m.userData['part'] as string
-      const part = partById(id)
-      expect(part, `${m.name} claims ${id}`).toBeTruthy()
-      // Rigid-motion invariant, so a spin or a mirror cannot make a wrong shape
-      // agree: this is the SHAPE, whatever was done to it.
-      expect(fingerprint(posOf(m)), m.name).toEqual(fingerprint(referenced(part!)))
-      found.add(id)
-    }
-    expect([...found].sort())
-      .toEqual(['box-01', 'box-03', 'box-23', 'cone-01', 'plate-01', 'tube-01', 'wedge-06'])
-  })
-
-  it('leaves every node\'s quaternion identity and every scale at one', () => {
-    const g = build()
-    expect(g.scale.toArray()).toEqual([1, 1, 1])
-    expect(g.quaternion.toArray()).toEqual([0, 0, 0, 1])
-    expect(g.position.x).toBe(0)
-    expect(g.position.z).toBe(0)
-    for (const m of meshesOf(g)) {
-      expect(m.scale.toArray(), m.name).toEqual([1, 1, 1])
-      expect(m.quaternion.toArray(), m.name).toEqual([0, 0, 0, 1])
-    }
-    // Worth nothing unless something IS spun — otherwise the loop above passes
-    // for the wrong reason, and on this animal the spin is the whole silhouette.
+describe('the spin lives in the vertices, and it is the whole silhouette', () => {
+  it('spins the TAIL and nothing else', () => {
+    // `assertAssembly` checks that no node carries a rotation or a scale and
+    // that at least one feature is spun, so the check is not vacuous. Which
+    // feature is this animal's own claim: on a squirrel the spin IS the animal.
     expect(SQUIRREL_ASSEMBLY.features.filter(f => (f.spin ?? []).length > 0)
       .map(f => f.name)).toEqual(['tail'])
   })
@@ -606,34 +585,11 @@ describe('nothing is authored and nothing is placed with a transform', () => {
     expect(maxY).toBeCloseTo(was, 3)
   })
 
-  it('stays inside rule 9\'s budgets and the pack\'s height band', () => {
-    const g = build()
-    let verts = 0, tris = 0, body = 0
-    for (const m of meshesOf(g)) {
-      const n = m.geometry.getAttribute('position').count
-      verts += n
-      tris += m.geometry.getIndex()!.count / 3
-      if (m.userData['role'] !== 'leg') body += n
-    }
-    // Bodies 236-1114 verts, whole models 405-1626 verts and 422-951 tris. This
-    // one is inside all three, and unlike the hedgehog it strains none of them.
-    expect(body).toBeGreaterThanOrEqual(236)
-    expect(body).toBeLessThanOrEqual(1114)
-    expect(verts).toBeGreaterThanOrEqual(405)
-    expect(verts).toBeLessThanOrEqual(1626)
-    expect(tris).toBeGreaterThanOrEqual(422)
-    expect(tris).toBeLessThanOrEqual(951)
-    expect(tris).toBe(597)
-    expect(verts).toBe(452)
-
-    const b = worldBox(g)
-    expect(b.min.y).toBeCloseTo(0, 3)
-    const h = b.max.y - b.min.y
-    // The 24 run 1.43-2.02. This sits at 1.976, near the top, and the `flag`
-    // says so in the viewer — the tail is the animal and it is carried up.
-    expect(h).toBeGreaterThan(1.43)
-    expect(h).toBeLessThan(2.02)
-    expect(h).toBeCloseTo(1.9763, 3)
+  it('says in the viewer that it is near the top of the height band', () => {
+    // `assertAssembly` pins the band, the budgets and the exact counts. The
+    // claim here is §2's: this animal sits at 1.976 against a ceiling of 2.02
+    // because the tail is carried up, that is a decision Joe may want to take
+    // back, and the `flag` is where he reads it rather than a test file.
     expect(SQUIRREL_ASSEMBLY.flag).toMatch(/1\.98|1\.976/)
   })
 })
@@ -641,12 +597,12 @@ describe('nothing is authored and nothing is placed with a transform', () => {
 /* --------------------------------------------------------------- roster --- */
 
 describe('the roster stays the authority on names and facts', () => {
-  it('reads name and collection off the roster', () => {
+  it('reads its printed name off the roster', () => {
+    // `assertAssembly` checks the name, the collection and the flag against the
+    // roster on every species. The printed spelling is this file's own pin.
     const row = assembledSpecies().find(r => r.id === 'animal-squirrel')!
     expect(row.name).toBe(SPECIES_NAMES['animal-squirrel'])
     expect(row.name).toBe('Squirrel')
-    expect(row.collection).toBe(SPECIES_COLLECTION['animal-squirrel'])
-    expect(row.flag).toBe(SQUIRREL_ASSEMBLY.flag)
   })
 
   it('adds the assembly beside the scrapped kit build, changing nothing', () => {

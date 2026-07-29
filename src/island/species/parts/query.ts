@@ -174,7 +174,7 @@ export const SPIKE_QUERY: ShapeQuery = {
  * shapes, all of them tails: the fox's brush, the parrot's fan and the beaver's
  * paddle. Nothing else in 129 shapes is that big, that thick and rear-facing.
  * Which of the three is a squirrel's is then a measurement and not a name; see
- * `assembled.ts`.
+ * `parts/assembled/animal-squirrel.ts`.
  */
 export const BRUSH_QUERY: ShapeQuery = {
   minLongest: 0.8,

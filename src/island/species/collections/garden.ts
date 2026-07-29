@@ -47,7 +47,22 @@
  * the collection is separated rather than trusting these comments.
  */
 import { defineSpecies } from '../define'
-import { HEDGEHOG_ASSEMBLY, SQUIRREL_ASSEMBLY } from '../parts/assembled'
+/**
+ * THE ONE LINE THAT ATTACHES EVERY ASSEMBLY, AND IT IS NEVER EDITED AGAIN.
+ *
+ * Imported for its effect and not for a name. Each species file under
+ * `parts/assembled/` registers itself as it defines its build, and `defineSpecies`
+ * then picks the build up BY ID — so adding an assembled Garden species is a new
+ * file and a line in `parts/assembled/index.ts`, and nothing in this file moves.
+ * That matters here more than anywhere: every entry below is wrapped in a
+ * paragraph explaining the animal, and those paragraphs are the record.
+ *
+ * It has to be here rather than inside `define.ts` because the register is empty
+ * until the species modules are evaluated, and this import is what evaluates
+ * them. `tests/island/assembly-constants.test.ts` fails loudly if it is ever
+ * dropped as unused.
+ */
+import '../parts/assembled'
 import type { Species } from '../types'
 
 export const GARDEN_SPECIES: readonly Species[] = [
@@ -57,7 +72,8 @@ export const GARDEN_SPECIES: readonly Species[] = [
    * and §6 says the scrapped build stays on the record beside the assembled one
    * "so ... nothing he can see today disappears" until Joe rules on JT-034. So
    * the `build` below is untouched — every number in it is as it shipped — and
-   * `assembly` is added alongside. `parts/assembled.ts` holds the new one and
+   * `assembly` is attached by id off the register. `parts/assembled/animal-hedgehog.ts`
+   * holds the new one and
    * explains every measurement in it.
    *
    * The hedgehog. `spines` is what this animal IS — the kit's ridge of
@@ -80,7 +96,6 @@ export const GARDEN_SPECIES: readonly Species[] = [
       // has to be the darkest thing on the animal or the ridge disappears.
       palette: { coat: 0xb2946c, belly: 0xf4e6cc, detail: 0x6b533a, accent: 0x53412c },
     },
-    assembly: HEDGEHOG_ASSEMBLY,
   }),
 
   /*
@@ -91,7 +106,8 @@ export const GARDEN_SPECIES: readonly Species[] = [
    * It is second because it carries the half of the risk the hedgehog did not
    * (§6): a lifted TAIL, which is a separate node with its own transform, and a
    * two-tone coat whose boundary is PAINTED into the texture rather than cut
-   * into geometry. `parts/assembled.ts` shows every measurement behind it. The
+   * into geometry. `parts/assembled/animal-squirrel.ts` shows every measurement
+   * behind it. The
    * two comments below now describe two different animals — the kit one and the
    * assembled one — and they agree on the character: tufted ears, a bushy tail,
    * and the tallest thing in the collection (the assembly measures 1.976).
@@ -113,7 +129,6 @@ export const GARDEN_SPECIES: readonly Species[] = [
       tail: 'bushy',
       palette: { coat: 0xc4692f, belly: 0xfbf1e2, detail: 0x9c4a1e, accent: 0x6e3413 },
     },
-    assembly: SQUIRREL_ASSEMBLY,
   }),
 
   /* ---- the four small ground creatures ------------------------------------

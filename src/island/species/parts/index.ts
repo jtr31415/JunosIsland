@@ -69,7 +69,20 @@ export {
   PACK_PUPIL, PACK_SCLERA, SLOT_PX, SLOT_W,
 } from './texture'
 export type { SlotSplit, SlotSplits } from './texture'
-export { ASSEMBLED_BUILDS, HEDGEHOG_ASSEMBLY, SQUIRREL_ASSEMBLY } from './assembled'
+/**
+ * The assembled species. `export *` deliberately: `assembled/index.ts` gains one
+ * line per species and this door must not be a second place that has to be
+ * edited to see it. `ASSEMBLED_BUILDS`, `assemblyFor` and every species' own
+ * `<NAME>_ASSEMBLY` const come through here without being named twice.
+ */
+export * from './assembled'
+/** The measured facts every species build reaches for, rather than re-measuring. */
+export {
+  HULL_BOTTOM_Y, LEG_ROW, HULL_FRONT_Z, HULL_FRONT_Z_USUAL, EYE_CARD_Z,
+  PACK_HEIGHT_MIN, PACK_HEIGHT_MAX, HEIGHT_FLOOR, HEIGHT_FLOOR_MARGIN,
+  BODY_VERTS_MIN, BODY_VERTS_MAX, MODEL_VERTS_MIN, MODEL_VERTS_MAX,
+  MODEL_TRIS_MIN, MODEL_TRIS_MAX, OTHER_HULLS, hullFrontZ, hullFacts,
+} from './hulls'
 /**
  * The shapes Joe sanctioned us to author. Exported so a review surface can
  * LABEL them — a `bespoke-*` part is one he ruled on, and §9.2's discipline
