@@ -29,6 +29,14 @@ const WRITABLE = {
   notes: 'joe/asset-notes.json',
   names: 'joe/names-audit.json',
   primitives: 'joe/primitives-audit.json',
+  /*
+   * The visual editor's draft store: species DEFINITIONS Joe is making in the
+   * page, not geometry. Two writers again — he edits drafts here while the facts
+   * pipeline fills in a `fact` on the other side — so it is merged on the same
+   * terms as everything above it, and its ids are dealt server-side. See
+   * `merge.mjs MERGEABLE.edits`.
+   */
+  edits: 'joe/species-edits.json',
 }
 
 /**

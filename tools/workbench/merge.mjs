@@ -74,6 +74,11 @@ export class Refused extends Error {}
  *         redo, so the page may set one — but `idle` is the ABSENCE of a
  *         decision ('open' is what every record is born as), and an absence
  *         never unticks anything.
+ *   json  A whole object or array carried as the field's value. Judged exactly
+ *         as `text` is — a genuine two-sided disagreement is refused, never
+ *         guessed at — but compared by CONTENT rather than by identity, because
+ *         two parses of the same bytes are never `===` and a re-ordered key is
+ *         not a change. See `stable` and `nothing` for the two halves of that.
  */
 const MERGEABLE = {
   tasks: {
@@ -189,6 +194,69 @@ const MERGEABLE = {
       note: { kind: 'text' },
     },
   },
+  /*
+   * `joe/species-edits.json` — the visual editor's draft store, and the first
+   * file here whose payload is not words but a DEFINITION.
+   *
+   * A draft is one new species Joe is making in the page: what it was copied
+   * from, what collection it joins, what it is called, the fact that goes under
+   * its name, and `def` — a CreatureDef, carried as JSON. The server never looks
+   * inside `def` and must not: what a valid definition is belongs to the kits and
+   * the axioms in `src/`, which move, and a validator here would be a second
+   * opinion that quietly disagrees with the one the page actually builds against.
+   * Opaque, whole, and merged by content.
+   *
+   *   def         `json`, not `text`. It is the payload and it is an OBJECT, so
+   *               `text`'s `===` would call every save a disagreement — two
+   *               parses of the same bytes are never the same object — and 409
+   *               the page out of its own drafts. `json` compares a stable
+   *               stringify instead and then refuses a real clash exactly as
+   *               `text` does, because a lost def is a lost animal.
+   *   warnings    `json` too, for the same reason and one more: it is an ARRAY,
+   *               and `[]` is the absence of a save-time axiom check rather than
+   *               a claim that there were no warnings. `nothing` treats it as
+   *               idle, so a stale page cannot blank the warnings recorded beside
+   *               a draft an agent re-checked after it loaded.
+   *   state       `flag`, idle `'draft'`. 'draft' is what every record is born
+   *               as, so a stale page carrying it can never un-ready a draft Joe
+   *               marked ready; marking it back down is a patch, said out loud.
+   *   everything
+   *   else        `text`. `givenName` and `fact` are his own words in the most
+   *               literal sense — the fact is the sentence a six-year-old will
+   *               hear read aloud — and `speciesId`, `from`, `fromKind`,
+   *               `collection` and `factSource` are short strings whose loss is
+   *               silent rather than visible, which is the test `flag` fails.
+   *
+   * IDS ARE DEALT HERE, and that is why the counter exists: the page once dealt
+   * itself a stale one and cost a card twice (see `needsAnId`). `SD-001` upward,
+   * sticky once written, never reused — a draft that has been through the facts
+   * pipeline or landed in a commit message is referred to by that id forever.
+   *
+   * Note what the counter does NOT get here: `needsAnId`'s second signal is
+   * DIFFERENT — a disagreement about a field the page cannot edit — and this spec
+   * owns every field on the record, so that signal can never fire. It does not
+   * need to. The page deals no ids at all (`app.js` sends a draft with no `id`
+   * and the server allocates inside the request), which removes the race by
+   * construction rather than by detection; a payload record that does arrive
+   * carrying an id the file already holds is genuinely an edit of that draft.
+   */
+  edits: {
+    list: 'drafts', key: 'id',
+    owns: {
+      speciesId: { kind: 'text' },
+      from: { kind: 'text' },
+      fromKind: { kind: 'text' },
+      collection: { kind: 'text' },
+      givenName: { kind: 'text' },
+      fact: { kind: 'text' },
+      factSource: { kind: 'text' },
+      def: { kind: 'json' },
+      warnings: { kind: 'json' },
+      state: { kind: 'flag', idle: 'draft' },
+      note: { kind: 'text' },
+    },
+    counter: { field: 'nextId', prefix: 'SD-', pad: 3 },
+  },
 }
 
 /*
@@ -206,6 +274,51 @@ export const mergeable = what => Object.hasOwn(MERGEABLE, what)
 /** Nothing said. An empty string, an absent key, or the value a record is born with. */
 const idle = (v, field) => v === undefined || v === null || v === '' || v === field.idle
 
+/**
+ * A string that is the same whenever the VALUE is, whatever shape it arrived in.
+ *
+ * `JSON.stringify` alone is not that: it preserves insertion order, and a def
+ * that has been through a form, a structuredClone or another agent's rewrite
+ * carries the same fields in a different order as a matter of course. Comparing
+ * those with `===` — which is exactly right for a string, and is what `text`
+ * does — would read every such save as a two-sided disagreement and 409 Joe out
+ * of a draft he has not changed. Keys sorted at every depth, so the comparison
+ * is about what the object SAYS.
+ */
+function stable(v) {
+  if (Array.isArray(v)) return '[' + v.map(stable).join(',') + ']'
+  if (v && typeof v === 'object') {
+    return '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + stable(v[k])).join(',') + '}'
+  }
+  /* `undefined` stringifies to nothing at all, which would collide with the
+   * empty string. Say null out loud instead. */
+  return JSON.stringify(v) ?? 'null'
+}
+
+/**
+ * Nothing said, in JSON.
+ *
+ * An absent key, an empty array, an empty object — all of them are a payload
+ * that has no opinion rather than one asserting emptiness. A stale page carrying
+ * `warnings: []` never saw the check that filled them in, exactly as a stale
+ * page carrying `note: ''` never saw the note.
+ */
+const nothing = v =>
+  v === undefined || v === null || v === '' ||
+  (Array.isArray(v) && v.length === 0) ||
+  (typeof v === 'object' && Object.keys(v).length === 0)
+
+/**
+ * What each kind actually does, in one table: how two values are compared, what
+ * counts as nothing said in it, and whether a genuine disagreement is refused
+ * rather than resolved by guessing.
+ */
+const KINDS = {
+  text: { same: (a, b) => a === b, idle, refuses: true },
+  flag: { same: (a, b) => a === b, idle, refuses: false },
+  json: { same: (a, b) => stable(a) === stable(b), idle: nothing, refuses: true },
+}
+
 /** Two meaningful values, no third version to break the tie. */
 const CLASH = Symbol('clash')
 /** Leave the disk copy alone. */
@@ -213,16 +326,19 @@ const KEEP = undefined
 
 /** One field, four cases, no guessing. */
 function fold(field, was, now) {
-  if (was === now) return KEEP
+  /* A kind this table has never heard of is treated as `text`, the strictest of
+   * them: a typo in a spec above should cost a 409, never a silent overwrite. */
+  const kind = KINDS[field.kind] ?? KINDS.text
+  if (kind.same(was, now)) return KEEP
   /* The page says nothing here. An echo of an absence is not an instruction to
    * blank something — a stale page carries an empty note simply because it
    * never saw the one that was written after it loaded. */
-  if (idle(now, field)) return KEEP
+  if (kind.idle(now, field)) return KEEP
   /* Nothing on disk to lose: the page's edit lands. This is Joe answering a
    * ruling, which is the common case and must always work. */
-  if (idle(was, field)) return now
+  if (kind.idle(was, field)) return now
   /* Both sides mean something, and they differ. */
-  return field.kind === 'text' ? CLASH : now
+  return kind.refuses ? CLASH : now
 }
 
 /** The number inside a dealt id — `PB-048` → 48 — or NaN if it was never dealt from the counter. */

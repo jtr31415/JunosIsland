@@ -401,6 +401,19 @@ export function seed(root, { force = false } = {}) {
    */
   put('joe/primitives-audit.json', { schemaVersion: 1, rows: PRIMITIVES })
 
+  /*
+   * The species-edit drafts arrive EMPTY, like the names audit and unlike the
+   * primitives — there is nothing to seed, because every record in this file is
+   * something Joe makes in the editor and a seeded draft would be an animal
+   * nobody designed. What the seed guarantees is the SHAPE: the file exists, so
+   * the editor opens and a patch has somewhere to land before he has saved his
+   * first draft, and `nextId` starts where the ids start.
+   *
+   * Create-if-absent, like everything else here: re-running the server after an
+   * evening of drafting must never walk over the evening.
+   */
+  put('joe/species-edits.json', { schemaVersion: 1, nextId: 1, drafts: [] })
+
   /* Lessons come from the spec, and only if the spec is where we expect it. */
   const specPath = inside(REPO, 'docs/pet-island-runA.md')
   if (existsSync(specPath)) {
