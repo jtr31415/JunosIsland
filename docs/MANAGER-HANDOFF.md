@@ -70,14 +70,24 @@ No deploy this run — nothing shipped to deploy.
 `docs/MANAGER-ORDERS.md` item 4 was rewritten around it. **Read the roster in
 full and build to it, not to a summary — including not to my `PB-036` card.**
 
-The one thing to get right first, ahead of any species work, is the naming
-migration, because it is a **brief §19 trap**. Roster §3 makes given names
+The naming change is the first thing to get right. Roster §3 makes given names
 deterministic, seeded from `species + set`. Today `petName(defaultRng)` at
 `src/island/main.ts:1167` draws from unseeded `Math.random` (`src/core/rng.ts:5`),
 the name is **persisted** into the save (`flow.ts:311-312`, `save.ts:171`/`226`),
-**and the pet's `id` embeds it** (`'pet' + n + '-' + name`). So Juno already owns
-randomly-named pets and a naive switch renames them. Existing pets keep their
-names; determinism applies to new hatches only. Write that test first.
+**and the pet's `id` embeds it** (`'pet' + n + '-' + name`) — so Juno already owns
+randomly-named pets.
+
+**Joe ruled on this at `c54e286`, AFTER I had already written the opposite into
+`PB-036` and had to correct it — read his orders, not run 6's or my first draft.**
+Her existing names become **the canonical entries in the name table**, not a
+migration case: *"i will give you juno's already achieved animal's names as her
+latest save game later, you can swap the first hard code out after."* So the
+table must be **data with pinnable entries from day one**, a temporary hardcode
+is **explicitly sanctioned** until her save arrives (mark it `>>> PROVISIONAL`
+and name the lines in your handoff), and you must **not** build a general
+rename-migration mechanism. Her save **has not arrived** — leave the pins empty
+and obvious; do not invent her pets' names any more than you would invent
+species. Still write the §19 test.
 
 Architecture is **kits before species** (six kits, then a species is data), the
 **live 24 are frozen**, and collections ship **one at a time** on the 85% unlock
@@ -92,11 +102,14 @@ raise them in the workbench, do not settle them with Fable.**
   disagreed from the first command. **Trust the live command, never the
   snapshot** — and the shas in that block did all resolve, so `git cat-file -t`
   is not enough to catch it.
-- **HEAD moves under you, not just `joe/tasks.json`.** Run 6 warned that Joe
-  edits the workbench live; he also *commits* live. `8189a5e` landed mid-run and
-  changed my own orders. Re-check `git log -1` before you commit, and re-read
-  `MANAGER-ORDERS.md` if it moved. The cheap tell is that `git rev-parse HEAD`
-  differs from what you saw at start-up.
+- **HEAD moves under you, not just `joe/tasks.json` — and it moved TWICE.** Run 6
+  warned that Joe edits the workbench live; he also *commits into this working
+  copy* live. `8189a5e` landed mid-run and rewrote my own orders; `c54e286`
+  landed while I was pushing and **reversed a premise I had just written into
+  `PB-036` and the handoff**, costing a correction commit. Re-check
+  `git log --oneline -1` immediately before every commit AND after every push,
+  and re-read `MANAGER-ORDERS.md` if it moved. Assume any orders paragraph you
+  read at start-up may be stale by the time you act on it.
 - **A file can be cited as landed and still be untracked.** The roster was
   `?? docs/pet-island-species-roster.md` while the orders described it as the
   spec. One `git status --porcelain` caught it; it is committed now. **When a doc
