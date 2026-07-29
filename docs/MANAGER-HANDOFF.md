@@ -1,5 +1,85 @@
 # Manager handoff
 
+---
+
+## Run 10 (ladder manager) — 29 July, ~18:30. PREPENDED, NOT OVERWRITTEN.
+
+*Two managers were live in this tree at once. Run 9's baton below is still
+current (JT-033 open, PB-053 unfixed), so overwriting it as the template says
+would have destroyed real state. Read both. My ground was `src/core/`,
+`src/challenges/`, `src/island/harness.ts` and `joe/`.*
+
+**Joe's fast-track, verbatim:** *"can we fast track some additional summing
+levels. it needs at least one between the basic <=10 and the carry level. and
+some 3 & 4 letter nouns."*
+
+**Shipped: `521b744`, `1a8fef5`, `9c78b1c` — all pushed, `origin/main` level.**
+
+**The new sums rung is "teens plus units", generator id 3.** The gap was
+provable from the sibling path rather than inferred: `STAGE_LABELS.takingAway`
+climbs *to ten → teens minus units → anything to twenty*, while addition jumped
+from `a+b<=10` straight to a level that ALWAYS bridges ten. The missing step was
+addition's own non-regrouping teens rung: `a in [10,18]`, `b in [1, 9-units(a)]`,
+sum 11..19, `(a%10)+b <= 9` always.
+
+**The one thing a future reader will want to "tidy" and must not.**
+`STAGES.sums` is `[1, 3, 2]` (`harness.ts:63`). The NUMBER is a generator id;
+the ARRAY POSITION is the rung. It is not `[1,2,3]` because `golden.json` pins
+what level 2 produces, so renumbering reddens a frozen file. There is a comment
+saying so at the declaration. Adding a rung is therefore always: append a new
+generator id, insert it in `STAGES` at the right ladder position.
+
+**A latent bug this surfaced, now fixed.** `settledOn` compared stage ids
+numerically (`s < top`) while `topTicked`/`nextStage` used array order. Harmless
+while the two agreed; the moment ladder order diverged from numeric order, a
+retired middle rung would never retire. Now compares by ladder index
+(`harness.ts:830`). **Anything else that orders stages must use array position.**
+
+**Nobody is demoted, and nobody could have been.** Joe confirmed mid-run: *"no
+one is on the next level yet anyway, only in the first on everything."* So no
+migration machinery was built. The guarantee is kept in tests instead —
+`harness.test.ts` covers ladder order (1→3→2→none), no-demote, `settledOn`
+ordering, and Juno's shape of save round-tripped through `toSave`→`fromSave`
+with her stage-1 ewma/attempts/ticks intact and stage 3 arriving fresh.
+
+**v0 was edited** (`v0/junos-words.html:981`) — the identical branch, no DOM
+touched. Parity therefore still proves both that the two sides agree and that
+levels 1 and 2 are unchanged. Say this out loud in any future v0 edit.
+
+**The noun question had a different answer than expected.**
+`joe/noun-candidates.json` did not exist and never had — `JT-004` has been open
+since the workbench was seeded, waiting on a file that "arrives with Run D", and
+Run D never happened. So his red pen had nothing to review. It is now written:
+88 clean words (44 three-letter, 44 four-letter), 23 flagged, 35 rejected with
+reasons, every word checked against `segmentation.ts` `GRAPHS`, all `verdict`
+and `note` fields empty. **This is his twenty minutes, and it now unlocks.**
+
+**But approving them is not shipping them — `JT-035` raised, NEEDS JOE.** GREEN
+(`wordlists.ts:17`) cannot be appended to. `makeDeck` deals from the array in
+order, `capture.mjs:37` pins the v0 word literals, and `alien.ts:25` spreads
+GREEN into `REAL_BLOCK` — so **one extra noun shifts the rng stream behind
+`read`, `readL2` AND `build` at once.** Choice is (a) a new list behind a new
+reading rung, or (b) a deliberate stated golden re-capture. Nothing is built on
+either; a reversal costs nothing today.
+
+**Where the next manager starts:** if `JT-035` has a note, build it — option (a)
+is also the front half of queue item 5 (the reading curriculum), since JT-025's
+step 1 is literally "adding nouns". If it is still open, the sums ladder now has
+three rungs and `takingAway` still has an untouched `else` catch-all at
+`sums.ts:48` that silently serves level 3 — the same shape of gap, one path over.
+
+**Gates, run by the manager on the final tree, all five green:** `npm test`
+100 files / **2124 passed**, golden included and untouched; `tsc --noEmit` exit
+0; `build` ✓ 8 precache entries; `smoke` "all boot checks passed"; `parity`
+"every step renders identically", spoken 4/4, score bar `🐚 6`/`🐚 6`.
+**Revert-checks went red as required:** reverting the `settledOn` fix failed
+*"settles rung 3 as well as rung 1"* (`expected [1] to equal [1,3]`); reverting
+`STAGES.sums` failed 18 tests including *"offers 3 above rung one"*. Reported
+honestly: the three no-demote tests stay green under both reverts — they guard
+the migration invariant, not the ordering, which the block above guards.
+
+---
+
 *Run 9, written 29 July 2026, ~16:20. Read `docs/MANAGER-ORDERS.md` for the job.*
 
 ## Queue position
