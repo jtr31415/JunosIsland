@@ -67,6 +67,33 @@ export interface Entry {
  */
 export const packOf = (id: string): Pack => (/^[A-Z]/.test(id) ? 'forest' : 'props')
 
+/**
+ * Which packs on disk a gallery may list, and the reason this is a named
+ * function rather than three lines inside `shown()`.
+ *
+ * It WAS three lines inside `shown()`: species → pets, tiles → tiles, and an
+ * ELSE that meant props and forest. Three arms for four galleries. When
+ * `built` joined the union it fell out of that else and inherited the props,
+ * so the Built animals gallery listed every prop file on disk — which is
+ * precisely what Joe reported on 29 July. Nothing caught it: the else compiles,
+ * and no test named the join between a gallery and its source.
+ *
+ * `built` gets an empty list, and that is the correct answer rather than a
+ * missing one. A built animal is constructed at runtime by `buildSpecies` and
+ * has no file anywhere, so there is no directory listing it could be measured
+ * against; its only source is the bench in `built.ts`. Every gallery is written
+ * out here, so adding a fifth means writing its arm rather than inheriting the
+ * fourth's.
+ */
+export const packsFor = (gallery: Gallery): readonly Pack[] => {
+  switch (gallery) {
+    case 'species': return ['pets']
+    case 'tiles': return ['tiles']
+    case 'props': return ['props', 'forest']
+    case 'built': return []
+  }
+}
+
 /** Where a scenery or pet ID resolves to, at the same base URL the game uses. */
 export const fileOf = (id: string, pack: Pack): string =>
   pack === 'pets' ? `pets/${id}.glb` : `${pack}/${id}.gltf`

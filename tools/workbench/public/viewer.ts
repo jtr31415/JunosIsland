@@ -63,7 +63,7 @@ import { wearFaceUVs } from '../../../src/island/variants/facedecals'
 import { speciesRecord } from '../../../src/island/species/registry'
 import { buildSpecies } from '../../../src/island/species/kit'
 import {
-  buildCatalogue, tileEntries, incrementSteps, grouped, basenameOf, fileOf,
+  buildCatalogue, tileEntries, incrementSteps, grouped, basenameOf, fileOf, packsFor,
   type Entry, type Gallery,
 } from './registry'
 import {
@@ -259,12 +259,15 @@ function shown(): Shown[] {
   /* Compared on FILENAME, not ID — see `Entry.file`. The tiles differ. */
   const named = new Set(inGallery.map(e => basenameOf(e.file)))
 
+  /*
+   * Which packs this gallery is allowed to list — `registry.ts packsFor`, and
+   * deliberately not an inline ternary. The inline version had an unwritten
+   * else, and `built` fell into it and listed the props.
+   */
+  const packs = packsFor(gallery)
   const orphans: Entry[] = []
   for (const [pack, files] of Object.entries(disk)) {
-    const belongs = gallery === 'species' ? pack === 'pets'
-      : gallery === 'tiles' ? pack === 'tiles'
-        : pack === 'props' || pack === 'forest'
-    if (!belongs) continue
+    if (!packs.includes(pack as Entry['pack'])) continue
     for (const id of files) {
       if (!named.has(id)) {
         orphans.push({

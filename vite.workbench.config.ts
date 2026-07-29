@@ -13,6 +13,22 @@
  * a tool and then let rot.
  *
  *   npm run workbench      → http://127.0.0.1:4173
+ *
+ * ## Why `strictPort`, and what it cost to learn
+ *
+ * Vite's default is to take the next free port when its own is busy. On 29 July
+ * that turned a bookmark into a liar. A workbench server left running from the
+ * previous day still held 4173; the new one announced 4174 in a line nobody
+ * re-read; and Joe's 4173 tab kept answering — from the OLD process, whose
+ * module graph predated the built-animals gallery entirely. Its `Gallery` union
+ * had no `built` in it, so the tab he clicked fell through `shown()`'s else and
+ * listed the props. The agent that had "verified in a real browser" was on
+ * 4174 and was telling the truth; so was he. They were different servers.
+ *
+ * `strictPort` makes that impossible to reach. If 4173 is taken, Vite refuses
+ * to start and says so, and the fix is to close the old one. A dev server that
+ * moves quietly is a dev server that lets a stale bundle impersonate the
+ * current one, and there is no test downstream that can catch it.
  */
 import { defineConfig } from 'vite'
 import { fileURLToPath } from 'node:url'
@@ -42,7 +58,7 @@ export default defineConfig({
     __CHANNEL__: JSON.stringify('preview'),
     __BUILD_STAMP__: JSON.stringify('workbench'),
   },
-  server: { port: 4173, host: '127.0.0.1', open: false },
+  server: { port: 4173, host: '127.0.0.1', open: false, strictPort: true },
   plugins: [
     {
       name: 'joe-workbench-api',
