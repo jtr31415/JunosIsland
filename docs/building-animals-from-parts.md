@@ -201,6 +201,8 @@ Three things follow, and all three are binding:
    Where two shapes filed under different roles turn out to be identical after
    translation, that is a dedup win and it is recorded.
 
+   A name alone is not enough, and §3.2 is why.
+
 2. **Sinking into the torso is a legitimate placement, not a mistake to clamp
    away.** The placement rule must express **N copies along a line** — six a
    side, evenly spaced — and must take **depth as a first-class parameter** with
@@ -218,6 +220,46 @@ Three things follow, and all three are binding:
    overstatement and is to be re-derived before it is quoted to Joe again. Do
    not chase this during a collection pilot; do not repeat the old number
    either.
+
+---
+
+## 3.2 The bank is searched by measured shape, not by name
+
+Joe, extending the above:
+
+> hog tusks might also double up as hedgehog spikes. might be an idea to
+> classify the basic shape of a primitive so an agent can try to use it for a
+> different purpose than originally drawn up for.
+
+**The naming discipline in §3.1 is necessary and not sufficient.** A good name
+still has to be *guessed*. What makes the multiplier actually work is that an
+agent building a hedgehog can ask the bank *"what in here is a small tapering
+spike?"* and get back the hog's tusk **and** the hog's ear without knowing either
+name. Every reuse that depends on somebody having the idea by hand does not
+scale to 296 species.
+
+So each bank record carries a **`shape` block, derived from the geometry, never
+assigned by opinion**, alongside — never instead of — its provenance. The axes:
+
+| Axis | What it separates |
+|---|---|
+| **form** | spike/cone, wedge, plate/fin, blade, tube, box, dome — from vertex distribution and how the cross-section changes along the long axis |
+| **aspect** | bounding-box proportions, normalised. A spike and a plate are one family at different ratios |
+| **taper** | whether and how sharply the cross-section shrinks along the axis. This is what separates a tusk from a peg |
+| **symmetry** | mirror-symmetric, radial, or handed. A left ear is not a right ear, and a search must never return one for the other |
+| **attachment** | which face or region it was joined to, and whether it still reads when sunk. This is what makes repeat-and-sink safe rather than a gamble |
+| **size** | absolute model units. The pack is authored at one consistent scale and absolute size is already known to matter (rule 5, the eye card) |
+
+**The acceptance test for the classification** is a query, not a taxonomy: *small
+tapering spikes, many, sunk* must return the hog tusk and the hog ear as
+candidates. If it cannot answer that, it is the wrong classification.
+
+**Do not gold-plate this.** Classify what a collection actually needs, find out
+whether the axes are right, and only then apply them to the other 182 parts. An
+axis that turns out constant across the pack, or that never discriminates
+between two parts an agent would confuse, is **deleted and the deletion is
+recorded** — which axes earned their place is itself a deliverable, because it
+is how the remaining 19 collections get classified.
 
 ---
 
