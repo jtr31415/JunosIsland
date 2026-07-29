@@ -394,15 +394,142 @@ side-by-side is worse than no side-by-side.
 
 ## 7. Measured bank inventory
 
-*Filled in by the census pass. Numbers only; every one comes off the 24 real
-files.*
+*Every number below comes off the 24 real `.glb` files. Instances are not
+shapes.* **315 instances → 129 distinct shapes.**
 
-> Pending — see the run that follows this document's creation.
+| Role | Instances | Distinct | Baked | Size range (x / y / z) | Donors |
+|---|---|---|---|---|---|
+| hull | 24 | **10** | yes | 1.250–1.539 / 0.451–1.505 / 1.125–1.350 | all 24 |
+| leg | 86 | **1** | yes | 0.375 / 0.306 / 0.375 | 23 |
+| ear | 42 | 23 | yes | 0.160–0.743 / 0.232–0.913 / 0.191–0.464 | 17 |
+| tail | 8 | 7 | yes | 0.200–0.744 / 0.623–1.082 / 0.425–0.910 | 8 |
+| wing | 10 | 6 | no | 0.362–0.693 / 0.200–0.450 / 0.362–0.600 | 5 |
+| eye | 48 | 10 | yes | 0.330–0.435 / 0.276–0.443 / **0.000** | all 24 |
+| nose | 36 | 28 | yes | 0.080–1.000 / 0.080–1.000 / 0.000–0.287 | 19 |
+| horn | 19 | 15 | no | 0.237–1.350 / 0.189–0.701 / 0.153–0.713 | 9 |
+| tooth | 8 | 8 | yes | 0.174–0.309 / 0.167–0.341 / 0.050–0.445 | 4 |
+| claw | 10 | 10 | no | 0.249–0.732 / 0.137–0.743 / 0.113–0.551 | 4 |
+| band | 5 | 5 | yes | 1.335–1.650 / 0.877–1.650 / 0.446–0.520 | 5 |
+| card | 14 | 4 | yes | 0.000–0.237 / 0.100–0.400 / 0.000–0.433 | 10 |
+| oddment | 5 | 5 | no | 0.246–1.250 / 0.089–1.250 / 0.000–1.250 | 5 |
+
+**The eye card sits at z = 0.6350 with standard deviation 0.0000, n = 48.**
+Confirmed: one distinct value across all 24 species.
+
+### The torso question — Joe's reading holds, 8 of 9
+
+| Hull | Verdict |
+|---|---|
+| cow + deer | **(a)** all 32 cube corners plus 62 more |
+| fish | **(a)** cube + 8 |
+| fox | **(a)** cube + 70 |
+| monkey | **(a)** cube + 34 |
+| panda | **(a)** cube + 6 |
+| penguin | **(a)** cube + 10 |
+| tiger | **(a)** cube + 98 |
+| lion | **(a−)** the cube **minus** four corners — all 28 of its corners are cube corners |
+| crab | **(c)** genuinely different — 1 of 32 corners, a flat 0.45-high shell |
+
+**Colour-only variation is confirmed and already collapsed.** The **14** species
+sharing the identical 1.250 cube point at six different palette column sets —
+{5} {15} {13} {1} {1,13} {3}. Same geometry, different colour. Once we author
+the texture (§4) that difference stops existing. *(Note: 14 of 24, not the 13
+quoted in earlier documents.)*
+
+So: **one torso primitive, one add-on bank, and exactly one genuine exception —
+the crab.**
+
+### Three things that only turned up by measuring
+
+1. **Near-misses are rounding, not shape.** The left and right ears of the
+   beaver, lion and panda differ by 2.98e-8 — one float32 ulp — while genuinely
+   different pairs differ by 0.045, the 1/16 authoring grid. That six-order gap
+   is why the dedup tolerance is a measurement rather than a taste. A hard-edged
+   hash reported 91 shapes where there are 88, and three separate bugs each
+   inflated the count while looking like a real finding.
+2. **Three of the 86 legs have 46 triangles, not 44**, over the *identical* 24
+   welded points — the deer's and fox's back legs. "All 86 legs are one shape"
+   is true only if triangulation is not shape. Recorded as `triVariants`.
+3. **Cross-role dedup is a real multiplier.** The shared cube hull is also the
+   crab's `Group` oddment, and the chick/monkey/penguin ear is bit-identical to
+   the bunny's tooth. An ear that is already a tusk — §3.1 paying for itself
+   before anyone tried to use it.
+
+### Which classification axes earned their place
+
+Measured, not guessed, and this decides how the other 19 collections get
+classified:
+
+- **taper, attachment/sink, and absolute size — keep.** These do the work.
+- **symmetry — keep, narrowly.** It is what stops a left ear answering a
+  right-ear query. Its only job is a correctness guard, and that job is real.
+- **aspect — drop.** It never discriminated anything taper and size had not
+  already separated.
+- **`form` — keep as a LABEL, never as a query filter.** This is the important
+  one. The hog's tusk classifies as a `wedge` (taper 0.59) and the hog's ear as
+  a `cone` (taper 0.25) — the same job, on opposite sides of a bucket boundary.
+  **Joe's own example only works with the form filter removed**, querying taper
+  directly. Any search that filters on form throws away the multiplier §3.1
+  exists to create.
+
+### Two-tone is exact, not a vote
+
+**Zero of 15,333 triangles have corners in two different swatch columns.** Every
+triangle points at exactly one colour. (8,636 do span two or three swatch
+*rows*, so the **column is the honest unit**, not the cell.) This is why the
+per-triangle `bands` field can be trusted to split a lifted part cleanly into
+texture regions rather than approximating one.
+
+### Known debt
+
+The baked bank is **496.8 KB**, over the 400 KB budget, of which 360 KB is
+positions and normals. It covers the Garden roles plus `tooth`; baking all roles
+was 763.8 KB. Further reduction needs a codec — and since the pack is authored
+on a 1/16 grid, quantising to integers is the obvious one and was deliberately
+not invented on the fly. **Nothing built here is wired to a child yet**, so this
+is not shipping weight today, but it must be paid before it is.
+
+Fins and true insect wings **are censused as distinct shapes** (fish, bee) and
+are simply not baked, because `wing` is outside the Garden set. One line adds
+them. See §3.1(3).
 
 ---
 
 ## 8. Placement rules
 
-*Derived from §7. Written down so an ear does not get placed by eye twice.*
+*Derived from §7, written down so an ear is never placed by eye twice. All
+figures are a fraction of the hull's bounding box, mean ± sd.*
 
-> Pending.
+**The pack is perfectly bilateral: every kind sits at x = 0.500.**
+
+**Derivable — place these by rule, with confidence:**
+
+- **nose** — x sd 0.033, z = 1.080 ± 0.074
+- **eye** — z = 1.008 ± 0.028, and the absolute z = 0.6350 with sd 0.0000
+- **band** — x sd 0.000
+
+**Not derivable — these are placed by hand, per species:**
+
+- **ear** — x sd 0.283. Note *why*: left and right average out, so the spread is
+  an artefact of the summary, not of the pack. Place ears per side.
+- **wing** — x sd 0.571
+- **claw** — x sd 0.528
+
+### Sink depth, as a fraction of the part's own extent
+
+This is a **dial, not a floor** (§3.1). Measured range across the pack:
+
+| Part | Sunk |
+|---|---|
+| eye | **exactly 0.000** — eye cards sit *on* the face, never in it |
+| leg | 0.00 – 0.41 (y) |
+| tooth | 0.00 – 0.87 |
+| horn | 0.00 – 0.93 |
+| **ear** | **0.00 – 1.00, mean 0.548** |
+| band | 0.91 – 1.00 |
+
+The ear range going to a full 1.00 is what makes Joe's six-a-side spikes a
+placement rather than a hack: the pack already buries a part completely.
+
+**The one placement that is never adjusted is the eye.** Absolute z, absolute
+size, zero sink. Rule 5 and the measurement agree, from opposite directions.
