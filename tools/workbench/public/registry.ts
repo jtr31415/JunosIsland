@@ -34,6 +34,13 @@ import { TILE_URL } from '../../../src/island/world/tiles'
  * here appears in the test that iterates it, and cannot compile until
  * `packsFor` below has written its arm.
  *
+ * `assembled` is a fourth odd one and is odder still. It shows an animal built
+ * under `docs/building-animals-from-parts.md` — assembled at runtime out of
+ * geometry lifted from the pack — standing beside a real Kenney GLB. Neither
+ * half is this gallery's to list: the right half has no file at all, and the left
+ * half is borrowed from the pets pack, which `species` owns. It sits FIRST
+ * because it is the live method; `built` sits second and is labelled SCRAPPED.
+ *
  * `built` and `primitives` are the odd ones and are NOT in this file's
  * catalogue. The other three are things on disk that a loader opens. A built
  * animal has no file at all — it is constructed at runtime by `buildSpecies`,
@@ -43,7 +50,7 @@ import { TILE_URL } from '../../../src/island/world/tiles'
  * allowed to build out of, benched in `primitives.ts`, and the models it puts on
  * the turntable are borrowed from the other galleries rather than owned.
  */
-export const GALLERIES = ['built', 'primitives', 'anatomy', 'species', 'tiles', 'props'] as const
+export const GALLERIES = ['assembled', 'built', 'primitives', 'anatomy', 'species', 'tiles', 'props'] as const
 export type Gallery = typeof GALLERIES[number]
 export type Pack = 'pets' | 'props' | 'forest' | 'tiles'
 
@@ -113,6 +120,17 @@ export const packOf = (id: string): Pack => (/^[A-Z]/.test(id) ? 'forest' : 'pro
  * props arm it would have listed every prop on disk, which is precisely what
  * `built` did on 29 July.
  *
+ * `assembled` gets an empty list, and it is the hardest case of the three to get
+ * right because BOTH its halves look claimable. The right half is an animal
+ * assembled at runtime out of lifted parts and has no file, exactly like a
+ * `built` one. The left half is a real `pets/animal-fox.glb` — so claiming
+ * `pets` would look not merely reasonable but obviously correct. It is still
+ * wrong, for the reason spelled out for `anatomy` above: the species gallery owns
+ * that pack and is where a missing pet file must be reported once. A second
+ * claim reports all 24 twice and trips the cross-gallery guard in
+ * `built-gallery-source.test.ts`. This gallery borrows the fox to stand something
+ * next to; it is not a listing of foxes.
+ *
  * The switch has no default and the return type is not optional, so a gallery
  * added to `GALLERIES` without an arm here does not compile. That, plus the
  * test that iterates `GALLERIES`, is the whole guard.
@@ -125,6 +143,7 @@ export const packsFor = (gallery: Gallery): readonly Pack[] => {
     case 'built': return []
     case 'primitives': return []
     case 'anatomy': return []
+    case 'assembled': return []
   }
 }
 

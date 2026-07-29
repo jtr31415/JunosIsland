@@ -11,10 +11,24 @@
   <header>
     <a class="back" href="/">← bench</a>
     <nav id="galleries">
-      <button data-gallery="built" class="on">Built animals</button>
+      <!--
+        THE LIVE METHOD, and it sits first because it is the one that is not
+        scrapped. An animal here is assembled at runtime out of geometry lifted
+        from the 24 original Kenney files (docs/building-animals-from-parts.md)
+        and always stands BESIDE a real pack animal, because the question the
+        method has to answer is whether it "sits next to the fox without looking
+        like a guest" — which is a question about a pair, not about an animal.
+
+        The captions on this tab and the next are `NEW_METHOD_TAB` and
+        `SCRAPPED_TAB` in `assembled.ts`, and a test asserts the HTML still says
+        both. Two tabs of animals with no word about which one is superseded is
+        precisely the confusion the labelling requirement exists to prevent.
+      -->
+      <button data-gallery="assembled">Assembled — NEW</button>
+      <button data-gallery="built" class="on">Kit builds — SCRAPPED</button>
       <!--
         The primitives sign-off. PB-036 phase 4, and it sits SECOND rather than
-        last because nothing on the Built animals tab may be re-tuned until the
+        last because nothing on the kit-builds tab may be re-tuned until the
         primitive it rides on has been ticked here.
       -->
       <button data-gallery="primitives">Primitives</button>
@@ -76,6 +90,17 @@
           animal. The 24 are filled in from `ANATOMY_SPECIES` by `viewer.ts`.
         -->
         <label id="anatomyPick" hidden>Animal <select id="speciesSelect"></select></label>
+        <!--
+          WHICH ORIGINAL THE NEW ANIMAL STANDS BESIDE.
+
+          Defaulted to `animal-fox` by `DEFAULT_REFERENCE`, because the sentence
+          the method is judged against names the fox specifically. The other 23
+          are here because "does it look like a guest" has a different answer
+          beside a panda than beside a bee, and he should be able to ask both.
+          Filled from `REFERENCE_ANIMALS` by `viewer.ts` so the list cannot fall
+          behind what is on disk.
+        -->
+        <label id="besidePick" hidden>Beside <select id="besideSelect"></select></label>
         <label id="explodePick" hidden>
           Explode <input type="range" id="explodeRange" min="0" max="1" step="0.01" value="0.55">
           <span id="explodeValue" class="meta">0.55</span>
@@ -129,6 +154,20 @@
         disagree about a part.
       -->
       <section id="anatomy" hidden></section>
+
+      <!--
+        One animal built under the NEW method, and what it is standing beside.
+
+        It carries the method's own label at the top rather than at the bottom,
+        so the first thing read on this pane is which of the two kinds of animal
+        is on the turntable. If the build raised a flag it goes here too, as a
+        note rather than an alarm — the escape clause is the method working, and
+        a flag Joe cannot see is worse than useless.
+
+        Built by hand in `viewer.ts`; the strings come from `assembled.ts` so the
+        list, the card and the labels over the canvas cannot word it differently.
+      -->
+      <section id="assembled" hidden></section>
 
       <form id="noteForm">
         <textarea name="note" rows="3" placeholder="what is wrong with it" required></textarea>

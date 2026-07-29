@@ -79,6 +79,25 @@ import {
   ANATOMY_SPECIES, DEFAULT_SPECIES, SPLIT_NODE, petIdOf,
   type ComponentFacts, type PartName,
 } from './anatomy'
+import {
+  assembledRows, filterRows, groupRows, groupHeading, countLabel, rowTitle, pairCard, flagNote,
+  referenceOr, REFERENCE_ANIMALS, DEFAULT_REFERENCE, NEW_METHOD_MARK, NEW_METHOD_SHORT,
+  SCRAPPED_NOTE, NOTHING_YET, FLAG_HEADING, FLAG_GLYPH,
+  type AssembledRow,
+} from './assembled'
+/*
+ * The new method's own module, and the ONE import in this file that may not
+ * exist yet.
+ *
+ * `src/island/species/parts` is written by the run that assembles a species and
+ * lands one species at a time (docs/building-animals-from-parts.md, "One species
+ * at a time"). It is imported here rather than through `assembled.ts` on
+ * purpose: `assembled.ts` is the tested half and takes its rows as data, so the
+ * gallery's arithmetic is provable whether or not a single animal has been built
+ * yet, and this file — which is untested by design — is the only thing that has
+ * to know where the assembler lives.
+ */
+import { assembledSpecies, buildAssembled } from '../../../src/island/species/parts'
 
 const $ = <T extends HTMLElement>(s: string): T => document.querySelector(s) as T
 const say = (t: string, bad = false) => {
@@ -158,6 +177,7 @@ renderer.setAnimationLoop(() => {
   renderer.render(scene, camera)
   /* After the render, so a label sits on where the part was actually drawn. */
   moveTags()
+  movePairTags()
 })
 
 function clearStand(): void {
@@ -337,24 +357,74 @@ async function loadComparison(compare: Comparison): Promise<THREE.Object3D> {
     loadBuilt(compare.kitSpecies),
   ])
 
-  const sides = [
+  return standSideBySide(
     lift(toUnitHeight(packWhole), compare.packParts),
     lift(toUnitHeight(kitWhole), compare.kitParts),
-  ]
+  )
+}
 
-  /* Grounded and centred, then pushed apart by their own half-widths, so a leg
-   * and a whole fox both land side by side without one sitting inside the other. */
+/**
+ * Two already-normalised things, grounded, centred and pushed apart by their own
+ * half-widths, so a leg and a whole fox both land beside each other without one
+ * sitting inside the other.
+ *
+ * LEFT is the pack and RIGHT is ours, always and in that order — every card in
+ * this viewer that describes a pair says so in those words, and they must not
+ * disagree. Named rather than left inline because there are now two galleries
+ * that stand two models next to each other and a second copy of this arithmetic
+ * would drift from the first the moment either gap changed.
+ */
+function standSideBySide(left: THREE.Object3D, right: THREE.Object3D): THREE.Group {
   const pair = new THREE.Group()
   const gap = 0.25
-  sides.forEach((side, i) => {
+  ;[left, right].forEach((side, i) => {
     const box = new THREE.Box3().setFromObject(side)
     const centre = box.getCenter(new THREE.Vector3())
     side.position.sub(new THREE.Vector3(centre.x, box.min.y, centre.z))
-    /* LEFT is the pack, RIGHT is the kit, always and in that order — the card
-     * beside the canvas says so in those words and they must not disagree. */
     side.position.x += (i === 0 ? -1 : 1) * ((box.max.x - box.min.x) / 2 + gap / 2)
     pair.add(side)
   })
+  return pair
+}
+
+/* --------------------------------------------- the assembled side-by-side */
+
+/**
+ * One animal built under the NEW method, standing beside a real Kenney original.
+ *
+ * There is no single-model mode on this gallery and that is the design. The
+ * method is judged by one sentence — whether a new animal *sits next to the fox
+ * without looking like a guest* — and that is a question about a pair, so the
+ * pair is what `build()` returns. Which original it stands beside is his to
+ * choose from the `Beside` dropdown; it opens on `animal-fox` because the fox is
+ * the animal the sentence names.
+ *
+ * Neither half is baked, for the reason the header of this file argues at length
+ * about the built animals and which applies harder here: the assembler is being
+ * piloted one species at a time and will be re-tuned between them, so a baked
+ * preview would be a picture of what the method used to do. The left is the
+ * species gallery's own loader; the right is `buildAssembled` called for real.
+ *
+ * Each side is scaled to one unit tall BEFORE they are stood together, exactly as
+ * `loadComparison` does, because absolute model units are not what is being
+ * asked about — proportion and silhouette are.
+ */
+async function loadAssembled(id: string): Promise<THREE.Object3D> {
+  const row = assembled.find(r => r.id === id)
+  if (!row) throw new Error(`${id} is not on the assembled bench`)
+  const reference = referenceOr($<HTMLSelectElement>('#besideSelect').value)
+
+  const pack = await loadPet(reference, '')
+  /* Synchronous, like `buildSpecies` — awaited only so a throw arrives as a
+   * rejection that `select()` already knows how to print into the status line. */
+  const mine = await Promise.resolve(buildAssembled(row.id))
+
+  const left = toUnitHeight(pack)
+  const right = toUnitHeight(mine)
+  const pair = standSideBySide(left, right)
+  /* Held for the two labels over the canvas. Rebuilt on every selection, so a
+   * stale anchor cannot outlive the model it was pointing at. */
+  pairSides = { left, right, row, reference }
   return pair
 }
 
@@ -506,8 +576,11 @@ async function loadAnatomy(species: string): Promise<THREE.Object3D> {
 
   /* How far apart "fully apart" is: a little under the model's own radius, so a
    * fox comes to pieces without the pieces ending up a screen away from it. */
-  const assembled = new THREE.Box3().setFromObject(group)
-  reach = assembled.getBoundingSphere(new THREE.Sphere()).radius * 0.9
+  /* Named `assembledBox` and not `assembled`: there is now a module-level
+   * `assembled` holding the new-method bench, and a local shadowing it here
+   * would compile silently and read as the wrong thing. */
+  const assembledBox = new THREE.Box3().setFromObject(group)
+  reach = assembledBox.getBoundingSphere(new THREE.Sphere()).radius * 0.9
 
   /*
    * THE CAMERA IS FRAMED ON THE FULLY EXPLODED ANIMAL, ALWAYS.
@@ -626,10 +699,91 @@ function moveTags(): void {
   }
 }
 
+/* ------------------------------------------- the labels over the ASSEMBLED pair */
+
+/**
+ * The two halves currently on the turntable, and what they are.
+ *
+ * Kept as a whole rather than as two loose objects so the labels can never be
+ * built from one selection's models and another's names — which is the exact
+ * shape of "a gallery listing the wrong thing", and this gallery exists to stop
+ * him confusing two kinds of animal.
+ */
+let pairSides: { left: THREE.Object3D; right: THREE.Object3D; row: AssembledRow; reference: string } | null = null
+const pairTags: Array<{ object: THREE.Object3D; el: HTMLElement }> = []
+
+/**
+ * A name over each half, and the whole labelling requirement lives in here.
+ *
+ * *"Animals built under this method are labelled distinctly and unmistakably
+ * from the scrapped kit builds, in the list and on the model."* This is the ON
+ * THE MODEL half, and it follows the convention the anatomy view already
+ * established rather than inventing a second one: **Kenney's own name plain, ours
+ * marked as ours and visibly different.** So the left tag says `animal-fox` in
+ * the same ink as every other measurement on this page, and the right tag is
+ * amber, prefixed `OURS — `, and carries the method's name under it. The classes
+ * are `kenney` and `ours`, which are the anatomy gallery's own, so the two
+ * surfaces cannot drift apart in styling either.
+ *
+ * A flag rides on the right-hand tag as well as in the card, because the model is
+ * where he is looking.
+ */
+function drawPairTags(): void {
+  const layer = $('#labels')
+  layer.replaceChildren()
+  pairTags.length = 0
+  if (gallery !== 'assembled' || !pairSides) return
+
+  const card = pairCard(pairSides.row, pairSides.reference)
+  const make = (object: THREE.Object3D, name: string, meta: string, ours: boolean): void => {
+    const el = document.createElement('div')
+    el.className = 'tag ' + (ours ? 'ours' : 'kenney')
+    const title = document.createElement('span')
+    title.className = 'name'
+    title.textContent = name
+    const facts = document.createElement('span')
+    facts.className = 'facts'
+    facts.textContent = meta
+    el.append(title, facts)
+    layer.append(el)
+    pairTags.push({ object, el })
+  }
+  make(pairSides.left, card.left, card.leftMeta, false)
+  make(pairSides.right, card.right, card.rightMeta, true)
+}
+
+const pairAt = new THREE.Vector3()
+
+/**
+ * Hold each of the two labels over the top of the half it names.
+ *
+ * Much simpler than `moveTags` and deliberately not sharing its code: there are
+ * exactly two of these, they are yards apart, and the whole de-overlapping pass
+ * that the anatomy gallery needs would be machinery with nothing to do. Anchored
+ * to the top-centre of each half's bounding box so the label sits above the
+ * animal rather than across its face.
+ */
+function movePairTags(): void {
+  if (!pairTags.length) return
+  const width = canvas.clientWidth, height = canvas.clientHeight
+  for (const { object, el } of pairTags) {
+    const box = new THREE.Box3().setFromObject(object)
+    if (box.isEmpty()) continue
+    pairAt.set((box.min.x + box.max.x) / 2, box.max.y, (box.min.z + box.max.z) / 2)
+    pairAt.project(camera)
+    const behind = pairAt.z > 1
+    el.style.display = behind ? 'none' : ''
+    if (behind) continue
+    el.style.left = `${(pairAt.x * 0.5 + 0.5) * width}px`
+    el.style.top = `${Math.max(el.offsetHeight / 2 + 4, (-pairAt.y * 0.5 + 0.5) * height - 22)}px`
+  }
+}
+
 /** The same parts, read down the side: name, whose name it is, size, triangles. */
 function drawAnatomy(): void {
   $('#creature').hidden = true
   $('#primitive').hidden = true
+  $('#assembled').hidden = true
   $('#anatomy').hidden = false
   $('#assetId').textContent = picked || '—'
   $('#facts').replaceChildren()
@@ -701,6 +855,27 @@ let bench: Creature[] = []
  * where his place is kept — see `primitives.ts`.
  */
 let primitives: Primitive[] = []
+/**
+ * The animals built under the NEW method, joined to the roster's collection
+ * titles. Read once at boot off `assembledSpecies()` and never sorted after: the
+ * assembler's order is the pilot's order and is where his place is kept.
+ *
+ * Empty is a NORMAL state here and is not an error — the pilot lands one species
+ * at a time, so before the hedgehog arrives there is genuinely nothing to show.
+ * `NOTHING_YET` is what the rail says in that case.
+ */
+let assembled: AssembledRow[] = []
+/**
+ * Why the assembled bench is empty, when the reason is a throw rather than a
+ * pilot that has not started.
+ *
+ * `assembledSpecies()` raises by name on a build filed against a species the
+ * roster does not have, which is right — a silent skip would hide a real
+ * mistake. But it is called during `boot()`, and an unhandled throw there takes
+ * the tiles, the props and the species galleries down with it over a fault in
+ * one animal. So it is caught, kept, and printed on the bench it belongs to.
+ */
+let assembledFault = ''
 let picked = ''
 /** Bumped on every selection, so a slow load cannot overwrite a newer one. */
 let token = 0
@@ -789,11 +964,19 @@ function primitivesShown(): Primitive[] {
     `${p.id} ${p.group} ${p.title} ${p.question}`.toLowerCase().includes(q))
 }
 
+/**
+ * The new-method animals on screen. Filtered by the search box and NOTHING ELSE,
+ * the same rule the other three benches keep and for the same reason.
+ */
+const assembledShown = (): AssembledRow[] =>
+  filterRows(assembled, $<HTMLInputElement>('#search').value)
+
 /** Every id currently listed, in list order — what the arrow keys page through. */
 const listedIds = (): string[] => {
   if (gallery === 'built') return benchShown().map(c => c.speciesId)
   if (gallery === 'primitives') return primitivesShown().map(p => p.id)
   if (gallery === 'anatomy') return anatomyShown()
+  if (gallery === 'assembled') return assembledShown().map(r => r.id)
   return shown().map(e => e.id)
 }
 
@@ -823,10 +1006,92 @@ function drawAnatomyList(): void {
   }
 }
 
+/**
+ * The new-method rail, and the second half of the labelling requirement.
+ *
+ * Every row wears `ASSEMBLED` and every group heading wears it too, so the rail
+ * alone tells him which of the two animal galleries he is looking at without
+ * reading the tab. A flagged build carries `⚑` in its own colour — a note's
+ * colour, not the warning colour the missing-file rows use — because a flag is
+ * the escape clause working rather than a fault.
+ */
+function drawAssembledList(): void {
+  const list = $('#list')
+  list.replaceChildren()
+  const items = assembledShown()
+
+  if (!assembled.length) {
+    const empty = document.createElement('li')
+    empty.className = 'group'
+    empty.textContent = assembledFault ? 'the assembler threw' : 'nothing assembled yet'
+    list.append(empty)
+    const why = document.createElement('li')
+    /* A throw is a fault and wears the warning colour; an empty pilot is not and
+     * does not. Telling them apart is the difference between "the first animal
+     * has not landed" and "one of them is broken", and he cannot act on either
+     * if the page says the same thing for both. */
+    why.className = 'railnote' + (assembledFault ? ' scrapped' : '')
+    why.textContent = assembledFault
+      ? `src/island/species/parts refused to list what it can build: ${assembledFault}`
+      : NOTHING_YET
+    list.append(why)
+    $('#count').textContent = '0 assembled'
+    return
+  }
+
+  for (const group of groupRows(items)) {
+    const head = document.createElement('li')
+    head.className = 'group'
+    head.textContent = groupHeading(group)
+    list.append(head)
+
+    for (const row of group.items) {
+      const li = document.createElement('li')
+      li.className = 'item creature assembledrow' + (row.id === picked ? ' on' : '')
+
+      const chip = document.createElement('span')
+      chip.className = 'chip ours'
+      chip.textContent = NEW_METHOD_SHORT
+      li.append(chip, `${row.name} `)
+
+      if (row.flagged) {
+        const flag = document.createElement('span')
+        flag.className = 'flagmark'
+        flag.textContent = FLAG_GLYPH
+        li.append(flag)
+      }
+
+      const who = document.createElement('span')
+      who.className = 'meta'
+      who.textContent = row.id
+      li.append(who)
+
+      li.title = rowTitle(row)
+      li.onclick = () => void select(row.id)
+      list.append(li)
+    }
+  }
+
+  $('#count').textContent = countLabel(assembled, items)
+}
+
 function drawBenchList(): void {
   const list = $('#list')
   list.replaceChildren()
   const items = benchShown()
+
+  /*
+   * THE SCRAPPED BANNER, at the top of the list and not in a tooltip.
+   *
+   * The tab already says SCRAPPED; this says what survives. Joe signs names and
+   * facts off on this bench and those still stand — it is only the geometry
+   * turning beside them that has been superseded — and a bench that said nothing
+   * would leave him signing off shapes that will never ship.
+   */
+  const scrapped = document.createElement('li')
+  scrapped.className = 'railnote scrapped'
+  scrapped.textContent = SCRAPPED_NOTE
+  list.append(scrapped)
 
   let group = ''
   for (const c of items) {
@@ -965,6 +1230,7 @@ function drawList(): void {
   if (gallery === 'built') { drawBenchList(); drawProgress(); return }
   if (gallery === 'primitives') { drawPrimitiveList(); drawPrimitiveProgress(); return }
   if (gallery === 'anatomy') { drawAnatomyList(); return }
+  if (gallery === 'assembled') { drawAssembledList(); return }
   const items = shown()
   const list = $('#list')
   list.replaceChildren()
@@ -1021,6 +1287,10 @@ async function select(id: string): Promise<void> {
       drawTags()
       drawAnatomy()
     }
+    /* The two labels only exist once both halves are on the stand, so they are
+     * hung HERE rather than in `drawDetail` — same reasoning as the anatomy tags
+     * one line up. */
+    if (gallery === 'assembled') drawPairTags()
     say('')
   } catch (err) {
     if (mine !== token) return
@@ -1042,6 +1312,11 @@ function build(id: string): Promise<THREE.Object3D> {
     return loadComparison(row.compare)
   }
   if (gallery === 'anatomy') return loadAnatomy(id)
+  /* Always the pair, never the animal alone — see `loadAssembled`. Grid mode
+   * therefore lays out a grid of PAIRS, which is the right answer for the
+   * question this gallery asks: a collection is judged one comparison at a time
+   * and then all at once, against the same original each time. */
+  if (gallery === 'assembled') return loadAssembled(id)
   if (gallery === 'species') return loadPet(id, $<HTMLSelectElement>('#setSelect').value)
   if (gallery === 'tiles') return loadTile(id, $<HTMLSelectElement>('#seasonSelect').value as Season)
   return loadProp(id, $<HTMLInputElement>('#greyToggle').checked)
@@ -1051,9 +1326,11 @@ function drawDetail(): void {
   if (gallery === 'built') return drawCreature()
   if (gallery === 'primitives') return drawPrimitive()
   if (gallery === 'anatomy') return drawAnatomy()
+  if (gallery === 'assembled') return drawAssembled()
   $('#creature').hidden = true
   $('#primitive').hidden = true
   $('#anatomy').hidden = true
+  $('#assembled').hidden = true
   const entry = shown().find(e => e.id === picked)
   $('#assetId').textContent = picked || '—'
   const facts = $('#facts')
@@ -1075,6 +1352,21 @@ function drawDetail(): void {
     if (step) put('increment', `step ${step.index + 1}: ${step.step}`)
   }
 
+  drawNotes()
+}
+
+/**
+ * The notes he has left against whatever is selected.
+ *
+ * Named rather than inlined at the bottom of `drawDetail` because the assembled
+ * gallery wants them too and has nowhere else to put a remark. A creature on the
+ * scrapped bench and a primitive both carry their own note field inside a card
+ * that patches an audit file; an assembled animal has no audit file yet, so the
+ * per-asset note box — which keys on the id and already persists — is the honest
+ * place for "the spikes are too big" until the pilot says what a sign-off on one
+ * of these should look like.
+ */
+function drawNotes(): void {
   const ul = $('#notes')
   ul.replaceChildren()
   for (const n of notes.filter(n => n.assetId === picked)) {
@@ -1156,11 +1448,18 @@ function drawCreature(): void {
   box.replaceChildren()
   $('#primitive').hidden = true
   $('#anatomy').hidden = true
+  $('#assembled').hidden = true
 
   $('#assetId').textContent = c ? c.given : '—'
   const dl = $('#facts')
   dl.replaceChildren()
   if (!c) { box.hidden = true; return }
+
+  /* The same sentence the rail carries, on the card he is actually reading while
+   * he clicks Sign off. He has been burned by a stale page once; a bench whose
+   * geometry has been superseded says so on every card, not once at the top of a
+   * list he scrolled past ten minutes ago. */
+  box.append(el('p', 'scrapnote', SCRAPPED_NOTE))
 
   const put = (label: string, value: string) => {
     dl.append(el('dt', '', label), el('dd', '', value))
@@ -1318,6 +1617,7 @@ function drawPrimitive(): void {
   box.replaceChildren()
   $('#creature').hidden = true
   $('#anatomy').hidden = true
+  $('#assembled').hidden = true
 
   $('#assetId').textContent = p ? (p.title || p.id) : '—'
   const dl = $('#facts')
@@ -1404,6 +1704,81 @@ function drawPrimitive(): void {
     + 'off is what unblocks the change; rejecting it is what stops it being made anyway.'))
 }
 
+/* --------------------------------------------------- the assembled card */
+
+/**
+ * One new-method animal: what it is, what it is standing beside, and any flag.
+ *
+ * There is no gate on this card and that is deliberate. The pilot is running —
+ * one species, then stop and report — and what Joe is being asked for here is a
+ * look and a remark, not a verdict on a bench that does not exist yet. Inventing
+ * a sign-off field would mean inventing a file to keep it in, and the method
+ * document is explicit that the instructions get sharpened between collections
+ * before anything is scaled up. The per-asset note box below the card is where a
+ * remark lands, on the same persistence path every other note uses.
+ *
+ * The order is fixed: WHAT KIND OF ANIMAL THIS IS first, the flag second if
+ * there is one, the pairing third. Anything else risks him reading the model
+ * before he has read which of the two methods built it, which is the single
+ * confusion this gallery was added to prevent.
+ */
+function drawAssembled(): void {
+  const box = $('#assembled')
+  box.hidden = false
+  box.replaceChildren()
+  $('#creature').hidden = true
+  $('#primitive').hidden = true
+  $('#anatomy').hidden = true
+
+  const row = assembled.find(r => r.id === picked)
+  const dl = $('#facts')
+  dl.replaceChildren()
+  $('#assetId').textContent = row ? row.name : '—'
+
+  if (!row) {
+    if (assembledFault) box.append(el('p', 'alarm', assembledFault))
+    else box.append(el('p', 'pending', NOTHING_YET))
+    drawNotes()
+    return
+  }
+
+  /* ---- which method built it, first and unmissable */
+  const badge = el('p', 'methodmark', NEW_METHOD_MARK)
+  box.append(badge)
+
+  const put = (label: string, value: string) => {
+    dl.append(el('dt', '', label), el('dd', '', value))
+  }
+  put('species id', row.id)
+  put('collection', row.collectionName + (row.unknownCollection ? '  (not a collection the roster knows)' : ''))
+  put('built by', 'src/island/species/parts — assembled from lifted pack geometry')
+
+  if (row.unknownCollection) {
+    box.append(el('p', 'alarm',
+      `This build is filed under '${row.collection}', which is in no collection the roster has. `
+      + 'The animal still shows; what is wrong is where it says it belongs.'))
+  }
+
+  /* ---- the flag, second, and as a NOTE rather than an alarm */
+  if (row.flagged) {
+    const note = el('div', 'flagnote')
+    const head = el('div', 'row')
+    head.append(el('span', 'flagmark big', FLAG_GLYPH), el('h3', '', FLAG_HEADING))
+    note.append(head)
+    note.append(el('p', 'factText', flagNote(row)))
+    box.append(note)
+  }
+
+  /* ---- what is on the turntable, in the same words the labels over it use */
+  const card = pairCard(row, referenceOr($<HTMLSelectElement>('#besideSelect').value))
+  const pairing = el('div', 'judge')
+  pairing.append(el('h3', '', 'What you are looking at'))
+  pairing.append(el('p', 'factText meta', card.why))
+  box.append(pairing)
+
+  drawNotes()
+}
+
 /* ------------------------------------------------------------- grid mode */
 
 /**
@@ -1418,10 +1793,19 @@ async function showGrid(): Promise<void> {
    * that matters: roster §4 flags whole groups that "will read as duplicates
    * unless size, palette and marking are deliberately separated", and that is
    * not a question a one-at-a-time viewer can answer. */
-  const bucket: Array<{ id: string }> = gallery === 'built'
-    ? benchShown().filter(c => c.collection === bench.find(x => x.speciesId === picked)?.collection)
-      .map(c => ({ id: c.speciesId }))
-    : (() => {
+  /* And for the ASSEMBLED animals the group is the collection too, for a sharper
+   * version of the same reason: the pilot is a collection at a time, and "do
+   * these fourteen read as one set" is the question that follows "does this one
+   * sit beside the fox". Each cell is a PAIR, so the reference animal repeats
+   * down the grid — which is the point, not a waste: it is the constant every
+   * one of them is being judged against. */
+  const bucket: Array<{ id: string }> = gallery === 'assembled'
+    ? assembledShown().filter(r => r.collection === assembled.find(x => x.id === picked)?.collection)
+      .map(r => ({ id: r.id }))
+    : gallery === 'built'
+      ? benchShown().filter(c => c.collection === bench.find(x => x.speciesId === picked)?.collection)
+        .map(c => ({ id: c.speciesId }))
+      : (() => {
       const entry = shown().find(e => e.id === picked)
       return shown().filter(e => e.group === (entry?.group ?? '') && e.onDisk)
     })()
@@ -1469,9 +1853,15 @@ function setGallery(next: Gallery): void {
   $('#greyPick').hidden = next !== 'props'
   $('#anatomyPick').hidden = next !== 'anatomy'
   $('#explodePick').hidden = next !== 'anatomy'
+  /* Which original the new animal stands beside. Only this gallery pairs an
+   * assembly with a pack model, so only this gallery gets the picker. */
+  $('#besidePick').hidden = next !== 'assembled'
   /* Leaving the gallery takes its labels with it, or they hang over the next
-   * model pointing at parts of an animal that is no longer on the stand. */
-  if (next !== 'anatomy') { $('#labels').replaceChildren(); tags.length = 0; parts = [] }
+   * model pointing at parts of an animal that is no longer on the stand. Both
+   * label sets are cleared, because both draw into the one `#labels` layer. */
+  if (next !== 'anatomy') { tags.length = 0; parts = [] }
+  if (next !== 'assembled') { pairTags.length = 0; pairSides = null }
+  if (next !== 'anatomy' && next !== 'assembled') $('#labels').replaceChildren()
   /*
    * The progress bar belongs to the two SIGN-OFF benches and would be a lie over
    * the props, which have nothing to be finished with. Both fill the same three
@@ -1488,6 +1878,9 @@ function setGallery(next: Gallery): void {
    * "group" it belongs to is Face or Limbs, which is not a thing to lay out. */
   /* Nothing to grid on the anatomy bench either: it is already showing one
    * animal in a dozen pieces, and a grid of those would be unreadable. */
+  /* The assembled bench DOES grid, unlike the other pairing gallery: its group
+   * is a whole collection and "do these fourteen read as one set" is a real
+   * question the pilot has to answer. */
   $('#grid').hidden = next === 'primitives' || next === 'anatomy'
   /*
    * THE TURNTABLE STOPS HERE, and it is not a preference.
@@ -1517,6 +1910,18 @@ function setGallery(next: Gallery): void {
    * `leg-adopt` row. Drag to orbit still works and is how you look round it.
    */
   if (next === 'anatomy' && spinning) $('#spin').click()
+  /*
+   * AND IT STOPS HERE, for exactly the primitives bench's reason.
+   *
+   * This gallery shows two animals side by side and both the card and the two
+   * labels over the canvas say in as many words which is the pack's and which is
+   * ours. A turntable swings the pair right round every few seconds and makes
+   * that sentence false with nothing on screen looking wrong — and on THIS
+   * gallery the sentence being false means he judges a scrapped-looking shape as
+   * Kenney's, or Kenney's as ours, which is the whole thing this surface exists
+   * to prevent. Drag to orbit still works and is how you look round it.
+   */
+  if (next === 'assembled' && spinning) $('#spin').click()
   drawList()
   const listed = listedIds()
   /* The fox opens, not the beaver. It is the roster's reference animal and the
@@ -1524,6 +1929,10 @@ function setGallery(next: Gallery): void {
    * what "one example of an original animal" means. */
   const first = next === 'anatomy' && listed.includes(DEFAULT_SPECIES) ? DEFAULT_SPECIES : listed[0]
   if (first) void select(first)
+  /* Nothing to select is a real state on the assembled bench before the first
+   * species lands, and the card has to say so rather than keep the last
+   * gallery's detail pane on screen. */
+  else if (next === 'assembled') { picked = ''; clearStand(); pairSides = null; drawPairTags(); drawDetail() }
 }
 
 $('#galleries').onclick = e => {
@@ -1547,6 +1956,10 @@ $('#explodeRange').oninput = () => {
   $('#explodeValue').textContent = explode.toFixed(2)
   applyExplode()
 }
+/* Changing the reference reloads the pair, exactly as changing the set reloads a
+ * pet. Both halves are rebuilt, so the new original arrives at matched height
+ * rather than inheriting the last one's scale. */
+$('#besideSelect').onchange = () => void select(picked)
 $('#setSelect').onchange = () => void select(picked)
 $('#seasonSelect').onchange = () => void select(picked)
 $('#greyToggle').onchange = () => void select(picked)
@@ -1620,6 +2033,34 @@ async function boot(): Promise<void> {
     option.selected = species === DEFAULT_SPECIES
     animals.append(option)
   }
+
+  /* The 24 originals a new animal may be stood beside, off `REFERENCE_ANIMALS`
+   * — which is `ANATOMY_SPECIES` through the loader's own prefix, so this list
+   * cannot fall behind what is on disk either. The fox is selected, because the
+   * sentence the method is judged against names the fox. */
+  const beside = $<HTMLSelectElement>('#besideSelect')
+  for (const id of REFERENCE_ANIMALS) {
+    const option = document.createElement('option')
+    option.value = id
+    option.textContent = id
+    option.selected = id === DEFAULT_REFERENCE
+    beside.append(option)
+  }
+
+  /*
+   * The new-method bench, read once and joined to the roster's collection names.
+   *
+   * `assembledSpecies()` is the assembler's own list of what it can actually
+   * build — not a roster, not a plan — so an animal appears here the moment its
+   * assembly lands and never before. That is the pilot's delivery rule made
+   * visible: one species at a time, each viewable as soon as it exists.
+   */
+  try {
+    assembled = assembledRows(assembledSpecies())
+  } catch (err) {
+    assembledFault = (err as Error).message
+  }
+
   explode = Number($<HTMLInputElement>('#explodeRange').value)
   $('#explodeValue').textContent = explode.toFixed(2)
 
