@@ -354,6 +354,20 @@
       "check": "",
       "note": "",
       "state": "open"
+    },
+    {
+      "id": "JT-028",
+      "type": "ruling",
+      "title": "Fred's crowding invite now stays quiet for a build she starts AFTER abandoning one (PB-048 x PB-042)",
+      "detail": "Small, but it touches the governor you tuned by hand across eight rulings, so you should see it rather than find it.\n\nNOTHING WAS CHANGED HERE. I left the line exactly as it shipped. What changed is what it MEANS, underneath it.\n\nThe line is interactions.ts:159: a socket tap only offers Fred's crowding invite when `!flow.plot`. And governors.ts:372 says the same thing again - `landPaused` is the surplus governor AND `f.plot === null`. The reasoning was sound: do not nag a girl about crowding halfway through a tile she is already building.\n\nPB-048 shipped today and changed what a standing plot IS. Before, a standing plot meant \"mid-build\". Now, because the sum overlay stays open across every sum of a tile, the only way she is ever back on the island with a plot standing is by having LEFT one - a standing plot is the ABANDONED state. So the suppression now reads: she abandons a tile, taps a fresh socket to start a new one, and Fred does not mention crowding, because the abandoned scaffolding is still standing on her island.\n\nOPTIONS. (a) LEAVE IT: she gets one crowding-free tile after each abandonment. Harmless, arguably kind, and it is what is live right now. (b) DROP THE `!flow.plot` GUARD so the invite fires on any socket tap: strictly correct under the new meaning, but it makes Fred slightly chattier and your JT-016 grace period and JT-022 were tuned against the old meaning. (c) Keep the guard but scope it to a plot she is actively building - which no longer exists as a state, so this collapses into (b).\n\nWHAT WAS BUILT ON WHICH CHOICE: nothing. I deliberately built (a) by not touching it, because the governors are yours and PB-048 was a live bug that should not drag a balance change along with it. Fable was not asked.\n\nIF YOU CHOOSE (b): one condition, one line - drop `!flow.plot &&` at src/island/interactions.ts:159, and decide separately whether governors.ts:372 keeps its own `f.plot === null` clause. About twenty minutes including the tests in tests/island/interactions.test.ts (the case at :661 already pins this rule and would need its expectation flipped). No commit needs reverting either way.",
+      "blocks": [
+        "PB-042"
+      ],
+      "artefact": "src/island/interactions.ts:159",
+      "doneRule": "manual",
+      "check": "",
+      "note": "",
+      "state": "open"
     }
   ],
   "archive": []
