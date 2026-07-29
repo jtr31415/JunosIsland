@@ -196,6 +196,76 @@ const DECLINE_COOLDOWN = 2
 /** Sessions the honeymoon covers, counting the one it was accepted on. */
 const HONEYMOON_SESSIONS = 2
 
+/*
+ * ------------------------------------------------------------------------
+ * THE THREE ADAPTIVE DIALS — the weakness lean, the mercy run, the whisper.
+ *
+ * >>> PROVISIONAL, AND THIS IS THE MARK JOE ASKED FOR ON NUMBERS THAT PLAY
+ * >>> WILL PROBABLY MOVE. The JT-021 precedent is `src/island/balance/
+ * >>> index.ts:369-379`: values that were ratified for now rather than
+ * >>> settled get a marker so nobody has to go looking for them. Retuning
+ * >>> any of the eight below is an edit to THIS BLOCK and nothing else —
+ * >>> no new concept, no second write path, no test rewrite beyond the
+ * >>> tolerances the tests state out loud.
+ *
+ * THE WEAKNESS LEAN. runA.md:236 asks for a *"weakness-lean between paths
+ * bounded 65/35 on persistent estimates only"*, and on its face that is a
+ * clamp on the SHARE — which would supersede JT-010(1), where Joe says in
+ * terms that *"share of maths stays by tick"* and gives his own worked
+ * example of 2/3 sums to 1/3 subtraction. The conflict was put to Fable with
+ * the real code and Fable chose option C: read *bounded 65/35* as a bound on
+ * the STRENGTH of the lean — a multiplier on the weaker path's tick weight —
+ * rather than as a clamp on the resulting share. The reason is that the ticks
+ * must always dominate, because they are the parent's statement of what his
+ * daughter may be dealt, and a lean that could invert which path leads would
+ * be quietly overruling him with an accuracy estimate.
+ *
+ * WHAT THE MULTIPLIER BUYS, in the only two shapes worth naming:
+ *
+ *   1:1 ticks (one sum rung, one subtraction rung), full lean:
+ *     weights 1.857 : 1 → .65 / .35 — EXACTLY the spec's number, arrived at
+ *     from the other end. That is the calibration of LEAN_MAX.
+ *   2:1 ticks (Joe's example, subtraction the weaker), full lean:
+ *     weights 2 : 1.857 → about .519 sums / .481 subtraction. The parent's
+ *     ticks still lead, and subtraction has bought most of the practice it
+ *     needed without the lean taking the decision away from him.
+ *
+ * The lean reads PERSISTED estimates only — the spec's own words — so
+ * nothing that happened in this sitting can move the share of maths.
+ */
+
+/**
+ * Attempts a path must have behind its estimate before it may be leaned on.
+ *
+ * BOTH paths must clear it or the lean is off entirely, which is deliberate:
+ * a freshly introduced `takingAway` has almost no history, and a lean
+ * computed from the OTHER path's data alone would force-feed a five-year-old
+ * a brand-new kind of maths on the strength of no evidence about it at all.
+ * Below this bar she is dealt at her tick share, which is Joe's answer.
+ */
+const LEAN_MIN_ATTEMPTS = 8
+/** A gap this small is noise in an ewma, not a weakness. */
+const LEAN_DEAD_ZONE = 0.05
+/** The gap at which the lean is fully on. Beyond it nothing more happens. */
+const LEAN_FULL_GAP = 0.30
+/** The strongest the lean may ever pull: 65/35 at a 1:1 tick baseline. */
+const LEAN_MAX = 65 / 35
+
+/**
+ * Consecutive wrong answers on one path that arm a mercy run.
+ *
+ * Three is the point at which a child has stopped being stretched and
+ * started being ground down, and it is high enough that a slip and a guess
+ * do not reach it.
+ */
+const MERCY_TRIGGER = 3
+/** How many items the run lasts. Long enough to land, short enough to be invisible. */
+const MERCY_RUN = 2
+/** What a settled stage is worth against a live one: one item in five or so. */
+const WHISPER_WEIGHT = 0.2
+/** *"1–2 items per session from mastered stages"* — runA.md:237, the upper end. */
+const WHISPER_PER_SESSION = 2
+
 /**
  * What a stage looks like before anything has happened on it.
  *
@@ -422,8 +492,10 @@ export interface Harness {
    * What a maths round should be. Null when nothing in maths is ticked.
    *
    * Joe, JT-010(1): *"share of maths stays by tick."* The ticked stages of
-   * both paths go in one pool and the draw is uniform over it, so the share is
-   * a consequence of the ladder rather than a number anybody sets.
+   * both paths go in one pool and the draw is over that pool, so the share is
+   * a consequence of the ladder rather than a number anybody sets. The three
+   * adaptive mechanisms weight the pool — see the dial block near the top of
+   * this file — and only the weakness lean is allowed anywhere near the share.
    */
   dealMaths(roll: Roll): MathsDeal | null
   /**
@@ -461,6 +533,22 @@ export interface Harness {
   /** A rescue fired on this path. In-session only; never persisted. */
   noteRescue(path: Path): void
   rescuedThisSession(path: Path): boolean
+  /**
+   * The stages of this path that are MASTERED AND SUPERSEDED — solid, and with
+   * a higher rung ticked above them.
+   *
+   * runA.md:237 wants *"whisper retirement (1–2 items per session from
+   * mastered stages, feeding the settled-✓ that can quietly wake)"*, and this
+   * is the read the ✓ will be drawn from. Nothing renders it yet; it is here
+   * because the definition belongs with the rule that acts on it and not with
+   * the panel that will one day draw it.
+   *
+   * IT IS DERIVED, NEVER STORED. A settled stage is settled because `solid`
+   * says so this instant, so one wrong answer takes its `ewma` under the bar
+   * and it is simply back in full rotation — the *"quietly wake"* of the spec,
+   * with no flag to unset, nothing unticked and nothing demoted.
+   */
+  settledStages(path: Path): number[]
 
   /* -------------------------------------------------- Run B, live and headless */
 
@@ -529,18 +617,59 @@ export function createHarness(
   /** Transient rescue memory, per path. Deliberately not in `state`. */
   const rescuedIn = new Set<Path>()
 
+  /*
+   * THE IN-SESSION HALF OF ADAPTIVE SELECTION, and it lives here beside
+   * `rescuedIn` for exactly the same reason that does: none of it is a fact
+   * about the child.
+   *
+   * A run of three wrong answers is a bad ten minutes, not a capability, and
+   * writing it into `attainment` would mean a Tuesday afternoon followed her
+   * into every session afterwards — visible in a save, arguable over, and one
+   * more field the migration has to repair. The whisper budget is the same
+   * statement about a sitting: *"1–2 items per session"* is a sentence about
+   * TODAY. So all three counters die with the session, which also makes them
+   * untestable through the save and therefore only observable where they
+   * actually matter — in what she gets dealt.
+   *
+   * Brief §19 governs the mercy run in particular: wrong answers cost her
+   * nothing. It is silent, it is never announced, there is no read for it on
+   * the interface, and the attempts she makes during one are recorded exactly
+   * as honestly as any others. She simply finds the next two questions on the
+   * bottom rung, and nobody tells her why.
+   */
+  /** Consecutive wrong answers on a path, reset by any correct one. */
+  const wrongRun = new Map<Path, number>()
+  /** Items still owed on an armed mercy run. */
+  const mercyLeft = new Map<Path, number>()
+  /** Whisper items already spent on a path this session. */
+  const whispered = new Map<Path, number>()
+
   const statsFor = (path: Path, stage: number): StageStats | null =>
     state[path]?.stages[stage] ?? null
 
   const live = (path: Path): boolean =>
     (LIVE_PATHS as readonly string[]).includes(path)
 
+  /**
+   * The ticked stages of a path, in ladder order — the one implementation.
+   *
+   * Driven by the STAGE TABLE, not by the keys of the save. A hand-edited
+   * file, a rolled-back build or a future stage id are all untrusted input and
+   * none of them may reach a generator that cannot render them.
+   *
+   * `levelFor`, `topTicked` and the weighted draw all read it from here rather
+   * than each filtering the table themselves: three copies of one rule agree
+   * only for as long as somebody keeps them agreeing by hand, which is the
+   * shape HANDOFF §5 names as this project's repeat offender.
+   */
+  const tickedStages = (path: Path): number[] =>
+    live(path) ? STAGES[path].filter(s => statsFor(path, s)?.ticked === true) : []
+
   /* --------------------------------------------------------- Run B's reads */
 
   /** The top rung she is allowed, which is the one the gate judges. */
   const topTicked = (path: Path): number | null => {
-    if (!live(path)) return null
-    const set = STAGES[path].filter(s => statsFor(path, s)?.ticked === true)
+    const set = tickedStages(path)
     return set.length ? (set[set.length - 1] as number) : null
   }
 
@@ -603,16 +732,116 @@ export function createHarness(
     return o.declinedDay === null || o.daysSinceDecline >= DECLINE_COOLDOWN
   }
 
+  /* ------------------------------------------- the weights behind a draw */
+
+  const clamp01 = (v: number): number => Math.min(1, Math.max(0, v))
+
+  /**
+   * A path's PERSISTENT accuracy estimate, and the volume standing behind it.
+   *
+   * The attempts-weighted mean of `ewma` across the path's ticked stages,
+   * counting only stages that have an ewma at all — a stage nobody has
+   * answered says nothing, and averaging it in as a zero would say something
+   * false and cruel. Weighted by attempts rather than flat across stages
+   * because twenty answers on the bottom rung and one on the top is mostly a
+   * statement about the bottom rung.
+   *
+   * Null when the path has no ticked stage with any history.
+   */
+  const estimate = (path: Path): { mean: number; attempts: number } | null => {
+    let attempts = 0
+    let sum = 0
+    for (const s of tickedStages(path)) {
+      const st = statsFor(path, s)
+      if (!st || st.ewma === null) continue
+      attempts += st.attempts
+      sum += st.attempts * st.ewma
+    }
+    return attempts > 0 ? { mean: sum / attempts, attempts } : null
+  }
+
+  /**
+   * THE WEAKNESS LEAN — the ONLY thing that sets the share between the two
+   * maths paths, and therefore the only thing JT-010(1) has to be defended
+   * against.
+   *
+   * A path's weight starts at its number of ticked stages, which IS Joe's
+   * answer: the share stays by tick. The weaker path's weight is then
+   * multiplied by λ, which is 1 (no lean at all, today's behaviour exactly)
+   * until the two paths' persisted estimates differ by more than the dead
+   * zone, and rises to LEAN_MAX across the gap after that. See the dial block
+   * near the top of this file for what λ buys at the two tick shapes that
+   * matter, and for why *"bounded 65/35"* is read as a bound on the lean's
+   * strength.
+   *
+   * THE GATE IS ON BOTH PATHS AT ONCE. If either side is short of
+   * LEAN_MIN_ATTEMPTS, or has no ticked stage, or has no answered stage to
+   * average, there is no lean — not a half lean, and not a lean computed from
+   * one path's data. A gap measured against nothing is not a weakness.
+   */
+  const pathWeights = (): Map<Path, number> => {
+    const out = new Map<Path, number>()
+    for (const p of MATHS_PATHS) out.set(p, tickedStages(p).length)
+    const [first, second] = MATHS_PATHS
+    const a = estimate(first)
+    const b = estimate(second)
+    if (!a || !b) return out
+    if (a.attempts < LEAN_MIN_ATTEMPTS || b.attempts < LEAN_MIN_ATTEMPTS) return out
+    const weak = a.mean <= b.mean ? first : second
+    const gap = Math.abs(a.mean - b.mean)
+    const s = clamp01((gap - LEAN_DEAD_ZONE) / (LEAN_FULL_GAP - LEAN_DEAD_ZONE))
+    out.set(weak, (out.get(weak) ?? 0) * (1 + s * (LEAN_MAX - 1)))
+    return out
+  }
+
+  /**
+   * The stages of a path that are mastered AND superseded — see
+   * `Harness.settledStages` for what the word means and why nothing about it
+   * is stored.
+   *
+   * The spec's third clause — that a path must keep at least one non-settled
+   * ticked stage — is satisfied by construction rather than by a test here:
+   * the comparison is strictly BELOW the top ticked rung, so the top rung
+   * itself can never be settled and is always left in full rotation.
+   */
+  const settledOn = (path: Path): number[] => {
+    const top = topTicked(path)
+    if (top === null) return []
+    return tickedStages(path).filter(s => {
+      const st = statsFor(path, s)
+      return s < top && st !== null && solid(st)
+    })
+  }
+
+  /**
+   * How much each ticked stage of ONE path is worth against its siblings.
+   *
+   * These are renormalised within the path by the caller, which is the whole
+   * architecture of this draw: whatever happens here — a mercy run collapsing
+   * everything onto the bottom rung, a retirement taking two stages to zero —
+   * the path's share of maths is unchanged, because the numbers below only
+   * ever decide WHICH rung of a path is dealt and never HOW OFTEN the path is.
+   * That is what keeps JT-010(1) safe from all of it.
+   *
+   * A MERCY RUN outranks everything: the bottom rung, alone, until the run is
+   * spent. A SETTLED stage is worth a whisper until the session's budget is
+   * gone and nothing after that, which is the retirement.
+   *
+   * THE FALLBACK IS NOT OPTIONAL. A path whose every ticked stage has gone to
+   * zero — all settled, budget spent — must still be dealable, so everything
+   * goes back to 1. She is never dealt nothing.
+   */
+  const stageWeights = (path: Path, stages: number[]): number[] => {
+    if ((mercyLeft.get(path) ?? 0) > 0) return stages.map((_, i) => (i === 0 ? 1 : 0))
+    const settled = new Set(settledOn(path))
+    const spent = (whispered.get(path) ?? 0) >= WHISPER_PER_SESSION
+    const out = stages.map(s => (settled.has(s) ? (spent ? 0 : WHISPER_WEIGHT) : 1))
+    return out.some(w => w > 0) ? out : stages.map(() => 1)
+  }
+
   return {
     levelFor(path) {
-      if (!live(path)) return []
-      const stages = state[path]?.stages ?? {}
-      /*
-       * Driven by the STAGE TABLE, not by the keys of the save. A hand-edited
-       * file, a rolled-back build or a future stage id are all untrusted input
-       * and none of them may reach a generator that cannot render them.
-       */
-      return STAGES[path].filter(s => stages[s]?.ticked === true)
+      return tickedStages(path)
     },
 
     pick(path, roll) {
@@ -633,13 +862,66 @@ export function createHarness(
        * rung quietly cuts subtraction's share — and chose it, because the
        * ladder is what corrects it: *"as soon as sub becomes proficient for the
        * next level, the next triggers and the share is 1:1 again."*
+       *
+       * THE POOL AND ITS ORDER ARE UNCHANGED; what was a uniform index is now
+       * a cumulative walk over the same entries, and with every weight equal
+       * the two are the same selection down to the last boundary case. That is
+       * deliberate — it means the mechanisms below are additions to this draw
+       * and not a replacement of it, and that Joe's ruling is still the thing
+       * being computed when nothing else has anything to say.
        */
       const pool: Array<{ path: Path; stage: number }> = []
+      const weights: number[] = []
+      const byPath = pathWeights()
       for (const path of MATHS_PATHS) {
-        for (const stage of this.levelFor(path)) pool.push({ path, stage })
+        const stages = this.levelFor(path)
+        if (!stages.length) continue
+        /*
+         * RENORMALISED WITHIN THE PATH, and this one line is the guarantee.
+         *
+         * Each path's stage weights are divided by their own sum before the
+         * path weight multiplies them, so every path contributes exactly its
+         * `pathWeight` to the total no matter what the stage layer did. A
+         * mercy run, a retirement, a stage at zero: none of them can move the
+         * sum-versus-subtraction share by so much as a rounding error, which
+         * is how JT-010(1) survives two mechanisms that had to reach into the
+         * same draw.
+         */
+        const stage = stageWeights(path, stages)
+        const total = stage.reduce((n, w) => n + w, 0)
+        const share = byPath.get(path) ?? stages.length
+        for (let k = 0; k < stages.length; k++) {
+          pool.push({ path, stage: stages[k] as number })
+          weights.push(share * (stage[k] as number) / total)
+        }
       }
       if (!pool.length) return null
-      const i = Math.min(pool.length - 1, Math.max(0, Math.floor(roll() * pool.length)))
+
+      /*
+       * ONE ROLL, SPENT EXACTLY WHERE THE UNIFORM DRAW SPENT IT.
+       *
+       * A cumulative walk rather than a rejection loop, because the island's
+       * rng is a single shared sequence and a draw whose COST depends on its
+       * outcome would shift every downstream number by an amount nobody can
+       * predict from the test. With every weight equal this reduces exactly to
+       * the `floor(roll() * n)` it replaces — the weights are then all 1, the
+       * total is n, and the first cumulative sum above `roll() * n` is at
+       * index `floor(roll() * n)` — so every test written against the uniform
+       * draw is still a test of this one.
+       *
+       * Clamped at both ends as before: an rng contract of [0,1) is a
+       * contract, not a guarantee, and dealing `undefined` to a generator is
+       * unrecoverable. Zero-weight entries are skipped outright so that a
+       * below-range roll cannot land on a stage the weights had retired.
+       */
+      const totalWeight = weights.reduce((n, w) => n + w, 0)
+      const target = roll() * totalWeight
+      let i = weights.reduce((last, w, k) => (w > 0 ? k : last), pool.length - 1)
+      let seen = 0
+      for (let k = 0; k < weights.length; k++) {
+        seen += weights[k] as number
+        if ((weights[k] as number) > 0 && seen > target) { i = k; break }
+      }
       const drawn = pool[i] as { path: Path; stage: number }
 
       /*
@@ -653,8 +935,15 @@ export function createHarness(
        * to probe does not consume a roll it has no use for: the island's rng
        * is a shared sequence and spending from it invisibly is how a
        * deterministic test stops being deterministic.
+       *
+       * A MERCY RUN SILENCES THE PROBE on its own path, and it has to: the
+       * run exists because three answers in a row went wrong, and answering
+       * that by slipping her a question from the rung ABOVE would be the
+       * island making a bad ten minutes worse. Asked before `probeWanted` and
+       * so it spends no roll either.
        */
-      if (this.probeWanted(drawn.path) && roll() < PROBE_RATE) {
+      const mercy = (mercyLeft.get(drawn.path) ?? 0) > 0
+      if (!mercy && this.probeWanted(drawn.path) && roll() < PROBE_RATE) {
         const target = nextStage(drawn.path)
         if (target !== null) return { path: drawn.path, stage: target, probe: true }
       }
@@ -714,13 +1003,56 @@ export function createHarness(
     },
 
     dealt(path, stage, probe = false) {
-      current = live(path) && statsFor(path, stage) ? { path, stage, probe } : null
+      const real = live(path) && statsFor(path, stage) !== null
+      current = real ? { path, stage, probe } : null
+      if (!real) return
+
+      /*
+       * THE TWO SESSION BUDGETS ARE SPENT HERE, at the moment something is
+       * actually put in front of her, and not at the moment it was chosen.
+       * `dealMaths` may be called speculatively, and a run that drained itself
+       * on questions nobody asked would be a mercy she never received.
+       *
+       * A mercy item is not a whisper even when the bottom rung happens to be
+       * a settled one: the run put her there, so charging the whisper budget
+       * for it would retire a stage she was sent to for comfort. A PROBE is
+       * never a whisper either, and needs no test of its own for it: a probe
+       * is always on the rung ABOVE the top ticked one, and a settled stage is
+       * always below it.
+       */
+      const left = mercyLeft.get(path) ?? 0
+      if (left > 0) { mercyLeft.set(path, left - 1); return }
+      if (settledOn(path).includes(stage)) {
+        whispered.set(path, (whispered.get(path) ?? 0) + 1)
+      }
     },
 
     recordAttempt(evt) {
       if (!current) return
       const st = statsFor(current.path, current.stage)
       if (!st) return
+
+      /*
+       * THE MERCY COUNTER, and it counts every answer she gave — probes
+       * included, which is the one place this file lets a probe touch
+       * anything outside its own ring.
+       *
+       * It is not an inconsistency: the rule that a probe moves no stat is
+       * about the RECORD, and about a wrong answer on a rung nobody has given
+       * her permanently marking that rung. This counter is not a record of
+       * anything. It is a count of how the last few minutes have felt, it is
+       * gone when the tab closes, and from where she is sitting three wrong in
+       * a row is three wrong in a row whether or not the island privately
+       * labelled one of them a taste of the next rung.
+       */
+      if (evt.correct) wrongRun.set(current.path, 0)
+      else {
+        const n = (wrongRun.get(current.path) ?? 0) + 1
+        if (n >= MERCY_TRIGGER) {
+          wrongRun.set(current.path, 0)
+          mercyLeft.set(current.path, MERCY_RUN)
+        } else wrongRun.set(current.path, n)
+      }
 
       /*
        * A DAY SHE PLAYED, counted once, for every path at once.
@@ -787,6 +1119,8 @@ export function createHarness(
 
     noteRescue(path) { if (live(path)) rescuedIn.add(path) },
     rescuedThisSession(path) { return rescuedIn.has(path) },
+
+    settledStages(path) { return settledOn(path) },
 
     /* ------------------------------------------------ Run B, live and headless */
 

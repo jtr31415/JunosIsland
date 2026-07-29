@@ -1306,3 +1306,520 @@ describe('who moves a path’s ticks', () => {
     expect(back.reading.mode).toBe('hold')
   })
 })
+
+/* ------------------------------------- adaptive selection: lean, mercy, whisper */
+
+/**
+ * The three mechanisms runA.md:236-237 asks for, all of them landing in the one
+ * draw: *"weakness-lean between paths bounded 65/35 on persistent estimates
+ * only, invisible in-session mercy runs, whisper retirement (1–2 items per
+ * session from mastered stages, feeding the settled-✓ that can quietly wake)."*
+ *
+ * They are tested TOGETHER because they share a vehicle, and because the thing
+ * most worth pinning down is how they are kept apart: the lean sets the weight
+ * of a PATH, the other two set the weight of a STAGE WITHIN a path, and the
+ * stage weights are renormalised inside their path before the path weight
+ * multiplies them. So JT-010(1) — *"share of maths stays by tick"* — is
+ * answered by the lean alone, and no amount of mercy or retirement can touch
+ * it. Nearly every test below is a test of that boundary.
+ */
+type Att = ReturnType<typeof createAttainment>
+type H = ReturnType<typeof createHarness>
+
+/** An island with exactly these maths stages ticked and nothing else said. */
+const mathsIsland = (keys: readonly string[]): Att => {
+  const a = createAttainment()
+  for (const p of ['sums', 'takingAway'] as const) {
+    for (const s of STAGES[p]) a[p]!.stages[s]!.ticked = keys.includes(`${p}:${s}`)
+  }
+  return a
+}
+
+/** The pool the harness draws from, in the harness's own order. */
+const mathsPool = (a: Att): string[] => {
+  const out: string[] = []
+  for (const p of ['sums', 'takingAway'] as const) {
+    for (const s of STAGES[p]) if (a[p]!.stages[s]!.ticked) out.push(`${p}:${s}`)
+  }
+  return out
+}
+
+/** A persisted estimate, stated directly: a save is only ever a record. */
+const persist = (
+  a: Att, path: 'sums' | 'takingAway', stage: number, ewma: number, attempts: number,
+): void => {
+  const st = a[path]!.stages[stage]!
+  st.ticked = true
+  st.ewma = ewma
+  st.attempts = attempts
+}
+
+/** Deals over a deterministic sweep of [0,1), tallied. Measures a SPLIT, not an rng. */
+const deals = (h: H, N = 1000): Record<string, number> => {
+  const tally: Record<string, number> = {}
+  for (let i = 0; i < N; i++) {
+    const got = h.dealMaths(() => i / N)
+    const key = got ? got.path + ':' + got.stage : 'none'
+    tally[key] = (tally[key] ?? 0) + 1
+  }
+  return tally
+}
+
+/**
+ * A count from a sweep, to within a rounding boundary.
+ *
+ * A deterministic sweep of [0,1) measures a share exactly EXCEPT at the one
+ * index that straddles a cumulative boundary, where a weight of 1/1.2 · 2 is
+ * not the same double as 5/3. One item in six hundred either way is that, and
+ * asserting through it would be asserting about IEEE 754 rather than about
+ * what a child is dealt.
+ */
+const about = (got: number | undefined, want: number, slack = 2): void => {
+  expect(got ?? 0).toBeGreaterThanOrEqual(want - slack)
+  expect(got ?? 0).toBeLessThanOrEqual(want + slack)
+}
+
+/** The same sweep, collapsed to the only thing JT-010(1) is about. */
+const pathShare = (h: H, N = 1000): Record<string, number> => {
+  const out: Record<string, number> = { sums: 0, takingAway: 0 }
+  for (const [key, n] of Object.entries(deals(h, N))) {
+    const path = key.split(':')[0] as string
+    out[path] = (out[path] ?? 0) + n
+  }
+  return out
+}
+
+describe('the weighted draw — the vehicle all three mechanisms ride on', () => {
+  /*
+   * THE REGRESSION NET FOR EVERY TEST ABOVE THIS LINE. The uniform index that
+   * `dealMaths` used to compute is Joe's JT-010(1) and it is not superseded: it
+   * is now the case where every weight happens to be equal, and it must come
+   * out of the cumulative walk unchanged down to the last boundary case.
+   */
+  const uniformPick = (n: number, r: number): number =>
+    Math.min(n - 1, Math.max(0, Math.floor(r * n)))
+
+  /** Boundaries, an out-of-contract roll at each end, and a long sweep. */
+  const ROLLS = [
+    0, 1e-12, 0.05, 0.2, 0.25, 1 / 3, 0.4, 0.5, 0.6, 2 / 3, 0.75, 0.8,
+    0.9999999999, -0.5, 1.5,
+    ...Array.from({ length: 997 }, (_, i) => i / 997),
+  ]
+
+  const CONFIGS = [
+    ['sums:1'],
+    ['sums:1', 'takingAway:1'],
+    ['sums:1', 'sums:2', 'takingAway:1'],
+    ['sums:1', 'sums:2', 'takingAway:1', 'takingAway:2', 'takingAway:3'],
+  ]
+
+  it('picks exactly what the uniform draw picked, roll for roll', () => {
+    for (const keys of CONFIGS) {
+      const a = mathsIsland(keys)
+      const h = createHarness(a)
+      const pool = mathsPool(a)
+      for (const r of ROLLS) {
+        const got = h.dealMaths(() => r)
+        expect(`${got?.path}:${got?.stage}`).toBe(pool[uniformPick(pool.length, r)])
+      }
+    }
+  })
+
+  it('spends exactly one roll, as the uniform draw did', () => {
+    /*
+     * The island's rng is a single shared sequence and `main.ts` hands the same
+     * one to the generators immediately afterwards. A weighted draw that
+     * rejected and re-rolled would cost a different number of draws depending
+     * on its own outcome, which is how a deterministic test stops being
+     * deterministic and nobody's fault stays findable.
+     */
+    let drawn = 0
+    const counted = () => { drawn++; return 0.5 }
+    const h = createHarness(mathsIsland(['sums:1', 'sums:2', 'takingAway:1']))
+    h.dealMaths(counted)
+    expect(drawn).toBe(1)
+  })
+
+  it('still deals nothing at all when the whole of maths is unticked', () => {
+    expect(createHarness(mathsIsland([])).dealMaths(() => 0)).toBeNull()
+  })
+})
+
+describe('the weakness lean — runA.md:236, and JT-010 survives it', () => {
+  it('does not lean until BOTH paths have enough attempts behind them', () => {
+    /*
+     * The gate is on both sides at once, and the path it protects is the newly
+     * introduced one: `takingAway` arrives with almost no history, and a lean
+     * computed from the sums data alone would force-feed a five-year-old a
+     * brand-new kind of maths on the strength of no evidence about it at all.
+     * Under the bar she is dealt at her TICK share, which is Joe's answer.
+     */
+    const a = mathsIsland(['sums:1', 'takingAway:1'])
+    persist(a, 'sums', 1, 1, 20)
+    persist(a, 'takingAway', 1, 0.2, 7)
+    expect(pathShare(createHarness(a))).toEqual({ sums: 500, takingAway: 500 })
+
+    a.takingAway.stages[1]!.attempts = 8
+    expect(pathShare(createHarness(a))).toEqual({ sums: 350, takingAway: 650 })
+  })
+
+  it('ignores a gap that is only the noise in an ewma', () => {
+    // .04 apart is two estimates saying the same thing. A lean that answered
+    // it would be re-weighting a child's maths on a rounding difference.
+    const a = mathsIsland(['sums:1', 'takingAway:1'])
+    persist(a, 'sums', 1, 0.9, 20)
+    persist(a, 'takingAway', 1, 0.86, 20)
+    expect(pathShare(createHarness(a))).toEqual({ sums: 500, takingAway: 500 })
+  })
+
+  it('comes on gradually once the gap clears the dead zone', () => {
+    // Nothing snaps: a gap a hair over the dead zone buys a hair of a lean.
+    const a = mathsIsland(['sums:1', 'takingAway:1'])
+    persist(a, 'sums', 1, 0.9, 20)
+    persist(a, 'takingAway', 1, 0.84, 20)
+    const share = pathShare(createHarness(a))
+    expect(share.takingAway).toBeGreaterThan(share.sums as number)
+    expect(share.takingAway).toBeLessThan(550)
+  })
+
+  it('lands on exactly 65/35 at a 1:1 tick baseline, the spec\'s own number', () => {
+    /*
+     * runA.md:236 says *"bounded 65/35"* and this is where that number is
+     * kept: one rung ticked on each path, a gap wide enough to pull as hard as
+     * the lean ever pulls, and the weaker path gets 65% of her maths. Read as
+     * a bound on the STRENGTH of the lean (Fable's option C), the spec's
+     * figure is the calibration of LEAN_MAX rather than a clamp on the share.
+     */
+    const a = mathsIsland(['sums:1', 'takingAway:1'])
+    persist(a, 'sums', 1, 0.95, 20)
+    persist(a, 'takingAway', 1, 0.55, 20)
+    expect(pathShare(createHarness(a))).toEqual({ sums: 350, takingAway: 650 })
+  })
+
+  it('never inverts which path leads, at Joe\'s own 2:1 example', () => {
+    /*
+     * THE REASON THE LEAN IS A MULTIPLIER AND NOT A CLAMP. Joe's worked
+     * example is two sum rungs to one subtraction rung, which he calls 2/3
+     * sums. With subtraction the weaker path and the lean fully on it moves to
+     * about .519/.481 — subtraction has bought nearly all the practice it
+     * needed and the PARENT'S TICKS STILL LEAD. A 65/35 clamp would have
+     * flipped his 2:1 into a 35/65 against him, which is an accuracy estimate
+     * overruling a father.
+     */
+    const a = mathsIsland(['sums:1', 'sums:2', 'takingAway:1'])
+    persist(a, 'sums', 1, 0.95, 20)
+    persist(a, 'sums', 2, 0.95, 20)
+    persist(a, 'takingAway', 1, 0.55, 20)
+    const share = pathShare(createHarness(a))
+    expect(share.sums).toBeGreaterThan(share.takingAway as number)
+    about(share.sums, 519)
+    about(share.takingAway, 481)
+  })
+
+  it('leans the other way just as hard, and still does not invert the ticks', () => {
+    // Symmetry, and the same refusal: whichever path is behind gets the pull,
+    // and whichever path has the ticks keeps the lead.
+    const a = mathsIsland(['sums:1', 'takingAway:1', 'takingAway:2'])
+    persist(a, 'sums', 1, 0.55, 20)
+    persist(a, 'takingAway', 1, 0.95, 20)
+    persist(a, 'takingAway', 2, 0.95, 20)
+    const share = pathShare(createHarness(a))
+    expect(share.takingAway).toBeGreaterThan(share.sums as number)
+    about(share.sums, 481)
+  })
+
+  it('weights the estimate by attempts, so one answer cannot speak for a path', () => {
+    /*
+     * Twenty answers on the bottom rung and one on the rung above is mostly a
+     * statement about the bottom rung. Flat across stages, a single unlucky
+     * answer on a newly ticked stage would halve a path's estimate and swing
+     * the whole of her maths at it.
+     */
+    const a = mathsIsland(['sums:1', 'sums:2', 'takingAway:1'])
+    persist(a, 'sums', 1, 0.95, 40)
+    persist(a, 'sums', 2, 0.15, 1)   // one bad answer on a brand-new rung
+    persist(a, 'takingAway', 1, 0.9, 20)
+    // The weighted mean is ~.93, near enough .9 to stay inside the dead zone.
+    expect(pathShare(createHarness(a))).toEqual({ sums: 667, takingAway: 333 })
+  })
+
+  it('says nothing about a path with no answered stage at all', () => {
+    // A gap measured against nothing is not a weakness. `takingAway` on the
+    // evening JT-007 ticked it has a tickbox and no history whatsoever.
+    const a = mathsIsland(['sums:1', 'takingAway:1'])
+    persist(a, 'sums', 1, 1, 40)
+    expect(a.takingAway.stages[1]!.ewma).toBeNull()
+    expect(pathShare(createHarness(a))).toEqual({ sums: 500, takingAway: 500 })
+  })
+
+  it('reads persisted estimates only, never anything from this session', () => {
+    /*
+     * *"on persistent estimates only"* — runA.md:236, and it is a rule with
+     * teeth: a rescue, a probe and an armed mercy run are all real in-session
+     * facts, and none of them may move the share of maths. Only what is in the
+     * save speaks here.
+     */
+    const a = mathsIsland(['sums:1', 'sums:2', 'takingAway:1'])
+    persist(a, 'sums', 1, 0.9, 20)
+    persist(a, 'sums', 2, 0.9, 20)
+    persist(a, 'takingAway', 1, 0.9, 20)
+    const h = createHarness(a)
+    const before = pathShare(h)
+
+    h.noteRescue('sums')
+    h.dealt('sums', 2, true)
+    for (let i = 0; i < 3; i++) h.recordAttempt(attempt({ correct: false }))
+    expect(a.sums.stages[2]!.ewma).toBe(0.9)   // a probe moved no persisted stat
+
+    expect(pathShare(h)).toEqual(before)
+  })
+})
+
+describe('the mercy run — invisible, in-session, and silent', () => {
+  /*
+   * runA.md:236, *"invisible in-session mercy runs"*, under brief §19: wrong
+   * answers cost her nothing. Nothing is announced, nothing is rendered, there
+   * is no read for it on the interface at all, and the attempts she makes
+   * during one are recorded exactly as honestly as any others. She simply
+   * finds the next two questions on the bottom rung, and nobody tells her why.
+   * These tests can only watch it through the deals, which is the point.
+   */
+  const struggling = (): { a: Att; h: H } => {
+    const a = mathsIsland(['sums:1', 'sums:2'])
+    const h = createHarness(a)
+    h.dealt('sums', 2)
+    for (let i = 0; i < 3; i++) h.recordAttempt(attempt({ correct: false }))
+    return { a, h }
+  }
+
+  it('drops to the bottom rung for two items after three wrong in a row', () => {
+    const { h } = struggling()
+    // A roll of .99 is the top of the pool and would deal sums 2 every time.
+    expect(h.dealMaths(() => 0.99)).toEqual({ path: 'sums', stage: 1, probe: false })
+    h.dealt('sums', 1)
+    expect(h.dealMaths(() => 0.99)).toEqual({ path: 'sums', stage: 1, probe: false })
+    h.dealt('sums', 1)
+    expect(h.dealMaths(() => 0.99)).toEqual({ path: 'sums', stage: 2, probe: false })
+  })
+
+  it('spends the run on items actually dealt, not on rounds merely considered', () => {
+    // `dealMaths` may be called without anything being put in front of her. A
+    // run that drained itself on questions nobody asked is a mercy she never
+    // received.
+    const { h } = struggling()
+    for (let i = 0; i < 20; i++) h.dealMaths(() => 0.99)
+    expect(h.dealMaths(() => 0.99)?.stage).toBe(1)
+  })
+
+  it('is disarmed by a single right answer, because the trouble has passed', () => {
+    const a = mathsIsland(['sums:1', 'sums:2'])
+    const h = createHarness(a)
+    h.dealt('sums', 2)
+    h.recordAttempt(attempt({ correct: false }))
+    h.recordAttempt(attempt({ correct: false }))
+    h.recordAttempt(attempt({ correct: true }))
+    h.recordAttempt(attempt({ correct: false }))
+    h.recordAttempt(attempt({ correct: false }))
+    expect(h.dealMaths(() => 0.99)?.stage).toBe(2)
+  })
+
+  it('keeps the paths apart — one path\'s bad run is not the other\'s', () => {
+    const a = mathsIsland(['sums:1', 'sums:2', 'takingAway:1', 'takingAway:2'])
+    const h = createHarness(a)
+    h.dealt('sums', 2)
+    for (let i = 0; i < 3; i++) h.recordAttempt(attempt({ correct: false }))
+    const got = deals(h, 400)
+    expect(got['sums:2']).toBeUndefined()
+    expect(got['takingAway:2']).toBeGreaterThan(0)
+  })
+
+  it('CANNOT move the share of maths, which is what protects JT-010(1)', () => {
+    /*
+     * THE INVARIANT THE WHOLE RENORMALISATION EXISTS FOR. The control is a
+     * SECOND harness over the very same attainment record: identical persisted
+     * stats, no session state, therefore no mercy run. The stage mix differs —
+     * that is the mercy — and the sum-versus-subtraction split is identical to
+     * the last deal.
+     */
+    const a = mathsIsland(['sums:1', 'sums:2', 'takingAway:1'])
+    const h = createHarness(a)
+    h.dealt('sums', 2)
+    for (let i = 0; i < 3; i++) h.recordAttempt(attempt({ correct: false }))
+    const control = createHarness(a)
+
+    expect(pathShare(h, 600)).toEqual(pathShare(control, 600))
+    expect(deals(h, 600)['sums:2']).toBeUndefined()
+    expect(deals(control, 600)['sums:2']).toBeGreaterThan(0)
+  })
+
+  it('silences the probe on that path, and spends no roll doing it', () => {
+    /*
+     * The run exists because three answers in a row went wrong. Answering that
+     * by slipping her a question from the rung ABOVE would be the island
+     * making a bad ten minutes worse. The counter is fed here by wrong PROBES,
+     * which move no persisted stat — so `sums` 1 is still comfortable and a
+     * probe is still wanted, and it is the mercy alone that stops it.
+     */
+    const it = island()
+    masterSums1(it)
+    expect(it.h.probeWanted('sums')).toBe(true)
+    it.h.dealt('sums', 2, true)
+    for (let i = 0; i < 3; i++) it.h.recordAttempt(attempt({ correct: false }))
+
+    let drawn = 0
+    const counted = () => { drawn++; return 0 }
+    expect(it.h.dealMaths(counted)).toEqual({ path: 'sums', stage: 1, probe: false })
+    expect(drawn).toBe(1)
+  })
+
+  it('records her attempts as honestly during a run as outside one', () => {
+    // Brief §19 cuts both ways: the kindness is in what she is DEALT, never in
+    // what is written down. A mercy that quietly stopped counting would be a
+    // measurement system lying to the parent who reads it.
+    const a = mathsIsland(['sums:1', 'sums:2'])
+    const h = createHarness(a)
+    h.dealt('sums', 2)
+    for (let i = 0; i < 3; i++) h.recordAttempt(attempt({ correct: false }))
+    expect(a.sums.stages[2]!.attempts).toBe(3)
+    h.dealt('sums', 1)
+    h.recordAttempt(attempt({ correct: true }))
+    expect(a.sums.stages[1]!.attempts).toBe(1)
+  })
+
+  it('writes nothing of itself into the attainment', () => {
+    // A run of three wrong answers is a bad ten minutes, not a capability. In
+    // the save it would follow her into every session afterwards.
+    const a = mathsIsland(['sums:1', 'sums:2'])
+    const h = createHarness(a)
+    h.dealt('sums', 2)
+    h.recordAttempt(attempt({ correct: false }))
+    const was = JSON.parse(JSON.stringify(a))
+    h.recordAttempt(attempt({ correct: false }))
+    h.recordAttempt(attempt({ correct: false }))
+    h.dealMaths(() => 0.99)
+    h.dealt('sums', 1)
+    const after = JSON.parse(JSON.stringify(a))
+    // The two further attempts are the ONLY difference: no run, no counter.
+    was.sums.stages[2].attempts = after.sums.stages[2].attempts
+    was.sums.stages[2].ewma = after.sums.stages[2].ewma
+    was.sums.stages[2].sessions = after.sums.stages[2].sessions
+    expect(after).toEqual(was)
+  })
+})
+
+describe('whisper retirement — mastered, superseded, and quietly awake', () => {
+  /*
+   * runA.md:237: *"whisper retirement (1–2 items per session from mastered
+   * stages, feeding the settled-✓ that can quietly wake)."* A stage she has
+   * mastered and moved past is not deleted and not unticked; it drops to the
+   * occasional item, and then to none for the rest of the sitting.
+   */
+  const settled = (): Island => {
+    const it = island()
+    masterSums1(it)                        // 20 right across two days: solid
+    it.a.sums.stages[2]!.ticked = true     // and now superseded
+    it.on('2026-07-03')
+    return it
+  }
+
+  it('is mastered AND superseded, never merely mastered', () => {
+    /*
+     * The top rung she is on can never be settled, however well she is doing —
+     * it is the work. Retiring it would leave a child who had just got good at
+     * something being dealt anything but that.
+     */
+    const it = island()
+    masterSums1(it)
+    expect(it.h.settledStages('sums')).toEqual([])   // solid, but still the top
+    it.a.sums.stages[2]!.ticked = true
+    expect(it.h.settledStages('sums')).toEqual([1])
+  })
+
+  it('says nothing about a path with no ticks or no mastery', () => {
+    const it = settled()
+    expect(it.h.settledStages('takingAway')).toEqual([])
+    expect(it.h.settledStages('reading')).toEqual([])
+  })
+
+  it('drops a settled stage to a whisper — one item in six, not none', () => {
+    // Retirement is not deletion. She still meets it, occasionally, and it is
+    // still hers.
+    const got = deals(settled().h, 600)
+    about(got['sums:1'], 100)
+    about(got['sums:2'], 500)
+  })
+
+  it('stops after two whispers a session, and that is the retirement', () => {
+    const it = settled()
+    it.h.dealt('sums', 1)
+    it.h.dealt('sums', 1)
+    expect(deals(it.h, 600)).toEqual({ 'sums:2': 600 })
+  })
+
+  it('counts only the items she was actually dealt on the settled stage', () => {
+    const it = settled()
+    it.h.dealt('sums', 2)          // the live rung is not a whisper
+    it.h.dealt('sums', 2, true)
+    it.h.dealt('sums', 1)          // one whisper spent, one still to come
+    about(deals(it.h, 600)['sums:1'], 100)
+  })
+
+  it('gives the budget back with the session, because it was never in the save', () => {
+    const it = settled()
+    const before = JSON.stringify(it.a)
+    it.h.dealt('sums', 1)
+    it.h.dealt('sums', 1)
+    expect(JSON.stringify(it.a)).toBe(before)
+    // Tomorrow is a new harness over the same record, and she meets it again.
+    about(deals(createHarness(it.a), 600)['sums:1'], 100)
+  })
+
+  it('CANNOT move the share of maths either — the same renormalisation', () => {
+    /*
+     * Both ends of the retirement, measured against the tick share Joe ruled
+     * for: two sum rungs to one subtraction rung is 2/3 sums, whether sums 1 is
+     * whispering or retired for the rest of the sitting.
+     */
+    const it = settled()
+    it.a.takingAway.stages[1]!.ticked = true
+    const whispering = pathShare(it.h, 600)
+    it.h.dealt('sums', 1)
+    it.h.dealt('sums', 1)
+    const retired = pathShare(it.h, 600)
+    expect(retired).toEqual(whispering)
+    about(whispering.sums, 400)
+    about(whispering.takingAway, 200)
+  })
+
+  it('never deals her nothing, whatever the weights have done', () => {
+    // A defensive guarantee rather than a reachable state — the top rung is
+    // never settled, so something on the path always carries weight. It is
+    // asserted anyway because the failure it guards against is a child tapping
+    // a plot and finding no question there.
+    const it = settled()
+    it.h.dealt('sums', 1)
+    it.h.dealt('sums', 1)
+    for (let i = 0; i < 200; i++) expect(it.h.dealMaths(() => i / 200)).not.toBeNull()
+  })
+
+  it('wakes quietly on a wrong answer, with nothing unticked and nothing lost', () => {
+    /*
+     * WHY NOTHING ABOUT `settled` IS PERSISTED. There is no flag to unset and
+     * no demotion to reverse: a stage is settled because `solid` says so this
+     * instant, so a wrong answer takes its ewma under the bar and it is simply
+     * back in full rotation. That is the whole of *"can quietly wake"*, and it
+     * is emergent rather than implemented. (Two wrong answers rather than one:
+     * one lands the ewma on exactly .85, which is still solid.)
+     */
+    const it = settled()
+    expect(it.h.settledStages('sums')).toEqual([1])
+    it.h.dealt('sums', 1)
+    it.h.recordAttempt(attempt({ correct: false }))
+    it.h.recordAttempt(attempt({ correct: false }))
+
+    expect(it.h.settledStages('sums')).toEqual([])
+    expect(it.h.levelFor('sums')).toEqual([1, 2])           // nothing unticked
+    expect(it.a.sums.stages[1]!.attempts).toBe(22)          // nothing lost
+    expect(deals(it.h, 600)).toEqual({ 'sums:1': 300, 'sums:2': 300 })
+  })
+})
