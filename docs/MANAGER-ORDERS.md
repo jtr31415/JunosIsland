@@ -59,8 +59,15 @@ written down.
 In order. The drumbeat set this; do not reorder it without saying why in the
 handoff.
 
-0. **LIVE BUG — an abandoned tile follows her around.** Reported by Joe, 29 July,
-   from Juno playing the deployed build. This jumps the queue.
+0. **PB-050 — LIVE BUG, an abandoned tile follows her around.** Reported by Joe,
+   29 July, from Juno playing the deployed build. This jumps the queue.
+
+   *The card is `PB-050`. It was raised as `PB-048` and renumbered by the
+   workbench save race — the page dealt card ids out of a stale `nextId`, so two
+   of Joe's own cards were dealt `PB-048` over it; his cards keep their ids and
+   this one moved. `d6f99c6`, `f21ec99` and `docs/MANAGER-HANDOFF.md` still say
+   `PB-048` for this same work, and are left alone: `PB-048` is now Joe's `asset
+   loading optimisation`. The race itself is fixed in `tools/workbench/merge.mjs`.*
 
    His report, verbatim: *"if a tile has been started and then abandoned, then
    tapping any tile jumps back into the building of the same tile, frustrating

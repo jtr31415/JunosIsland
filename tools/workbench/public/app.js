@@ -106,8 +106,16 @@ function drawBacklog() {
   add.onsubmit = e => {
     e.preventDefault()
     const b = S.backlog
-    const id = 'PB-' + String(b.nextId).padStart(3, '0')
-    save('backlog', { ...b, nextId: b.nextId + 1, cards: [...b.cards, { id, title: title.value, detail: detail.value, state: 'open', run: '' }] })
+    /*
+     * No id, and the counter left alone.
+     *
+     * This page used to deal the id itself, out of `nextId` as it stood when
+     * the page loaded — which is a stale number the moment an agent adds a
+     * card, and dealt Joe's new cards an id the live-bug card already had,
+     * twice in one run. The server deals it now, inside the request, against
+     * the file as it is on disk that instant. See `merge.mjs`.
+     */
+    save('backlog', { ...b, cards: [...b.cards, { title: title.value, detail: detail.value, state: 'open', run: '' }] })
   }
   root.append(add)
 

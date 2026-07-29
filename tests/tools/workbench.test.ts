@@ -359,6 +359,118 @@ describe('two writers, one file', () => {
     expect(after.nextId).toBe(stale.nextId)
   })
 
+  /*
+   * The third loss in the same shape, and the one that renumbered a card.
+   *
+   * The merge protected the card ARRAY and left the ID SPACE unguarded. Cards
+   * were dealt ids in the page, out of `nextId` as it stood when the page
+   * loaded, so a card Joe added from a tab that had been open a while arrived
+   * carrying an id an agent had already given the live-bug card. It looked like
+   * an edit of that card, was folded into it, and was lost with a 200 —
+   * manager run 8 saw it happen twice, which is why the live bug is carded as
+   * `PB-050` while `d6f99c6` and the orders call the same work `PB-048`.
+   *
+   * The agent's half is a direct `writeFileSync` again, because that is how it
+   * happens; the page's half goes over HTTP carrying the copy it loaded first.
+   */
+  const backlog = () => onDisk('joe/backlog.json')
+  const pbNumber = (id: string) => Number(id.slice(3))
+  const cardsAdded = (f: any, title: string) => f.cards.filter((c: any) => c.title === title)
+
+  it('the PB-048 collision: an id dealt twice keeps both cards, and moves only the newcomer', async () => {
+    const page = JSON.parse(JSON.stringify((await api('/api/state')).backlog))
+    const taken = 'PB-' + String(page.nextId).padStart(3, '0')
+
+    /* An agent commits the live-bug card straight to the file, taking the very
+     * id the tab Joe has open is about to deal itself. */
+    agentWrites(f => {
+      f.cards.push({
+        id: taken, title: 'an abandoned tile follows her around',
+        detail: 'the live bug, raised by an agent while his page was open',
+        state: 'open', run: '8',
+      })
+      f.nextId += 1
+    }, 'joe/backlog.json')
+
+    /* Joe types a card into that page and hits Add. It deals itself `taken`. */
+    page.cards.push({ id: taken, title: 'a card Joe typed meanwhile', detail: 'his own', state: 'open', run: '' })
+    page.nextId += 1
+    expect((await status({ what: 'backlog', value: page })).code).toBe(200)
+
+    const after = backlog()
+    const ids = after.cards.map((c: any) => c.id)
+    expect(new Set(ids).size).toBe(ids.length)                 // no id is held twice
+    /* Whoever got there first keeps the id: nothing already written is renumbered. */
+    expect(after.cards.find((c: any) => c.id === taken).title).toBe('an abandoned tile follows her around')
+    /* And his card is still here — under an id nothing else holds. */
+    const his = cardsAdded(after, 'a card Joe typed meanwhile')
+    expect(his).toHaveLength(1)
+    expect(his[0].id).not.toBe(taken)
+    expect(his[0].detail).toBe('his own')
+    expect(after.nextId).toBeGreaterThan(pbNumber(his[0].id))
+  })
+
+  it('deals an id the file does not already hold, however far behind the counter has fallen', async () => {
+    const page = JSON.parse(JSON.stringify((await api('/api/state')).backlog))
+
+    /* An agent appends two cards and never touches the counter, so the file now
+     * holds ids at and past `nextId`. A counter read on its own deals one of
+     * them straight back out. */
+    agentWrites(f => {
+      f.cards.push({ id: 'PB-' + String(f.nextId).padStart(3, '0'), title: 'appended without bumping the counter', detail: '', state: 'open', run: '' })
+      f.cards.push({ id: 'PB-' + String(f.nextId + 1).padStart(3, '0'), title: 'and the one after it', detail: '', state: 'open', run: '' })
+    }, 'joe/backlog.json')
+
+    page.cards.push({ id: 'PB-' + String(page.nextId).padStart(3, '0'), title: 'his next card', detail: '', state: 'open', run: '' })
+    page.nextId += 1
+    expect((await status({ what: 'backlog', value: page })).code).toBe(200)
+
+    const after = backlog()
+    const ids = after.cards.map((c: any) => c.id)
+    expect(new Set(ids).size).toBe(ids.length)
+    expect(cardsAdded(after, 'his next card')).toHaveLength(1)
+    expect(cardsAdded(after, 'appended without bumping the counter')).toHaveLength(1)
+    /* The counter healed: it is past every id in the file it allocates into. */
+    expect(after.nextId).toBeGreaterThan(Math.max(...ids.map(pbNumber)))
+  })
+
+  it('deals the id server-side when the page leaves it to the file', async () => {
+    const page = JSON.parse(JSON.stringify((await api('/api/state')).backlog))
+    /* What the page sends now: a card with no id, and the counter untouched. */
+    page.cards.push({ title: 'a card from a page that deals no ids', detail: '', state: 'open', run: '' })
+    expect((await status({ what: 'backlog', value: page })).code).toBe(200)
+
+    const after = backlog()
+    expect(after.cards.every((c: any) => /^PB-\d{3}$/.test(c.id ?? ''))).toBe(true)
+    const his = cardsAdded(after, 'a card from a page that deals no ids')
+    expect(his).toHaveLength(1)
+    expect(pbNumber(his[0].id)).toBeGreaterThanOrEqual(page.nextId)
+    expect(after.nextId).toBeGreaterThan(pbNumber(his[0].id))
+  })
+
+  it('a stale copy of a card an agent retitled is still that card, not a second one', async () => {
+    /* The other side of the same judgement. A payload record that disagrees
+     * with the disk about a field the page cannot edit is only a NEW card if
+     * the payload's counter also says it was dealt in this save. Without that
+     * second signal every stale echo would breed a duplicate. */
+    const page = JSON.parse(JSON.stringify((await api('/api/state')).backlog))
+    const victim = page.cards[1].id
+    agentWrites(f => { f.cards.find((c: any) => c.id === victim).title = 'the agent sharpened the wording' }, 'joe/backlog.json')
+
+    /* An old page, still dealing its own ids — so the counter signal is live
+     * for the card being added and must stay dead for the one merely echoed. */
+    page.cards.push({ id: 'PB-' + String(page.nextId).padStart(3, '0'), title: 'the add that carried the stale copy', detail: '', state: 'open', run: '' })
+    page.nextId += 1
+    expect((await status({ what: 'backlog', value: page })).code).toBe(200)
+
+    const after = backlog()
+    expect(after.cards.filter((c: any) => c.id === victim)).toHaveLength(1)
+    expect(after.cards.find((c: any) => c.id === victim).title).toBe('the agent sharpened the wording')
+    /* Not re-dealt under a fresh id with its old title alongside. */
+    expect(after.cards.filter((c: any) => c.title === page.cards[1].title)).toHaveLength(0)
+    expect(cardsAdded(after, 'the add that carried the stale copy')).toHaveLength(1)
+  })
+
   it('keeps the file in ITS order and ITS formatting — two spaces, LF, trailing newline', async () => {
     /* Inserted in the middle, not appended, so "kept" and "kept where it was"
      * are different assertions and both get made. */

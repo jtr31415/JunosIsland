@@ -14,7 +14,13 @@
  *     and he had to type it again.
  *
  * `joe/backlog.json` is written from both sides too, so it is merged on the
- * same terms.
+ * same terms. It cost work a third time, in the same shape but through the ID
+ * SPACE rather than the records: the page dealt card ids out of its own stale
+ * `nextId`, so Joe's new card arrived carrying an id an agent had already given
+ * the live-bug card, and a merge that protects the list but not the counter
+ * folded his card into that one and lost it — twice, which is why the live bug
+ * ended up carded as PB-050 while every commit for it says PB-048. Ids are now
+ * dealt server-side, inside the request; see `needsAnId` and `nextFree`.
  *
  * The fix is not a procedure for people to remember. The server re-reads the
  * file inside the request and merges, so correctness does not depend on anyone
@@ -73,12 +79,17 @@ const MERGEABLE = {
   tasks: {
     list: 'tasks', key: 'id',
     owns: { note: { kind: 'text' }, state: { kind: 'flag', idle: 'open' } },
+    /* No counter. JT ids are dealt by agents editing the file, and the page
+     * cannot add a task at all — there is no allocation here for two writers to
+     * race over. If it ever grows an Add task, it needs a `counter` too. */
   },
   backlog: {
     list: 'cards', key: 'id',
     owns: { state: { kind: 'flag', idle: 'open' }, run: { kind: 'flag', idle: '' } },
-    /* Ids are handed out from here and never reused, so it may only go up. */
-    highest: ['nextId'],
+    /* Ids are dealt from here, never reused and never renumbered once written.
+     * See `nextFree` for what the counter is worth, and `needsAnId` for the
+     * case the counter cannot cover on its own. */
+    counter: { field: 'nextId', prefix: 'PB-', pad: 3 },
   },
 }
 
@@ -116,6 +127,82 @@ function fold(field, was, now) {
   return field.kind === 'text' ? CLASH : now
 }
 
+/** The number inside a dealt id — `PB-048` → 48 — or NaN if it was never dealt from the counter. */
+function serial(counter, id) {
+  if (typeof id !== 'string' || !id.startsWith(counter.prefix)) return NaN
+  const tail = id.slice(counter.prefix.length)
+  return /^\d+$/.test(tail) ? Number(tail) : NaN
+}
+
+const dealId = (counter, n) => counter.prefix + String(n).padStart(counter.pad, '0')
+
+/**
+ * The lowest id that is certainly free, across every copy of the file in play.
+ *
+ * Past both counters — a stale page's counter may never drag the file's back
+ * down — and past every id ACTUALLY PRESENT, which is the half a counter alone
+ * cannot give you. A counter that has fallen behind the cards it dealt (an
+ * agent appending straight to the file without bumping it, a card restored from
+ * a commit blob) would otherwise deal the same id a second time. Reading the
+ * ids means the file heals itself on the next save instead.
+ */
+function nextFree(spec, ...files) {
+  const { list, key, counter } = spec
+  let n = 1
+  for (const f of files) {
+    if (!f) continue
+    n = Math.max(n, Number(f[counter.field]) || 0)
+    for (const r of Array.isArray(f[list]) ? f[list] : []) {
+      const s = serial(counter, r?.[key])
+      if (Number.isFinite(s)) n = Math.max(n, s + 1)
+    }
+  }
+  return n
+}
+
+/**
+ * Is this incoming record a card the page is ADDING, rather than its copy of a
+ * card the file already holds?
+ *
+ * The page deals ids itself, out of the counter as it stood when the page
+ * LOADED, so by the time a save lands the id may already belong to a card the
+ * page never heard of. That is how the live-bug card was dealt `PB-048` twice
+ * over: each collision arrived looking like an edit of the card already at that
+ * id, was folded into it, and the new card vanished with a 200. Merging the
+ * list while leaving the id space unguarded protects the cards and loses the
+ * one being added.
+ *
+ * The counter is now dealt server-side (`app.js` sends no id), which removes
+ * the race by construction. This covers the pages that still deal their own —
+ * any tab loaded before that change, which is exactly the tab this happened to.
+ * Two signals, and both must agree:
+ *
+ *   DEALT HERE  the payload's own counter sits exactly one past this id, which
+ *               is what a page does when it deals one and saves immediately.
+ *               A card it merely loaded sits far below its counter.
+ *   DIFFERENT   the two disagree about a field the page cannot edit. Edits go
+ *               out as patches now, so a whole-file payload never carries a
+ *               changed title — a title that differs is a different card.
+ *
+ * Neither alone would do. The first also fits the newest card of a page that
+ * saves whole without adding anything; the second also fits a stale echo of a
+ * card an agent retitled. Where they still disagree the choice is between
+ * showing a card twice and losing one silently, and this module loses nothing.
+ */
+function needsAnId(spec, onDisk, incoming, now) {
+  const { key, owns, counter } = spec
+  if (!counter) return false
+  const id = now?.[key]
+  /* No id at all: the page left the dealing to the server, where it belongs. */
+  if (typeof id !== 'string' || !id) return true
+  const was = onDisk.get(id)
+  if (!was) return false                      // nothing to collide with
+  const dealtHere = Number(incoming?.[counter.field]) === serial(counter, id) + 1
+  const different = [...new Set([...Object.keys(was), ...Object.keys(now)])].some(f =>
+    f !== key && !Object.hasOwn(owns, f) && JSON.stringify(was[f]) !== JSON.stringify(now[f]))
+  return dealtHere && different
+}
+
 /**
  * Merge a whole-file payload onto the copy the server just read from disk.
  *
@@ -125,7 +212,7 @@ function fold(field, was, now) {
 export function mergeWhole(what, disk, incoming) {
   const spec = MERGEABLE[what]
   if (!spec) return incoming
-  const { list, key, owns } = spec
+  const { list, key, owns, counter } = spec
 
   /* Nothing on disk yet (first boot, before the seed): the payload is all there
    * is, and there is nothing it could destroy. */
@@ -134,7 +221,11 @@ export function mergeWhole(what, disk, incoming) {
     throw new Refused(`a ${what} save needs a ${list} array`)
   }
 
-  const sent = new Map(incoming[list].map(r => [r?.[key], r]))
+  const onDisk = new Map(disk[list].map(r => [r?.[key], r]))
+  /* Classified before a single field is folded: a card that needs an id is not
+   * an edit of whatever happens to be sitting at the id it arrived with. */
+  const fresh = new Set(incoming[list].filter(r => needsAnId(spec, onDisk, incoming, r)))
+  const sent = new Map(incoming[list].filter(r => !fresh.has(r)).map(r => [r?.[key], r]))
   const clashes = []
   const seen = new Set()
 
@@ -153,15 +244,22 @@ export function mergeWhole(what, disk, incoming) {
     return out
   })
 
-  /* Records the page has and the disk does not: the backlog's Add card. */
-  for (const now of incoming[list]) if (!seen.has(now?.[key])) merged.push(now)
+  /* Records the page has and the disk does not: the backlog's Add card. One
+   * that needs an id is dealt the next free one HERE, inside the request,
+   * against the file as it stands this instant — never the id it arrived with,
+   * and never at the cost of the card already holding it. Ids are sticky once
+   * written: the newcomer moves, the card on disk never does. */
+  let free = counter ? nextFree(spec, disk, incoming) : 0
+  for (const now of incoming[list]) {
+    if (fresh.has(now)) merged.push({ ...now, [key]: dealId(counter, free++) })
+    else if (!seen.has(now?.[key])) merged.push(now)
+  }
 
   if (clashes.length) throw new Conflict(clashes)
 
   const out = { ...disk, [list]: merged }
-  for (const n of spec.highest ?? []) {
-    out[n] = Math.max(Number(disk[n]) || 0, Number(incoming[n]) || 0)
-  }
+  /* Never backwards, and never behind the ids it allocates into. */
+  if (counter) out[counter.field] = nextFree(spec, disk, incoming, out)
   return out
 }
 
