@@ -11,7 +11,8 @@
   <header>
     <a class="back" href="/">← bench</a>
     <nav id="galleries">
-      <button data-gallery="species" class="on">Species</button>
+      <button data-gallery="built" class="on">Built animals</button>
+      <button data-gallery="species">Species</button>
       <button data-gallery="tiles">Tiles</button>
       <button data-gallery="props">Props</button>
     </nav>
@@ -19,6 +20,20 @@
     <span id="count" class="meta"></span>
     <span id="says" class="meta"></span>
   </header>
+
+  <!--
+    Where he has got to, across the WHOLE bench, always on screen.
+
+    Joe asked for it in the same breath as the sign-off — "i then sign them off
+    one by one and you show me the progress in the viewer" — so it sits above
+    the three panes rather than inside the one he happens to be looking at, and
+    it never describes only what is filtered onto the screen.
+  -->
+  <div id="bench" hidden>
+    <progress id="benchBar" value="0" max="1"></progress>
+    <strong id="benchDone">—</strong>
+    <span id="benchMeta" class="meta"></span>
+  </div>
 
   <div id="layout">
     <aside id="rail"><ul id="list"></ul></aside>
@@ -41,6 +56,22 @@
     <aside id="detail">
       <h2 id="assetId">—</h2>
       <dl id="facts"></dl>
+
+      <!--
+        One creature's whole bench, and ONE gate over it.
+
+        JT-031, in his words: "have an agent create the facts and fact check
+        them. they then become part of my final sign off for each animal along
+        with its name." So the fact and the name sit above a single Sign off
+        button, and the two strike buttons beside them are not second gates —
+        they are how he says "the model and the name are fine, the sentence is
+        not" without having to write a paragraph about it.
+
+        Built by hand in `viewer.ts` rather than declared here, because every
+        control on it has to know which creature it is patching.
+      -->
+      <section id="creature" hidden></section>
+
       <form id="noteForm">
         <textarea name="note" rows="3" placeholder="what is wrong with it" required></textarea>
         <button type="submit">Add note for this asset</button>

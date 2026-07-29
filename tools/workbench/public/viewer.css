@@ -59,3 +59,46 @@ dd { margin: .1rem 0 0; font-family: ui-monospace, monospace; word-break: break-
 #notes { list-style: none; margin: .8rem 0 0; padding: 0; font-size: .82rem; }
 #notes li { border-top: 1px solid var(--line); padding: .4rem 0; display: flex; gap: .4rem; }
 #notes button { padding: 0 .3rem; font-size: .7rem; margin-left: auto; }
+
+/* ------------------------------------------------------- the built animals */
+
+/* The progress bar. Always on screen while the bench is open, because he asked
+   for the progress in the viewer and a number he has to go looking for is a
+   number he will not look at. */
+#bench { display: flex; gap: .8rem; align-items: center; flex: none;
+  padding: .4rem .8rem; background: var(--panel); border-bottom: 1px solid var(--line); }
+#bench[hidden] { display: none; }
+#benchBar { flex: 0 0 14rem; height: .55rem; accent-color: var(--ok); }
+
+/* A signed-off row keeps its place in the list and shows its tick — it never
+   disappears from under the cursor. */
+#list .item.creature { font-family: inherit; font-size: .86rem; }
+#list .item .tick { color: var(--dim); width: .8rem; flex: none; }
+#list .item.done .tick { color: var(--ok); }
+#list .item.done { color: var(--ok); }
+#list .item.on .tick, #list .item.on .meta { color: inherit; }
+#list .item.creature.missing { text-decoration: none; }
+
+#creature h3 { margin: 0; font-size: .7rem; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--dim); font-weight: 600; }
+.judge { border-top: 1px solid var(--line); padding: .6rem 0; display: flex;
+  flex-direction: column; gap: .4rem; }
+.judge input { flex: 1 1 8rem; min-width: 6rem; background: #100e0a; color: var(--ink);
+  border: 1px solid var(--line); border-radius: 4px; padding: .2rem .4rem; }
+.factText { margin: 0; font-size: .9rem; line-height: 1.45; }
+.pending { margin: 0; font-size: .8rem; color: var(--dim); font-style: italic; }
+.alarm { margin: .4rem 0; font-size: .8rem; color: var(--warn);
+  border-left: 3px solid var(--warn); padding-left: .5rem; }
+
+.pill { font-size: .68rem; text-transform: uppercase; letter-spacing: .06em;
+  border-radius: 999px; padding: .1rem .5rem; border: 1px solid var(--line); color: var(--dim); }
+.pill.ok { color: var(--ok); border-color: var(--ok); }
+.pill.warn { color: var(--warn); border-color: var(--warn); }
+
+button.strike.on { color: var(--warn); border-color: var(--warn); }
+
+/* The one gate. Deliberately the largest thing in the pane. */
+button.signoff { width: 100%; margin-top: .8rem; padding: .55rem; font-size: .95rem;
+  font-weight: 600; border-color: var(--dim); }
+button.signoff.on { background: var(--ok); color: var(--bg); border-color: var(--ok); }
+button.signoff:disabled { opacity: .4; cursor: not-allowed; }

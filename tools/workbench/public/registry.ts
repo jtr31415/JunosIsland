@@ -22,7 +22,16 @@ import {
 import { INCREMENTS, PALETTE } from '../../../src/island/world/increments'
 import { TILE_URL } from '../../../src/island/world/tiles'
 
-export type Gallery = 'species' | 'tiles' | 'props'
+/**
+ * `built` is the odd one and is NOT in this file's catalogue.
+ *
+ * The other three are things on disk that a loader opens. A built animal has no
+ * file at all — it is constructed at runtime by `buildSpecies`, from a record in
+ * `src/island/species/` — so nothing about it can be crossed against a directory
+ * listing, and it has its own bench in `built.ts`. It is named in the union
+ * because the viewer's chrome switches on it.
+ */
+export type Gallery = 'built' | 'species' | 'tiles' | 'props'
 export type Pack = 'pets' | 'props' | 'forest' | 'tiles'
 
 export interface Entry {

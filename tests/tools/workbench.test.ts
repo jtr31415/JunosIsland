@@ -637,6 +637,90 @@ describe('the pet-name audit', () => {
     expect(row('natural/animal-fox').replacement).toBe('Rusty')
   })
 
+  /*
+   * The built-animal sign-off, which lands in these same rows.
+   *
+   * JT-031: *"have an agent create the facts and fact check them. they then
+   * become part of my final sign off for each animal along with its name."* So
+   * one row is one creature's whole bench and `signoff` is the single gate over
+   * it. It goes through the SAME merge — there is no second persistence route —
+   * which is what these three prove.
+   */
+  it('takes a sign-off, and a strike against the fact, on the same row as the name', async () => {
+    regenerate()
+    expect((await status({
+      what: 'names',
+      patch: { id: 'natural/animal-fox', signoff: 'ok', factVerdict: 'reject', factNote: 'a fox is not a dog' },
+    })).code).toBe(200)
+
+    expect(row('natural/animal-fox')).toMatchObject({
+      signoff: 'ok', factVerdict: 'reject', factNote: 'a fox is not a dog',
+    })
+    /* The name's own verdict is a different judgement and is untouched by it. */
+    expect(row('natural/animal-fox').verdict).toBe('')
+    expect(row('natural/animal-fox').name).toBe('Rusanna')
+
+    /* And it is visible to the next page that asks — the viewer resumes from
+     * this and nothing else, with no agent running. */
+    const s = await api('/api/state')
+    expect(s.names.find((n: any) => n.id === 'natural/animal-fox').signoff).toBe('ok')
+  })
+
+  it('a regenerated list cannot untick a sign-off, and his own hand can', async () => {
+    regenerate()
+    await status({ what: 'names', patch: { id: 'natural/animal-owl', signoff: 'ok' } })
+
+    /* The generator does not know `signoff` exists — its rows carry no such key
+     * at all. An absent field is the absence of a decision, exactly as '' is,
+     * so it can never walk over one he has made. */
+    expect(generated().names[0]).not.toHaveProperty('signoff')
+    expect((await status({ what: 'names', value: generated() })).code).toBe(200)
+    expect(row('natural/animal-owl').signoff).toBe('ok')
+
+    /* A patch is intent, said out loud, so it re-opens it. */
+    expect((await status({ what: 'names', patch: { id: 'natural/animal-owl', signoff: '' } })).code).toBe(200)
+    expect(row('natural/animal-owl').signoff).toBe('')
+  })
+
+  it('his note about a fact is his words, and is never guessed at', async () => {
+    regenerate()
+    await status({ what: 'names', patch: { id: 'natural/animal-owl', factNote: 'owls do not turn their heads all the way round' } })
+
+    const rewritten = generated() as any
+    rewritten.names.find((n: any) => n.id === 'natural/animal-owl').factNote = 'something an agent decided'
+    const clash = await status({ what: 'names', value: rewritten })
+    expect(clash.code).toBe(409)
+    expect(clash.body.clashes[0]).toMatchObject({ id: 'natural/animal-owl', field: 'factNote' })
+    expect(row('natural/animal-owl').factNote).toBe('owls do not turn their heads all the way round')
+  })
+
+  /*
+   * The facts file is READ and never written.
+   *
+   * A separate agent drafts and checks the sentences into
+   * `joe/species-facts.json`, so it has exactly one author and there is nothing
+   * for the merge to arbitrate. Keeping it out of `WRITABLE` is what makes that
+   * true by construction rather than by everyone remembering.
+   */
+  it('serves the species facts raw, and refuses to write them', async () => {
+    /* Absent until that agent lands, which is the state the viewer opens in. */
+    expect(existsSync(join(root, 'joe/species-facts.json'))).toBe(false)
+    expect((await api('/api/state')).facts).toBe(null)
+
+    const file = { schemaVersion: 1, facts: [{ speciesId: 'animal-fox', fact: 'A fox is a mammal.', check: 'verified' }] }
+    writeFileSync(join(root, 'joe/species-facts.json'), JSON.stringify(file, null, 2) + '\n')
+    /* Passed through unreshaped: the shape is the drafting agent's to settle,
+     * and a normaliser this end would quietly disagree with the one that
+     * renders it. */
+    expect((await api('/api/state')).facts).toEqual(file)
+
+    const r = await status({ what: 'facts', value: { facts: [] } })
+    expect(r.code).toBe(400)
+    expect(r.body.error).toContain('not a writable file')
+    /* And the file the agent owns is exactly as it left it. */
+    expect(JSON.parse(readFileSync(join(root, 'joe/species-facts.json'), 'utf8'))).toEqual(file)
+  })
+
   it('refuses a patch for a field the page does not own', async () => {
     regenerate()
     const r = await status({ what: 'names', patch: { id: 'natural/animal-fox', species: 'Otter' } })

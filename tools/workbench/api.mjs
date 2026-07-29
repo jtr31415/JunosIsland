@@ -86,6 +86,20 @@ function state(root) {
      * depends on a comparator this end.
      */
     names: readJson(root, 'joe/names-audit.json', { schemaVersion: 1, names: [] }).names ?? [],
+    /*
+     * The species facts, RAW and unexamined.
+     *
+     * JT-031: *"have an agent create the facts and fact check them."* That agent
+     * owns `joe/species-facts.json` outright — it is deliberately absent from
+     * `WRITABLE` above and absent from the seed, so nothing in the workbench can
+     * write it and there is no second author for it to collide with. This end
+     * only reads it, and passes it through without reshaping it: the file's
+     * shape is that agent's to settle, and a normaliser here would have to guess
+     * at it and would then quietly disagree with the one in `built.ts` that
+     * actually renders it. Absent until it lands, which is the state the viewer
+     * is built to show.
+     */
+    facts: readJson(root, 'joe/species-facts.json', null),
     voices,
     statuses: STATUSES,
     /*

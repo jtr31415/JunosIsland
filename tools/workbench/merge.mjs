@@ -105,6 +105,40 @@ const MERGEABLE = {
    *
    * No counter: ids are `setId/speciesId`, derived from the roster and never
    * dealt, so there is no id space for two writers to race over.
+   *
+   * `signoff`, `factVerdict` and `factNote` arrived with the built-animal
+   * viewer, and they are Joe's ruling of 29 July written down: *"have an agent
+   * create the facts and fact check them. they then become part of my final sign
+   * off for each animal along with its name."* (JT-031.) So a row is ONE
+   * ANIMAL's whole bench — the model, the collection, the name and the fact —
+   * and there is exactly ONE gate over all of it.
+   *
+   *   signoff      THE gate, and the only one. 'ok' means "this creature may
+   *                ship": model, collection, name and fact together. A flag,
+   *                because it is one click and visibly wrong when wrong.
+   *
+   *                Deliberately NOT `verdict`. `verdict` is the name-only
+   *                judgement made by reading a word aloud in the names panel,
+   *                and folding the two together would let a name ticked in a
+   *                list count as an animal he had actually looked at.
+   *
+   *   factVerdict  Per-field, not a second gate: 'reject' is him striking the
+   *                FACT while the name may be fine, which is the case his ruling
+   *                needs a way to express. Same shape `verdict` already has for
+   *                the name, for the same reason.
+   *   factNote     Why he struck it, or the wording he wants instead. His words,
+   *                so text, so a genuine disagreement is refused not guessed at.
+   *
+   * THE FACT ITSELF IS NOT HERE, and that is deliberate. It is drafted and
+   * checked by an agent into `joe/species-facts.json`, a file of its own, so the
+   * drafting side and the judging side never write the same file and there is
+   * nothing for this merge to arbitrate. The viewer reads that file and shows
+   * what it contains; only Joe's verdict on it lands here.
+   *
+   * All three are absent from every row the generator has written so far, and
+   * `idle` treats an absent key exactly as it treats an empty one — so the
+   * generator running again over a signed-off row keeps the tick, without the
+   * generator needing to know the field exists.
    */
   names: {
     list: 'names', key: 'id',
@@ -112,6 +146,9 @@ const MERGEABLE = {
       verdict: { kind: 'flag', idle: '' },
       replacement: { kind: 'text' },
       note: { kind: 'text' },
+      signoff: { kind: 'flag', idle: '' },
+      factVerdict: { kind: 'flag', idle: '' },
+      factNote: { kind: 'text' },
     },
   },
 }
