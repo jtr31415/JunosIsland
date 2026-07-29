@@ -338,8 +338,8 @@
       "artefact": "src/island/harness.ts",
       "doneRule": "manual",
       "check": "",
-      "note": "",
-      "state": "open"
+      "note": "c)",
+      "state": "done"
     },
     {
       "id": "JT-027",
@@ -352,8 +352,8 @@
       "artefact": "src/island/collection.ts",
       "doneRule": "manual",
       "check": "",
-      "note": "",
-      "state": "open"
+      "note": "at 80% completion a new collection opens up, never more than 4 collections active. at 4 open collections active a new one opens up only when another is completed. random order, but hold legendary, dinosaurs and prehistoric for now. we should also avoid consecutive collections that may be perceived as related.",
+      "state": "done"
     },
     {
       "id": "JT-028",
@@ -380,8 +380,8 @@
       "artefact": "src/island/species/naming.ts",
       "doneRule": "manual",
       "check": "",
-      "note": "",
-      "state": "open"
+      "note": "we drop the colours, only the sets in their natural color. we may add silver and gold later if we run low and we can just add something like \"the great\" to their original name, lets just focus on the existing collections and their name.",
+      "state": "done"
     }
   ],
   "archive": []
