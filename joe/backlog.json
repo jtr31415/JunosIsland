@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "nextId": 50,
+  "nextId": 51,
   "cards": [
     {
       "id": "PB-001",
@@ -334,17 +334,24 @@
     },
     {
       "id": "PB-048",
-      "title": "An abandoned tile follows her around, and hijacks every later tap",
-      "detail": "BUILT 29 July 2026, manager run 8, commit d6f99c6, deployed. LIVE BUG, reported by Joe on 29 July from Juno playing the deployed build: \"if a tile has been started and then abandoned, then tapping any tile jumps back into the building of the same tile, frustrating for her if she tries to tap an animal.\" The symptom that matters is the last clause - she taps an ANIMAL and gets dropped back into building a tile she had walked away from. THE RULING IS JOE'S AND IS SETTLED, so it is not to be redesigned: \"if she abandons a tile, the progress towards reward is saved, the location and type is not. so when she then taps another glowing tile to build one, progress picks up but location and type is rechosen by her on entry.\" Three parts. (1) Abandoning KEEPS her progress toward the reward - she earned it and brief 19 makes that non-negotiable. (2) Abandoning DISCARDS the location and the type - neither was ever a commitment. (3) Her next tap on any glowing socket starts a build THERE, in a type she chooses ON ENTRY, carrying the saved progress. HOW IT WAS BUILT: a standing plot while the flow is in free play IS the abandoned state, because the sum overlay stays open across every sum of a tile - so she is only ever back on the island mid-build by having left one. askForLand no longer resumes a standing plot, it always opens the bank (flow.ts:236-261). placeTile now RELOCATES a standing plot instead of refusing to site over one (flow.ts:599-623). A tile tap starts nothing and resumes nothing, ever (interactions.ts:225-241), which is what kills the animal near-miss, because picking answers with whatever is under the ray. THE ABANDONED SCAFFOLDING IS DELIBERATELY LEFT STANDING on the island rather than removed: that is what stops flow.plot ever transiently going null, and had it gone null the plot host would have played the completion farewell (plot.ts:111-133) so an abandoned tile would have looked like a finished one. THE ONE DETAIL NOBODY HAD RULED ON IS ANSWERED BY THE MACHINERY, AND IT IS NOT A LOSS: sumsForTile depends only on tilesEarned, never on type or site, and the host puts a freshly built plot straight to flow.sumProgress (plot.ts:179), so the scaffolding at the new socket appears already grown to exactly the stage the old one had reached. She sees her build MOVE, not shrink. Still worth Joe's eye on the tablet, as the card asked. Tests drive the real createPlotHost and the real handleWorldTap together at tests/island/plot.test.ts:402-534, watched failing first; seven existing tests across interactions.test.ts and flow.test.ts asserted the resumption and were rewritten rather than deleted.",
-      "state": "done",
-      "run": "manager 8"
+      "title": "asset loading optimisation",
+      "detail": "investigation/discussion first on how to cleverly serve the game to balance memory and runtime load lag, given all the audio, flora and fauna.",
+      "state": "open",
+      "run": ""
     },
     {
       "id": "PB-049",
-      "title": "asset loading optimisation",
-      "detail": "investigation/discussion first on how to cleverly serve the game to balance memory and runtime load lag, given all the audio, flora and fauna. JOE'S OWN CARD, written by him in the workbench on 29 July. It arrived as PB-048 and was renumbered to PB-049 by manager run 8, because his save was made from a page loaded before the drumbeat committed the live-bug card at c0b6827, so the UI dealt his new card an id that was already taken and the whole-file save overwrote the live bug. Nothing of his was changed except the id. PB-048 keeps the live bug because that id is already cited in docs/MANAGER-ORDERS.md, in the manager handoff, and in a pushed commit message.",
+      "title": "revisit the \"addictiveness\" - avoid abandoning the game through boredom",
+      "detail": "Juno has just asked to play a completely different game - she just wanted to consume stories. we should not build that in, but it means that whatever she was doing was boring compared to an alternative. we must avoid that. discuss with fable 5 in a quick back and forth to decide on a strategy.",
       "state": "open",
       "run": ""
+    },
+    {
+      "id": "PB-050",
+      "title": "An abandoned tile follows her around, and hijacks every later tap",
+      "detail": "BUILT AND DEPLOYED 29 July 2026, manager run 8, commit d6f99c6, CI green. THIS CARD WAS RAISED AS PB-048 AND RE-NUMBERED TO PB-050 - not by choice. The workbench UI saves joe/backlog.json whole, and Joe's page was open on a copy loaded before the live-bug card was committed, so two successive saves dealt his own new cards the id PB-048 and overwrote this one. His cards keep the ids he gave them; this one moved. docs/MANAGER-ORDERS.md item 0 and commit d6f99c6 both still say PB-048, and that is the same work as this card. LIVE BUG, reported by Joe from Juno playing the deployed build: \"if a tile has been started and then abandoned, then tapping any tile jumps back into the building of the same tile, frustrating for her if she tries to tap an animal.\" THE RULING WAS JOE'S AND SETTLED: \"if she abandons a tile, the progress towards reward is saved, the location and type is not. so when she then taps another glowing tile to build one, progress picks up but location and type is rechosen by her on entry.\" HOW IT WAS BUILT: a standing plot while the flow is in free play IS the abandoned state, because the sum overlay stays open across every sum of a tile - so she is only ever back on the island mid-build by having left one. askForLand no longer resumes a standing plot, it always opens the bank (flow.ts:236-261). placeTile now RELOCATES a standing plot instead of refusing to site over one (flow.ts:599-623). A tile tap starts nothing and resumes nothing, ever (interactions.ts:225-241), which is what kills the animal near-miss, because picking answers with whatever is under the ray and a missed tap at a pet is the tile beneath it. THE ABANDONED SCAFFOLDING IS DELIBERATELY LEFT STANDING rather than removed: that is what stops flow.plot ever transiently going null, and had it gone null the plot host would have played the completion farewell (plot.ts:111-133), so an abandoned tile would have looked like a finished one. THE ONE DETAIL NOBODY HAD RULED ON IS ANSWERED BY THE MACHINERY AND IS NOT A LOSS: sumsForTile depends only on tilesEarned, never on type or site, and the host puts a freshly built plot straight to flow.sumProgress (plot.ts:179), so the scaffolding at the new socket appears already grown to exactly the stage the old one had reached. She sees her build MOVE, not shrink. Still worth Joe's eye on the tablet, as the original card asked. Verified from the deployed bundle, not merely from tests. Tests drive the real createPlotHost and the real handleWorldTap together at tests/island/plot.test.ts:402-534, watched failing first; seven existing tests across interactions.test.ts and flow.test.ts asserted the resumption and were rewritten rather than deleted, two of which had been passing vacuously off fixtures that never had a plot at all. Raised JT-028 alongside it: the guard at interactions.ts:159 was not changed, but PB-048 changed what a standing plot MEANS, so Fred's crowding invite now stays quiet for the tile she starts after abandoning one.",
+      "state": "done",
+      "run": "manager 8"
     }
   ]
 }
