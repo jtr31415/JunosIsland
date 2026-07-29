@@ -1,149 +1,176 @@
 # Manager handoff
 
-*Run 7, written 29 July 2026. Read `docs/MANAGER-ORDERS.md` for the job — Joe
-amended it MID-RUN (`8189a5e`), so read it fresh rather than trusting run 6.*
+*Run 8, written 29 July 2026, ~11:50. Read `docs/MANAGER-ORDERS.md` for the job.*
 
 ## Queue position
 
-- Item 1 (PB-042): **DONE** (run 4).
-- Item 2 (PB-030, the addition/subtraction ladder): **DONE** (run 6). Run B complete.
-- Item 3 (**hold the work, reconcile the backlog**): **DONE — this run.**
-- Item 4 (**PB-036, themed animal collections**): **NOT STARTED — yours, and it
-  is now UNBLOCKED.** Joe's brief landed mid-run.
-- Item 5 (the reading progression curriculum): NOT STARTED. Now carded as `PB-043`.
+- Item 0 (**the live bug, an abandoned tile follows her around**): **DONE — this
+  run. Shipped, CI green, verified from the deployed bundle.**
+- Item 1 (PB-042): DONE (run 4).
+- Item 2 (PB-030, the addition/subtraction ladder): DONE (run 6).
+- Item 3 (hold the work, reconcile the backlog): DONE (run 7).
+- Item 4 (**PB-036, themed animal collections**): **NOT MINE, AND NOT THE NEXT
+  MANAGER'S EITHER.** Joe gave it a dedicated manager mid-run, running in
+  parallel with me from ~11:00. Do not pick it up without checking with the
+  drumbeat.
+- Item 5 (the reading progression curriculum, carded `PB-043`): NOT STARTED.
 
 ## What this run did
 
-No source was touched. Two commits, deliberately separate: `1339916`
-`data(backlog):` and `b74a5b6` `docs(backlog):`.
+One item, PB-048 (**now carded as `PB-050` — see Decisions, the id moved and it
+was not my choice**). Joe's report: *"if a tile has been started and then
+abandoned, then tapping any tile jumps back into the building of the same tile,
+frustrating for her if she tries to tap an animal."*
 
-**`joe/backlog.json`** — eleven cards were describing work that is already live.
-`PB-030` was `planned` with all eight of its behaviours shipped, and its detail
-never named the honeymoon economy that B2 built. `PB-042`'s `progress` still said
-the escalating price "IS NOT BUILT YET" three runs after it shipped, and still
-cited a `balance.json` `tilesPerPet` field that no longer exists. `PB-039`,
-`PB-011`, `PB-002` closed. `PB-001` and `PB-040` narrowed rather than closed.
-Three cards created for shipped work that had **never had a card** (`PB-044` the
-placement backstop, `PB-045` change-your-mind, `PB-046` the break suggestion) —
-they lived in `docs/BACKLOG.md` alone. `PB-043` created for Joe's reading
-curriculum, rescued from the JT-025 note it would have died inside. `nextId`
-43 → 47. Card count 42 → 46. **Where a card was superseded the reasoning stays
-and the supersession is stated** — nothing was silently deleted.
+The fact the fix turned on, and it is in `docs/HANDOFF.md` now: **a standing
+`flow.plot` in free play IS the abandoned state.** The sum overlay stays open
+across every sum of a tile (`main.ts:1577-1588` deals the next sum into the same
+panel), so she is only ever back on the island mid-build by having left one.
+`askForLand` resumed it, so every later tap re-entered that build — including a
+near-miss at an animal, because `picking.ts` answers with whatever is under the
+ray and that is the tile her friend stands on.
 
-**`docs/BACKLOG.md`** — it had zero hits for `PB-0`, `Run B`, `PB-030`, `PB-042`
-and `JT-0`, and contradicted the JSON on `#44`. It is now explicitly the **prose
-annex**, with `joe/backlog.json` declared authoritative for state, every heading
-stamped with its PB id, and seven dated status notes added over the original
-cases rather than replacing them.
+Three edits, all small: `askForLand` never resumes and always opens the bank
+(`flow.ts:236-261`); `placeTile` RELOCATES a standing plot instead of refusing to
+site over one (`flow.ts:599-623`); a tile tap starts nothing and resumes nothing,
+ever (`interactions.ts:225-241`). Progress carries for free because `sumProgress`
+lives on the Flow, not the plot.
+
+**The abandoned scaffolding is deliberately LEFT STANDING.** That is the load-
+bearing choice. Nulling `flow.plot` is the obvious fix and it is wrong:
+`plot.ts:111-133` reads `state.plot === null` with a plot standing as COMPLETION
+and plays the farewell, so an abandoned tile would bow and fly away like a
+finished one. Leaving it standing means `flow.plot` goes straight from old plot
+to new in one transition and the host takes its ordinary rebuild path.
+
+Tests drive the real `createPlotHost` and the real `handleWorldTap` together
+(`tests/island/plot.test.ts:402-534`), written first and watched failing. Seven
+existing tests asserted the resumption and were rewritten rather than deleted;
+**two of them had been passing vacuously off fixtures that never had a plot at
+all**, and one more passed accidentally off a stale `challenge: 'sum'` in its
+fixture. The revert-check was watched by the subagent and reported: reverting the
+`interactions.ts` edit alone failed 5 tests across two files.
 
 ## Gate results
 
-Docs and data only; `git diff --stat src v0 tools/golden/golden.json tests` is
-empty, both files verified LF.
+Tree hash before the gate run and after: **`9c25bc9b...` both times, identical.**
+`golden.json`, `src/core/` and `v0/` untouched (`git status --porcelain` on those
+paths was empty). All five files verified LF.
 
 ```
 $ npx vitest run
- Test Files  74 passed (74)
-      Tests  1509 passed (1509)        (unchanged from run 6 — nothing was code)
-   Duration  35.52s
+ Test Files  75 passed (75)
+      Tests  1525 passed (1525)
+   Duration  36.36s
+
 $ npx tsc --noEmit -p tsconfig.json
-TSC OK exit=0
+TSC exit=0
+
 $ npm run build
-PWA v1.3.0 · mode generateSW · precache 8 entries (773.59 KiB)
+PWA v1.3.0 · mode generateSW · precache 8 entries (773.57 KiB)
+files generated  ../../dist/island/sw.js
+
 $ npm run smoke
-ok  builds the ambience layer / battery is retired / reading mode is active
-ok  score bar initialised
-all boot checks passed
+ok    no runtime errors on boot
+ok    renders a growing reading round
+ok    every wiring path runs without throwing
+all boot checks passed          SMOKE exit=0
+
 $ npm run parity
 self-check  spoken utterances : 4 / 4
 self-check  score bar         : "🐚 6" / "🐚 6"
-every step renders identically
+every step renders identically  PARITY exit=0
 ```
 
-No deploy this run — nothing shipped to deploy.
+**Deploy: shipped and VERIFIED FROM THE BUNDLE, not from the tests.** Pushed
+`d6f99c6`; CI run `30444437020` completed **success**. Note the hosting layout,
+which cost me time: `https://jtr31415.github.io/JunosIsland/` is the newest `v*`
+TAG and `/preview/` is `main` — and the preview page's asset `src` is absolute
+(`/JunosIsland/assets/...`) while its bundle actually lives at
+`/JunosIsland/preview/assets/...`, so the obvious URL 404s with a 9,379-byte
+GitHub error page that looks like a tiny bundle. The real one is 129,638 bytes.
+In it, minified with backtick strings:
+
+```
+function ai(e,t=null){return e.phase===`free`?{...e,phase:`placing`,chosen:null,pending:t}:e}
+case`pet`:{n.bouncePet(t.id);...}case`tile`:return n.focusOn(t.axial),e;default:return e}
+```
+
+That is `askForLand` with no resumption, and a tile tap that only moves the
+camera. Both halves of the fix are live.
 
 ## Where the next manager starts
 
-**Item 4, PB-036, and the blocker run 6 warned you about is GONE.** Joe committed
-`8189a5e` at 10:50 while I was mid-reconciliation: his roster landed as
-**`docs/pet-island-species-roster.md`** (142 lines, ratified, not a draft) and
-`docs/MANAGER-ORDERS.md` item 4 was rewritten around it. **Read the roster in
-full and build to it, not to a summary — including not to my `PB-036` card.**
+**Not on PB-036** — it has its own manager. Ask the drumbeat for the next item;
+the honest candidates are item 5 (`PB-043`, the reading progression curriculum,
+which is a survey-then-ask item, not a build-it item) and Joe's two brand-new
+cards, `PB-048` *asset loading optimisation* and `PB-049` *revisit the
+"addictiveness"* — the second says explicitly *"discuss with fable 5 in a quick
+back and forth to decide on a strategy"*, so it is a conversation before it is
+any code.
 
-The naming change is the first thing to get right. Roster §3 makes given names
-deterministic, seeded from `species + set`. Today `petName(defaultRng)` at
-`src/island/main.ts:1167` draws from unseeded `Math.random` (`src/core/rng.ts:5`),
-the name is **persisted** into the save (`flow.ts:311-312`, `save.ts:171`/`226`),
-**and the pet's `id` embeds it** (`'pet' + n + '-' + name`) — so Juno already owns
-randomly-named pets.
+**If you touch the plot/flow/tap seam at all, read `docs/HANDOFF.md`'s new
+"Landmines added 29 July" section first.** The single most useful line in it:
+a standing plot means she ABANDONED one, and nulling `flow.plot` makes an
+abandoned tile play the completion farewell.
 
-**Joe ruled on this at `c54e286`, AFTER I had already written the opposite into
-`PB-036` and had to correct it — read his orders, not run 6's or my first draft.**
-Her existing names become **the canonical entries in the name table**, not a
-migration case: *"i will give you juno's already achieved animal's names as her
-latest save game later, you can swap the first hard code out after."* So the
-table must be **data with pinnable entries from day one**, a temporary hardcode
-is **explicitly sanctioned** until her save arrives (mark it `>>> PROVISIONAL`
-and name the lines in your handoff), and you must **not** build a general
-rename-migration mechanism. Her save **has not arrived** — leave the pins empty
-and obvious; do not invent her pets' names any more than you would invent
-species. Still write the §19 test.
-
-Architecture is **kits before species** (six kits, then a species is data), the
-**live 24 are frozen**, and collections ship **one at a time** on the 85% unlock
-cadence — the ~296 builds are not a build order. Roster §6 holds Joe's own open
-questions (ship order, whether Prehistoric ships, IUCN wording): **those are his,
-raise them in the workbench, do not settle them with Fable.**
+**Nothing about how a tile TYPE is chosen or stored has changed in shape**, which
+matters because the PB-036 manager is introducing sets and a `species + set` key.
+`flow.plot` is still exactly `{ at: Axial; type: TileType } | null`
+(`flow.ts:141`), still persisted whole (`save.ts:179`), still sanitised by
+`readPlot` against `grass|water|rock` (`save.ts:186-192`). `TileType` is TERRAIN
+and has no relationship to species or sets. What changed is only WHEN the type is
+chosen: it is now re-asked on entry at each new socket instead of surviving an
+abandonment. **No collision with the roster work.**
 
 ## What I learned that is not in the code
 
-- **The `gitStatus` block in the session prompt can be flatly wrong.** Mine
-  listed five recent commits, none of which were on `main`. My own `git log`
-  disagreed from the first command. **Trust the live command, never the
-  snapshot** — and the shas in that block did all resolve, so `git cat-file -t`
-  is not enough to catch it.
-- **HEAD moves under you, not just `joe/tasks.json` — and it moved TWICE.** Run 6
-  warned that Joe edits the workbench live; he also *commits into this working
-  copy* live. `8189a5e` landed mid-run and rewrote my own orders; `c54e286`
-  landed while I was pushing and **reversed a premise I had just written into
-  `PB-036` and the handoff**, costing a correction commit. Re-check
-  `git log --oneline -1` immediately before every commit AND after every push,
-  and re-read `MANAGER-ORDERS.md` if it moved. Assume any orders paragraph you
-  read at start-up may be stale by the time you act on it.
-- **A file can be cited as landed and still be untracked.** The roster was
-  `?? docs/pet-island-species-roster.md` while the orders described it as the
-  spec. One `git status --porcelain` caught it; it is committed now. **When a doc
-  tells you a file has arrived, check it is in git.**
-- **`joe/backlog.json` has two conventions for delivery and they mean different
-  things.** `PB-033` uses `state: "done"` with a `"BUILT <date>"` prefix in the
-  detail; `PB-042` uses a separate `progress` field and keeps `state`. The
-  `progress` field is the one that rots, because nobody re-reads it. I used the
-  `BUILT` convention for closures and only edited `progress` where it existed.
-- **Edit JSON with the Edit tool or Node, never in bulk.** Both files are LF and
-  `file` confirmed they stayed LF; the memory note about Python text mode on
-  Windows applies to Node's `writeFileSync` too if you ever normalise strings.
+All three are now written into `docs/HANDOFF.md` under "Landmines added 29 July",
+so this is the short form:
+
+- **`joe/backlog.json` races Joe exactly like `joe/tasks.json` does, and it cost
+  three collisions in one run.** His page was loaded before the drumbeat
+  committed `PB-048`, so his stale `nextId` dealt his own new cards an id that was
+  already taken and the whole-file save overwrote the live-bug card outright —
+  twice on the same id. Verify after writing, not just before: card count up,
+  no duplicate ids, everything in `HEAD` still present, still LF.
+- **Do not fight him for an id.** His cards keep the ids he gave them; your
+  record moves and says in its own text which id the orders and commits call it.
+- **A near-miss at a pet is a `kind:'tile'` hit**, not "nothing" — `picking.ts`
+  has no nothing answer. Any behaviour you attach to a tile tap is behaviour you
+  have attached to missing an animal.
+- **`git commit -m @'...'@` in the Bash tool is PowerShell syntax and bash takes
+  it literally**, so the `@` becomes part of the subject line. Caught before
+  pushing and amended with `-F`; use a message file.
 
 ## Decisions
 
-**Picked up this run (his nod):** none. **`JT-026` is still `open`** — I checked
-`joe/tasks.json` first thing and no `type: "ruling"` task has gained a note since
-run 6. **So nothing was reverted, and B3's lean stands exactly as shipped.** The
-reversal remains costed at about an hour in `PB-030`'s card, with all eight dials
-in one `>>> PROVISIONAL` block at `harness.ts:199-268`.
+**Raised this run:** `JT-028` — *Fred's crowding invite now stays quiet for a
+build she starts AFTER abandoning one (PB-048 × PB-042)*. Nothing was changed at
+`interactions.ts:159`; what changed is what a standing plot MEANS underneath it.
+I built nothing on a guess and did not ask Fable — the governors are Joe's, tuned
+across eight rulings, and a live bug should not drag a balance change along with
+it. Reversal is one condition on one line, about twenty minutes.
 
-**Raised this run:** none. Reconciliation surfaced no question that needed Joe —
-every correction was a fact the repo already settled.
+**Picked up this run (his nod):** none. `JT-026` (B3's lean) and `JT-027` (the
+25th egg) are both still `open` with empty notes — I checked `joe/tasks.json`
+first thing. **So nothing was reverted, and B3's lean stands exactly as shipped**;
+the reversal remains costed at about an hour with the dials at
+`harness.ts:199-268`.
 
-**Still open in the workbench and worth knowing:** `JT-001`, `JT-004`, `JT-005`
-(reviews, and `JT-004`/`JT-005` are the pattern to copy for PB-036's audit
-surface), `JT-006`, `JT-007`, `JT-023`, `JT-026`.
+**Decided rather than asked, and reversible:** that the abandoned scaffolding
+stays visible on the island rather than being cleared. It follows from Joe's
+ruling and it is what makes the fix safe, but it is a thing a child sees, so it
+is worth his eye on the tablet — as the original card asked. It does **not**
+read as a loss: `sumsForTile` depends only on `tilesEarned`, so the plot at the
+new socket appears already grown to the stage the old one had reached. She sees
+her build move, not shrink.
 
-**Two things I decided rather than asked**, both recorded in the commits: that
-`PB-002` closes by delivery even though Joe never ruled on it (the card says so
-explicitly), and that `docs/BACKLOG.md` becomes a prose annex rather than being
-rewritten as a second full backlog — which preserves Joe's and Fable's reasoning
-instead of duplicating 46 cards in prose. Reverse either freely; both are docs.
+**The id, stated plainly so nobody re-derives it:** the live bug is `PB-050` in
+`joe/backlog.json`. `docs/MANAGER-ORDERS.md` item 0 and commit `d6f99c6` both
+call the same work `PB-048`, and `PB-048` in the backlog is now Joe's own asset-
+loading card. The closed card's full text is also at
+`git show 5574cf7:joe/backlog.json` under the old id.
 
-**Nothing about animals was invented.** No species, collection or name was
-generated by me or by any subagent; `PB-036` cites only Joe's roster and measured
-facts about the existing 24 species and 25 sets.
+**Still open in the workbench:** `JT-001`, `JT-004`, `JT-005`, `JT-006`,
+`JT-007`, `JT-023`, `JT-026`, `JT-027`, `JT-028`.

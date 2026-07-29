@@ -626,3 +626,53 @@ have collided, **his notes win**: keep his file and re-append your record from
 the commit blob. Recovery only exists because every write is committed, so commit
 `joe/tasks.json` on its own and the lost record is always one
 `git show <commit>:joe/tasks.json` away.
+
+## Landmines added 29 July
+
+**The whole-file save race is `joe/backlog.json` too, and it is WORSE there.**
+The note above documents it for `joe/tasks.json`. On 29 July it hit
+`joe/backlog.json` three times in a single manager run. Joe's page had been
+loaded before the drumbeat committed a new card, so his stale `nextId` dealt
+each new card of his an id that was **already taken**, and the whole-file save
+then overwrote the existing card of that id outright — twice on the same id,
+plus one edit of a manager's made ninety seconds earlier. Nothing warns you; the
+file still parses and the card count still goes up.
+
+So: **re-read from disk immediately before writing, and verify AFTER writing**
+that every card present in `HEAD` is still present, that there are no duplicate
+ids, and that the file is still LF. **Do not fight him for an id.** His cards
+keep the ids he gave them and your record moves to a free one, with a line in
+the card saying which id the orders and the commit messages call it — otherwise
+the next reader finds `MANAGER-ORDERS.md` citing `PB-048` and a completely
+different card sitting at `PB-048`. And **commit his uncommitted cards when you
+find them**: they are real product intent living only in a file that the next
+save may clobber.
+
+**A standing `flow.plot` in free play IS the abandoned state — it is not "mid
+build".** This is the fact the PB-048 fix turned on, and it is not visible from
+either side of the seam. The sum overlay stays **open across every sum of a
+tile** (`main.ts:1577-1588` deals the next sum into the same panel), so the only
+way she is ever back on the island with a plot standing is by having **left**
+one. `askForLand` used to resume it, which meant every later tap — including a
+near-miss at an animal, because `picking.ts` answers with whatever is under the
+ray and that is the tile her friend stands on — dropped her back into a build she
+had walked away from. That was Joe's report, and it is the **fourth** fault in
+this seam.
+
+**Do not "fix" abandonment by nulling `flow.plot`.** It is the obvious move and
+it is wrong: `plot.ts:111-133` treats `state.plot === null` with a plot standing
+as COMPLETION — it pins the scaffolding to full progress and plays the farewell —
+so an abandoned tile would bow and fly away exactly like a finished one. The
+shipped fix instead leaves the scaffolding standing and moves `flow.plot`
+straight from the old plot to the new one in a single transition, so the host
+takes its ordinary `!same(built, state.plot)` rebuild path and null never
+happens. **Nothing is lost visually either**: `sumsForTile` depends only on
+`tilesEarned`, never on type or site, and the host puts a freshly built plot
+straight to `flow.sumProgress`, so the new scaffolding appears already grown to
+the stage the old one had reached. She sees her build move, not shrink.
+
+**Two comments in the tests still narrate the old resumption as current.**
+`tests/island/pettap.test.ts:13` and `tests/island/retype.test.ts:193` describe
+"a half-built plot resuming into a sum" as a live outcome. It is now impossible.
+They are historical narration of an older bug, left alone deliberately, but do
+not read them as documentation of what the code does today.
