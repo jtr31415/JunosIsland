@@ -147,22 +147,51 @@ new ResizeObserver(resize).observe(canvas)
  * the bounding sphere, with the object re-centred on the origin so the
  * turntable spins about its middle rather than about wherever the exporter
  * left it.
+ *
+ * `radius` OVERRIDES the object's own bounding sphere, and it exists for one
+ * reason: a camera distance derived from each model's own bounds is a size
+ * normaliser wearing a different hat. Push the camera further for a big animal
+ * and closer for a small one and the small one fills the frame again — which
+ * would quietly undo the whole of `SHARED_SCALE` below. The comparison gallery
+ * therefore passes a CONSTANT radius (`PAIR_FRAME_RADIUS`) so every pair is
+ * framed from exactly the same place and the only thing that changes between two
+ * selections is how big the animals actually are. The re-centring above stays
+ * per-object because it is a TRANSLATION, and a translation cannot change a size.
+ *
+ * Galleries whose assets really are different KINDS of thing — a tuft against a
+ * mountain — pass nothing and keep the fit.
  */
-function frame(object: THREE.Object3D, pad = 1.6): void {
+function frame(object: THREE.Object3D, pad = 1.6, radius?: number): void {
   const box = new THREE.Box3().setFromObject(object)
   if (box.isEmpty()) return
   const sphere = box.getBoundingSphere(new THREE.Sphere())
   const centre = box.getCenter(new THREE.Vector3())
   object.position.sub(new THREE.Vector3(centre.x, box.min.y, centre.z))
 
-  const dist = (sphere.radius * pad) / Math.sin((camera.fov * Math.PI) / 360)
-  controls.target.set(0, sphere.radius * 0.55, 0)
-  camera.position.set(dist * 0.55, sphere.radius * 1.25 + dist * 0.4, dist * 0.75)
+  const r = radius ?? sphere.radius
+  const dist = (r * pad) / Math.sin((camera.fov * Math.PI) / 360)
+  controls.target.set(0, r * 0.55, 0)
+  camera.position.set(dist * 0.55, r * 1.25 + dist * 0.4, dist * 0.75)
   camera.near = Math.max(0.01, dist / 200)
   camera.far = dist * 12
   camera.updateProjectionMatrix()
   controls.update()
 }
+
+/** Whether the stand holds a GRID rather than one selection. Decides the framing. */
+let showingGrid = false
+
+/**
+ * The framing the thing on the stand wants — a constant for a single pair, a fit
+ * for anything else.
+ *
+ * A grid is fitted even on the comparison gallery, and that is not an exception to
+ * the rule above: a grid is ONE object whose every cell is drawn at
+ * `SHARED_SCALE`, so fitting it cannot single any animal out. Fixing its distance
+ * instead would just cut the corner off a fourteen-cell collection.
+ */
+const frameRadius = (): number | undefined =>
+  gallery === 'assembled' && !showingGrid ? PAIR_FRAME_RADIUS : undefined
 
 let spinning = true
 const clock = new THREE.Clock()
@@ -226,38 +255,107 @@ const loadProp = (id: string, grey: boolean): Promise<THREE.Object3D> => props.l
 /* --------------------------------------------------- the side-by-side --- */
 
 /**
- * Scale a thing so it is exactly one unit tall, feet on y = 0, centred on x
- * and z.
+ * THE ONE NUMBER EVERY MODEL ON THIS PAGE IS SCALED BY, and why it is one number.
  *
- * THE MATCH, and the one judgement in the whole render. The pack's models and
- * the kits' output are not the same size and never were, so "matched scale" has
- * to mean something specific: it means MATCHED HEIGHT. That is not an arbitrary
- * pick — every number on the eye rows is already a ratio against the animal's
- * height (the pack holds 0.19–0.29, the kits run 0.0597–0.1603), and Joe's
- * complaint about legs and feet is a claim about their size relative to the
- * animal they are attached to. Normalising by height makes the picture say
- * exactly what the numbers say.
+ * Joe, on the first fourteen assembled animals: *"the new animals look genuinely
+ * really good. general criticism is size. the body/cube should always be the
+ * standard size, its often bigger."*
  *
- * What it deliberately does NOT preserve is absolute model units. Nobody can see
- * those, and a fox at 1.66 beside a hyena at 1.05 would show a size difference
- * that has nothing to do with the question being asked.
+ * The geometry is innocent. All fourteen wear a hull of exactly 1.250 (1.125 on z
+ * for the three on the other real shell), no node carries a non-identity scale,
+ * and `Hull.stretch` is typed `never` in `assembly.ts` so an oversized hull no
+ * longer compiles. **The size difference he was seeing was made here, by the
+ * viewer.**
+ *
+ * What used to stand in this place divided every model by its OWN total height, so
+ * each one arrived exactly one unit tall. That is a size NORMALISER, and a
+ * normaliser is the one thing this page must never do: the viewer exists so Joe
+ * can judge size, so it cannot be allowed to normalise size away. Our species'
+ * total heights run 1.431 (mouse, badger, shrew) to 1.976 (squirrel), so the
+ * identical 1.250 cube was drawn at 1.250/1.431 = 0.874 of a frame-unit on one and
+ * 1.250/1.976 = 0.633 on the other — a 1.38x spread invented by arithmetic. Worse,
+ * it was applied to the PACK half of the pair too, by that animal's own height, so
+ * the one comparison this gallery exists to make was wrong in both directions at
+ * once.
+ *
+ * So the divisor is a shared CONSTANT, stated rather than measured:
+ * `PACK_HEIGHT_MEDIAN`, the median total height of the 24 originals in
+ * `src/island/public/pets` — 1.611185, between `animal-monkey` at 1.6100 and
+ * `animal-cow` at 1.6124. Two consequences, and both of them are the point:
+ *
+ *   - A 1.250 hull is 1.250 / 1.611185 = **0.776 frame-units for every animal**,
+ *     ours and the pack's, in single view and in grid view. Same cube, same size.
+ *   - Our animal stands beside its reference at its TRUE relative size. The 1.976
+ *     squirrel really is 1.38x the 1.431 mouse, and now it looks it.
+ *
+ * The MEDIAN is what keeps the page from lurching. The old normaliser drew
+ * everything at 1.000; this draws the same set between 0.888 (1.431/1.611) and
+ * 1.247 (2.010/1.611), so the framing he already knows is roughly the framing he
+ * keeps — and what moves within it is now real.
+ *
+ * Measured off the real files by walking every mesh node's world matrix, the same
+ * chunk walk `tools/pets/parts-bank.ts` uses. A constant and not a runtime
+ * measurement because a divisor computed from whatever happens to be loaded is a
+ * divisor that changes when the selection does, which is the bug all over again.
  */
-function toUnitHeight(object: THREE.Object3D): THREE.Group {
+const PACK_HEIGHT_MEDIAN = 1.611185
+/** The width and depth medians of the same 24, for `PAIR_FRAME_RADIUS` only. */
+const PACK_WIDTH_MEDIAN = 1.491992
+const PACK_DEPTH_MEDIAN = 1.477575
+/** One model unit, in frame units. Every mesh on this page. Never per-animal. */
+const SHARED_SCALE = 1 / PACK_HEIGHT_MEDIAN
+/** The clear air between the two halves of a pair, in frame units. */
+const PAIR_GAP = 0.25
+/**
+ * The camera distance for the comparison gallery, as a constant.
+ *
+ * The half-diagonal of a NOMINAL pair: two animals of median pack size, shared-
+ * scaled and stood `PAIR_GAP` apart — a 2.102 x 1.000 x 0.917 box, so 1.251. Every
+ * pair is framed from this one distance, so a squirrel is drawn bigger than a mouse
+ * instead of being pushed further away until it is not. It is generous enough that
+ * the widest pair the gallery can show (the 2.336 bunny beside the 1.943 mouse,
+ * 2.905 across once scaled) sits comfortably inside the frame: at pad 1.6 the
+ * visible half-span is 2.001 and the content needs 1.453.
+ */
+const PAIR_FRAME_RADIUS = 0.5 * Math.hypot(
+  2 * PACK_WIDTH_MEDIAN * SHARED_SCALE + PAIR_GAP,
+  PACK_HEIGHT_MEDIAN * SHARED_SCALE,
+  PACK_DEPTH_MEDIAN * SHARED_SCALE,
+)
+
+/**
+ * Scale a thing by the SHARED divisor, feet on y = 0, centred on x and z.
+ *
+ * Nothing in here reads how big the object is, and that absence is the entire
+ * fix. The only thing measured is where the model's feet and its middle are, and
+ * acting on that is a TRANSLATION — a translation cannot make one animal look
+ * bigger than another.
+ *
+ * What it deliberately does NOT do any more is match HEIGHTS. Matched height was a
+ * defensible answer to a different question (every eye and leg number on this page
+ * is a ratio against the animal's own height), and it is the answer that produced
+ * the complaint: two animals drawn the same height are two animals whose real
+ * difference in size has been deleted from the picture. The ratios are still
+ * printed as ratios; the models are drawn at their true size.
+ */
+function toSharedScale(object: THREE.Object3D): THREE.Group {
   const holder = new THREE.Group()
   holder.add(object)
-  holder.updateMatrixWorld(true)
-
-  const box = new THREE.Box3().setFromObject(object)
-  if (box.isEmpty()) return holder
-  const scale = 1 / Math.max(1e-6, box.max.y - box.min.y)
-  object.scale.multiplyScalar(scale)
-  object.position.multiplyScalar(scale)
+  object.scale.multiplyScalar(SHARED_SCALE)
+  object.position.multiplyScalar(SHARED_SCALE)
 
   holder.updateMatrixWorld(true)
   const after = new THREE.Box3().setFromObject(object)
+  if (after.isEmpty()) return holder
   const centre = after.getCenter(new THREE.Vector3())
   object.position.sub(new THREE.Vector3(centre.x, after.min.y, centre.z))
   return holder
+}
+
+/** A loaded model's true total height, in MODEL units — what the tags print. */
+const heightOf = (object: THREE.Object3D): number => {
+  const box = new THREE.Box3().setFromObject(object)
+  return box.isEmpty() ? 0 : box.max.y - box.min.y
 }
 
 /**
@@ -272,7 +370,7 @@ function toUnitHeight(object: THREE.Object3D): THREE.Group {
  */
 function standSideBySide(left: THREE.Object3D, right: THREE.Object3D): THREE.Group {
   const pair = new THREE.Group()
-  const gap = 0.25
+  const gap = PAIR_GAP
   ;[left, right].forEach((side, i) => {
     const box = new THREE.Box3().setFromObject(side)
     const centre = box.getCenter(new THREE.Vector3())
@@ -301,9 +399,11 @@ function standSideBySide(left: THREE.Object3D, right: THREE.Object3D): THREE.Gro
  * preview would be a picture of what the method used to do. The left is the
  * species gallery's own loader; the right is `buildAssembled` called for real.
  *
- * Each side is scaled to one unit tall BEFORE they are stood together, exactly as
- * `loadComparison` does, because absolute model units are not what is being
- * asked about — proportion and silhouette are.
+ * Each side is scaled by the SHARED divisor before they are stood together — see
+ * `SHARED_SCALE`. Both halves therefore arrive at their true size relative to one
+ * another, which is what Joe's note about size was asking for, and each half's
+ * true height in model units goes onto its own label so the number and the
+ * picture say the same thing.
  */
 async function loadAssembled(id: string): Promise<THREE.Object3D> {
   const row = assembled.find(r => r.id === id)
@@ -315,12 +415,17 @@ async function loadAssembled(id: string): Promise<THREE.Object3D> {
    * rejection that `select()` already knows how to print into the status line. */
   const mine = await Promise.resolve(buildAssembled(row.id))
 
-  const left = toUnitHeight(pack)
-  const right = toUnitHeight(mine)
+  /* Measured BEFORE the shared scale, so it is the height the .glb and the
+   * assembler actually hold rather than the height of the drawing. */
+  const packHeight = heightOf(pack)
+  const mineHeight = heightOf(mine)
+
+  const left = toSharedScale(pack)
+  const right = toSharedScale(mine)
   const pair = standSideBySide(left, right)
   /* Held for the two labels over the canvas. Rebuilt on every selection, so a
    * stale anchor cannot outlive the model it was pointing at. */
-  pairSides = { left, right, row, reference }
+  pairSides = { left, right, row, reference, leftHeight: packHeight, rightHeight: mineHeight }
   return pair
 }
 
@@ -605,7 +710,11 @@ function moveTags(): void {
  * shape of "a gallery listing the wrong thing", and this gallery exists to stop
  * him confusing two kinds of animal.
  */
-let pairSides: { left: THREE.Object3D; right: THREE.Object3D; row: AssembledRow; reference: string } | null = null
+let pairSides: {
+  left: THREE.Object3D; right: THREE.Object3D; row: AssembledRow; reference: string
+  /** Total heights in MODEL units, before `SHARED_SCALE`. Printed on the tags. */
+  leftHeight: number; rightHeight: number
+} | null = null
 const pairTags: Array<{ object: THREE.Object3D; el: HTMLElement }> = []
 
 /**
@@ -623,6 +732,14 @@ const pairTags: Array<{ object: THREE.Object3D; el: HTMLElement }> = []
  *
  * A flag rides on the right-hand tag as well as in the card, because the model is
  * where he is looking.
+ *
+ * EACH TAG ALSO CARRIES ITS HALF'S TRUE TOTAL HEIGHT IN MODEL UNITS, and that is
+ * not decoration either. Both halves are now drawn at one shared scale
+ * (`SHARED_SCALE`) so a size difference on the canvas is a real size difference —
+ * and the moment that is true, the useful question becomes "how much bigger?",
+ * which an eye cannot answer off two silhouettes. The number answers it, and it is
+ * measured off the loaded model rather than quoted from a table, so it cannot go
+ * stale against the geometry the way a baked preview would.
  */
 function drawPairTags(): void {
   const layer = $('#labels')
@@ -644,8 +761,9 @@ function drawPairTags(): void {
     layer.append(el)
     pairTags.push({ object, el })
   }
-  make(pairSides.left, card.left, card.leftMeta, false)
-  make(pairSides.right, card.right, card.rightMeta, true)
+  const tall = (h: number): string => `${h.toFixed(3)} units tall`
+  make(pairSides.left, card.left, `${card.leftMeta} · ${tall(pairSides.leftHeight)}`, false)
+  make(pairSides.right, card.right, `${card.rightMeta} · ${tall(pairSides.rightHeight)}`, true)
 }
 
 const pairAt = new THREE.Vector3()
@@ -1036,13 +1154,14 @@ async function select(id: string): Promise<void> {
 
   const mine = ++token
   clearStand()
+  showingGrid = false
   say(`loading ${id}…`)
   try {
     const object = await build(id)
     if (mine !== token) return                        // a newer click won
     clearStand()
     stand.add(object)
-    frame(object)
+    frame(object, 1.6, frameRadius())
     /* The parts only exist once the GLB has been taken apart, so the labels and
      * the list beside the canvas are built HERE and not in `drawDetail` above. */
     if (gallery === 'anatomy') {
@@ -1468,25 +1587,55 @@ async function showGrid(): Promise<void> {
 
   const columns = Math.ceil(Math.sqrt(bucket.length))
   const cell = new THREE.Group()
-  /* Normalise each to a unit box first, or a mountain hides fourteen tufts. */
-  loaded.forEach((object, i) => {
-    if (!object) return
+  /*
+   * ONE SCALE FOR THE WHOLE GRID, and it is the same one single view uses.
+   *
+   * What was here divided each cell by its OWN largest dimension — a third
+   * per-model normaliser, and a different one again from the two in the pair path,
+   * so a 1.250 cube could be drawn at three different sizes on the same page
+   * depending on which tab and which mode Joe happened to be in. That is precisely
+   * the confusion his note about size came out of, so the grid takes
+   * `SHARED_SCALE` like everything else and a cube is the same cube everywhere.
+   *
+   * The pairs come out of `loadAssembled` ALREADY shared-scaled, so scaling them
+   * again here would halve them; only the raw single models — pets, tiles, props —
+   * need the multiply. Both paths end up at exactly one model unit = SHARED_SCALE.
+   */
+  const scale = gallery === 'assembled' ? 1 : SHARED_SCALE
+  const holders: THREE.Group[] = []
+  let widest = 0
+  loaded.forEach(object => {
+    if (!object) { holders.push(new THREE.Group()); return }
     const box = new THREE.Box3().setFromObject(object)
-    const size = box.getSize(new THREE.Vector3())
-    const scale = 1 / Math.max(size.x, size.y, size.z, 0.001)
     const centre = box.getCenter(new THREE.Vector3())
     object.position.sub(new THREE.Vector3(centre.x, box.min.y, centre.z))
     const holder = new THREE.Group()
     holder.add(object)
     holder.scale.setScalar(scale)
+    const size = box.getSize(new THREE.Vector3()).multiplyScalar(scale)
+    widest = Math.max(widest, size.x, size.z)
+    holders.push(holder)
+  })
+  /*
+   * The pitch comes off the WIDEST cell rather than being the old fixed 1.4, and
+   * that is forced by the line above: cells are no longer all one unit across, so a
+   * constant pitch would either overlap the biggest (a shared-scaled pair is 2.9
+   * across) or strand the smallest in white space. One pitch for every cell, so the
+   * grid still says nothing about size that the cells do not say themselves.
+   */
+  const pitch = Math.max(1.4, widest * 1.15)
+  holders.forEach((holder, i) => {
     holder.position.set(
-      ((i % columns) - (columns - 1) / 2) * 1.4,
+      ((i % columns) - (columns - 1) / 2) * pitch,
       0,
-      (Math.floor(i / columns) - (Math.ceil(bucket.length / columns) - 1) / 2) * 1.4,
+      (Math.floor(i / columns) - (Math.ceil(bucket.length / columns) - 1) / 2) * pitch,
     )
     cell.add(holder)
   })
   stand.add(cell)
+  showingGrid = true
+  /* Fitted to the GRID, which is right: the grid is one object and every cell in
+   * it is drawn at the shared scale, so the fit cannot single any animal out. */
   frame(cell, 1.25)
   say(`${loaded.filter(Boolean).length} of ${bucket.length} loaded`)
 }
@@ -1568,7 +1717,7 @@ $('#galleries').onclick = e => {
 }
 $('#search').oninput = () => drawList()
 $('#spin').onclick = () => { spinning = !spinning; $('#spin').textContent = spinning ? 'pause spin' : 'resume spin' }
-$('#reset').onclick = () => { const o = stand.children[0]; if (o) frame(o) }
+$('#reset').onclick = () => { const o = stand.children[0]; if (o) frame(o, 1.6, frameRadius()) }
 $('#grid').onclick = () => void showGrid()
 $('#speciesSelect').onchange = () => void select($<HTMLSelectElement>('#speciesSelect').value)
 /*

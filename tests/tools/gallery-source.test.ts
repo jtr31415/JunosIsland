@@ -31,7 +31,9 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync, existsSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { Box3, Vector3 } from 'three'
 import { packsFor, GALLERIES, type Gallery, type Pack } from '../../tools/workbench/public/registry'
+import { assembledSpecies, buildAssembled } from '../../src/island/species/parts'
 
 const REPO = resolve(__dirname, '../..')
 
@@ -230,6 +232,169 @@ describe('the scrapped animals cannot be reached, reviewed or compared against',
     const union: readonly string[] = GALLERIES
     expect(union).not.toContain('built')
     expect(union).not.toContain('primitives')
+  })
+})
+
+/*
+ * THE VIEWER MUST NOT NORMALISE SIZE AWAY, WHICH IS WHY IT IS ASSERTED HERE.
+ *
+ * Joe, on the first fourteen assembled animals: *"the new animals look genuinely
+ * really good. general criticism is size. the body/cube should always be the
+ * standard size, its often bigger."* Every one of the fourteen wears a hull of
+ * exactly 1.250 and no node in any of them carries a scale — the difference he
+ * could see was manufactured by the VIEWER, which divided every model by its own
+ * total height so each arrived one unit tall. Our heights run 1.431 to 1.976, so
+ * the identical cube was drawn across a 1.38x range, and the same divisor was
+ * applied to the pack half of each pair by ITS own height, so the one comparison
+ * the gallery exists for misled in both directions at once.
+ *
+ * WHY THIS IS A SOURCE TEST. `viewer.ts` builds a `WebGLRenderer` and queries
+ * `#stage` at module load, so it cannot be imported into a test at all — which is
+ * the same reason `loadBuilt` is asserted by reading the file, thirty lines up.
+ * What is NOT source-read is the geometry: the heights below come out of
+ * `buildAssembled` for real, so the spread the fix is answering is measured rather
+ * than quoted, and the last test in the block feeds a DOCTORED source back through
+ * the same reader to prove the reader has teeth.
+ */
+const viewerSource = (): string => viewerTs()
+
+/** The body of a top-level `function name(...)`, brace-matched. */
+const bodyOf = (source: string, name: string): string => {
+  const at = source.indexOf(`function ${name}(`)
+  expect(at, `no function ${name} in viewer.ts`).toBeGreaterThan(-1)
+  const open = source.indexOf('{', source.indexOf(')', at))
+  let depth = 0
+  for (let i = open; i < source.length; i++) {
+    if (source[i] === '{') depth++
+    else if (source[i] === '}' && --depth === 0) return source.slice(open, i + 1)
+  }
+  throw new Error(`function ${name} never closes`)
+}
+
+/**
+ * Every line that derives a SCALE from something it just measured.
+ *
+ * That shape — `1 / <something about this model's bounds>` — is the fault itself,
+ * in all three of the places it used to live: `toUnitHeight`'s
+ * `1 / (box.max.y - box.min.y)`, and the grid's `1 / Math.max(size.x, size.y,
+ * size.z)`. Any of them coming back means one animal is being drawn relative to
+ * itself again.
+ */
+const perModelDivisors = (source: string): string[] =>
+  source.split('\n')
+    .map(l => l.trim())
+    /* Comments are prose about the fault and are meant to mention it. */
+    .filter(l => !l.startsWith('*') && !l.startsWith('//') && !l.startsWith('/*'))
+    .filter(l => /1(e-6)?\s*\/\s*[^\n]*\b(box|size|sphere)\b/.test(l)
+      || /\/\s*Math\.max\([^\n]*\b(box|size|sphere)\b/.test(l))
+
+/** The one divisor, read off the source rather than copied into this file. */
+const packHeightMedian = (source: string): number => {
+  const m = /const PACK_HEIGHT_MEDIAN = ([\d.]+)/.exec(source)
+  expect(m, 'viewer.ts states no PACK_HEIGHT_MEDIAN').not.toBeNull()
+  return Number(m![1])
+}
+
+/** The shared hull cube, and the whole of what Joe said must not change size. */
+const STANDARD_HULL = 1.25
+
+describe('the viewer is truthful about absolute size', () => {
+  it('scales both halves of a pair by the SAME constant, and measures neither', () => {
+    const source = viewerSource()
+    const pair = bodyOf(source, 'loadAssembled')
+    /* One function, one constant, called once per half — so the two models cannot
+     * be scaled by two different numbers however their heights differ. */
+    expect(pair).toContain('toSharedScale(pack)')
+    expect(pair).toContain('toSharedScale(mine)')
+
+    const fn = bodyOf(source, 'toSharedScale')
+    expect(fn).toContain('multiplyScalar(SHARED_SCALE)')
+    expect(perModelDivisors(fn)).toEqual([])
+    expect(source).toMatch(/const SHARED_SCALE = 1 \/ PACK_HEIGHT_MEDIAN/)
+  })
+
+  it('leaves no per-model divisor anywhere in the file, grid view included', () => {
+    expect(perModelDivisors(viewerSource())).toEqual([])
+    /* And the grid takes the same constant, so a cube cannot change apparent size
+     * between one animal and a collection of them. */
+    expect(bodyOf(viewerSource(), 'showGrid')).toContain('SHARED_SCALE')
+  })
+
+  it('does not put the normalisation back through the camera', () => {
+    const source = viewerSource()
+    /* A camera distance derived from each model's own bounds pushes a big animal
+     * away and pulls a small one in, which is the same normalisation by another
+     * route. The comparison gallery therefore frames from a CONSTANT. */
+    expect(source).toMatch(/const PAIR_FRAME_RADIUS = /)
+    expect(bodyOf(source, 'select')).toContain('frame(object, 1.6, frameRadius())')
+    expect(source).toMatch(/gallery === 'assembled' && !showingGrid \? PAIR_FRAME_RADIUS/)
+    /* And the true height in model units is on screen beside each name, so the
+     * question the picture now raises — how much bigger? — has an answer. */
+    expect(bodyOf(source, 'drawPairTags')).toContain('units tall')
+  })
+
+  /*
+   * THE PROPERTY THAT MATTERS, on the real fourteen: two models of DIFFERENT total
+   * height are scaled by the SAME factor, so the shared 1.250 hull is the same
+   * on-screen size in both.
+   */
+  it('draws the identical 1.250 hull at one size across the real spread of heights', () => {
+    const heights = assembledSpecies()
+      .map(s => new Box3().setFromObject(buildAssembled(s.id)).getSize(new Vector3()).y)
+    expect(heights.length).toBeGreaterThan(1)
+    const lo = Math.min(...heights)
+    const hi = Math.max(...heights)
+
+    /* The spread is real, so the fixture is not proving something about one animal. */
+    expect(hi / lo).toBeGreaterThan(1.3)
+
+    /*
+     * WHAT THE OLD PER-ANIMAL DIVISOR DID to that cube: `1.250 / thisAnimalHeight`,
+     * so the cube's on-screen size was the RECIPROCAL of the height spread — 1.38x
+     * apart on the two ends of the same fourteen.
+     */
+    const asBefore = (height: number): number => STANDARD_HULL / height
+    expect(asBefore(lo)).toBeCloseTo(0.873, 2)
+    expect(asBefore(hi)).toBeCloseTo(0.633, 2)
+    expect(new Set(heights.map(h => asBefore(h).toFixed(6))).size).toBeGreaterThan(1)
+
+    /*
+     * AND WHAT THE SHARED DIVISOR DOES. `asNow` takes the height and does not use
+     * it, which is the property in one line — and it is not this test asserting it
+     * of itself: the two tests above pin that `toSharedScale` and `showGrid` contain
+     * no expression of the `asBefore` shape, and the last one proves that reader
+     * catches such an expression when there is one.
+     */
+    const shared = 1 / packHeightMedian(viewerSource())
+    const asNow = (_height: number): number => STANDARD_HULL * shared
+    expect(new Set(heights.map(h => asNow(h).toFixed(9))).size).toBe(1)
+    expect(asNow(lo)).toBe(asNow(hi))
+    expect(asNow(lo)).toBeCloseTo(0.7758, 4)
+
+    /* And the page does not lurch: the old rule drew every animal at 1.000 and this
+     * draws all fourteen inside a band around it, so the framing Joe knows holds. */
+    for (const h of heights) {
+      expect(h * shared).toBeGreaterThan(0.85)
+      expect(h * shared).toBeLessThan(1.30)
+    }
+  })
+
+  /*
+   * The reader has teeth. Fed the divisor it exists to forbid, it must name the
+   * line — otherwise the two tests above pass by matching nothing at all, which is
+   * exactly how a source assertion decays into "the file still exists".
+   */
+  it('catches a per-model divisor when there is one to catch', () => {
+    const doctored = viewerSource().replace(
+      '  object.scale.multiplyScalar(SHARED_SCALE)',
+      '  const scale = 1 / Math.max(1e-6, box.max.y - box.min.y)\n  object.scale.multiplyScalar(scale)',
+    )
+    expect(perModelDivisors(doctored)).toHaveLength(1)
+    const grid = viewerSource().replace(
+      "  const scale = gallery === 'assembled' ? 1 : SHARED_SCALE",
+      '  const scale = 1 / Math.max(size.x, size.y, size.z, 0.001)',
+    )
+    expect(perModelDivisors(grid)).toHaveLength(1)
   })
 })
 
