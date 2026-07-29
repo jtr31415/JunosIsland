@@ -121,11 +121,32 @@ handoff.
    owns pets whose names were drawn randomly, and a naive switch to deterministic
    naming renames the creatures she has already hatched.** That is a brief §19
    violation — nothing she owns is ever lost, and a pet's name is the most
-   personal thing she owns. Existing pets keep their names; determinism applies
-   to newly hatched ones. Because the id embeds the name, check what an id
-   migration would touch before assuming either is safe. Treat this as the first
-   thing to get right, and write a test that hatches under the old scheme, moves
-   to the new, and asserts the old pet is untouched.
+   personal thing she owns.
+
+   **Joe has since given the answer, and it is simpler than a migration layer.**
+   His words, 29 July: *"i will give you juno's already achieved animal's names
+   as her latest save game later, you can swap the first hard code out after."*
+   So her existing pets' names become **the canonical deterministic names** for
+   those `species + set` pairs — pinned as data in the frozen name table rather
+   than migrated around. Nothing of hers changes, and the table is right for
+   every other child too, because the table IS the source of truth.
+
+   What follows for how you build it:
+   - **The name table must be data with pinnable entries from day one**, so a
+     supplied name overrides a generated one for a given `species + set`. That
+     is the seam his save plugs into.
+   - **A temporary hardcode is explicitly sanctioned** until her save arrives —
+     he said "swap the first hard code out after". Mark it unmistakably
+     (`>>> PROVISIONAL`, as run 6 did with its dials) and say in the handoff
+     exactly which lines come out when the save lands.
+   - **Do NOT build a general rename-migration mechanism.** It is not needed and
+     it would be a large, risky thing built for a case that will not occur.
+   - Still write the §19 test: hatch under the old scheme, move to the new,
+     assert the old pet is untouched. Because the id embeds the name, check what
+     an id migration would touch before assuming either path is safe.
+   - **Her save has not arrived yet.** Do not invent her pets' names to fill the
+     table, exactly as you must not invent species. Leave the pins empty and
+     obvious.
 
    **The audit is Joe's manual work and it is large** — every generated name
    needs checking for pronunciation and for real-word or rude-word collisions,
