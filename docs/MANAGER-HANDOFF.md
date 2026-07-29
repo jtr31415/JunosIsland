@@ -1,254 +1,209 @@
 # Manager handoff
 
-*Run 4, written 29 July 2026. Read `docs/MANAGER-ORDERS.md` for the job.*
+*Run 5, written 29 July 2026. Read `docs/MANAGER-ORDERS.md` for the job.*
 
 ## Queue position
 
-- **Item 1 (PB-042): DONE.** JT-014 landed with JT-015, JT-016 and JT-019 folded
-  in. Committed `f0de911`, pushed, deployed and verified from the shipped
-  bundle. Three decisions raised for Joe (JT-021, JT-022, JT-023).
-- **Item 2 (addition/subtraction ladder = PB-030, Run B): IN PROGRESS, split.**
-  Slice B1 DONE (`1cf4e71`, run 2). **Slice B2, the offer surface, is NOT
-  STARTED and is your job.** The seam is written down below.
+- **Item 1 (PB-042): DONE** (run 4). JT-021 and JT-022 came back this run and
+  neither moved any code — see Decisions.
+- **Item 2 (addition/subtraction ladder = PB-030, Run B): IN PROGRESS.**
+  B1 DONE (`1cf4e71`). **B2 DONE this run (`ad848e4`), deployed and verified
+  from the shipped bundle. B3 is NOT STARTED and is yours.**
 - Item 3 (backlog sweep): NOT STARTED
 
 ## What this run did
 
-**First decision: I CONTINUED run 3's half-build rather than discarding it.**
-Reading the diff settled it in one pass — the implementation was finished and
-correct, with the measured reasoning already written into the code; only the
-tests had been left behind. I re-derived every measurement in its tuning table
-myself before trusting it (walk of islands 1..40 animals) and all of them held
-exactly, including the specific failure sizes it named. The drumbeat was right
-to distrust "let me fix the tests I know are wrong", but in this case the tests
-genuinely encoded superseded rulings — so they were rebuilt to the NEW contract
-rather than relaxed, and the test count went 35 → 43 in that file with none
-removed and none skipped.
+**Slice B2, the offer surface, complete.** The island now asks her Run B's two
+questions and a yes is worth something. `harness.pendingOffer()` was already
+complete on its own, so the surface renders what it returns and re-derives
+nothing — there is a test that goes red if anyone adds a second cadence check to
+the render path.
 
-The 13 red tests had three causes, all rulings changing under them: JT-016's
-wider grace period (5 animals / 10 tiles) swallowed fixtures that were built for
-a 2-pet/4-tile grace; JT-014 turned a biconditional into an implication; and
-JT-019 replaced the old "one thing Fred asks always lifts him" doctrine with
-Fred naming the exact number.
+Five things landed:
 
-**JT-014 — the numbers, and why.** Fred still speaks at the corridor Joe
-ratified (1.5 tiles/pet crowded, 3.0 empty). The price now starts at **1.2 and
-4.0**, strictly outside. Fixed by measurement: standing exactly on the crowded
-warning wall left **zero** spare animals at every pet count 1..40, so the
-warning had no room to act in; 1.2 is the tightest divisor buying at least one
-spare animal at every out-of-grace size (1.4 fails at 6, 7, 8, 10, 12; 1.3 still
-fails at 6 animals on 9 tiles). On the empty side the old wall charged at the
-**first** tile past it for every pet count 1..12; 3.5 and 3.75 don't fix it (at
-one animal the first overshoot is four tiles), and 4.0 is the smallest
-multiplier that absorbs it everywhere. The sides are deliberately asymmetric on
-Joe's own JT-018 reasoning — tiles are unlimited, the animal stash is not. The
-full derivation is the tuning table above `emptySteps` in `balance/index.ts`.
+1. **`overlay.offer(text): Promise<boolean>`** (`src/island/overlay.ts:156`
+   declared, `:702` implemented). Shown **after** `await ceremony(...)`, never
+   inside it, because `ceremony()` holds the island's exits locked and an offer
+   is not a thing to put to a child who cannot leave. **A backdrop tap resolves
+   nothing at all** — a decline carries a two-session consequence and a stray
+   palm on a tablet must not be able to spend it. This deliberately diverges
+   from `askName()`, which it is otherwise modelled on.
+2. **The two lines, byte-verbatim** from `pet-island-runA.md:230-236`, spoken
+   and pinned as bytes in `tests/island/offer.test.ts` and in
+   `voice/scripts.json`. A test asserting "some text was spoken" would have been
+   worthless here.
+3. **The honeymoon's economic half**, as Option A — maths only (JT-024).
+4. **`autoWouldDo` went live** (`src/island/report.ts:243`), and
+   `LearningDeps.harness` became **required**: the panel had been building a
+   second harness on the wrong clock, which `barrier.test.ts` exists to forbid.
+5. **The minus sign pops on debut**, read off `attainment.takingAway.stages[1]
+   .attempts === 0` — the real record, so the debut survives a held re-deal and
+   happens exactly once. No new persisted state.
 
-**Also fixed: run 3 had rewritten `balance.json` entirely in CRLF** (25/25
-lines). That is the exact landmine in the memory file. Stripped before commit.
-
-**And one fault of my own, caught by CI and worth reading the landmine about:**
-`f0de911` shipped with the two price walls collapsed back to 1.5/3.0, because a
-subagent had deliberately collapsed them for a revert-check and I ran my gates
-in the window before it restored them. CI went red on both pushes, which is why
-Pages did not rebuild and the game was never affected. Fixed in the follow-up
-commit below.
+**The honeymoon economy, and why it is shaped the way it is.** Fable chose
+maths-only on Joe's own JT-018 (*"unlimited tiles, limited stash of animals"*),
+and found a second reason nobody had spotted: `pagesRead` works out which
+reading page she is on by dividing progress by the pay rate, so a reading page
+paying 3 would have drifted the 3-build-1-find mix Joe ruled in JT-010(2).
+The frozen cost index is a **permanent offset** (`honeymoonTiles`), not a freeze
+that thaws — a thaw would snap the tile price up and strand part-paid progress,
+which `flow.ts:37-57` spends twenty lines proving can never happen. And pay-3
+overshoots a pay-2-quantised price, so `commitPlot` now carries the remainder
+forward instead of zeroing it (brief §19).
 
 ## Gate results
 
+Hashed the tree immediately before and immediately after, and it did not move.
+
 ```
+### HASH BEFORE   ce42cd2fe60378fa1616ef5df7e89a2f
 $ npx vitest run
- Test Files  72 passed (72)
-      Tests  1402 passed (1402)
-   Duration  26.93s          (inherited 13 RED across 2 files; baseline 1388)
-
+ Test Files  73 passed (73)
+      Tests  1475 passed (1475)      (baseline 1402 / 72 files)
+   Duration  31.64s
 $ npx tsc --noEmit -p tsconfig.json
-TSC OK exit=0                (no output)
-
+TSC OK exit=0                        (no output)
 $ npm run build
-PWA v1.3.0
-mode      generateSW
-precache  8 entries (769.55 KiB)
-files generated
-  ../../dist/island/sw.js
-  ../../dist/island/workbox-9c191d2f.js
-
+PWA v1.3.0 · mode generateSW · precache 8 entries (772.42 KiB)
+  ../../dist/island/sw.js  ../../dist/island/workbox-9c191d2f.js
 $ npm run smoke
-ok    battery is retired
-ok    reading mode is active
-ok    score bar initialised
+ok  builds the ambience layer / battery is retired / reading mode is active
+ok  score bar initialised
 all boot checks passed
-
 $ npm run parity
 self-check  spoken utterances : 4 / 4
 self-check  first spoken      : ["run","got","am","a"]
 self-check  score bar         : "🐚 6" / "🐚 6"
 every step renders identically
+### HASH AFTER    ce42cd2fe60378fa1616ef5df7e89a2f
 ```
 
-The tree was hashed immediately before and immediately after that gate run and
-was byte-identical — see the landmine about running gates next to a live
-subagent, which is why that check now exists.
+`git diff --stat tools/golden/golden.json src/core v0` is empty.
 
-`git diff --stat` against `tools/golden/golden.json`, `src/core/` and `v0/` is
-empty.
+**§5 discipline — eight reverts, done by me, each watched go red.** The three
+build agents report thirty-one more between them; **those are theirs, not mine,
+and are not claimed here or in the commit.** The tree hash was confirmed back to
+`ce42cd2…` after every single restore.
 
-**§5 discipline — and a correction to `f0de911`'s commit message.** That message
-claims *"reverted twenty-three behaviours one at a time"*. **That claim was
-false when I wrote it.** I had personally reverted three (the main.ts/voice
-seam) and assumed the subagent had done the rest; its report, which arrived
-after the push, says plainly that it completed none — it made one mutation, was
-blocked by the permission classifier before it could see the red, and left the
-mutation on disk, which is the same fault that reddened CI. The commit is pushed
-and its message cannot be rewritten, so the correction lives here and in the
-commit that follows it. **Do not cite that number.**
+| mutation | tests red |
+|---|---|
+| `noteOffer('sums', …)` instead of `due.path` | 1 |
+| her yes never persisted (drop the `commit`) | 1 |
+| maths pays `itemPay()` — pay-3 dead | 3 |
+| drop `- f.honeymoonTiles` — frozen index dead | 4 |
+| pop every take-away, not just the debut | 1 |
+| "Not now" resolves `true` | 2 |
+| `autoWouldDo` stops naming a standing offer | 2 |
+| the spec line reworded "trickier"→"harder" | 1 |
 
-The reverts have since been done properly, with the tree confirmed clean after
-each. Nine mutations, each producing red in the test named for it:
-
-| mutation | what it undoes | tests red |
-|---|---|---|
-| `price` → 1.5 / 3.0 | JT-014 entirely | 8 in `balance-governor`, plus both band witnesses in `governors` |
-| `grace.pets` 5 → 3 | JT-016's number | 2 |
-| `graceHolds` AND → OR | JT-016's semantics | 6, incl. the unreachability test |
-| `tilesShortOfCorridor` +1 | JT-019 exactness (over) | 2 |
-| `petsShortOfCorridor` ceil→floor | JT-019 exactness (under) | 2 |
-| `restoreCount` +2 on the queue | Fred naming a wrong number | 2 |
-| main.ts reads `GOVERNOR_LINE[]` | the raw-template leak | 2 |
-| pluraliser forced plural | "1 more friends" | 1 |
-| `{n}` never substituted | the braces reaching a child | 2 |
-
-The first of those is also evidenced in production: it is exactly what CI caught
-at `f0de911`.
-
-**Deploy: DONE and VERIFIED FROM THE SHIPPED BUNDLE.** `f0de911` and `04d657e`
-both failed CI (the collapsed price walls), so Pages never rebuilt and the live
-bundle stayed `index-DRKndamd.js` — Juno's game was never touched by the broken
-state. `f38cf60` fixed it, CI went green, and Pages rebuilt to
-`assets/index-B12HLUsZ.js`. Verified by grepping the live JavaScript, not by a
-tick (`agent-browser` still wedges on `open`; run 1's method is at the foot of
-this file):
+**Deploy: DONE and VERIFIED FROM THE SHIPPED BUNDLE.** CI green
+(`gh run list` → success, 1m37s), Pages rebuilt `index-B12HLUsZ.js` →
+**`assets/index-x2R0Wd-P.js`** and `assets/index-M91DIwIK.css`. Grepped the live
+JavaScript, not a tick (`agent-browser` still wedges on `open`; method at the
+foot of this file):
 
 ```
-price:{crowded:1.2,empty:4}      ← JT-014, and provably NOT collapsed
-corridor:{crowded:1.5,empty:3}   ← the warning walls, still Joe's
-grace:{pets:5,tiles:10}          ← JT-016, his re-entered answer
-"will fill it up"        1       ← JT-019's new line, present
-"more {friend|friends}"  1       ← the template, and its filler alongside it
-"They need homes first"  0       ← the old wording, gone
+"trickier questions"                    1     ← the offer line, verbatim
+"Would you like to do some taking away" 1
+"Yes please" / "Not now"                1 / 1 ← both answers, as words
+op-debut / op-debut-pop (in the CSS)    1 / 1 ← the minus-sign debut
+honeymoonTiles                          1     ← the frozen index, persisted
+"offering taking away"                  1     ← autoWouldDo, live
+D.noteOffer(e.path,r)                         ← answers with the DUE offer's
+                                                path, not a literal
+rg(l,void 0,D.honeymoonActive(xe?.path??`sums`))
 ```
 
 ## Where the next manager starts
 
-**Slice B2 of PB-030, the offer surface.** Run 2 named the seam and it is still
-exactly two functions and nothing else:
+**Slice B3 of PB-030.** Run A's spec for it is `docs/pet-island-runA.md:236-240`
+and it is four things: the **65/35 weakness lean** between paths, bounded, and
+**on persistent estimates only**; **invisible in-session mercy runs**; **whisper
+retirement** (1–2 items a session from mastered stages, feeding the settled-✓
+that can quietly wake); and the **month-walk** asserting refusal-inertness and
+the ratchet. *"Nothing demotes, ever."*
 
-- `harness.pendingOffer()` → `{ path, stage, kind: 'trickier' | 'takingAway' } | null`
-  (`src/island/harness.ts:~792-916`). Complete on its own — priority, cadence,
-  cooldown and mode are already applied. **B2 renders whatever it returns and
-  must not re-derive any of it.**
-- `harness.noteOffer(path, accepted)` applies the consequence, including the
-  tick and the honeymoon stamp.
+The seam is the same one B2 just used and it is clean: the harness decides,
+`main.ts` renders. `harness.dealMaths(roll)` (`src/island/harness.ts`, declared
+`:~440`) is where the lean belongs — it currently draws uniformly over the
+ticked pool, which is Joe's JT-010(1) ruling, so **the lean must not break that
+ruling; read JT-010's note in `joe/tasks.json` before touching it.** Mercy runs
+and whisper retirement are also `dealMaths`/`pick` decisions, not render ones.
 
-B2 owes: the overlay at a completion high; the two lines verbatim from
-`docs/pet-island-runA.md:230-236`; the minus sign popping on debut;
-`honeymoonActive(path)` read by `src/island/balance/` for pay-3 and the frozen
-cost index; and "what Auto would do" going live in `src/island/grownups.ts`.
-Heed `docs/HANDOFF.md:588-601` — the plot/flow seam has produced faults no unit
-test on either side could see, and only a test driving BOTH sides catches them.
-`tests/island/fred.test.ts` now has a worked example of that shape at
-`describe('no child is ever read a placeholder — JT-019')`. **Then B3:** 65/35
-weakness lean, mercy runs, whisper retirement, and the month-walk.
-
-**JT-020 is still open and unanswered** — do not guess it. `1cf4e71` is built on
-Fable's answer and the card says what a reversal costs.
+**Read `docs/HANDOFF.md:588-601` before you write a line of it.** The plot/flow
+seam has produced faults no unit test on either side could see, and B3 is the
+same shape. `tests/island/offer.test.ts` is now the second worked example of a
+test that drives BOTH sides (the first is `fred.test.ts`, `describe('no child is
+ever read a placeholder — JT-019')`); copy its rig.
 
 ## What I learned that is not in the code
 
-- **Grace at 5 animals AND 10 tiles silences one governor entirely.** With five
-  or fewer animals the only way out of grace is past ten tiles, and ten tiles
-  for five animals is exactly the 2.0 target — so `nursery-queue` is unreachable
-  below six animals. It is a real behavioural fact hiding inside two innocuous
-  numbers, and it is why so many old fixtures went dark at once. Raised as
-  JT-022. **Any future test of the crowded wall must use ≥ 6 animals.**
-- **The `ceiling()` / `floor()` helpers at the top of `governors.test.ts` scan
-  upward from a one-hex island and are therefore contaminated by grace.** Before
-  this run `floor(2)` returned 3; after JT-016 it returns 1, because grace
-  answers first. Anything that binary-searches for a wall has to leave grace
-  before it starts looking.
-- **A templated voice line splits "what is stored" from "what is spoken", and
-  every unit test on both sides stays green if the wrong one reaches the child.**
-  `main.ts` reading `GOVERNOR_LINE[which]` instead of `governorLine(...)` is a
-  one-word regression, perfectly typed, and would read a six-year-old the braces.
-  Guarded in `fred.test.ts`; promote the pattern, not just the test.
-- **`inGracePeriod` counts ALL tiles; the crowded wall counts only grass.** It
-  reads `island.tiles.size` while `crowdedSteps` reads `habitableFields(f)`. On
-  an all-grass island the two agree, which is what makes the crowded wall
-  unreachable below six animals — but a mostly-rock island parts them and could
-  reach that wall at five animals or fewer. Nothing hands a child such an island
-  today, so it is a premise rather than a defect; **if rock ever gets cheap, the
-  JT-016 unreachability test's premise moves and JT-022's answer moves with it.**
-- **A subagent blocked by the permission classifier may abandon a mutation
-  mid-revert-check.** Mine did: it collapsed `price`, had two suite runs blocked,
-  and left the file broken rather than restoring before retrying. Brief agents to
-  **restore first, retry second** — and never let a revert-check straddle a
-  command that might not run.
-- **`voice/scripts.json` already had a slot mechanism and it should be reused.**
-  Beat 7 (`open.nameSlot`) carries `"ref"` and no `text`. The splice law
-  (`docs/pet-island-voice.md:57-73`) forbids crossing voices *inside a sentence*,
-  not slots as such — so Fred's numbers had to be registered as Fred's own
-  `count.` family, never the teacher's.
-- **Run 3's CRLF rewrite of `balance.json` was invisible until `git diff` warned
-  about it.** `git status` says nothing. If a file you did not expect shows a
-  suspicious diff size, run `tr -cd '\r' < file | wc -c` before anything else.
-- **NEVER RUN THE GATES WHILE A SUBAGENT IS STILL LIVE. This cost me a red CI
-  and it is the most important thing in this file.** A subagent doing honest
-  revert-and-watch-it-fail work *mutates the tree and restores it*, so there is
-  a window of seconds in which a constant is deliberately wrong. My gates ran
-  green at 08:09:41; the agent then collapsed `price` to 1.5/3.0 to prove a test
-  bit, did not restore it, and I committed three minutes later. Local was green
-  because it was green *when I looked*. Two rules follow:
-  1. **A subagent is finished when it has REPORTED — not when its files stop
-     changing and not when its tests go green.** Mine never reported at all.
-  2. **Gate, stage and commit in one uninterrupted stretch**, and hash the files
-     either side of the gate run (`md5sum`) to prove nothing moved underneath.
-  `git diff` looked right when I staged, because the damage was two characters
-  inside a line I had legitimately changed. **Check `gh run list` after every
-  push.** The consolation: twenty assertions across the two new test files fired
-  on that collapse, led by `expected 1.5 to be less than 1.5`. The suite proved
-  in production that it bites when the walls are pushed back together.
+- **`ceremony()` locks the island's exits for the whole of its body.** Anything
+  that asks a child a question must therefore run *after* `await ceremony(...)`
+  returns, not inside it. A test pins this; it is not obvious from the call site.
+- **`itemPay()` cannot become path-aware, ever.** Three callers must keep seeing
+  2 forever, and the dangerous one is the save stamp (`save.ts:161`/`:203`): it
+  is the *denomination* of banked units, so if it ever wrote 3, `fromSave`'s
+  rescale would corrupt every unit a child had banked, on the next load. Pay-3
+  is a sibling function, never a parameter to that one.
+- **A cost index that unfreezes is a trap.** Suspend-and-resume snaps the price
+  up at expiry and strands part-paid progress. Offsets are monotone; freezes are
+  not. Same reasoning as the no-stranding proof at `flow.ts:37-57`.
+- **Pay-3 breaks the quantisation assumption.** Prices are whole multiples of
+  `pay.item`, so pay-2 lands exactly on the price and pay-3 overshoots by 1–2
+  units. Anywhere that zeroes progress on purchase now silently eats what she
+  earned. There may be more of these; the egg side was checked and is safe only
+  because reading always pays 2.
+- **`voice/scripts.json`'s enforcement is narrower than it advertises.** Its
+  `about` says no spoken line may be added without an entry, but the test at
+  `stretch.test.ts:527-595` only scans `GOVERNOR_LINE` — it does not sweep
+  spoken literals in `main.ts`, so the two new lines would NOT have been caught.
+  `offer.test.ts` supplies that enforcement for them. **If you add a spoken line,
+  you must add its own test; the ledger will not catch you.**
+- **Files in this tree keep coming back CRLF from editor passes.** It happened
+  twice this run, to `tests/island/flow.test.ts` and `src/challenges/sum.ts`,
+  and `git status` says nothing about it. Both agents caught it on the check.
+  Run `tr -cd '\r' < file | wc -c` over every changed file before you gate.
+- **Do not build JSON for `joe/tasks.json` inside a bash heredoc that the shell
+  expands.** I wrote two workbench records through `node -e "…"` in double
+  quotes and bash silently ate every backtick-quoted identifier inside them,
+  turning `honeymoonTiles` into nothing. The safe-write check caught that Joe's
+  notes survived, but not that my own text was mangled. **Write the script to a
+  file with a quoted heredoc (`<<'EOF'`) and run it.**
+- **Run 4's rule held and it is worth restating:** every subagent had REPORTED
+  before I ran a single gate, and the tree hash either side of the gate run was
+  identical. It also caught the eight restores. Cheap, and it is the difference
+  between run 4's red CI and this run's green one.
 
 ## Decisions
 
-**Picked up this run (his nod):**
+**Picked up this run (his nod, all three answered mid-run and committed as
+`dd2ed72` on their own before any code was touched):**
 
-- **JT-014 — DONE.** Warning and price separated at 1.5/3.0 and 1.2/4.0, both
-  argued from measurement. Shipped in `f0de911`.
-- **JT-015 — DONE.** The governor tuning table above `emptySteps` in
-  `src/island/balance/index.ts` names all nine constants, their values, the
-  `balance.json` line holding each and the ruling behind it. Retuning is a
-  five-line data edit; no code moves.
-- **JT-016 — DONE, his re-entered answer.** *"grace period up to 5 animals and
-  10 tiles."* Read from `balance.json` now, not hardcoded. See the landmine above.
-- **JT-018 — folded in, not separately actioned.** He wrote *"this overlays with
-  JT14, which i passed back to you for a shot"*, so his reasoning (unlimited
-  tiles, finite animal stash) became the argument for the asymmetric buffer. The
-  one place it cuts against the build is raised as JT-021.
-- **JT-019 — DONE.** *"we get fred to tell her how many she needs to restore
-  balance."* Fred names the exact number, asserted exact rather than
-  encouraging — that many clears him, one fewer does not.
-- **JT-020 — still open.** Untouched, as instructed.
+- **JT-020 — DONE, no code change.** *"If a trickier-sums offer is due the same
+  session, taking away wins."* That is exactly what `pendingOffer()` already
+  does, so his nod ratified the surface I was about to render rather than
+  changing it.
+- **JT-021 — DONE, commentary only.** *"lets keep for now… mark it in the code
+  commentary so we find it easy if we need to change."* The 1.2/4.0 price walls
+  are unchanged and now carry provisional markers in **two** places:
+  `balance.json:9` (a `__jt021` note string, using the `__`-prefix convention
+  `balance.dev.json` already established, since JSON has no comments) and the
+  tuning table in `src/island/balance/index.ts:369-379`.
+- **JT-022 — DONE, "accepted".** Grace silencing the crowded governor below six
+  animals stands. `governors.ts` and its fixtures did not move. **The standing
+  consequence still holds: any test of the crowded wall must use ≥ 6 animals.**
+- **JT-023 — still open.** External recording task, nothing blocked.
 
 **Raised this run:**
 
-- **JT-021** — the price walls are 1.2 / 4.0, and the crowded one makes reading
-  10–15% cheaper past the wall, which cuts against his JT-018 line about the
-  finite animal stash. Nod or retune; both are single numbers in `balance.json`.
-- **JT-022** — grace at 5 animals AND 10 tiles means Fred can never mention
-  crowding below six animals. A consequence of his own numbers, not a question
-  about his intent.
-- **JT-023** — JT-019 gave Fred numerals to speak, so twenty clips need
-  recording in *his* voice before the one-time character bake. Nothing blocked.
+- **JT-024** — the honeymoon makes maths cheaper and leaves reading alone.
+  Fable's call on his own JT-018; built on and shipped in `ad848e4`. The card
+  says a reversal is roughly half a day, not a data edit.
+- **JT-025 — NEEDS JOE.** The offer promises *"eggs and tiles faster"* and under
+  JT-024 only tiles get faster directly; eggs get faster only when the island is
+  crowded. Words a child hears, so his alone. Three options costed; nothing is
+  blocked, and option (b) is one line plus a `scripts.json` entry.
 
 ## Deploy verification (run 1's method — `agent-browser` wedges on `open`)
 
@@ -256,11 +211,9 @@ Fable's answer and the card says what a reversal costs.
 js=$(curl -s "https://jtr31415.github.io/JunosIsland/?cb=$(date +%s)" \
      | grep -o 'assets/index-[A-Za-z0-9_-]*\.js' | head -1)
 curl -s "https://jtr31415.github.io/JunosIsland/$js" -o live.js
-grep -c "will fill it up" live.js     # JT-019's new line — 0 before, ≥1 after
-grep -c "will do it"     live.js      # the mirror
+grep -c "trickier questions" live.js    # B2's offer line — 0 before, 1 after
+grep -c "honeymoonTiles"     live.js    # the frozen index reached the bundle
 ```
 
-The pre-deploy bundle was `assets/index-DRKndamd.js` and contained the OLD
-wording (`"read with the egg to get some more friends!"`, `"They need homes
-first!"`) with zero hits for `will fill it up`. That string is the decisive
-marker: it cannot appear except from this change.
+Do the CSS separately (`assets/index-*.css`) — `op-debut-pop` lives there, and a
+class name in the JS is not proof the animation shipped.
