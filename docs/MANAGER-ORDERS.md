@@ -111,7 +111,36 @@ handoff.
    **set textures are cached and detached, never disposed**, because disposing
    one breaks every pet of that set including ones she already owns (brief §19).
 
-5. **The rest of the backlog**, highest value first, skipping anything the
+5. **The reading progression curriculum** — the packet Joe's JT-024 and JT-025
+   answers create. His words, 29 July:
+   - JT-024: *"see answer to JT-025, we need the reading progression built for
+     this."*
+   - JT-025: *"we need to catch up here with the reading progression curriculum.
+     1. adding nouns 2. finding word challenge with only similar words. 3.
+     5-letter longer non-noun words, etc etc."*
+
+   **Read what those two answers actually settle.** JT-024 was "the honeymoon
+   makes maths cheaper only" — he did NOT reverse it, so B2's build stands and
+   nothing is to be reverted. But he has said *why* it is only half right: the
+   offer promises "eggs and tiles faster" and only tiles get faster, and the
+   honest fix is not to reword the promise — it is to **build the reading side
+   so the promise becomes true**. That is the packet.
+
+   His numbered list is a sketch of a ladder, not its specification, and the
+   "etc etc" is his own admission of that. So this is a survey-then-ask item:
+   the maths ladder (PB-030, slices B1–B3) is the worked precedent for what a
+   progression looks like here, and reading already has real machinery in
+   `src/challenges/wordFind` and the noun lists in `joe/`. Map what exists
+   against his three rungs, then hand him the questions his sketch leaves open
+   rather than proposing a design for him to approve — that is how he prefers
+   to work.
+
+   The same two regression gates constrain this as constrained the maths ladder,
+   and in the same opposite directions: `golden.json` pins per-level generator
+   behaviour, and `parity.mjs` drives v0's own level switch, so **selection
+   lives in the island layer, never `src/core/`**.
+
+6. **The rest of the backlog**, highest value first, skipping anything the
    backlog marks as waiting on Joe.
 
 ---
