@@ -232,7 +232,11 @@ export function askConfirm(
  * to it.
  */
 export const STAGE_LABELS: Record<Path, Record<number, string>> = {
-  sums: { 1: 'to ten', 2: 'bridging ten (to twenty)' },
+  sums: {
+    1: 'to ten',
+    3: 'teens plus units',
+    2: 'bridging ten (to twenty)',
+  },
   takingAway: { 1: 'to ten', 2: 'teens minus units', 3: 'anything to twenty' },
   reading: { 1: 'reading words' },
   building: { 1: 'building words' },

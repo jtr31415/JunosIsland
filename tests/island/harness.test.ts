@@ -16,6 +16,12 @@ import {
 } from '../../src/island/harness'
 import { createFrozenClock, dayKey } from '../../src/platform/clock'
 import type { AttemptEvent } from '../../src/island/attempts'
+/* The new rung is a change to the STAGE TABLE, so the two things that read
+ * that table from outside — the save loader and the parent's wording — are
+ * part of what has to be shown still working. */
+import { toSave, fromSave } from '../../src/island/save'
+import { createFlow } from '../../src/island/flow'
+import { stageLabel } from '../../src/island/grownups'
 
 /** An attempt with everything switched off, so a test states only what it means. */
 const attempt = (over: Partial<AttemptEvent> = {}): AttemptEvent => ({
@@ -25,9 +31,15 @@ const attempt = (over: Partial<AttemptEvent> = {}): AttemptEvent => ({
 
 describe('the stages that exist', () => {
   it('lists only generators that are actually built', () => {
-    // A4: sums [1 to-ten, 2 to-twenty bridging] · takingAway [1,2,3 as v0] ·
-    // reading [1] · building [1].
-    expect(STAGES.sums).toEqual([1, 2])
+    // A4: sums [1 to-ten, 3 teens-plus-units, 2 to-twenty bridging] ·
+    // takingAway [1,2,3 as v0] · reading [1] · building [1].
+    //
+    // SUMS IS OUT OF NUMERIC ORDER ON PURPOSE and this test pins it that way.
+    // The number is a generator id and the POSITION is the ladder rung: 3 is
+    // the newer, easier rung and sits between them. Renumbering it to [1,2,3]
+    // would change what the second rung generates and redden the frozen
+    // golden.
+    expect(STAGES.sums).toEqual([1, 3, 2])
     expect(STAGES.takingAway).toEqual([1, 2, 3])
     expect(STAGES.reading).toEqual([1])
     expect(STAGES.building).toEqual([1])
@@ -407,9 +419,13 @@ const masterSums1 = ({ h, on }: Island, days = ['2026-07-01', '2026-07-02']): vo
   }
 }
 
-/** Probes on sums 2: `n` of them, `right` correct. Eight at .875 clears .70. */
-const probeSums2 = ({ h }: Island, right = 7, n = 8): void => {
-  h.dealt('sums', 2, true)
+/**
+ * Probes on the rung above sums 1 — which is stage 3, `teens plus units`, and
+ * not stage 2. Ladder order, not numeric order. `n` of them, `right` correct;
+ * eight at .875 clears .70.
+ */
+const probeNextSum = ({ h }: Island, right = 7, n = 8): void => {
+  h.dealt('sums', 3, true)
   for (let i = 0; i < n; i++) h.recordAttempt(attempt({ correct: i < right }))
   h.dealt('sums', 1)
 }
@@ -425,7 +441,7 @@ const gateReady = (): Island => {
   const it = island()
   it.a.takingAway.stages[1]!.ticked = true
   masterSums1(it)
-  probeSums2(it)
+  probeNextSum(it)
   it.on('2026-07-03')
   return it
 }
@@ -487,7 +503,7 @@ describe('Run B — probes, the taste of the next rung', () => {
     masterSums1(it)
     // First roll draws from the pool (one entry), second is the 1-in-8.
     expect(it.h.dealMaths(rolls(0, 0.1)))
-      .toEqual({ path: 'sums', stage: 2, probe: true })
+      .toEqual({ path: 'sums', stage: 3, probe: true })
   })
 
   it('leaves the other seven rounds exactly as they were', () => {
@@ -587,7 +603,7 @@ describe('Run B — the promotion gate', () => {
    * passes for the wrong reason is a gate that promotes a child who is not
    * ready and calls it evidence.
    */
-  const trickier = { path: 'sums', stage: 2, kind: 'trickier' }
+  const trickier = { path: 'sums', stage: 3, kind: 'trickier' }
 
   it('offers trickier questions when the whole of it is passed', () => {
     const it = gateReady()
@@ -612,7 +628,7 @@ describe('Run B — the promotion gate', () => {
       it.on(d)
       for (let i = 0; i < 9; i++) it.h.recordAttempt(attempt({ correct: true }))
     }
-    probeSums2(it)
+    probeNextSum(it)
     it.on('2026-07-03')
     expect(it.a.sums.stages[1]!.attempts).toBe(18)
     expect(it.h.pendingOffer()).toBeNull()
@@ -622,7 +638,7 @@ describe('Run B — the promotion gate', () => {
     const it = island()
     it.a.takingAway.stages[1]!.ticked = true
     masterSums1(it)
-    probeSums2(it, 7, 7)
+    probeNextSum(it, 7, 7)
     it.on('2026-07-03')
     expect(it.h.pendingOffer()).toBeNull()
   })
@@ -631,7 +647,7 @@ describe('Run B — the promotion gate', () => {
     const it = island()
     it.a.takingAway.stages[1]!.ticked = true
     masterSums1(it)
-    probeSums2(it, 5, 8)
+    probeNextSum(it, 5, 8)
     it.on('2026-07-03')
     expect(it.h.pendingOffer()).toBeNull()
   })
@@ -645,7 +661,7 @@ describe('Run B — the promotion gate', () => {
     for (let i = 0; i < 10; i++) it.h.recordAttempt(attempt({ correct: true }))
     it.on('2026-07-02')
     for (let i = 0; i < 15; i++) it.h.recordAttempt(attempt({ correct: true }))
-    probeSums2(it)
+    probeNextSum(it)
     it.on('2026-07-03')
     expect(it.h.pendingOffer()).toBeNull()
   })
@@ -662,7 +678,7 @@ describe('Run B — the promotion gate', () => {
       it.on(d)
       for (let i = 0; i < 12; i++) it.h.recordAttempt(attempt({ correct: true }))
     }
-    probeSums2(it)
+    probeNextSum(it)
     it.on('2026-07-04')
     expect(it.a.sums.stages[1]!.rescues).toHaveLength(1)
     expect(it.h.pendingOffer()).toEqual(trickier)
@@ -672,7 +688,7 @@ describe('Run B — the promotion gate', () => {
     const it = island()
     it.a.takingAway.stages[1]!.ticked = true
     masterSums1(it, ['2026-07-01', '2026-07-01'])
-    probeSums2(it)
+    probeNextSum(it)
     it.on('2026-07-02')
     expect(it.a.sums.stages[1]!.attempts).toBe(20)
     expect(it.h.pendingOffer()).toBeNull()
@@ -700,8 +716,8 @@ describe('Run B — the cadence of an offer', () => {
   it('ticks the target and stamps the honeymoon when she says yes', () => {
     const it = gateReady()
     it.h.noteOffer('sums', true)
-    expect(it.a.sums.stages[2]!.ticked).toBe(true)
-    expect(it.h.levelFor('sums')).toEqual([1, 2])
+    expect(it.a.sums.stages[3]!.ticked).toBe(true)
+    expect(it.h.levelFor('sums')).toEqual([1, 3])
     expect(it.a.sums.honeymoonFrom).toBe('2026-07-03')
     expect(it.h.honeymoonActive('sums')).toBe(true)
   })
@@ -727,7 +743,7 @@ describe('Run B — the cadence of an offer', () => {
     for (const answer of [true, false]) {
       const it = island()
       masterSums1(it)
-      probeSums2(it)
+      probeNextSum(it)
       it.on('2026-07-03')
       expect(it.h.pendingOffer()?.kind).toBe('takingAway')
       it.h.noteOffer('takingAway', answer)
@@ -758,7 +774,7 @@ describe('Run B — the cadence of an offer', () => {
     it.on('2026-07-05')
     it.h.recordAttempt(attempt({ correct: true }))
     expect(it.a.sums.offer.daysSinceDecline).toBe(2)
-    expect(it.h.pendingOffer()).toEqual({ path: 'sums', stage: 2, kind: 'trickier' })
+    expect(it.h.pendingOffer()).toEqual({ path: 'sums', stage: 3, kind: 'trickier' })
   })
 
   it('counts the cooldown in days she played, not days on the calendar', () => {
@@ -794,7 +810,7 @@ describe('Run B — the cadence of an offer', () => {
     const it = gateReady()
     it.h.noteOffer('takingAway', true)
     expect(it.a.takingAway.stages[2]!.ticked).toBe(false)
-    expect(it.h.pendingOffer()).toEqual({ path: 'sums', stage: 2, kind: 'trickier' })
+    expect(it.h.pendingOffer()).toEqual({ path: 'sums', stage: 3, kind: 'trickier' })
   })
 
   it('runs the honeymoon for two sessions and then stops', () => {
@@ -865,7 +881,7 @@ describe('Run B — introducing taking away', () => {
     // the kind she is already doing.
     const it = island()
     masterSums1(it)
-    probeSums2(it)
+    probeNextSum(it)
     it.on('2026-07-03')
     expect(it.h.pendingOffer()).toEqual(intro)
     expect(it.h.offerDue('sums')).toBe(false)
@@ -874,12 +890,12 @@ describe('Run B — introducing taking away', () => {
   it('lets the trickier offer through the next session once it is settled', () => {
     const it = island()
     masterSums1(it)
-    probeSums2(it)
+    probeNextSum(it)
     it.on('2026-07-03')
     it.h.noteOffer('takingAway', true)
     expect(it.a.takingAway.stages[1]!.ticked).toBe(true)
     it.on('2026-07-04')
-    expect(it.h.pendingOffer()).toEqual({ path: 'sums', stage: 2, kind: 'trickier' })
+    expect(it.h.pendingOffer()).toEqual({ path: 'sums', stage: 3, kind: 'trickier' })
   })
 
   it('splits the deal moment evenly the moment it is accepted — JT-007\'s evening', () => {
@@ -983,7 +999,7 @@ describe('Run B\'s bookkeeping survives a save', () => {
     const it = gateReady()
     it.h.noteOffer('sums', true)
     const back = roundTrip(it.a)
-    expect(back.sums.stages[2]?.probes).toEqual(it.a.sums.stages[2]!.probes)
+    expect(back.sums.stages[3]?.probes).toEqual(it.a.sums.stages[3]!.probes)
     expect(back.sums.offer.lastOfferDay).toBe('2026-07-03')
     expect(back.sums.honeymoonFrom).toBe('2026-07-03')
   })
@@ -1821,5 +1837,195 @@ describe('whisper retirement — mastered, superseded, and quietly awake', () =>
     expect(it.h.levelFor('sums')).toEqual([1, 2])           // nothing unticked
     expect(it.a.sums.stages[1]!.attempts).toBe(22)          // nothing lost
     expect(deals(it.h, 600)).toEqual({ 'sums:1': 300, 'sums:2': 300 })
+  })
+})
+
+/* ------------------------------- the rung between: sums 3, teens plus units */
+
+describe('the sums ladder is array order, not numeric order', () => {
+  /*
+   * `STAGES.sums` is [1, 3, 2]. The NUMBER is a generator id — 2 is the
+   * bridging generator that `tools/golden/golden.json` is frozen against — and
+   * the ARRAY POSITION is the rung. The new middle rung had to be numbered 3
+   * because renumbering it 2 would have changed what the second rung
+   * generates. So every read of "the next rung", "the top rung" and "below the
+   * top rung" has to walk the array, and these tests are what stops anyone
+   * quietly tidying the table back into numeric order.
+   */
+
+  /** Sums-only, with every ticked rung already comfortable. */
+  const ladder = (ticked: number[]): Att => {
+    const a = createAttainment()
+    for (const s of STAGES.sums) {
+      const st = a.sums.stages[s]!
+      st.ticked = ticked.includes(s)
+      if (st.ticked) { st.ewma = 0.9; st.attempts = 20 }
+    }
+    return a
+  }
+
+  /**
+   * The rung the harness would probe next, read through the only door there
+   * is: `dealMaths` swaps the stage for `nextStage` on the one round in eight.
+   * Null when there is nothing above to ask about.
+   */
+  const rungAbove = (a: Att): number | null => {
+    const got = createHarness(a).dealMaths(rolls(0, 0.1))
+    return got?.probe ? got.stage : null
+  }
+
+  it('offers 3 above rung one, because 3 is the rung and 2 is a generator id', () => {
+    expect(rungAbove(ladder([1]))).toBe(3)
+  })
+
+  it('offers 2 above rung three, which is the top of the ladder', () => {
+    expect(rungAbove(ladder([1, 3]))).toBe(2)
+  })
+
+  it('offers nothing above rung two, the last position in the array', () => {
+    expect(rungAbove(ladder([1, 3, 2]))).toBeNull()
+  })
+
+  it('reads the ticked rungs back in ladder order, never sorted', () => {
+    expect(createHarness(ladder([1, 3, 2])).levelFor('sums')).toEqual([1, 3, 2])
+    expect(createHarness(ladder([1, 2])).levelFor('sums')).toEqual([1, 2])
+  })
+
+  it('labels the new rung in words a parent can act on', () => {
+    expect(stageLabel('sums', 3)).toBe('teens plus units')
+  })
+
+  it('does not start it ticked — a new rung is nobody’s until it is earned', () => {
+    const a = createAttainment()
+    expect(a.sums.stages[3]?.ticked).toBe(false)
+    expect(createHarness(a).levelFor('sums')).toEqual([1])
+  })
+})
+
+describe('a child already on the bridging rung is never moved down to 3', () => {
+  /*
+   * THE MIGRATION CASE, and the one that would actually hurt. A child who has
+   * been ticked on `sums` 1 and 2 for weeks wakes up on a build where a rung
+   * has been inserted BELOW her top one. Auto may only ever tick (runA.md:240)
+   * and inserting a rung is not an exception to that: she is not demoted, she
+   * is not offered the easier rung as though it were progress, and she is not
+   * dealt it behind her back.
+   */
+  const settledChild = (): Island => {
+    const it = island()
+    it.a.takingAway.stages[1]!.ticked = true   // takes the intro offer off the table
+    it.a.sums.stages[2]!.ticked = true         // ticked on 1 and 2, NOT on 3
+    masterSums1(it)
+    it.on('2026-07-03')
+    return it
+  }
+
+  it('keeps her top rung at 2 with 3 left untouched', () => {
+    const it = settledChild()
+    expect(it.h.levelFor('sums')).toEqual([1, 2])
+    expect(it.a.sums.stages[3]!.ticked).toBe(false)
+    expect(it.a.sums.stages[3]!.attempts).toBe(0)
+  })
+
+  it('offers her nothing, because there is no rung above the one she is on', () => {
+    const it = settledChild()
+    expect(it.h.pendingOffer()).toBeNull()
+    expect(it.h.offerDue('sums')).toBe(false)
+    expect(it.h.probeWanted('sums')).toBe(false)
+  })
+
+  it('never deals her the rung she skipped, over a whole sweep', () => {
+    const it = settledChild()
+    const got = deals(it.h, 600)
+    expect(got['sums:3']).toBeUndefined()
+    expect(it.h.levelFor('sums')).toEqual([1, 2])
+  })
+})
+
+describe('settledOn is BELOW in ladder order — the latent comparison', () => {
+  /*
+   * `settledOn` filtered `s < top`, comparing generator IDS, while `topTicked`
+   * and `nextStage` have always walked the array. The two agreed for as long as
+   * every ladder happened to be numbered in its own order, and stopped agreeing
+   * the moment `STAGES.sums` became [1, 3, 2]: a child ticked on all three has
+   * top = 2, and rung 3 — one place BELOW her — would compare 3 < 2 and never
+   * retire. She would be dealt the middle rung at full weight forever.
+   */
+  const allThree = (): Island => {
+    const it = island()
+    for (const stage of [1, 3]) {
+      it.h.dealt('sums', stage)
+      for (const d of ['2026-07-01', '2026-07-02']) {
+        it.on(d)
+        for (let i = 0; i < 10; i++) it.h.recordAttempt(attempt({ correct: true }))
+      }
+    }
+    it.a.sums.stages[3]!.ticked = true
+    it.a.sums.stages[2]!.ticked = true
+    it.on('2026-07-03')
+    return it
+  }
+
+  it('settles rung 3 as well as rung 1, because both sit below the top', () => {
+    const it = allThree()
+    expect(it.h.levelFor('sums')).toEqual([1, 3, 2])
+    expect(it.h.settledStages('sums')).toEqual([1, 3])
+  })
+
+  it('still never settles the top rung itself, whatever it is numbered', () => {
+    const it = allThree()
+    expect(it.h.settledStages('sums')).not.toContain(2)
+  })
+
+  it('drops the settled middle rung to a whisper instead of full weight', () => {
+    // The behaviour the comparison actually buys: rung 3 is retired to the
+    // occasional item rather than dealt as though it were live work.
+    const it = allThree()
+    const got = deals(it.h, 600)
+    expect(got['sums:2']).toBeGreaterThan((got['sums:3'] ?? 0) * 2)
+  })
+})
+
+describe('Juno’s own save survives the new rung arriving beneath her', () => {
+  /*
+   * Not a hand-built record: her attainment goes out through `toSave`, through
+   * JSON, and back in through `fromSave` — the path a reload actually takes.
+   * `readAttainment` rebuilds outward from `STAGES`, so a rung added to that
+   * table is exactly the kind of change that could quietly drop a field or
+   * reset a tick, and this is the test that would catch it.
+   */
+  const junoSaved = () => {
+    const it = island()
+    it.h.dealt('sums', 1)
+    for (const d of ['2026-07-01', '2026-07-02']) {
+      it.on(d)
+      for (let i = 0; i < 9; i++) it.h.recordAttempt(attempt({ correct: true }))
+      it.h.recordAttempt(attempt({ correct: false, latencyMs: 4000 }))
+    }
+    const before = JSON.parse(JSON.stringify(it.a.sums.stages[1])) as unknown
+    const raw = JSON.parse(JSON.stringify(
+      toSave(createFlow(), true, 'Juno', true, it.a)))
+    return { before, loaded: fromSave(raw) }
+  }
+
+  it('brings her rung-one ticks, ewma, attempts and sessions back byte for byte', () => {
+    const { before, loaded } = junoSaved()
+    expect(loaded.attainment.sums.stages[1]).toEqual(before)
+    expect(loaded.attainment.sums.stages[1]?.ticked).toBe(true)
+    expect(loaded.attainment.sums.stages[1]?.attempts).toBe(20)
+    expect(loaded.attainment.sums.stages[1]?.sessions).toHaveLength(2)
+  })
+
+  it('gives her the new rung fresh and unticked, not backdated', () => {
+    const { loaded } = junoSaved()
+    expect(loaded.attainment.sums.stages[3]).toEqual({
+      ticked: false, attempts: 0, ewma: null,
+      latencies: [], early: [], sessions: [], rescues: [], probes: [],
+    })
+  })
+
+  it('leaves her being dealt exactly what she was being dealt', () => {
+    const { loaded } = junoSaved()
+    expect(createHarness(loaded.attainment).levelFor('sums')).toEqual([1])
   })
 })

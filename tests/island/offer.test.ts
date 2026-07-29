@@ -145,7 +145,7 @@ function introReady(): Island {
 }
 
 /**
- * ...and one with the TRICKIER offer standing, on `sums` 2.
+ * ...and one with the TRICKIER offer standing, on `sums` 3 — the ladder is [1, 3, 2], so the rung above 1 is 3.
  *
  * `takingAway` 1 is ticked up front deliberately: its introduction outranks a
  * trickier offer (harness.ts:818-842), so leaving it open would mean this
@@ -155,11 +155,11 @@ function trickierReady(): Island {
   const it = island()
   it.a.takingAway.stages[1]!.ticked = true
   masterSums1(it)
-  it.h.dealt('sums', 2, true)
+  it.h.dealt('sums', 3, true)
   for (let i = 0; i < 8; i++) it.h.recordAttempt({ ...right, correct: i < 7 })
   it.h.dealt('sums', 1)
   it.on('2026-07-03')
-  expect(it.h.pendingOffer()).toEqual({ path: 'sums', stage: 2, kind: 'trickier' })
+  expect(it.h.pendingOffer()).toEqual({ path: 'sums', stage: 3, kind: 'trickier' })
   return it
 }
 
@@ -200,10 +200,10 @@ describe('the offer the harness makes is the offer she is shown — B2', () => {
     tap(p.yes)
     const due = await run
 
-    expect(due).toEqual({ path: 'sums', stage: 2, kind: 'trickier' })
+    expect(due).toEqual({ path: 'sums', stage: 3, kind: 'trickier' })
     // The harness MOVED: the rung she was offered is now hers, and the
     // honeymoon marker the economy reads is stamped.
-    expect(it.a.sums.stages[2]!.ticked).toBe(true)
+    expect(it.a.sums.stages[3]!.ticked).toBe(true)
     expect(it.h.honeymoonActive('sums')).toBe(true)
     // ...and there is nothing left standing, because one offer is a session.
     expect(it.h.pendingOffer()).toBeNull()
@@ -235,7 +235,7 @@ describe('the offer the harness makes is the offer she is shown — B2', () => {
   it('costs her nothing when she says no, and buys two sessions of quiet', async () => {
     const { root, overlay } = setup()
     const it = trickierReady()
-    const before = JSON.stringify(it.a.sums.stages[2])
+    const before = JSON.stringify(it.a.sums.stages[3])
 
     const run = putTheOffer(it.h, overlay, () => {})
     await Promise.resolve()
@@ -243,8 +243,8 @@ describe('the offer the harness makes is the offer she is shown — B2', () => {
     await run
 
     // NOTHING TICKED, nothing recorded against her, no stat moved (runA.md:231).
-    expect(it.a.sums.stages[2]!.ticked).toBe(false)
-    expect(JSON.stringify(it.a.sums.stages[2])).toBe(before)
+    expect(it.a.sums.stages[3]!.ticked).toBe(false)
+    expect(JSON.stringify(it.a.sums.stages[3])).toBe(before)
     expect(it.h.honeymoonActive('sums')).toBe(false)
 
     // The only thing a decline writes is the cooldown.

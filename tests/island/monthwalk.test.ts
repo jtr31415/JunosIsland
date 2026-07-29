@@ -682,12 +682,13 @@ describe('the improver — settled rungs whisper, and wake without falling', () 
 
     /*
      * The month has to have gone somewhere. Subtraction was introduced and
-     * accepted, the second sum rung was earned, and the first sum rung has been
-     * mastered AND superseded — which is the state the whole retirement rule is
-     * about.
+     * accepted, BOTH sum rungs above the first were earned — 3 (teens plus
+     * units) and then 2 (bridging ten), in ladder order and not numeric order —
+     * and the first sum rung has been mastered AND superseded, which is the
+     * state the whole retirement rule is about.
      */
     expect(accepted).toBeGreaterThanOrEqual(2)
-    expect(w.h.levelFor('sums')).toEqual([1, 2])
+    expect(w.h.levelFor('sums')).toEqual([1, 3, 2])
     expect(w.h.levelFor('takingAway')).toContain(1)
     expect(whispers, 'a retired rung was never visited again').toBeGreaterThan(0)
 
@@ -734,7 +735,7 @@ describe('the improver — settled rungs whisper, and wake without falling', () 
     expect(shapeOf(w.a), 'waking changed what she is allowed').toBe(shape)
     expect(w.a.sums.stages[1]!.attempts).toBe(banked + 2)
     assertNoDemotion(census, censusOf(w.a), 'the wake')
-    expect(w.h.levelFor('sums')).toEqual([1, 2])
+    expect(w.h.levelFor('sums')).toEqual([1, 3, 2])
 
     // Back in full rotation: within the path the two rungs now weigh the same.
     const awake = deals(w.h)

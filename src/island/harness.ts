@@ -59,7 +59,19 @@ export type ReservedPath = typeof RESERVED_PATHS[number]
  * generator, not a new number here.
  */
 export const STAGES: Record<Path, readonly number[]> = {
-  sums: [1, 2],
+  /*
+   * DO NOT "TIDY" THIS INTO [1, 2, 3]. The NUMBER is a generator id; the ARRAY
+   * POSITION is the ladder rung. `generateAdd` reads the number — 2 is the
+   * bridging generator and 3 is teens-plus-units — and `tools/golden/golden.json`
+   * is FROZEN against those numbers. Renumbering so the middle rung reads "2"
+   * would change what the second rung generates and redden the golden.
+   *
+   * So the ladder is: 1 (to ten), then 3 (teens plus units, no regrouping),
+   * then 2 (bridging ten). Everything that walks the ladder — `tickedStages`,
+   * `topTicked`, `nextStage`, `settledOn` — walks THIS ORDER and never the
+   * numeric one.
+   */
+  sums: [1, 3, 2],
   takingAway: [1, 2, 3],
   reading: [1],
   building: [1],
@@ -803,13 +815,26 @@ export function createHarness(
    * ticked stage — is satisfied by construction rather than by a test here:
    * the comparison is strictly BELOW the top ticked rung, so the top rung
    * itself can never be settled and is always left in full rotation.
+   *
+   * "BELOW" IS LADDER ORDER, NOT NUMERIC ORDER, and that is the correction.
+   * This read `s < top`, comparing generator IDS, while `topTicked` and
+   * `nextStage` have always walked the position of the id in `STAGES[path]`.
+   * The bug was latent for as long as every ladder happened to be numbered in
+   * its own order, and became reachable the moment `STAGES.sums` became
+   * [1, 3, 2]: a child ticked on all three has top = 2, and stage 3 — the
+   * EASIER rung, one place below her — would compare 3 < 2 and never retire.
+   * She would go on being dealt the middle rung at full weight forever. The
+   * doc comment above already said "below the top ticked rung" in words; this
+   * makes the code agree with it.
    */
   const settledOn = (path: Path): number[] => {
     const top = topTicked(path)
     if (top === null) return []
+    const ids = STAGES[path]
+    const topAt = ids.indexOf(top)
     return tickedStages(path).filter(s => {
       const st = statsFor(path, s)
-      return s < top && st !== null && solid(st)
+      return ids.indexOf(s) < topAt && st !== null && solid(st)
     })
   }
 

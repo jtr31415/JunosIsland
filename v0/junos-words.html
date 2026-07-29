@@ -978,6 +978,14 @@ function generateAdd(){
     if(levels.add === 1){
       a = 1 + ri(9);
       b = 1 + ri(10 - a);
+    } else if(levels.add === 3){
+      /* teens plus units, never bridging: u is a's units digit and capping b
+         at 9-u keeps (a%10)+b <= 9, so the ten is never broken open. The rung
+         between "stays under ten" and "always crosses ten". Mirrors
+         src/core/generators/sums.ts. */
+      a = 10 + ri(9);
+      const u = a - 10;
+      b = 1 + ri(9 - u);
     } else {
       a = 1 + ri(10);
       const bmin = Math.max(1, 11 - a);

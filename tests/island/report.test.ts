@@ -314,9 +314,13 @@ const masterSums1 = (
   }
 }
 
-/** Eight probes on sums 2, seven right: past *"≥ .70 over ≥ 8"*. */
-const probeSums2 = ({ h }: Island): void => {
-  h.dealt('sums', 2, true)
+/**
+ * Eight probes on the rung above sums 1 — which is stage 3, `teens plus
+ * units`, and not stage 2: `STAGES.sums` is [1, 3, 2] and the ladder is array
+ * order. Seven right, so past *"≥ .70 over ≥ 8"*.
+ */
+const probeNextSum = ({ h }: Island): void => {
+  h.dealt('sums', 3, true)
   for (let i = 0; i < 8; i++) h.recordAttempt({ ...rightAnswer(), correct: i < 7 })
   h.dealt('sums', 1)
 }
@@ -337,11 +341,11 @@ describe('what Auto would do', () => {
     const it = island()
     it.a.takingAway.stages[1]!.ticked = true
     masterSums1(it)
-    probeSums2(it)
+    probeNextSum(it)
     it.on('2026-07-03')
 
-    expect(it.h.pendingOffer()).toEqual({ path: 'sums', stage: 2, kind: 'trickier' })
-    expect(autoWouldDo('sums', it.h, 'auto')).toBe('offering the next step (stage 2)')
+    expect(it.h.pendingOffer()).toEqual({ path: 'sums', stage: 3, kind: 'trickier' })
+    expect(autoWouldDo('sums', it.h, 'auto')).toBe('offering the next step (stage 3)')
   })
 
   it('calls taking away by its own name, because it is a different event', () => {
@@ -375,11 +379,11 @@ describe('what Auto would do', () => {
     const it = island()
     it.a.takingAway.stages[1]!.ticked = true
     masterSums1(it)
-    probeSums2(it)
+    probeNextSum(it)
     it.on('2026-07-03')
     it.h.noteOffer('sums', true)
 
-    expect(it.a.sums.stages[2]!.ticked).toBe(true)
+    expect(it.a.sums.stages[3]!.ticked).toBe(true)
     expect(it.h.honeymoonActive('sums')).toBe(true)
     expect(autoWouldDo('sums', it.h, 'auto')).toBe('going easy after a yes')
   })
@@ -390,7 +394,7 @@ describe('what Auto would do', () => {
     const it = island()
     it.a.takingAway.stages[1]!.ticked = true
     masterSums1(it)
-    probeSums2(it)
+    probeNextSum(it)
     it.on('2026-07-03')
     it.h.noteOffer('sums', true)
 
@@ -426,7 +430,7 @@ describe('what Auto would do', () => {
     const it = island()
     it.a.takingAway.stages[1]!.ticked = true
     masterSums1(it)
-    probeSums2(it)
+    probeNextSum(it)
     it.on('2026-07-03')
     it.h.setMode('sums', 'hold')
 
@@ -446,7 +450,7 @@ describe('what Auto would do', () => {
     const it = island()
     it.a.takingAway.stages[1]!.ticked = true
     masterSums1(it)
-    probeSums2(it)
+    probeNextSum(it)
     it.on('2026-07-03')
 
     const lines = [
