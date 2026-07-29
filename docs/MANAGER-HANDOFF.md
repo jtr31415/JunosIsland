@@ -1,228 +1,136 @@
 # Manager handoff
 
-*Run 6, written 29 July 2026. Read `docs/MANAGER-ORDERS.md` for the job — the
-queue changed TWICE mid-run (`c432b3f`, `02e5f6b`) and now has five items.*
+*Run 7, written 29 July 2026. Read `docs/MANAGER-ORDERS.md` for the job — Joe
+amended it MID-RUN (`8189a5e`), so read it fresh rather than trusting run 6.*
 
 ## Queue position
 
 - Item 1 (PB-042): **DONE** (run 4).
-- Item 2 (PB-030, the addition/subtraction ladder): **DONE.** B1 `1cf4e71`,
-  B2 `ad848e4`, **B3 `9138176` this run.** Run B is complete.
-- Item 3 (**hold the work, reconcile the backlog**): **NOT STARTED — yours.**
-- Item 4 (PB-036, themed animal collections): NOT STARTED.
-- Item 5 (the reading progression curriculum): NOT STARTED.
-
-**Joe's instruction is that item 3 is a real queue item, not housekeeping.** Do
-not start item 4 before it is done.
+- Item 2 (PB-030, the addition/subtraction ladder): **DONE** (run 6). Run B complete.
+- Item 3 (**hold the work, reconcile the backlog**): **DONE — this run.**
+- Item 4 (**PB-036, themed animal collections**): **NOT STARTED — yours, and it
+  is now UNBLOCKED.** Joe's brief landed mid-run.
+- Item 5 (the reading progression curriculum): NOT STARTED. Now carded as `PB-043`.
 
 ## What this run did
 
-**Slice B3, the last of Run B** — the 65/35 weakness lean, invisible in-session
-mercy runs, whisper retirement, and the month-walk. The commit message on
-`9138176` carries the full reasoning; the three things worth knowing here:
+No source was touched. Two commits, deliberately separate: `1339916`
+`data(backlog):` and `b74a5b6` `docs(backlog):`.
 
-1. All three mechanisms had to reach into ONE function, `dealMaths`, whose
-   uniform draw *is* Joe's JT-010(1). It became a **cumulative weighted walk
-   over the same pool, in the same order, on the same single roll** — with all
-   weights equal, the same selection down to the boundary case. That identity is
-   a test, and it is what keeps every pre-existing test a test of the new code.
-2. **The line that protects JT-010** is `harness.ts:878-892`: stage weights are
-   renormalised *within* a path before its path weight multiplies them, so mercy
-   and retirement cannot move the sums-versus-taking-away share at all.
-3. **The lean bounds its own strength, not the share** (Fable's option C, raised
-   as **JT-026**), because a tick is the parent's statement and must always
-   outrank an estimate. Mercy and retirement persist **nothing**, and waking a
-   retired rung needed no new state — its ewma falls, `solid` goes false by
-   itself, and nothing unticks.
+**`joe/backlog.json`** — eleven cards were describing work that is already live.
+`PB-030` was `planned` with all eight of its behaviours shipped, and its detail
+never named the honeymoon economy that B2 built. `PB-042`'s `progress` still said
+the escalating price "IS NOT BUILT YET" three runs after it shipped, and still
+cited a `balance.json` `tilesPerPet` field that no longer exists. `PB-039`,
+`PB-011`, `PB-002` closed. `PB-001` and `PB-040` narrowed rather than closed.
+Three cards created for shipped work that had **never had a card** (`PB-044` the
+placement backstop, `PB-045` change-your-mind, `PB-046` the break suggestion) —
+they lived in `docs/BACKLOG.md` alone. `PB-043` created for Joe's reading
+curriculum, rescued from the JT-025 note it would have died inside. `nextId`
+43 → 47. Card count 42 → 46. **Where a card was superseded the reasoning stays
+and the supersession is stated** — nothing was silently deleted.
+
+**`docs/BACKLOG.md`** — it had zero hits for `PB-0`, `Run B`, `PB-030`, `PB-042`
+and `JT-0`, and contradicted the JSON on `#44`. It is now explicitly the **prose
+annex**, with `joe/backlog.json` declared authoritative for state, every heading
+stamped with its PB id, and seven dated status notes added over the original
+cases rather than replacing them.
 
 ## Gate results
 
-Every subagent had **REPORTED** before a single gate ran, and the tree hash
-either side of the gate run is identical.
+Docs and data only; `git diff --stat src v0 tools/golden/golden.json tests` is
+empty, both files verified LF.
 
 ```
-### HASH BEFORE   54d69a97b0cdff07f1bf16c0e90bff81
 $ npx vitest run
  Test Files  74 passed (74)
-      Tests  1509 passed (1509)      (baseline 1475 / 73 files)
-   Duration  30.35s
+      Tests  1509 passed (1509)        (unchanged from run 6 — nothing was code)
+   Duration  35.52s
 $ npx tsc --noEmit -p tsconfig.json
-TSC OK exit=0                        (no output)
+TSC OK exit=0
 $ npm run build
 PWA v1.3.0 · mode generateSW · precache 8 entries (773.59 KiB)
-  ../../dist/island/sw.js  ../../dist/island/workbox-9c191d2f.js
 $ npm run smoke
 ok  builds the ambience layer / battery is retired / reading mode is active
 ok  score bar initialised
 all boot checks passed
 $ npm run parity
 self-check  spoken utterances : 4 / 4
-self-check  first spoken      : ["run","got","am","a"]
 self-check  score bar         : "🐚 6" / "🐚 6"
 every step renders identically
-### HASH AFTER    54d69a97b0cdff07f1bf16c0e90bff81   → TREE DID NOT MOVE
 ```
 
-`git diff --stat tools/golden/golden.json src/core v0` is empty. All three
-changed files checked `CR=0`.
-
-**§5 discipline — I claim none of it as mine.** I ran no mutation myself. The
-build agent reports 13 and the month-walk agent 11; **those are their claims,
-not mine**, and are not claimed in the commit either. Two are worth repeating
-because they are honest against interest: the build agent found one mutation
-that **cannot be made red** (the all-zero-weight fallback is genuinely
-unreachable) and said so rather than pretending; the month-walk agent had **two
-mutations come back GREEN**, found its own tests were measuring the wrong thing,
-and fixed the tests rather than the mutation.
-
-**Deploy: DONE and VERIFIED FROM THE SHIPPED BUNDLE.** CI green (1m52s), Pages
-rebuilt `index-x2R0Wd-P.js` → **`assets/index-Cb--qzwE.js`**. Grepped the live
-JavaScript (method at the foot of this file):
-
-```
-settledStages       1   ← whisper retirement's public read, B3-only
-65/35               1   ← LEAN_MAX, survives minification, B3-only
-trickier questions  1   ← B2 still shipped
-honeymoonTiles      1   ← B2 still shipped
-```
+No deploy this run — nothing shipped to deploy.
 
 ## Where the next manager starts
 
-**Item 3: stop building and reconcile the backlog.** I surveyed the ground for
-you, scoped to Run B only, so you should not need a survey of your own:
+**Item 4, PB-036, and the blocker run 6 warned you about is GONE.** Joe committed
+`8189a5e` at 10:50 while I was mid-reconciliation: his roster landed as
+**`docs/pet-island-species-roster.md`** (142 lines, ratified, not a draft) and
+`docs/MANAGER-ORDERS.md` item 4 was rewritten around it. **Read the roster in
+full and build to it, not to a summary — including not to my `PB-036` card.**
 
-- **`joe/backlog.json` PB-030 is `"state": "planned"` and that is now wrong** —
-  all eight behaviours in its `detail` have shipped. The file's own convention
-  for this is PB-033 (`"state": "done"` plus a "BUILT 28 Jul" note); PB-042 uses
-  a **`progress` field** instead, which is the existing precedent if you would
-  rather record delivery than close the card.
-- **The honeymoon is not named in PB-030's `detail` at all.** It shipped in B2.
-  That is a gap in the card, not a staleness — the card under-describes what was
-  built.
-- **`docs/BACKLOG.md` has no PB-030 card and never mentions Run B.** Grep for
-  `PB-030|Run B|B1|B2|B3` returns nothing. Its staleness is total omission, so
-  it cannot be reconciled line-by-line — it has to be written.
-- **A live file-to-file disagreement, and it touches the signal Run B gates on:**
-  `docs/BACKLOG.md` `#44` describes adaptive difficulty reading "pages passed" as
-  an open, undecided question, while `joe/backlog.json` PB-007 marks that same
-  `#44` card `"state": "done"` under Run A.
-- `joe/backlog.json` `nextId` is **43**.
-- **JT-025's note is a NEW requirement that arrived on the wrong card** and must
-  become a card of its own, or it will be lost inside a closed ruling. It is
-  queue item 5.
+The one thing to get right first, ahead of any species work, is the naming
+migration, because it is a **brief §19 trap**. Roster §3 makes given names
+deterministic, seeded from `species + set`. Today `petName(defaultRng)` at
+`src/island/main.ts:1167` draws from unseeded `Math.random` (`src/core/rng.ts:5`),
+the name is **persisted** into the save (`flow.ts:311-312`, `save.ts:171`/`226`),
+**and the pet's `id` embeds it** (`'pet' + n + '-' + name`). So Juno already owns
+randomly-named pets and a naive switch renames them. Existing pets keep their
+names; determinism applies to new hatches only. Write that test first.
 
-## What B1–B3 established about a progression — for the reading ladder
-
-The coordinator asked for this, and it is the cheapest thing in this file:
-**which parts of the maths ladder are general, and which were about maths.**
-
-**General — copy these.** (1) *Selection lives in the island layer, never
-`src/core/`.* This is structural, not stylistic: `golden.json` pins per-level
-generator behaviour and `parity.mjs` drives v0's own level switch, so the two
-regression gates constrain a ladder from opposite directions and only the island
-layer is free. (2) *Nothing demotes, ever* — and the cheapest way to honour it is
-to make regression **emergent from the estimate** rather than a stored flag.
-Whisper retirement needed no `settled` field at all; a rung wakes because its
-ewma fell, so there is no state that can disagree with the evidence. (3) *One
-offer a session, and a decline costs nothing but a cooldown.* (4) *A capability
-tick is a parent's statement and must always outrank an estimate* — this is the
-single most load-bearing thing B3 learned, and it is what forced the lean to be
-a bounded multiplier instead of a clamp. (5) *Probes into their own ring*, so
-that asking her something she has not been taught cannot contaminate the record
-used to decide what she is taught.
-
-**Specific to maths — do NOT copy blindly.** (a) The whole "one pool across both
-paths, share follows tick count" model exists because maths has exactly **two
-peer paths**. Reading's build/find split is already governed by a fixed 3-build-
-1-find mix Joe ruled in JT-010(2), so a reading ladder has a *mix constraint the
-maths ladder does not have*, and a weakness lean there would collide with that
-ruling the same way B3's collided with JT-010(1) — expect the same conflict and
-raise it early. (b) `pagesRead` derives the current reading page by dividing
-progress by the pay rate, which means **reading's difficulty and reading's
-economy are coupled in a way maths's are not**; B2 already hit this. (c) The
-promotion gate's constants (ewma ≥ .85, ≥ 20 attempts, ≥ 2 distinct days) are
-calibrated to short maths items and should be re-derived, not inherited, for
-items that take much longer.
-
-**And one thing B3 suggests was wrong, or at least under-specified:** the spec
-line *"weakness-lean between paths bounded 65/35"* was written without noticing
-it contradicted a ruling Joe had already given. Run A's spec paragraphs are
-dense and were written before his rulings existed. **Check each spec clause
-against `joe/tasks.json` before building it** — that is the check that saved
-this slice, and Joe's numbered reading rungs are explicitly a sketch ("etc
-etc"), so the reading packet is survey-then-ask, not build-to-spec.
+Architecture is **kits before species** (six kits, then a species is data), the
+**live 24 are frozen**, and collections ship **one at a time** on the 85% unlock
+cadence — the ~296 builds are not a build order. Roster §6 holds Joe's own open
+questions (ship order, whether Prehistoric ships, IUCN wording): **those are his,
+raise them in the workbench, do not settle them with Fable.**
 
 ## What I learned that is not in the code
 
-- **Joe edits `joe/tasks.json` live while you are running.** It changed under me
-  **twice** in twenty minutes, unprompted, with no notification. `git status`
-  showing `M joe/tasks.json` when no agent of yours should have touched it is
-  the signal, and it is worth checking for. Commit his edit **alone**,
-  immediately, before it collides with anything of yours.
-- **A closed ruling is not always an answer to the question asked.** Joe closed
-  JT-025 with a note about the reading curriculum — a *different subject*. The
-  protocol says "that note is the ruling", but read the note against the
-  question before acting: here the honest reading was that the shipped wording
-  stands by default and the note is new work. Do not force an unrelated note
-  into an answer, and do not guess the answer it did not give.
-- **A subagent doing revert-testing has deliberate mutations on disk for most of
-  its run.** I watched `git diff --stat` flip between `867/-16` and `868/-17`
-  while the month-walk agent worked. That is exactly the window run 4 shipped a
-  collapsed constant through. The hash-either-side-of-the-gates rule works, but
-  the *cheaper* rule is the one that matters: **do not read, judge or gate a
-  file while its agent is still running.**
-- **`git checkout` is the wrong way to restore a mutation when the working tree
-  already holds uncommitted work.** The month-walk agent was handed a tree that
-  already carried B3's unstaged implementation; restoring by `git checkout`
-  would have destroyed it. It took a byte copy first instead, and said so. If
-  you brief an agent to mutate-and-restore, **tell it the tree is dirty**.
-- **Minified bundles keep more than you expect.** `settledStages` and the literal
-  `65/35` both survive the build, which makes them usable deploy markers. Check
-  what survives by grepping your LOCAL `dist/` before you grep the live one —
-  it costs one command and tells you whether a null result means "not deployed"
-  or "not greppable".
-- **A CI run cancelled by a later push is not a failure.** B3's own run shows
-  `cancelled` because the JT-026 push superseded it two minutes later. The
-  later run contains both commits, and that is the one to verify against.
+- **The `gitStatus` block in the session prompt can be flatly wrong.** Mine
+  listed five recent commits, none of which were on `main`. My own `git log`
+  disagreed from the first command. **Trust the live command, never the
+  snapshot** — and the shas in that block did all resolve, so `git cat-file -t`
+  is not enough to catch it.
+- **HEAD moves under you, not just `joe/tasks.json`.** Run 6 warned that Joe
+  edits the workbench live; he also *commits* live. `8189a5e` landed mid-run and
+  changed my own orders. Re-check `git log -1` before you commit, and re-read
+  `MANAGER-ORDERS.md` if it moved. The cheap tell is that `git rev-parse HEAD`
+  differs from what you saw at start-up.
+- **A file can be cited as landed and still be untracked.** The roster was
+  `?? docs/pet-island-species-roster.md` while the orders described it as the
+  spec. One `git status --porcelain` caught it; it is committed now. **When a doc
+  tells you a file has arrived, check it is in git.**
+- **`joe/backlog.json` has two conventions for delivery and they mean different
+  things.** `PB-033` uses `state: "done"` with a `"BUILT <date>"` prefix in the
+  detail; `PB-042` uses a separate `progress` field and keeps `state`. The
+  `progress` field is the one that rots, because nobody re-reads it. I used the
+  `BUILT` convention for closures and only edited `progress` where it existed.
+- **Edit JSON with the Edit tool or Node, never in bulk.** Both files are LF and
+  `file` confirmed they stayed LF; the memory note about Python text mode on
+  Windows applies to Node's `writeFileSync` too if you ever normalise strings.
 
 ## Decisions
 
-**Picked up this run (his nod — both arrived mid-run, unprompted):**
+**Picked up this run (his nod):** none. **`JT-026` is still `open`** — I checked
+`joe/tasks.json` first thing and no `type: "ruling"` task has gained a note since
+run 6. **So nothing was reverted, and B3's lean stands exactly as shipped.** The
+reversal remains costed at about an hour in `PB-030`'s card, with all eight dials
+in one `>>> PROVISIONAL` block at `harness.ts:199-268`.
 
-- **JT-024 — DONE, and NOT a reversal. Nothing was reverted.** *"see answer to
-  JT-025, we need the reading progression built for this."* He accepted the
-  maths-only honeymoon, so **`ad848e4` stands exactly as shipped**. Committed as
-  `0a67669`.
-- **JT-025 — DONE, but the note answers a different question.** *"we need to
-  catch up here with the reading progression curriculum. 1. adding nouns 2.
-  finding word challenge with only similar words. 3. 5-letter longer non-noun
-  words, etc etc."* The offer wording therefore resolves **by default** to the
-  option already shipped (leave `runA.md:232` verbatim); no code moved and
-  nothing was guessed about words a child hears. Committed as `5d8bbee`. **His
-  note is new work and is now queue item 5.**
-- No ruling is left open in the workbench except the one I raised below.
+**Raised this run:** none. Reconciliation surfaced no question that needed Joe —
+every correction was a fact the repo already settled.
 
-**Raised this run:**
+**Still open in the workbench and worth knowing:** `JT-001`, `JT-004`, `JT-005`
+(reviews, and `JT-004`/`JT-005` are the pattern to copy for PB-036's audit
+surface), `JT-006`, `JT-007`, `JT-023`, `JT-026`.
 
-- **JT-026** — is *"bounded 65/35"* a limit on the lean or a clamp on the share?
-  Fable's option C, built on and shipped in `9138176`. The card costs the
-  reversal honestly: option (a) is a clamp that **wraps** the multiplier without
-  unwinding it, about an hour, and all eight dials sit in one block marked
-  `>>> PROVISIONAL` at `harness.ts:199-268` in the style he asked for on JT-021.
+**Two things I decided rather than asked**, both recorded in the commits: that
+`PB-002` closes by delivery even though Joe never ruled on it (the card says so
+explicitly), and that `docs/BACKLOG.md` becomes a prose annex rather than being
+rewritten as a second full backlog — which preserves Joe's and Fable's reasoning
+instead of duplicating 46 cards in prose. Reverse either freely; both are docs.
 
-**Nothing about animals was touched, surveyed or invented.** B3 is maths dealing
-only; no species, set or reward name was generated by me or by any subagent.
-
-## Deploy verification (run 1's method — `agent-browser` wedges on `open`)
-
-```bash
-js=$(curl -s "https://jtr31415.github.io/JunosIsland/?cb=$(date +%s)" \
-     | grep -o 'assets/index-[A-Za-z0-9_-]*\.js' | head -1)
-curl -s "https://jtr31415.github.io/JunosIsland/$js" -o live.js
-grep -c "settledStages" live.js   # B3's public read — 0 before, 1 after
-grep -c "65/35"         live.js   # LEAN_MAX reached the bundle
-```
-
-Grep your local `dist/island/assets/index-*.js` FIRST to learn which identifiers
-survive minification; a class name in the JS is not proof an animation shipped,
-so anything visual must be checked in `assets/index-*.css` separately.
+**Nothing about animals was invented.** No species, collection or name was
+generated by me or by any subagent; `PB-036` cites only Joe's roster and measured
+facts about the existing 24 species and 25 sets.
