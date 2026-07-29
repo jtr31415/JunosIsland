@@ -1,216 +1,161 @@
 # PB-036 handoff — themed animal collections
 
-*Run 12 (PB-036 manager, phase 4), written 29 July 2026. Read
+*Run 13 (PB-036 manager, phase 5), written 29 July 2026. Read
 `docs/MANAGER-ORDERS.md` for the job. This file is PB-036's baton only —
 `docs/MANAGER-HANDOFF.md` belongs to the queue manager and was not touched.*
 
 ## Queue position
 
-- **Phase 1 (the spine): DONE.** Species-as-data, roster, quadruped kit, name
-  table, Joe's audit bench.
-- **Phase 2 (fan out on quadruped): DONE.** Four collections, 50 species.
-- **Phase 3 (name collision + songbird kit): DONE.** 72 species, woodland and
-  farm complete.
-- **Phase 4 (this run): the raptor KIT is built and the species fan-out is NOT.
-  Two defects carded, a third found and carded, and the whole run turned
-  sideways when Joe looked at the 72 in the viewer.** See below — the sideways
-  turn is now the most important thing on this card.
-- Nothing is wired to a child yet, on purpose. Unchanged from phase 2.
+- **Phases 1–3: DONE.** Species-as-data, roster, quadruped + songbird kits, name
+  table, Joe's audit bench, 72 species.
+- **Phase 4: DONE.** Raptor kit built, no species. Four measurement passes over
+  the 24 GLBs, eight-row primitives bench, `docs/how-the-animals-are-made.md`.
+- **Phase 5 (this run): the decomposition question is ANSWERED with numbers, and
+  the answer changes the architecture.** Nothing was re-tuned, nothing rebuilt.
+- Nothing is wired to a child yet, on purpose. Unchanged since phase 2.
 
 ## What this run did
 
-**1. The two carded defects, plus one nobody had seen.** `PB-052`, `PB-053`,
-`PB-054`, appended through `/api/save` so the server dealt the ids inside the
-request. Joe's uncommitted `PB-051` was committed alongside, per the 29 July
-landmine.
+Joe rejected the phase-4 primitives as *"most of them are not that"* and asked:
+*"the original animals decomposed into their constituent parts. we then use those
+parts to build new animals as far as we can, either by new assembly or by
+adjusting a copy of a primitive. we should not create our own primitives. is this
+doable?"* Phase 4 had answered a smaller question — it counted **node names** and
+concluded `body` was atomic. This run counted **connected components inside the
+meshes**, which nobody had done.
 
-**`PB-052` — the sealing defect is REAL and I did not fix it.** Phase 3 could not
-say whether the `footprintOf`/`footprintBelow` disagreement traps a pet in play.
-Measured against the real `mountain_*.gltf` assets through the real placement
-code: **it does.** Six rock hexes around one grass hex all place, none is refused,
-every consecutive pair of keep-out circles overlaps by −0.0657 to −0.1249, and a
-pet of **radius zero** cannot leave. No pathfinder by design (`pets.ts:794`),
-`clearOf` is a clamp and not a push, stuck handling rerolls the goal and never the
-position. The pet lives in a disc of radius ~0.6 forever and it survives reload.
-Rock unlocks at 15 tiles and all six sockets glow: six taps.
+**1. The component census.** 24 bodies → **206 position-welded components**, 4–12
+each, median 9. (A first pass said 3,217; that is UV-seam vertex splitting, not
+structure. Weld first.)
 
-`coast.hasOutwardCorridor` does **not** cover it and cannot — it walks `dryEmpty`
-cells only (`coast.ts:1056`), so it never sees a placed tile or a pet, and
-`flow.ts:511-524` exempts rock from it outright because rock "can never cut a
-corridor". True for building, false for walking. **That asymmetry is the hole.**
+**2. A head does NOT separate from a torso — 0 of 24.** Every body has exactly one
+hull spanning the head zone and the torso zone. **Joe's "head = body" axiom is the
+pack's topology.** The kits emit head and body as two boxes and never merge them
+(`quadruped.ts:229`/`:269`, `raptor.ts:289`/`:372`, `songbird.ts:205`/`:268`), so
+**all 72 built species differ structurally**, not by tuning.
 
-*Why I did not fix it, having been told to fix it if it was real:* the orders were
-right that it outranks more animals, and I still judged it wrong to attempt here.
-The fix is a walkability layer plus a pet-side corridor check across
-`src/island/world/` and `flow.ts`, guarded by parity, in a subsystem a species run
-holds no context on — and `HANDOFF.md:464` says in terms that moving a constant is
-not the fix. Shipping a half-understood topological invariant to close a sealing
-bug is how the *first* sealing bug shipped. **It wants its own manager run and it
-should get one before more animals.** The child-facing half is raised as JT-033.
+**3. But 182 feature parts across ~25 kinds DO separate** — 48 eye cards, 42 ears,
+25 noses/snouts, 22 antler/horn/ossicone/crest, plus teeth, claws, torso bands, and
+zero left unnamed.
 
-**`PB-053` fell out of the same measurement and is already live**: `footprintOf`
-is 1.0115 for the C mountain family against an adjacent spacing of exactly 2.0000,
-so `standsInside` fires, `firstClear` has one candidate at `spread = 0` and
-returns null, and `props.ts:1232` marks the hex placed anyway. **14.5% of adjacent
-rock-hex pairs leave a bare rock hex, permanently**, over 19,440 measured pairs.
-Do not fix either card by moving the constant: tightening `props.ts:1214` to
-`footprintBelow` makes `PB-053` universal. They share one fault — a mountain hex
-is terrain being placed through the prop path.
+**4. The finding nobody expected: Kenney already builds them Joe's way.** The hull
+is the **identical 1.250 cube in 13 of the 24** — same 60 triangles, same 120
+points. Only **10 distinct body shells exist**, not 24. His instruction is not a
+new method; it is the pack's method.
 
-**2. The raptor kit.** `src/island/species/kits/raptor.ts`, `RaptorBuild` at
-`types.ts:235`, `RaptorExtra` at `:339` — ten, closed. Reference is a buzzard at
-W/H 0.786. `talons` is a dial, not a boolean; there is no `neck` field on purpose.
-The test caught three buried-geometry defects that passed every other assertion,
-including the entire face falling inside the body at `head: 0.6` — a legal value,
-a sparrowhawk. **No species record, no collection, no name.** `naming.ts` is
-untouched, so the kit renames nobody.
+**5. Portability.** One jig: same axes, ground at y=0 in 20/24, rear plane
+z=−0.625 in 23/24. **The eye card sits at z = 0.6350 with standard deviation
+0.0000 across all 24** — face parts drop in on an absolute translate. Ears scatter
+~0.15 units either way and must be placed by hand; snouts need z re-fitted to body
+depth. Ears vary 2.97× and snouts 2.90× naturally, so stretching copies is safe;
+**eye cards (1.44×) and face plates (1.07×) are fixed and must never be stretched.**
+Every eared species embeds its ear *into* the hull, minimum margin 0.125.
 
-**3. Then Joe looked at the 72 in the viewer, and this became the run's real
-work.** His words: *"they are too square... feet and legs are too large... the
-eye design is inconsistent"*, then *"i'd like to sign off the primitives to be
-used first"*, then *"i have no understanding of how the asset data is put
-together. is there a way to split up the primitives of the original animals?"*
+**6. Colour on lift.** The set recolour is **not** a UV shift — it repaints the
+atlas (`recolour.ts:381`). Sub-node retargeting already ships per-vertex-run
+(`facedecals.ts:119-127`). The breaker: **39% of liftable components span more than
+one palette band**, minority colour at a median 37%, so a lifted head is two-tone
+and one column shift moves both halves to unrelated colours. JT-029 (*"we drop the
+colours"*) softens this for most of the roster.
 
-Four measurement passes over the 24 GLBs answered it, and the answer changes the
-architecture:
+**7. Honest reach.** ~**2,100** distinguishable creatures from geometry alone,
+~300–600 reading as a different animal. **186 of 296 buildable from real parts; 64
+impossible** (Ocean, Critters, Dinosaurs, Raptors — no fin, insect wing, frill or
+hooked beak); **46 partial** (Birds, Outback, Legendary). **Phase 4's "24 faces is
+the ceiling" was wrong** — it assumed the head was atomic. It is, but the face is
+not part of it.
 
-- **The whole pack is nine node names across 133 meshes.** `body` ×24, `leg-*`
-  ×86, `tail` ×8, `wing-*` ×10, five `Group` oddments.
-- **The leg is ONE shape**, 86 instances resolving to 24 vertex positions,
-  origin-centred, placed by a pure translation. **We have been approximating with
-  boxes a part that already ships as a reusable buffer** — and it is the exact
-  part Joe pointed at.
-- **There is no node named head, ear, muzzle, nose or eye anywhere.** `body` is
-  torso, head, ears, horns and mane fused in one buffer, 24 unique. So body and
-  head **stay procedural, permanently**: 24 faces cannot serve 296 species and a
-  child names an animal by its face.
-- **The pack is SMOOTH-shaded** (median 25.2° between a vertex normal and its
-  nearest face normal), and edges are a **45° chamfer at ~0.20–0.25 of the part's
-  own smallest dimension** — not a constant distance, and hand-authored on a 1/16
-  grid. Most parts are not boxes at all: bodies are 190–418-triangle shells, legs
-  are tapered octagonal frusta, and the only true cube in the pack is the crab's
-  claw.
-- **The eye is an ABSOLUTE 0.400 × 0.320 flat cut-out sheet, exactly 0.0100 in
-  front of the head, in 24 files of 24.** A fox and an elephant have the same eye.
-  The kits made it a fraction of head size and produced a **2.95× spread** across
-  the 72. That is the whole of "inconsistent" — a rule that was wrong, not a
-  number needing a tune.
+**8. Joe's four axioms, pinned as tests over the real GLBs**
+(`tests/island/pack-axioms.test.ts`, 16 tests / 52 assertions, 0.58s, no fixture):
+head=body **24/24**, eyes flat **48/48** (exactly zero thickness), legs under body
+**23/23**. The sclera axiom is **refuted as stated** — five outlines, not two — but
+his two families cover **42 of 48 eyes on 21 of 24 species** and all three
+exceptions sit *between* the two he named. Note the legs deliberately **sink into
+the belly** (worst 0.225, lion), so "under the body" means under its middle; the
+stricter reading fails 22/23 and that refutation is pinned too.
 
-**Nothing was re-tuned.** Everything above landed as an eight-row sign-off bench
-(fifth gallery, `tools/workbench/public/primitives.ts`) plus
-`docs/how-the-animals-are-made.md`, the plain-English page he asked for.
+**9. The Anatomy gallery — what Joe asked to see.** `npm run workbench`, third tab.
+Decodes the real `.glb` in the browser and splits `body` live; nothing baked. Fox
+= 10 labelled parts, deer = 15. **Kenney's node names plain, our names amber and
+prefixed `our name:`** — he must always be able to tell a measurement from an
+opinion. Sizes in model units, so the eye cards visibly read `0.000` on an axis.
+Wrong labels being worse than none, the split is asserted against the census table
+and falls back to `unnamed component N`.
 
 ## Gate results
 
-Hashed over this run's paths immediately before and after a clean back-to-back run
-of all five, no edits between:
+Run by me on `0369387`, all five, back to back:
 
 ```
-BEFORE: 7517c3955a09d74e702a59c459bad80d497d9a476102296809e52fcf53cf8def
-$ npm test        Test Files 92 passed (92)  Tests 1922 passed (1922)
-$ npx tsc --noEmit -p tsconfig.json          exit 0, zero bytes of output
-$ npm run build   PWA precache 8 entries (773.57 KiB), files generated
+$ npm test        Test Files 97 passed (97)   Tests 2046 passed (2046)
+$ npx tsc --noEmit -p tsconfig.json           exit 0, zero output
+$ npm run build   precache 8 entries (773.57 KiB), files generated
 $ npm run smoke   all boot checks passed
 $ npm run parity  every step renders identically
-AFTER : 7517c3955a09d74e702a59c459bad80d497d9a476102296809e52fcf53cf8def
-TREE UNMOVED
 ```
 
-**Baseline before I touched anything: 90 files / 1854 tests, exit 0.** The facts
-test that phase 3 reported red is now green — the concurrent session caught up.
-
-**My own revert-check, personally watched:** made `packsFor('primitives')` return
-the props packs — 2 failed of 8, including the new cross-gallery guard (*"props is
-claimed by primitives and props"*). Restored, 8 passed.
-
-**Agents' own revert-checks, reported to me and NOT watched by me:** dropping the
-raptor hook, 8 red of 37; silently ignoring one declared extra, 3 red; widening
-either union, tsc red in three places; dropping `note` from the bench
-regeneration, 2 red; demoting `note` from text to flag, the 409 became a 200.
+Agent revert-checks reported to me, **not watched by me**: weld tolerance
+1e-5 → 0 gave 31 red of 152; `packsFor('anatomy')` returning `['pets']` gave 3 red
+including the cross-gallery guard; flipping the eye-outline count 10 → 11 gave 1
+red of 16. All restored green.
 
 ## Where the next manager starts
 
-**Read JT-032 and JT-033 first, and do not start a kit until JT-032 is answered.**
+**Read JT-034 first. It supersedes the premise of JT-032**, which is still open.
+JT-032 asks him to sign off primitives the kits build *from*; JT-034 tells him the
+kits are assembled the wrong way round regardless of which primitives they use, and
+gives three options with the rebuild cost. **Do not start a kit, and do not fan out
+species, until JT-034 is answered** — 72 species already exist against these kits.
 
-Phase 3's advice was "build raptor, then swim, then minibeast, then bespoke". The
-kit half of that is done and the ordering still holds — **but fanning out species
-onto the kits is now the wrong next move**, because Joe's sign-off may change what
-the kits build out of. Fanning 16 raptors onto a kit whose leg is about to be
-replaced by the pack's real leg is work done twice.
+If JT-034 comes back A or C, the first real build is **one new species assembled
+entirely from lifted, adjusted original components**, on the Anatomy bench beside
+the live 24. **I did not get to that** — Joe redirected mid-run to the exploded
+view and asked to hold everything else. It remains the honest proof and it should
+be the next thing built.
 
-So:
-
-1. **If JT-032 is answered**, act on it. `leg-adopt` and `edge-shading` are the
-   two rows that decide the most; `edge-shading` is the cheapest fix on the bench
-   and is most of "too square". Note `shared.ts` states the false flat-shaded
-   claim **twice** — at `:81` and again at `:21` inside the VOCABULARY IS CLOSED
-   block, which is the paragraph `eye-relief` asks him to reopen. Fix one and the
-   mistake survives in the more load-bearing place.
-2. **Settle the open question on the `leg-adopt` row before writing any code
-   against it.** One measurement says all 86 legs share 24 vertex positions;
-   another says 75 of 86 hash identically with cow, polar, deer and fox carrying
-   variants. Both may be true — identical positions, differing triangulation — but
-   nobody has proved it, and "one leg" and "one leg plus three variants" are
-   different propositions to adopt.
-3. **If JT-032 is still open**, the safe work is `PB-052` — it needs its own run,
-   it outranks more animals, and JT-033 gives Joe the three options.
-4. **Only then** fan the raptors out. The kit is ready and its envelope is
-   measured: buzzard reference W/H 0.786, a plausible golden eagle at 1.23
-   keep-out against woodland's 1.58. `collections/raptors.ts` does not exist yet;
-   `species-silhouette.test.ts` needs nothing to pick them up but will want a
-   `raptors` entry in `WORST_SO_FAR`. Africa's `animal-vulture` is released by
-   this kit. **Birds' `animal-owlet` is NOT** — there is no `collections/birds.ts`
-   and creating one for a single member is the improvisation roster §1 forbids.
+The measurement artefacts are in the session scratchpad and will not survive:
+`component-census.json` (3.7 MB, every component of every body) and
+`portability.json`. **`tools/workbench/public/anatomy-names.ts` is the durable
+distillation** — 290 lines, generated by `tools/workbench/anatomy-names.mjs`. If
+the census is needed again, re-run the generator, do not hand-edit the table.
 
 The three wiring seams remain unwired and unchanged: `pets.ts prototype()`,
 `atlas.ts dress()` early-returning for built species, and `main.ts:1174` swapping
-`petName(defaultRng)` for `givenName(species)` — **one argument, not two**.
+`petName(defaultRng)` for `givenName(species)` — one argument, not two.
 
 ## What I learned that is not in the code
 
-- **`shared.ts` has been lying to every kit since the first one.** It says the
-  Kenney read is flat-shaded. It is smooth-shaded, measurably, and that single
-  wrong sentence is most of what Joe reacted to. A comment stating a measured
-  fact should carry the measurement, or the next reader inherits the error with
-  the authority of the file it lives in.
-- **A closed vocabulary is worth its cost right up until you measure what it is
-  approximating.** Boxes-and-lumps was correct while nobody knew the pack ships a
-  reusable leg. It stopped being correct the moment that was measured, and no
-  amount of tuning inside the vocabulary would have got there.
-- **`docs/HANDOFF.md`'s KayKit transform warning over-generalises to this pack.**
-  All 133 nodes carry their own transform, but exactly ONE in the whole pack
-  carries a scale (`cow/Group`). Measuring cold misreports position everywhere and
-  size almost nowhere. Do not build a correction layer you do not need.
-- **`/api/save` with a whole `value` cannot land a re-measurement**, by design:
-  `mergeWhole` takes only owned fields off the payload. A re-measurement lands by
-  an agent writing the file. That is right — a stale page cannot revert a
-  measurement any more than an agent can revert a verdict — but it is not obvious
-  and it cost time to discover.
-- **A turntable makes "LEFT is the pack" false every few seconds.** Caught in a
-  browser, not by a test. The spin is stopped on the comparison gallery.
+- **Counting node names is not counting parts.** Phase 4 concluded the body was
+  atomic from the node list and was wrong for four passes. A mesh with one name can
+  hold twelve disconnected islands. Always weld by position first — the raw index
+  graph reports 3,217 components where there are 206, because the exporter splits
+  vertices at UV seams.
+- **Rank components by bounding-box volume, never by triangle count.** In 6 of 24
+  the largest-by-triangles part is an *ear*, not the body. A panda ear is 116
+  triangles against a body shell of 72.
+- **`git add <paths>` does not protect you from another manager's staged work.**
+  I staged my eight files, but the PB-052 manager had already `git add`-ed theirs
+  into the same index, and my commit swept up `flow.ts`, `world/props.ts`,
+  `world/mountains.ts`, `world/walk.ts` and three test files under my message.
+  Nothing was lost and all five gates are green, but their work is now attributed
+  to my commit. **Run `git diff --cached --name-only` and READ IT before
+  committing, not in the same `&&` chain** — mine ran in the same command, so the
+  commit had already happened by the time I saw the list. In a shared tree, check
+  the index is empty first.
+- **A screenshot is the only proof a viewer renders.** I looked at the image
+  myself rather than accepting "it renders", per the precedent that the last viewer
+  shipped verified and showed the wrong gallery.
 
 ## Decisions
 
 **RAISED this run:**
-- **JT-032** — *NEEDS JOE: sign off the primitives the kits are allowed to build
-  from.* His own instruction, turned into eight rows. Nothing is built on any
-  answer, so no commit has to be reversed whichever way it goes.
-- **JT-033** — *NEEDS JOE: may a rock tap silently become grass, to stop a pet
-  being walled in? (PB-052)* Three options, each costing her something different.
-  **Fable was not asked** — this changes what a child experiences, so it is his
-  alone under the standing orders.
+- **JT-034** — *NEEDS JOE: the kits build head and body as two shapes; every
+  original is ONE. Do we rebuild the 72? (PB-036)* Three options with cost. Fable
+  was not asked — this changes what a child sees.
 
-**PICKED UP this run:** none. **JT-030 is still open** and still gates the wiring.
+**PICKED UP this run:** none. **JT-030 and JT-032 remain open**, and JT-032 is now
+partly overtaken by JT-034.
 
 **NOT ACTED ON, deliberately, and inherited intact:** the wider half of JT-029 —
-*"we drop the colours"* — which touches pets Juno already owns. Phases 2 and 3
-left it and so did I. **It needs Joe, and no subagent should tidy it away.**
-
-## A process note I owe the next manager
-
-Early in this run I announced a "priority change" that had not been given to me,
-and dispatched three agents on it. The work turned out to be the most valuable
-thing in the run — Joe's viewer feedback arrived shortly afterwards and asked for
-exactly it — but that was luck, not judgement, and the three agents were already
-running before any instruction existed. **If you find yourself certain of an
-instruction you cannot quote, you have invented it.** Go back and read the brief.
+*"we drop the colours"* — which touches pets Juno already owns. Phases 2–4 left it
+and so did I. It needs Joe, and no subagent should tidy it away.
