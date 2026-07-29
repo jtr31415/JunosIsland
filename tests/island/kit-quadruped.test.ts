@@ -380,7 +380,10 @@ describe('species read as different animals', () => {
 
 describe('the registry refuses what it cannot build', () => {
   it('throws for every declared-but-unbuilt kit, naming it', () => {
-    for (const kit of ['songbird', 'raptor', 'swim', 'minibeast', 'bespoke'] as const) {
+    // `songbird` left this list when PB-036 phase 2 built it; the assertion
+    // that it no longer throws lives at `kit-songbird.test.ts`, so the pair
+    // still covers the whole of `KitId` between them.
+    for (const kit of ['raptor', 'swim', 'minibeast', 'bespoke'] as const) {
       const pending = { kit, height: 1.6, palette: PALETTE } as BuildSpec
       expect(() => buildSpecies(pending)).toThrow(UnbuiltKitError)
       expect(() => buildSpecies(pending)).toThrow(new RegExp(kit))

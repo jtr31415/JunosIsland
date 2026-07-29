@@ -90,14 +90,51 @@ const WORST_SO_FAR: Readonly<Record<string, number>> = {
   'home-pets': 1.28,
   africa: 1.40,
   woodland: 1.58,
+  farm: 1.38,
 }
+
+/**
+ * PHASE 3 TRIED TO REPLACE THIS RATCHET WITH A PRINCIPLED RULE AND FAILED, and
+ * the failure is worth more than a third guess would have been.
+ *
+ * The hypothesis was that keep-out is not an aesthetic budget at all but a
+ * PATHING radius, so the honest bar is a property of the island rather than of
+ * the pack: a pet must fit through the narrowest gap the island can generate
+ * between two solid obstacles. That is derivable, so it was derived.
+ *
+ * It does not survive the placement code. Measured:
+ *   - `pets.ts:652` takes the radius AFTER the field's 0.16 scale, so a
+ *     kit-space 1.16 is 0.186 world units; adjacent hex centres are 2.0.
+ *   - The largest obstacle is not a tree, it is a mountain tile:
+ *     `footprintBelow` at walking height measures 1.062 world units.
+ *   - Two adjacent rock-hex mountains are both centred, so the gap between them
+ *     is `2.0 - 2 x 1.062 = -0.124`. NEGATIVE, before any pet exists. A pet of
+ *     zero width does not fit through that gap either, so no bar on pet width
+ *     can be derived from it.
+ *
+ * That corridor is legally placeable because `props.ts:1214` checks placement
+ * with `footprintOf` (an axis-aligned half-extent, 0.938, measured
+ * pre-rotation) while `blocks` — what pets actually collide with — uses
+ * `footprintBelow`'s rotation-invariant reach of 1.062. **The placement guard
+ * and the collision radius are two different, disagreeing metrics on the same
+ * object.** That is a real scenery defect and it is written up in the PB-036
+ * handoff; it is not a species problem and must not be fixed by making animals
+ * thinner.
+ *
+ * `clearOf` also fails SOFT (`pets.ts:399-410`, bounded by `CLEAR_PASSES`), and
+ * `randomSpot` degrades to "stay put" after 12 blocked tries — so keep-out was
+ * never a hard invariant in the first place. It is a quality bar.
+ *
+ * So the ratchet stays, and it stays labelled as a ratchet. The five numbers
+ * still disagree with each other and that disagreement is still the open
+ * question. What phase 3 can say that phase 2 could not is that the answer is
+ * NOT hiding in the island's geometry, so nobody need look there again.
+ */
 
 interface Measured {
   id: string
   collection: string
   height: number
-  /** The length multiplier the species DECLARES about itself. */
-  body: number
   keepOut: number
   wh: number
 }
@@ -110,16 +147,20 @@ function measure(s: Species): Measured {
   const w = box.max.x - box.min.x
   const d = box.max.z - box.min.z
   const h = box.max.y - box.min.y
-  // Every species shipped so far rides the quadruped kit, which is the only
-  // kit with a `body`. When a second kit lands this needs a per-kit read;
-  // `body ?? 1` means a kit without one gets the plain pack allowance rather
-  // than silently passing.
-  const build = s.build as { height: number; body?: number }
+  // This used to carry the species' declared `body` multiplier and a note
+  // saying a second kit would need a per-kit read of it. The second kit
+  // (songbird) has now landed, and the note turned out to be describing work
+  // that does not exist: `body` was measured here and never asserted on
+  // anywhere in the file, because the failed rule it was collected for
+  // ("keep-out <= pack x body") was abandoned — it condemns the hippo, which is
+  // wide from bulk rather than length. Everything this file actually enforces
+  // is measured off the BUILT geometry, which is kit-agnostic by construction:
+  // a box is a box whether a bird or a badger made it. So the field is gone
+  // rather than extended, and a kit needs to do nothing to be measured here.
   return {
     id: s.id,
     collection: s.collection,
     height: h,
-    body: build.body ?? 1,
     keepOut: Math.max(w, d) / 2,
     wh: w / h,
   }
@@ -129,10 +170,17 @@ const BUILT = SHIPPED_SPECIES.filter(s => s.build !== undefined)
 const MEASURED = BUILT.map(measure)
 
 describe('every built species, measured as pets.ts measures it', () => {
-  it('has actually built something for all 50 of them', () => {
+  it('has actually built something for all 72 of them', () => {
     // If this drops, a collection stopped being imported by the registry and
     // the rest of this file would pass vacuously.
-    expect(BUILT.length).toBe(50)
+    //
+    // 50 after phase 2 (garden 13, home-pets 10, woodland 14, africa 13).
+    // 72 after phase 3, which built the songbird kit and spent it: woodland
+    // +2 (complete at 16), home-pets +4, and farm +16 as a whole new
+    // collection. Farm and woodland are the first two collections in the game
+    // that are COMPLETE — every rostered member built — which is the fact
+    // JT-030 turns on.
+    expect(BUILT.length).toBe(72)
     expect(MEASURED.every(m => m.keepOut > 0 && m.height > 0)).toBe(true)
   })
 
@@ -186,6 +234,55 @@ describe('every built species, measured as pets.ts measures it', () => {
       .filter(m => m.wh < 0.5 || m.wh > 1.45)
       .map(m => `${m.id} (${m.collection}) W/H ${m.wh.toFixed(2)}`)
     expect(strange).toEqual([])
+  })
+
+  /**
+   * The pairs that parallel agents CANNOT check, named one at a time.
+   *
+   * `gives no two shipped species an identical silhouette` below catches exact
+   * collisions to 3dp, which is a low bar — two birds can be visibly the same
+   * animal while measuring 0.004 apart. These are the pairs three phase-3
+   * agents each flagged in their own report as "I am not confident about this
+   * one", every time about a species in a collection they could not see. That
+   * is the signature of a cross-collection invariant, and MANAGER is the only
+   * role that can hold it (phase 2 learned the same thing the hard way).
+   *
+   * Each entry is a pair plus the margin it currently clears, measured, and
+   * rounded DOWN to something the pair genuinely holds. It is a ratchet like
+   * the collection widths: if a retune closes one of these gaps, that is the
+   * moment to look at the two animals side by side in the bench, not the moment
+   * to lower the number.
+   */
+  const WATCHED: readonly [string, string, number][] = [
+    // The capercaillie and the turkey wear the SAME beak, the SAME tail, the
+    // SAME wings and a shared `ruff`, and their heights are 0.07 apart. Two
+    // agents built them in the same hour without either seeing the other. What
+    // actually separates them is head size (1.00 v 0.66) and palette, neither
+    // of which this file can measure — so what is asserted is that they keep
+    // the width difference they have, which is the one signal `pets.ts` reads.
+    ['animal-capercaillie', 'animal-turkey', 0.10],
+    // Pheasant against rooster: shared beak, shared wings, shared wattle, both
+    // warm and rust-coloured. Separated on depth — the pheasant's trailing tail
+    // makes it the long one — so keep-out is the honest axis here too.
+    ['animal-pheasant', 'animal-rooster', 0.15],
+  ]
+
+  it('keeps the flagged look-alike pairs measurably apart', () => {
+    const by = new Map(MEASURED.map(m => [m.id, m]))
+    const tooClose: string[] = []
+    for (const [a, b, margin] of WATCHED) {
+      const x = by.get(a); const y = by.get(b)
+      if (!x || !y) { tooClose.push(`${a} or ${b} is not built any more`); continue }
+      const gap = Math.abs(x.keepOut - y.keepOut)
+      if (gap < margin) {
+        tooClose.push(
+          `${a} (${x.keepOut.toFixed(3)}) and ${b} (${y.keepOut.toFixed(3)}) ` +
+          `are ${gap.toFixed(3)} apart, under the ${margin} they held`,
+        )
+      }
+    }
+    expect(tooClose, 'look at these two in the bench before touching this number')
+      .toEqual([])
   })
 
   it('gives no two shipped species an identical silhouette', () => {

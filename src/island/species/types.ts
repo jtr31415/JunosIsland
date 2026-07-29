@@ -144,25 +144,92 @@ export type QuadrupedExtra =
   | 'spines' | 'shell' | 'trunk' | 'pouch' | 'crest' | 'whiskers'
 
 /**
- * The other five kits are DECLARED, not yet built.
+ * The songbird kit's data. Every bird that is not a raptor rides on this.
  *
- * PB-036 phase 1 built the quadruped kit, which covers ~150 of the 296. The
- * remaining five are named here so a species record can honestly say which kit
- * it wants before that kit exists, and so `speciesKit()` can refuse to build it
- * rather than guessing. Each becomes a real interface the way `QuadrupedBuild`
- * is one, when its kit is built.
+ * Same discipline as `QuadrupedBuild`: every number is a MULTIPLIER off the
+ * kit's reference silhouette — a robin — except `height`, which is absolute in
+ * Kenney units and holds to the same 1.2–2.6 family range for the same reason.
+ *
+ * `neck` is a PROPORTION and not an extra part, which is the one place this
+ * interface deliberately departs from the quadruped's shape. This single kit
+ * has to stretch from a wren to a flamingo, and neck length is the largest axis
+ * of that distance by a long way — a `'long-neck'` entry in the extras list
+ * would be a boolean where the data needs a dial, and a swan, a stork and a
+ * heron would all get the same neck.
+ */
+export interface SongbirdBuild {
+  kit: 'songbird'
+  /** Absolute standing height in Kenney units, as quadruped. */
+  height: number
+  /** Body length against height. A wren is a round ball; a heron is a long boat. */
+  body: number
+  /** Head size against body. The strongest read of "what bird is this". */
+  head: number
+  /** Leg length. A robin sits low; a flamingo is stilted. */
+  legs: number
+  /** Neck length against body. 0 for a wren or a robin, 1+ for a swan or heron. */
+  neck: number
+  /**
+   * Which beak it wears.
+   *
+   * `'hooked'` is deliberately absent. A hooked beak is the single strongest
+   * read of a bird of prey, and the raptor kit — declared in `KitId`, not built
+   * yet — is the one that owns it. Adding it here would let an owl be built as
+   * a songbird with a hook on, which is exactly the "quietly rebuild the
+   * sculpting" failure the closed extras list below exists to stop.
+   */
+  beak: 'fine' | 'short' | 'stout' | 'long' | 'flat' | 'dagger'
+  /** Which tail it wears. */
+  tail: 'fan' | 'short' | 'long' | 'forked' | 'pointed' | 'none'
+  /** How the wings sit. Folded is the default resting bird. */
+  wings: 'folded' | 'broad' | 'pointed' | 'tiny'
+  /** Up to three extra parts, kit-defined. Roster §1's "two or three detail parts". */
+  extras?: readonly SongbirdExtra[]
+  palette: KitPalette
+}
+
+/**
+ * The detail parts a songbird may wear.
+ *
+ * Closed, for the reason `QuadrupedExtra` above is closed, and the pressure to
+ * open it is worse here. This one kit carries roster §4's hardest confusable
+ * groups: duck against goose; swan against stork against heron against pelican
+ * against flamingo; and the corvids, where a crow, a rook, a raven and a
+ * jackdaw are four names for one silhouette. The tempting fix for each of those
+ * is a new part — a `'goose-bill'`, a `'raven-throat'` — and thirty species
+ * later the kit is a sculpting workshop with a data file bolted to it, which
+ * roster §1 rules out in its first three words.
+ *
+ * So the list stays shut and those groups are separated where the roster says
+ * they must be: by PROPORTION and PALETTE. A swan and a heron differ by `neck`,
+ * `body` and `legs`; a rook and a jackdaw differ by `head`, `height` and the
+ * grey of a collar. That constraint is also what gives the Pet-o-matic veto
+ * pass a checklist it can actually run.
+ */
+export type SongbirdExtra =
+  | 'crest' | 'plume' | 'eye-stripe' | 'cheek-patch' | 'throat-bib' | 'collar'
+  | 'wing-bar' | 'speckles' | 'ruff' | 'tail-streamer' | 'webbed-feet' | 'wattle'
+
+/**
+ * The other four kits are DECLARED, not yet built.
+ *
+ * PB-036 phase 1 built the quadruped kit, which covers ~150 of the 296, and
+ * phase 2 built the songbird. The remaining four are named here so a species
+ * record can honestly say which kit it wants before that kit exists, and so
+ * `speciesKit()` can refuse to build it rather than guessing. Each becomes a
+ * real interface the way `QuadrupedBuild` is one, when its kit is built.
  *
  * Do NOT widen this into a permissive record to unblock a collection. HANDOFF
  * §6 (line 565): widening a value union is invisible to the compiler, and the
  * failure surfaces as a creature that renders as nothing.
  */
 export interface PendingBuild {
-  kit: Exclude<KitId, 'kenney' | 'quadruped'>
+  kit: Exclude<KitId, 'kenney' | 'quadruped' | 'songbird'>
   height: number
   palette: KitPalette
 }
 
-export type BuildSpec = QuadrupedBuild | PendingBuild
+export type BuildSpec = QuadrupedBuild | SongbirdBuild | PendingBuild
 
 /**
  * One species.

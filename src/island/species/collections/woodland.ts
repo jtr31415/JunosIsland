@@ -1,20 +1,24 @@
 /**
  * The Woodland collection — roster row 9, `ship: 10`, name band `medium`.
  *
- * PB-036 phase 2. `roster.ts` says which species exist; this file says what
- * fourteen of Woodland's sixteen ARE, as `QuadrupedBuild` data. Nothing here
- * builds geometry — every number is a multiplier off the one reference
- * silhouette in `kits/quadruped.ts`, so retuning the whole collection is an edit
- * to `REF` and not to this file.
+ * PB-036 phases 2 and 3. `roster.ts` says which species exist; this file says
+ * what all sixteen of Woodland's members ARE, as build data. Nothing here builds
+ * geometry — every number is a multiplier off a kit's one reference silhouette,
+ * so retuning the whole collection is an edit to a `REF` and not to this file.
  *
- * SHIPS PARTIAL, DELIBERATELY. Woodland has sixteen members and this file has
- * fourteen. `animal-pheasant` and `animal-capercaillie` are game birds: they
- * need the songbird kit (or a bespoke one) and neither is built — `kit.ts`
- * throws `UnbuiltKitError` for both by name. A bird pressed into the quadruped
- * kit is a four-legged pheasant, which is the exact failure roster §1's "kits
- * before species" rule exists to prevent, so they are ABSENT rather than
- * approximated. `tests/island/species-woodland.test.ts` asserts their absence by
- * name so nobody half-fills the collection later without noticing.
+ * COMPLETE, AND THE FIRST COLLECTION THAT IS. Phase 2 shipped fourteen and left
+ * `animal-pheasant` and `animal-capercaillie` out on purpose: they are game
+ * birds, the songbird kit did not exist, and a bird pressed into the quadruped
+ * kit is a four-legged pheasant — the exact failure roster §1's "kits before
+ * species" rule exists to prevent. Phase 3 built the songbird kit
+ * (`kits/songbird.ts`), so the two of them are here now, as `SongbirdBuild`
+ * records, and Woodland is 16/16.
+ *
+ * SO THIS FILE IS TWO-KITTED, which nothing else in `collections/` is yet.
+ * Fourteen quadrupeds and two songbirds, and the tests read the build union
+ * rather than assuming `QuadrupedBuild` — see the note at the top of
+ * `tests/island/species-woodland.test.ts`, where the old "these two are absent"
+ * assertion became "these two must not resolve to a frozen pack animal".
  *
  * WHY THE NUMBERS ARE STOCKIER THAN THE ANIMALS. All 24 live GLBs were measured
  * (see the `REF` comment in `kits/quadruped.ts`): the pack is 1.43–2.02 tall,
@@ -292,6 +296,87 @@ export const WOODLAND_SPECIES: readonly Species[] = [
       height: 1.65, body: 1.1, head: 0.95, legs: 0.8,
       ears: 'pointed', tail: 'bushy', extras: ['whiskers'],
       palette: { coat: 0x8f7c5b, belly: 0xe2d6bb, detail: 0x50432f, accent: 0x2b2318 },
+    },
+  }),
+
+  /*
+   * PHEASANT — the first of the collection's two game birds, and the first
+   * member here that is not a quadruped at all.
+   *
+   * THE READ IS THE TAIL. A cock pheasant is a chicken-sized body towing a tail
+   * longer than the rest of it, and that is the only thing about it a child
+   * sketches. `tail: 'pointed'` is the kit's own pheasant wedge
+   * (`songbird.ts:375`), and its length is bought through `body: 1.35` —
+   * `tailLen = REF.tail * body`, so a long bird gets a long tail for free and
+   * the two read together instead of fighting. The kit sweeps every tail UP
+   * rather than back (`songbird.ts:321-326`), which is what keeps a bird this
+   * long inside the keep-out ceiling: measured, it lands at 0.977 — deeper than
+   * it is wide (D/H 1.15 against W/H 0.63, which IS the tail) and still the
+   * fourth-narrowest thing in a collection whose ratchet is 1.58.
+   *
+   * The two markings are the ones on the bird's own field-guide plate and both
+   * exist in the closed extras list: `wattle` is the bare red face, drawn in the
+   * ACCENT colour, and `collar` is the white neck ring, drawn in BELLY. That
+   * fixes the palette: accent must be a real red (so the face reads at 0.16
+   * scale) and belly must be near-white (so the ring does). Coat is the copper
+   * chestnut a pheasant actually is. The accent stays DARKER than the coat in
+   * luminance — the collection's rule, held everywhere but the skunk.
+   *
+   * `legs: 0.9` and `neck: 0.4`: a pheasant walks, so it is not a robin sat on
+   * its feet, but it is not a wading bird either. Against the capercaillie below
+   * it is SHORTER (1.70 v 1.95), LONGER in the body (1.35 v 1.05), lighter in
+   * every colour, and wears a different beak, tail, wing and pair of extras —
+   * the two are not separable by one field and are not asked to be.
+   */
+  defineSpecies('animal-pheasant', 'songbird', {
+    build: {
+      kit: 'songbird',
+      height: 1.7, body: 1.35, head: 0.85, legs: 0.9, neck: 0.4,
+      beak: 'short', tail: 'pointed', wings: 'folded',
+      extras: ['collar', 'wattle'],
+      palette: { coat: 0x9c5b28, belly: 0xf4ead6, detail: 0x7d6a4a, accent: 0xc0301f },
+    },
+  }),
+
+  /*
+   * CAPERCAILLIE — game bird two of two, and the whole job here is that it must
+   * NOT read as a big pheasant.
+   *
+   * Nothing about it is shared with the bird above. Height 1.95 against 1.70,
+   * which at the field's uniform 0.16 scale (`pets.ts:643`) is real size on
+   * screen and is the first thing seen. `body: 1.05` against 1.35 is the deeper
+   * half of the trade the kit makes at roughly constant volume
+   * (`songbird.ts:189-191`): a shorter body is a WIDER and DEEPER one, so this
+   * bird is a barrel where the pheasant is a boat. `tail: 'fan'` against
+   * `'pointed'`, held up and spread, is the cock capercaillie's display and the
+   * exact opposite silhouette to a trailing wedge. `beak: 'stout'` against
+   * `'short'`, `wings: 'broad'` against `'folded'`.
+   *
+   * `ruff` is the shaggy throat the manager's own note names, and `throat-bib`
+   * is the beard below it; both take the ACCENT colour, which is a blackish
+   * bottle green — the gloss a capercaillie carries on its breast, and the one
+   * true colour it has. `belly` is that green lightened into the breast lump,
+   * `coat` is dark slate, and `detail` — legs, feet and beak base — is a pale
+   * horn, because the ivory bill is the bird's other field mark and `detail` is
+   * the only slot that paints it.
+   *
+   * `legs: 0.65` is the lowest of the two birds on purpose: a capercaillie
+   * squats over feathered legs. That does NOT make it cheap — the fit is uniform
+   * and solves for height, so short legs raise the fit scale and swell
+   * everything else (the file header's corollary, and the quadruped kit's
+   * `>>>` block). Measured rather than assumed: keep-out 0.847 at W/H 0.75,
+   * against the pheasant's 0.977 at W/H 0.63. The taller, heavier bird takes
+   * LESS room, and it takes it sideways rather than fore-and-aft — which is the
+   * measurement saying, in the only units `pets.ts` reads, that these two are
+   * not the same bird.
+   */
+  defineSpecies('animal-capercaillie', 'songbird', {
+    build: {
+      kit: 'songbird',
+      height: 1.95, body: 1.05, head: 1.0, legs: 0.65, neck: 0.55,
+      beak: 'stout', tail: 'fan', wings: 'broad',
+      extras: ['ruff', 'throat-bib'],
+      palette: { coat: 0x4a4f52, belly: 0x2c4a3a, detail: 0x8d8677, accent: 0x1f3128 },
     },
   }),
 

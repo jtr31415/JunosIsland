@@ -46,6 +46,11 @@
  */
 import * as THREE from 'three'
 import type { KitPalette, QuadrupedBuild, QuadrupedExtra, Rgb } from '../types'
+// The primitives, the colour maths and the fit block moved to `shared.ts`
+// unchanged when the songbird kit arrived — six kits copy-pasting the same
+// helpers is six kits drifting apart. Nothing about this file's output moved
+// with them; the collection silhouette tests are the proof.
+import { darker, fitRig, lighter, parts } from './shared'
 
 /**
  * The reference silhouette, in Kenney units, with every multiplier at 1.
@@ -166,17 +171,6 @@ const PUPIL = 0x23404f
 /** Tusks, teeth and claws. Warm rather than white, so they read as bone. */
 const BONE = 0xfff6e4
 
-const mix = (c: Rgb, towards: Rgb, t: number): Rgb => {
-  const lerp = (a: number, b: number): number => Math.round(a + (b - a) * t)
-  return (
-    (lerp((c >> 16) & 255, (towards >> 16) & 255) << 16) |
-    (lerp((c >> 8) & 255, (towards >> 8) & 255) << 8) |
-    lerp(c & 255, towards & 255)
-  )
-}
-const lighter = (c: Rgb, t: number): Rgb => mix(c, 0xffffff, t)
-const darker = (c: Rgb, t: number): Rgb => mix(c, 0x000000, t)
-
 /**
  * The four coats a part may ask for, with `types.ts:90-99`'s fallbacks applied
  * once so no part has to know which fields a species bothered to fill in.
@@ -223,48 +217,8 @@ export function buildQuadruped(spec: QuadrupedBuild): THREE.Group {
   const legThick = REF.legThick * (wide / REF.bodyWidth)
   const hd = REF.head * headM
 
-  /*
-   * One material per colour, shared by every part that asks for it.
-   *
-   * Not an optimisation — it is the same reason `pets.ts` keeps one prototype:
-   * a clone shares materials, so the fewer distinct materials a species has,
-   * the fewer objects exist per hundred pets. Never disposed; see the file
-   * header.
-   */
-  const mats = new Map<number, THREE.MeshStandardMaterial>()
-  const mat = (colour: number): THREE.MeshStandardMaterial => {
-    const hit = mats.get(colour)
-    if (hit) return hit
-    // Identical to `fred.ts:77-78`, which is what makes `flattenImported`
-    // (lighting/index.ts:297) a no-op rather than a silent material rewrite.
-    const m = new THREE.MeshStandardMaterial({ color: colour, metalness: 0, roughness: 1 })
-    mats.set(colour, m)
-    return m
-  }
-
-  /**
-   * A box. The chunky, flat-shaded read the Kenney pack has.
-   *
-   * One shared unit BoxGeometry scaled per part rather than a BoxGeometry per
-   * part: same silhouette, one buffer. Fred can afford 30 geometries because
-   * there is one of him; a species is cloned per pet.
-   */
-  const unitBox = new THREE.BoxGeometry(1, 1, 1)
-  const unitBall = new THREE.SphereGeometry(0.5, 12, 9)
-
-  const box = (name: string, w: number, h: number, d: number, colour: number): THREE.Mesh => {
-    const m = new THREE.Mesh(unitBox, mat(colour))
-    m.scale.set(w, h, d)
-    m.name = name
-    return m
-  }
-  /** A rounded lump, `fred.ts:91-95`: a sphere squashed to the given box. */
-  const lump = (name: string, w: number, h: number, d: number, colour: number): THREE.Mesh => {
-    const m = new THREE.Mesh(unitBall, mat(colour))
-    m.scale.set(w, h, d)
-    m.name = name
-    return m
-  }
+  // The material cache and the two unit geometries, per build — `shared.ts`.
+  const { box, lump } = parts()
 
   const rig = new THREE.Group()
   rig.name = 'rig'
@@ -599,28 +553,8 @@ export function buildQuadruped(spec: QuadrupedBuild): THREE.Group {
 
   /* ---- fit ---- */
 
-  /*
-   * MEASURED, then fitted — never assumed.
-   *
-   * `pets.ts:650-660` measures the same box for the keep-out radius and the
-   * shadow, so the promise this kit makes has to be true of the geometry that
-   * actually got built: feet on y = 0, centred on x and z, and exactly
-   * `height` tall including whatever the ears and antlers added. Computing the
-   * height forward from the multipliers would drift the moment a part moved.
-   *
-   * The fit is applied to `rig`, NOT to the returned group, because
-   * `pets.ts:643` overwrites the returned group's scale with 0.16.
-   */
-  rig.updateMatrixWorld(true)
-  const bounds = new THREE.Box3().setFromObject(rig)
-  const raw = bounds.max.y - bounds.min.y
-  const fit = raw > 1e-6 ? height / raw : 1
-  rig.scale.setScalar(fit)
-  rig.position.set(
-    -((bounds.min.x + bounds.max.x) / 2) * fit,
-    -bounds.min.y * fit,
-    -((bounds.min.z + bounds.max.z) / 2) * fit,
-  )
+  // Measured, then fitted — never assumed. See `shared.ts`'s `fitRig`.
+  fitRig(rig, height)
 
   const root = new THREE.Group()
   root.name = 'quadruped'

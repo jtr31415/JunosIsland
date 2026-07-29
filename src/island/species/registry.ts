@@ -27,6 +27,7 @@ import { GARDEN_SPECIES } from './collections/garden'
 import { HOME_PETS_SPECIES } from './collections/home-pets'
 import { WOODLAND_SPECIES } from './collections/woodland'
 import { AFRICA_SPECIES } from './collections/africa'
+import { FARM_SPECIES } from './collections/farm'
 import type { Species } from './types'
 
 /**
@@ -101,8 +102,26 @@ export const PHASE2_SPECIES: readonly Species[] = [
   ...GARDEN_SPECIES, ...HOME_PETS_SPECIES, ...WOODLAND_SPECIES, ...AFRICA_SPECIES,
 ]
 
+/**
+ * The collections built in PB-036 phase 3, on the songbird kit and the
+ * quadruped kit together.
+ *
+ * FARM SHIPS COMPLETE — sixteen of sixteen, nine quadrupeds and seven
+ * songbirds, with no member waiting on an unbuilt kit. It is the first
+ * collection written that way, and its own test asserts it outright rather than
+ * counting. That is the reason `species-registry.test.ts`'s "still has no
+ * collection that is 100% shipped" check stops holding: that test's own comment
+ * says it goes red the day a second kit lands and JT-030 (may a collection
+ * unlock with a hole in it?) becomes live. The songbird kit landed; this is that
+ * day. Woodland's two game birds went in on the same kit in the same run, so
+ * expect that check to name more than one collection.
+ */
+export const PHASE3_SPECIES: readonly Species[] = [...FARM_SPECIES]
+
 /** Everything that has actually shipped: the frozen 24 plus the built collections. */
-export const SHIPPED_SPECIES: readonly Species[] = [...BASE_SPECIES, ...PHASE2_SPECIES]
+export const SHIPPED_SPECIES: readonly Species[] = [
+  ...BASE_SPECIES, ...PHASE2_SPECIES, ...PHASE3_SPECIES,
+]
 
 /** Every species that has actually shipped, by id. */
 export const REGISTRY: ReadonlyMap<string, Species> = new Map(

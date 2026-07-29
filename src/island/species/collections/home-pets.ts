@@ -9,18 +9,19 @@
  * called "Hamstre" forever.
  *
  * THIS COLLECTION SHIPS PARTIAL, ON PURPOSE. The roster lists sixteen members;
- * ten are here. The six absent ones are absent because their kits do not exist
- * (`kit.ts:66-74`), not because they were forgotten:
+ * fourteen are here. PB-036 phase 3 built the songbird kit and with it the four
+ * cage birds, which leaves two, and both are absent because their kits do not
+ * exist (`kit.ts:66-74`) rather than because they were forgotten:
  *
- *     animal-budgie, animal-canary, animal-cockatiel, animal-lovebird
- *                                                     -> songbird kit, unbuilt
  *     animal-corn-snake  -> legless; roster §1 puts the snake in `bespoke`
  *     animal-goldfish    -> swim kit, unbuilt
  *
- * `tests/island/species-home-pets.test.ts` names all six and asserts they are
- * ABSENT, so the day someone half-fills this file with a quadruped budgie the
- * suite says so. `registry.ts:11-14` — "do not finish this file" — applies here
- * exactly as it applies there.
+ * `tests/island/species-home-pets.test.ts` names both and asserts they are
+ * ABSENT, and — the invariant that outlived the four birds moving out of that
+ * list — asserts that NO member of this collection resolves to a frozen pack
+ * animal or to the wrong kit. The day someone half-fills this file with a
+ * quadruped goldfish the suite says so. `registry.ts:11-14` — "do not finish
+ * this file" — applies here exactly as it applies there.
  *
  * NO THREAT STATUS IS RECORDED. Same reason as `registry.ts:55-76`: roster §5
  * wants facts that are "true, checkable", and `Threat.checkedDate` exists so a
@@ -55,11 +56,51 @@
  * separated a SECOND time by proportion, with real margins, and the test asserts
  * both halves rather than trusting this comment.
  * ---------------------------------------------------------------------------
+ * THE SECOND HARD PART IS THE FOUR CAGE BIRDS, AND IT IS HARDER.
  *
- * ON THE NUMBERS. Every field except `height` is a multiplier off the kit's
- * reference silhouette (`kits/quadruped.ts:80-94`), and the reference is
- * fox-shaped. Two consequences worth stating once, because they explain nearly
- * every number below:
+ * Budgie, canary, cockatiel and lovebird are four small perching birds on one
+ * album page, three of them parrots, and there is a fifth bird in the same game
+ * they must not read as either: `animal-parrot`, one of the frozen Kenney 24
+ * (`registry.ts:55`), 1.55 tall and the shortest of the pack. Roster §4 does not
+ * list this group — it predates the songbird kit — but it is precisely the
+ * failure §4 describes, and a child who hatches a budgie and then a lovebird has
+ * to see two animals or the album is a lie.
+ *
+ * So all six separable axes are spent, deliberately, and no two of the four
+ * share a value on any of the part axes:
+ *
+ *     budgie     1.42  long/pointed  speckles+wing-bar   blue    slim, longest tail
+ *     canary     1.24  fan/folded    none                yellow  smallest, roundest
+ *     cockatiel  1.52  pointed/broad crest+cheek-patch   grey    biggest, the crest
+ *     lovebird   1.34  short/tiny    collar              green   stub tail, big head
+ *
+ * Read down the columns: four heights spaced 0.10 apart or more, four tail
+ * enums, four wing enums, four extras sets, four hues. The proportions are
+ * separated a second time — `body` runs 0.58 (lovebird) to 1.20 (budgie) and
+ * `head` runs 0.85 (budgie) to 1.28 (lovebird), which is the widest spread this
+ * kit is asked for outside the heron — and the test asserts both halves.
+ *
+ * AGAINST THE FROZEN PARROT the lever is size and colour. Every one of the four
+ * is SHORTER than the parrot's 1.55, the cockatiel by only 0.03 but wearing a
+ * crest and painted grey, and none of the four is the parrot's saturated
+ * red-and-green. A cockatiel genuinely is smaller than the parrot a child
+ * pictures, so this costs no honesty.
+ *
+ * ON THE BEAK, stated once because it is the one thing in these four records
+ * that is not what life says. Three of them are parrots and a parrot's beak is
+ * hooked; `types.ts:172-180` withholds `'hooked'` on purpose, because a hooked
+ * beak is the strongest read of a bird of prey and the raptor kit owns it. They
+ * are built `'stout'`, which is the kit's finch-and-parrot beak: short, deep and
+ * blunt. It carries "seed-eater" and it does NOT carry "parrot" — the downward
+ * curve is the whole signature and a box cannot fake it. The canary is a finch
+ * and takes `'short'`, which is both true and one more axis of separation.
+ * ---------------------------------------------------------------------------
+ *
+ * ON THE NUMBERS. Every field except `height` is a multiplier off its kit's
+ * reference silhouette — `kits/quadruped.ts:80-94`, which is fox-shaped, for the
+ * ten quadrupeds, and `kits/songbird.ts:72-106`, which is a robin, for the four
+ * birds. Two consequences worth stating once, because they explain nearly every
+ * number below:
  *
  *   - THESE ARE CUBE PETS, NOT ANIMALS. The measured pack is 1.43-2.02 tall with
  *     a mean width/height of 0.97 (quadruped.ts:56-74). A hamster at true
@@ -76,6 +117,13 @@
  *     wants that treatment most and it is the one whose `body` is held back and
  *     whose `height` is dropped instead; the test measures the keep-out rather
  *     than taking this paragraph's word for it.
+ *   - THE BIRDS COST ALMOST NOTHING, and that is measured, not assumed. The four
+ *     cage birds run keep-out 0.54 (lovebird) to 0.83 (budgie) against this
+ *     collection's ratchet of 1.28 (`species-silhouette.test.ts:88-93`, held by
+ *     the ferret), so the widest thing on this page is still the ferret and the
+ *     ratchet does not move. The budgie is the widest of the four because a
+ *     `'long'` tail is swept up and BACK and depth is what the keep-out charges
+ *     for; it is the one bird here whose depth, not width, sets its radius.
  */
 import { defineSpecies } from '../define'
 import type { Species } from '../types'
@@ -121,6 +169,45 @@ export const HOME_PETS_SPECIES: readonly Species[] = [
       ears: 'round',
       tail: 'none',
       palette: { coat: 0x9b5a33, belly: 0xf2e2c8, detail: 0xf5e6cc, accent: 0x2e211a },
+    },
+  }),
+
+  /*
+   * Budgie — the slim one with the long tail, and the archetypal cage bird.
+   *
+   * `body: 1.20` is the highest in the collection and the songbird kit spends it
+   * the way a bird wants: length up, girth down (`songbird.ts:189-191` holds the
+   * volume roughly constant), so a high `body` is a SLENDER bird rather than a
+   * fat one. Paired with the smallest head here (0.85) that is the budgie's
+   * whole outline — a little dart with a tail on it.
+   *
+   * `tail: 'long'` is the magpie tail, a narrow blade lifted hard so its length
+   * is spent in y (`songbird.ts:352-361`). It is still the most expensive part
+   * on any of the four: measured, this bird's depth is 1.66 against a width of
+   * 1.03, so the keep-out of 0.83 is set by the TAIL and not by the body. That
+   * is the honest cost of the field mark and it is well inside the collection's
+   * 1.28, so it is paid rather than tuned away. `wings: 'pointed'` is the other
+   * half of the read and it is true: a budgie is a fast, direct flier.
+   *
+   * `speckles` and `wing-bar` together are the wild budgie's black barring —
+   * across the back and along the wing — which is the marking every child's
+   * picture book shows. The sky-blue-and-white variety rather than the wild
+   * green: it is the second-commonest bird in a British pet shop, and it keeps
+   * the lovebird below as the only green bird on the page.
+   */
+  defineSpecies('animal-budgie', 'songbird', {
+    build: {
+      kit: 'songbird',
+      height: 1.42,
+      body: 1.20,
+      head: 0.85,
+      legs: 0.58,
+      neck: 0,
+      beak: 'stout',
+      tail: 'long',
+      wings: 'pointed',
+      extras: ['speckles', 'wing-bar'],
+      palette: { coat: 0x5b9bd8, belly: 0xf1f6fb, detail: 0x8b93a0, accent: 0x2c3540 },
     },
   }),
 
@@ -267,6 +354,86 @@ export const HOME_PETS_SPECIES: readonly Species[] = [
   }),
 
   /*
+   * Canary — the smallest thing on the page, and the only one that is not a
+   * parrot.
+   *
+   * Height 1.24 is the lowest in the collection and near the kit's 1.2 floor,
+   * which is right: a canary is the smallest bird a child keeps. `body: 0.78`
+   * against `head: 1.05` is the round-ball-with-a-face read the kit's own wren
+   * is built from, and `tail: 'fan'` is the short cocked tail — the exact
+   * opposite of the budgie's blade above.
+   *
+   * `beak: 'short'` rather than `'stout'` is the one deliberate departure from
+   * the other three, and it is true rather than convenient: a canary is a finch
+   * with a small conical bill, not a parrot with a great blunt one. It is also
+   * the only beak difference available among the four, so it is spent here.
+   *
+   * NO EXTRAS AT ALL, alone in this collection. A canary IS a plain yellow bird
+   * — no crest, no collar, no barring — and inventing a marking to make the
+   * record look as furnished as its neighbours would be exactly the lie roster
+   * §4 warns about. The absence is the field mark. Yellow throughout with a
+   * horn-coloured bill and legs, and a deeper gold on the tail edge so the fan
+   * still reads against the body from three metres.
+   */
+  defineSpecies('animal-canary', 'songbird', {
+    build: {
+      kit: 'songbird',
+      height: 1.24,
+      body: 0.78,
+      head: 1.05,
+      legs: 0.62,
+      neck: 0,
+      beak: 'short',
+      tail: 'fan',
+      wings: 'folded',
+      palette: { coat: 0xf2c623, belly: 0xfaea94, detail: 0xdcae7a, accent: 0xc08a12 },
+    },
+  }),
+
+  /*
+   * Cockatiel — the big one, and the only bird here wearing a crest.
+   *
+   * Every lever points the same way: tallest of the four at 1.52, the only one
+   * with a `neck` above 0 (0.35 — measured, and its neck mesh clears both the
+   * body and the skull, which a shorter one does not), the longest legs of the
+   * four, `wings: 'broad'` and a `'pointed'` wedge of a tail. A cockatiel really
+   * is roughly twice a budgie, and this is where that goes.
+   *
+   * The `crest` is the species. Nothing else in Home Pets wears one and nothing
+   * else in the songbird roster nearby does either; three blades on the crown
+   * (`songbird.ts:427-433`) is a cockatiel from any angle. `cheek-patch` is the
+   * second half — the orange spot is the field mark a child can name.
+   *
+   * WHERE THE PALETTE COMPROMISES, stated rather than hidden: `cheek-patch` is
+   * painted from `belly` (`songbird.ts:461`) and `belly` also paints the breast,
+   * so an orange cheek means a warm breast. It is set to a soft amber rather
+   * than a true orange for that reason — the cheek still reads warm against the
+   * grey, and the breast lands somewhere a cinnamon cockatiel actually is,
+   * instead of a grey bird with an orange chest. The yellow of the face goes on
+   * the crest, via `accent`, which is where a cockatiel's yellow mostly is.
+   *
+   * AGAINST THE FROZEN PARROT this is the one of the four that could collide:
+   * 1.52 against the parrot's 1.55. It is kept apart by the crest, by being grey
+   * where the pack's parrot is saturated, and by a tail that tapers rather than
+   * hangs. Flagged in the PB-036 report as the pair worth a look on the bench.
+   */
+  defineSpecies('animal-cockatiel', 'songbird', {
+    build: {
+      kit: 'songbird',
+      height: 1.52,
+      body: 1.00,
+      head: 1.00,
+      legs: 0.70,
+      neck: 0.35,
+      beak: 'stout',
+      tail: 'pointed',
+      wings: 'broad',
+      extras: ['crest', 'cheek-patch'],
+      palette: { coat: 0x9299a1, belly: 0xe3b070, detail: 0x5c6169, accent: 0xf3d357 },
+    },
+  }),
+
+  /*
    * Terrapin — the shell does the work.
    *
    * `shell` (quadruped.ts:516) is a dome in the accent colour with a rim in the
@@ -319,6 +486,49 @@ export const HOME_PETS_SPECIES: readonly Species[] = [
       tail: 'thin',
       extras: ['whiskers'],
       palette: { coat: 0x6e6259, belly: 0xe6dccd, detail: 0xd8a99a, accent: 0x3a322c },
+    },
+  }),
+
+  /*
+   * Lovebird — the chunkiest bird on the page, and the shortest-tailed.
+   *
+   * The exact inverse of the budgie on every axis that matters: `body: 0.58`
+   * against its 1.20 and `head: 1.28` against its 0.85, which the kit turns into
+   * a short, wide, deep torso with an outsized head on it — a lovebird's real
+   * outline, and it is the reason this bird needs no marking to be told from the
+   * budgie at a glance. `legs: 0.34` sits it down on its feet; `tail: 'short'`
+   * is the stub, and `wings: 'tiny'` keeps the wing from lengthening a bird
+   * whose whole identity is that it is short.
+   *
+   * THE BIG HEAD IS PAID FOR IN W/H, and it is worth knowing which way round
+   * that goes. A big head raises the RAW silhouette, which lowers the uniform
+   * fit scale, which narrows the finished bird in world units — so the chunkiest
+   * of the four measures the LOWEST W/H of them (0.665, against the canary's
+   * 0.754). It is comfortably inside the 0.5 floor
+   * (`species-silhouette.test.ts:186`) and the chunk is carried by the short
+   * deep body and the stub tail, where a camera can see it, rather than by a
+   * bounding box. This is the same trap `quadruped.ts:104-110` documents,
+   * wearing a different hat.
+   *
+   * Fischer's lovebird colouring: green body, a golden collar and upper breast —
+   * which is what the kit's `collar` extra paints, from `belly` — and the coral
+   * bill every lovebird has. The bill colour also reaches the feet, which is the
+   * small cost of `detail` doing both jobs, and it is the right way round: the
+   * bill is the part a child looks at.
+   */
+  defineSpecies('animal-lovebird', 'songbird', {
+    build: {
+      kit: 'songbird',
+      height: 1.34,
+      body: 0.58,
+      head: 1.28,
+      legs: 0.34,
+      neck: 0,
+      beak: 'stout',
+      tail: 'short',
+      wings: 'tiny',
+      extras: ['collar'],
+      palette: { coat: 0x4f9c3f, belly: 0xe3b23a, detail: 0xd3543a, accent: 0x2f6b2c },
     },
   }),
 

@@ -3,9 +3,10 @@
  * to something that has no texture.
  *
  * `types.ts` says what a species IS; this says how one becomes geometry. Today
- * there is exactly one kit — quadruped, which roster §1 puts at ~150 of the 296
- * new species — and five that are declared but unbuilt. Asking for one of those
- * five is an ERROR, loudly, because HANDOFF §6:565 records the failure mode a
+ * there are two kits — quadruped, which roster §1 puts at ~150 of the 296 new
+ * species, and songbird, which carries every bird that is not a raptor — and
+ * four that are declared but unbuilt. Asking for one of those four is an ERROR,
+ * loudly, because HANDOFF §6:565 records the failure mode a
  * quiet fallback produces: a widened union is invisible to the compiler and the
  * bug surfaces as a creature that renders as nothing, weeks later, on a child's
  * tablet. An empty group is the worst possible answer here.
@@ -13,6 +14,7 @@
 import * as THREE from 'three'
 import type { BuildSpec, KitId, KitPalette, Rgb } from './types'
 import { buildQuadruped } from './kits/quadruped'
+import { buildSongbird } from './kits/songbird'
 import type { SetPalette } from '../variants/recolour'
 import { isNatural, shade, STRIPE, patterned } from '../variants/recolour'
 
@@ -52,8 +54,21 @@ const quadruped: Kit = {
   },
 }
 
-/** Every kit that can build, by id. Five of the six are still missing. */
-export const KITS: Readonly<Partial<Record<KitId, Kit>>> = { quadruped }
+const songbird: Kit = {
+  id: 'songbird',
+  build(spec) {
+    // Same guard, same reason as the quadruped's above: the registry is keyed
+    // by KitId and the union is discriminated by the same field, but a lookup
+    // cannot prove that to the compiler.
+    if (spec.kit !== 'songbird') {
+      throw new UnbuiltKitError(spec.kit, "the songbird kit was handed another kit's spec")
+    }
+    return buildSongbird(spec)
+  },
+}
+
+/** Every kit that can build, by id. Four of the six are still missing. */
+export const KITS: Readonly<Partial<Record<KitId, Kit>>> = { quadruped, songbird }
 
 /**
  * Why a kit is not here yet, in words a stack trace can carry.
@@ -66,11 +81,11 @@ export const KITS: Readonly<Partial<Record<KitId, Kit>>> = { quadruped }
 const WHY: Readonly<Record<KitId, string>> = {
   kenney: 'the live 24 are authored GLBs, loaded by pets.ts:560 and never built',
   quadruped: 'built',
-  songbird: 'declared in types.ts:159 but not built yet (PB-036 phase 1 built quadruped only)',
-  raptor: 'declared in types.ts:159 but not built yet (PB-036 phase 1 built quadruped only)',
-  swim: 'declared in types.ts:159 but not built yet (PB-036 phase 1 built quadruped only)',
-  minibeast: 'declared in types.ts:159 but not built yet (PB-036 phase 1 built quadruped only)',
-  bespoke: 'declared in types.ts:159 but not built yet (PB-036 phase 1 built quadruped only)',
+  songbird: 'built',
+  raptor: 'declared in types.ts PendingBuild but not built yet (quadruped and songbird are built)',
+  swim: 'declared in types.ts PendingBuild but not built yet (quadruped and songbird are built)',
+  minibeast: 'declared in types.ts PendingBuild but not built yet (quadruped and songbird are built)',
+  bespoke: 'declared in types.ts PendingBuild but not built yet (quadruped and songbird are built)',
 }
 
 /**
