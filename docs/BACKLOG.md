@@ -1,21 +1,77 @@
-# Backlog — the open cards, with the reasoning attached
+# Backlog — the long-form reasoning behind the cards
 
-*Written 28 July 2026, at the end of the overnight run, so that clearing the
-session does not lose it. The task list this came from is session state; this file
-is not.*
+*Written 28 July 2026 at the end of the overnight run. **Reconciled 29 July 2026
+against the repo and against `joe/backlog.json`** (manager run 7), after Runs A
+and B shipped and after fifteen of Joe's rulings landed — this file had drifted
+badly enough to be dangerous, and eleven entries on it were describing work that
+was already live.*
+
+## Which file wins
+
+There are two backlogs and they had quietly disagreed. They now have different
+jobs, and this is the rule:
+
+- **`joe/backlog.json` is the backlog.** It is authoritative for **what exists,
+  what state it is in, and which run it belongs to**. It carries all 46 cards
+  (`PB-001`…`PB-046`), a `state` of `open | planned | done | parked`, and a
+  `run`. If this file and that file ever disagree again, **the JSON wins** and
+  this file is the one that is stale.
+- **This file is the prose annex.** It carries the long-form reasoning for the
+  subset of cards that have any — what was measured, what was tried, what the
+  trade-off was — because that reasoning is the valuable part and most of it is
+  Joe's own writing. It does **not** try to list every card; it never did.
+
+Every heading below now carries its **`PB-0NN` id**, which is the join between
+the two files. Before this reconciliation there were none, and the only link was
+a `#NN` number that appeared on barely half the entries.
 
 Read `docs/PHASE3-HANDOVER.md` for how the game is wired and `docs/HANDOFF.md`
-for the landmines. This file is only "what is left, and what we already know
-about it".
+for the landmines. Each card says what was measured, so nobody re-derives it.
+Where a card says FABLE FOUND, that came from a review that read the code rather
+than a summary.
 
-Each card says what was measured, so nobody re-derives it. Where a card says
-FABLE FOUND, that came from a review that read the code rather than a summary.
+## What shipped after this file was written
+
+Nothing below described any of it, which is precisely how work gets done twice.
+The detail lives in `joe/backlog.json`; this is the index.
+
+- **Run A** — the attempt model, the reading page mix fix (`PB-038`), and the
+  A5/A6/A7 signal work. Joe's rulings **JT-008 … JT-011**.
+- **Run B — automatic progression (`PB-030`, now `done`).** Three slices: **B1
+  `1cf4e71`** the promotion gates and probes, **B2 `ad848e4`** the offer and the
+  honeymoon economy, **B3 `9138176`** the 65/35 weakness lean, invisible mercy
+  runs and whisper retirement. Shipped and deployed. One dial is still contested
+  as **JT-026**, open at the time of writing.
+- **`PB-042` — the governors became a PRICE (now `done`).** Joe's **JT-012**
+  replaced the hard stop with an escalating price and an override; **JT-013 …
+  JT-022** settled every number. `PB-039`'s open end of the ratio closed with it.
+- **Closed by delivery:** `PB-011` album pop-out, `PB-044` the placement
+  backstop, `PB-045` change-your-mind on tile type, `PB-046` the break
+  suggestion, `PB-033` the asset viewer, `PB-038`, `PB-007`.
+- **New since:** `PB-043` the reading progression curriculum (Joe's own, from his
+  JT-025 note), and `PB-036` new animals — whose brief landed 29 July as
+  **`docs/pet-island-species-roster.md`** and is now the spec for it.
+
+**Joe's rulings live in `joe/tasks.json`, not here.** Fifteen landed during Runs
+A and B and several of them overturned things written on this page. Check a
+ruling before trusting a paragraph below.
 
 ---
 
 ## Waiting on Joe — do not guess these
 
-### Item 13's difficulty currency — BLOCKS PHASE 4
+### PB-001 · Item 13's difficulty currency — NARROWED, NO LONGER BLOCKING
+
+**Status 29 July: two thirds of this is overtaken, and only differential pay is
+left.** The tier table below describes the DOCUMENT, not the build — nothing
+difficulty-tiered was ever built. Pay is flat at `balance.json` `pay {item: 2,
+honeymoon: 3}`, so the cost curve did not re-base and session length did not
+halve; a third thing happened instead. What did ship is one tier that is not a
+difficulty tier at all — the honeymoon pays 3 (`balance/index.ts:274-300`,
+deliberately a sibling of `itemPay` rather than a parameter of it) — plus
+overshoot carry-forward at `flow.ts:633-660`. **The live question is only: should
+a harder item pay more than an easy one?** Still never ruled on. Read the rest of
+this entry as the original case, not as the current state.
 `pet-island-difficulty.md` §5 and slice-1 §4 are in the same currency and
 disagree. Today one sum banks one unit against a tile costing 1–16. §5 sets easy
 = 2, tricky = 3, honeymoon = 4, and Phase 3 adds mastered = 1. The day item 13
@@ -24,23 +80,28 @@ drops from eleven sums to six — and only the mastered case restores today's pa
 Either the cost curve re-bases or session length halves. This wants numbers, and
 the modelling of both curves is a deliverable in its own right.
 
-### Whether v1 ships without adaptive difficulty
+### PB-002 · Whether v1 ships without adaptive difficulty — CLOSED BY DELIVERY
+
+**Status 29 July: closed, and say plainly that Joe never answered it.** It was
+overtaken — the queue put `PB-030` above it, Run B built the adaptive ladder, and
+it is live and headless (`harness.ts:13-16`, `856`, `1127`). v1 ships WITH
+adaptive difficulty. Nothing here needs a ruling any more.
 Item 13 sits inside "the release" but is blocked on the above. Fable's view: it
 should ship without, since today's fixed difficulty is the v0 behaviour she
 already plays. Joe's call.
 
-### Two overlays now behave differently
+### PB-003 · Two overlays now behave differently
 Tapping outside the tile offer returns to the island (it is `cancelPlacing`, a
 zero-cost menu). Tapping outside a CHALLENGE does nothing, because a round is work
 in progress. Recorded as a rule in HANDOFF §6 — but it is a feel judgement and
 Juno is the only real judge.
 
-### A gesture is live on her tablet
+### PB-004 · A gesture is live on her tablet
 Tapping her own land turns the island about that tile. Costless, cannot start a
 round, but it is a product change to a gesture Joe had explicitly ruled on. Veto
 is one line in `interactions.ts` (the `focusOn` call in the `'tile'` case).
 
-### The lighting slice — END OF PHASE 4 (#43)
+### PB-005 · The lighting slice — END OF PHASE 4 (#43)
 Joe: *"add to this slice lighting review and tilt shift with a bit more fog, on a
 visual options menu. end of ph4, not immediatly."*
 
@@ -57,7 +118,7 @@ will never open a settings menu.
 
 ## The highest-value action that is not code
 
-**Get it in front of Juno again (#34).** She played for an hour on 27 July and
+**PB-006 · Get it in front of Juno again (#34).** She played for an hour on 27 July and
 every single thing she reported is now fixed: the pet tap target, the 3:1
 build-to-find ratio, the challenge X, the hatch delay, the water snooker. The next
 session is worth more than any remaining card.
@@ -75,7 +136,16 @@ back), and her save is not a prototype — §19 holds whatever the build is call
 
 ## Correctness, in rough priority order
 
-### #41 Backstop: refuse any placement leaving zero growable witnesses
+### PB-044 · #41 Backstop: refuse any placement leaving zero growable witnesses — SHIPPED
+
+**Status 29 July: SHIPPED (`c7b0097`).** `isGrowableWitness()` at
+`world/coast.ts:918` and `keepsAWitness` at `:1251`, wired into the placement
+decision at `:1278` and documented as THE BACKSTOP at `flow.ts:464-495`. The
+pinned failing `describe('the floor is a margin, not a theorem')` **is gone from
+the repo** — it flipped exactly as this entry predicted, and the live tests are
+`tests/island/coast.test.ts:975` and `:1004`. Knowingly still one ply only, so the
+last witness can itself be a dead end; the code says so at `coast.ts:1067` and
+`:1286`. Read the rest as the case that produced the fix.
 **IN FLIGHT at time of writing.** The dry-connection floor is an empirical margin,
 not a theorem. FABLE FALSIFIED IT with a 64-tap counterexample, replayed through
 the real tap path with every placement a genuinely offered button, ending with her
@@ -99,7 +169,7 @@ bypass free. When it lands, the pinned test flips.
 Severity if not done: a greedy harvest plus a six-ply search was needed to find
 the counterexample. Before the floor, six natural taps walled her in.
 
-### #46 `void async` over a loop — one failure kills the rest, THREE MORE SITES
+### PB-008 · #46 `void async` over a loop — one failure kills the rest, THREE MORE SITES
 **This pattern already cost a day of scenery.** The shape: an `async sync()` that
 loops and `await`s inside the loop, called as `void thing.sync(...)` with no
 `.catch`. One rejection abandons every item after it AND surfaces as an unhandled
@@ -125,7 +195,13 @@ placed, so dressed properly on the next sync". FALSE for cover — `placed.add(k
 runs BEFORE `scatter()`. Only a failed FEATURE leaves the hex unmarked. A lost
 cover piece is a session-permanent gap.
 
-### #44 One found word banks the whole page
+### PB-007 · #44 One found word banks the whole page — FIXED IN RUN A
+
+**Status 29 July: FIXED in Run A, and this entry had been contradicting
+`joe/backlog.json` for a day.** `flyToScore` sets `earned` only off a find page
+and a find page banks on `celebrate()` — `overlay.ts:428`, `:472`. `wordFind`
+still fires per word, which is by design (`challenges/wordFind.ts:64`). The
+separate question this entry raised about item 13's currency lives on `PB-001`.
 `earned` is set by `flyToScore`, which the word-find fires on EVERY found word, not
 on completion. So finding one word of five and leaving banks the page. PRE-EXISTING
 — the old button and backdrop had identical logic, and the challenge × made it
@@ -137,7 +213,7 @@ before building the difficulty rule. Note §19 says work she genuinely did shoul
 bank — the question is whether "passed" and "collected" should be the same fact.
 Today they are.
 
-### #47 A quarter of dead trunks flicker shadowless
+### PB-009 · #47 A quarter of dead trunks flicker shadowless
 Because `VARY` has no real floor (`(dh >> 13) % span` is a signed shift on an
 unsigned hash — 48.8% of pieces get a NEGATIVE term), bare trees actually span
 0.252–0.868 fitted height, not the 0.506–0.868 the shadow work measured. 23.4% fall
@@ -149,7 +225,13 @@ rearranging itself behind her, which `props.ts`'s own header forbids. Fix by
 shadowing by KIND (a tree is a tree whatever its roll), or correct the test that
 pins a floor the code does not enforce.
 
-### #32 QA: let her change her mind after picking the wrong tile type
+### PB-045 · #32 QA: let her change her mind after picking the wrong tile type — SHIPPED
+
+**Status 29 July: SHIPPED (`efff9fa`), in the shape proposed below.**
+`chooseTile` swaps `plot.type` in place and re-runs `tileTypeFor`, keeping
+`plot.at` and `sumProgress` so the change costs her nothing already earned —
+`flow.ts:520-548`, re-entry at `:553-557`. Tested at `tests/island/retype.test.ts`,
+including the §19 property at `:101`.
 Juno's own first feature request, via Joe. Distinct from the offer-dismiss already
 shipped, which only escapes the chooser BEFORE a kind is picked. This undoes a plot
 already sited and **already holding every sum she has spent on it**, so switching
@@ -162,7 +244,15 @@ shape: keep `plot.at` and `sumProgress`, change only `plot.type`, re-run
 
 ## Features and polish
 
-### #31 Album pop-out — IN FLIGHT at time of writing
+### PB-011 · #31 Album pop-out — SHIPPED
+
+**Status 29 July: SHIPPED (`dc21396`), and it dodged the hard part.** The second
+live WebGL context this entry worried about was avoided entirely by **reusing the
+`stage.ts` turntable and rendering the card as a hole rather than a panel** —
+`album.ts:13-45`. The missing species display name was solved too: `speciesName`
+comes from `./script` (`album.ts:51`, species row at `:174`). Tests at
+`tests/island/album.test.ts:154`, `:252`, `:309`, `:353`, `:443`. `album.ts:140-168`
+reserves the third row for brief item 7, which is `PB-016`.
 Tap a pet to open a larger card: the pet rotating, its NAME, its SPECIES, a
 find-it-on-the-map action, and a speak-its-name button.
 
@@ -183,7 +273,13 @@ Five things already established:
 If the pop-out ever shows a DRESSED variant it needs `wearFaceUVs()`, because
 `album.ts` loads its own GLBs and the face-decal fix does not reach it.
 
-### #36 Suggest a break when mashing persists — IN FLIGHT at time of writing
+### PB-046 · #36 Suggest a break when mashing persists — SHIPPED
+
+**Status 29 July: SHIPPED (`b1f7656`, later touched by `ad848e4` and `58425b6`).**
+`MASH_PAGES = 3` with a cross-page counter at `governors.ts:417`, `:462-475`,
+delivered by `offerAStretch()` at `main.ts:1896` from `:476`, `:1392`, `:1570`.
+The guardrail is tested rather than assumed: `tests/island/stretch.test.ts:316`,
+"the suggestion locks nothing and expires nothing (§19)".
 Joe: *"repeated mashing on successive pages should lead to a suggestion for a break
 or to get up, run around for a minute and then come back."*
 
@@ -199,7 +295,7 @@ Trap: `body:has(.overlay:not(.hide)) .say { display: none }` hides Fred's say ca
 whenever any overlay is open. That is why the tile-offer question was invisible for
 a day. If the suggestion must appear DURING a round it cannot use `.say`.
 
-### #39 PARKED — pure play elements as a session reward
+### PB-012 · #39 PARKED — pure play elements as a session reward
 Joe, for discussion, NOT to be built without him: *"she just did a solid hr of work
 and is now enjoying looking at the island and looking for the animals. we may want
 to add some pure play elements as session reward."*
@@ -213,19 +309,19 @@ element" may be to stop obstructing the play she has already invented.
 Open questions: does a pure-play reward need to be EARNED (which makes it economy,
 not play)? And §19 means a "session reward" must never become a session limit.
 
-### #35 Release engineering — the phase named "the release" has none
+### PB-013 · #35 Release engineering — the phase named "the release" has none
 No item for: cutting the first `v*` tag; verifying `npm run channel` against a
 TAGGED build (it has only ever run against main); an on-tablet pass; a pre-session
 backup from the gear; deleting the redundant `docs/nextphase.zip`.
 
-### #45 Prop glTFs 404 on a texture that is never used
+### PB-014 · #45 Prop glTFs 404 on a texture that is never used
 `props/*.gltf` reference `hexagons_medieval.png` but the folder ships only
 `hexagons_medieval_Summer.png`. Harmless — `props.ts` binds the season atlas in code
 — but it has now cost two agents time working out whether they caused it. A clean
 console is a debugging tool. Cheapest fix is the loading manager, since re-exporting
 vendor assets is how asset facts go stale.
 
-### #47b Batch the blob shadows before the 40-tile island
+### PB-010 · #47b Batch the blob shadows before the 40-tile island
 `createBlobShadow` makes a fresh geometry AND material per blob; only the alpha
 texture is shared. +1 draw call each, measured 1.74 per tile — fine now, ~70 extra
 at 40 tiles. Prop blobs are STATIC and all share opacity, so a shared unit geometry
@@ -233,7 +329,7 @@ plus one shared material collapses them to ~1. **Must exclude pets**, whose
 `castShadow` mutates opacity per frame. Natural home: beside the Phase 5 lighting
 rework.
 
-### Tablet screenshot wanted: a rim mountain's shadow
+### PB-015 · Tablet screenshot wanted: a rim mountain's shadow
 Hills and mountains at 1.92 tall / 0.96 reach throw an ellipse whose far edge lands
 ~3.7 units from the base, spanning neighbouring tiles and overhanging the sea. The
 arithmetic is right for a 35° sun and pets already do this at the coast, so no
@@ -244,11 +340,27 @@ clipping rule was invented. If it reads broken on the tablet, cap stretch/radius
 
 ## Phase 5, from the brief
 
-Items 7–12 and 14–17. Item 7 (progressive album + set unlocks) is the one with a
-consequence attached: **the ladder is 600 creatures, not ~1,000**, because the
-spotted twelve were dropped once it was proved the atlas cannot express a spot.
-Either a third wearing arrives with a positional signal behind it, or the pacing
-re-bases on 600.
+Items 7–12 and 14–17. **Each has its own card, and this one line was standing in
+for ten of them** — that is why they kept looking unplanned. The mapping:
+`PB-016` item 7 (progressive album + set unlocks), `PB-017` item 8 (habitats,
+nursery, move-in), `PB-018` item 9 (pet quests v1), `PB-019` item 10 (the daily
+visitor), `PB-020` item 11 (small ports), `PB-021` item 12 (per-item records +
+scheduler), `PB-022` item 14 (biome & tile ladder), `PB-023` item 15 (stardust,
+the Star Pool, the first wonder), `PB-024` item 16 (the persona simulator),
+`PB-025` item 17 (blossom enchantment I). Their scope notes live in
+`joe/backlog.json`, not here.
+
+Item 7 is the one with a consequence attached: **the ladder is 600 creatures,
+not ~1,000**, because the spotted twelve were dropped once it was proved the
+atlas cannot express a spot. Either a third wearing arrives with a positional
+signal behind it, or the pacing re-bases on 600.
+
+**And as of 29 July that number is the OLD ceiling.** `PB-036`'s brief landed as
+`docs/pet-island-species-roster.md` and adds ~296 builds across 20 collections on
+top of the live 24, shipped one collection at a time on the existing 85% unlock
+cadence. So item 7's ladder must be read against the roster before anyone
+re-bases pacing on 600. `album.ts:140-168` already reserves the third row for
+this.
 
 `docs/rock-hexes-proposal.md` is a down-payment on item 14 and carries two questions
 for Joe: what a rock tile is FOR (if not habitable, choosing it silently slows her
