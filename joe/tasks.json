@@ -298,6 +298,34 @@
       "check": "",
       "note": "",
       "state": "open"
+    },
+    {
+      "id": "JT-024",
+      "type": "ruling",
+      "title": "The honeymoon makes MATHS cheaper only, not reading (PB-030 B2)",
+      "detail": "Accepting an offer buys a honeymoon: runA.md:233 says \"pay 3, 2 sessions, cost-index frozen\". Offers are only ever made on the two maths paths, but maths pages buy TILES and reading pages buy EGGS - so the honeymoon had to be pointed at one half of the economy or both.\n\nFABLE CHOSE: maths only. Its argument was your own JT-018 - \"i have an unlimited amount of tiles but a limited stash of animals as rewards. neither must ever run out.\" Making reading cheaper would spend the scarce resource (animals) as a reward for a decision she made on the other path, which reverses the direction you set. It found a second reason too: pagesRead works out which reading page she is on by dividing her progress by the pay rate, so a reading page paying 3 would drift the 3-build-1-find mix you ruled in JT-010(2).\n\nBUILT ON IT (commit ad848e4): a maths page in a honeymoon pays 3 instead of 2, and tiles committed during a honeymoon never advance the tile price index. That freeze is permanent - a new honeymoonTiles counter in flow.ts and the save - rather than a freeze that later thaws, because a thaw would snap the price up and strand progress she had already part-paid for. Reading pays 2 in a honeymoon and the egg price curve is untouched.\n\nIF YOU REVERSE IT: ad848e4 changes. The pay half is one line (the reading branch of challengePassed in flow.ts, which today deliberately ignores the flag), but the egg index would need its own offset field and a save migration, and the pagesRead drift above would have to be solved first. Roughly half a day, not a data edit.",
+      "blocks": [
+        "PB-030"
+      ],
+      "artefact": "src/island/flow.ts",
+      "doneRule": "manual",
+      "check": "",
+      "note": "",
+      "state": "open"
+    },
+    {
+      "id": "JT-025",
+      "type": "ruling",
+      "title": "NEEDS JOE: the offer promises \"eggs and tiles faster\" and only tiles get faster directly (PB-030 B2)",
+      "detail": "The offer line is fixed by runA.md:232 and she hears it verbatim: \"You are doing really well! Would you like some trickier questions? They will get you eggs and tiles faster.\"\n\nUnder JT-024 the honeymoon makes tiles faster directly. Eggs get faster only INDIRECTLY: more tiles lowers the crowding step count, which lowers the egg surcharge - so the promise is true exactly when the island is crowded and eggs are dear, and not true at all while she is inside the corridor.\n\nSo for some of the time the sentence a five-year-old is read is half-true. Three ways out, all yours because it is words she hears:\n(a) leave it - the half that is false is the half she cannot measure, and the promise lands whenever it actually matters;\n(b) soften it to something like \"They will get you tiles faster!\" - accurate always, but a smaller promise;\n(c) make it true by reversing JT-024, which spends the animal stash - see that card.\n\nNothing is blocked: (a) is what is built and shipped in ad848e4. (b) is a one-line change in main.ts plus the matching entry in voice/scripts.json, and the test pins the wording as bytes so it cannot drift by accident.",
+      "blocks": [
+        "PB-030"
+      ],
+      "artefact": "src/island/main.ts",
+      "doneRule": "manual",
+      "check": "",
+      "note": "",
+      "state": "open"
     }
   ],
   "archive": []
