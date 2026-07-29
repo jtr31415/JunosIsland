@@ -51,27 +51,36 @@ describe('the species registry', () => {
     // The shortfalls that remain are still not sloppiness — each names a kit
     // that does not exist yet (bespoke, swim, raptor). The per-collection tests
     // name those members, so each is a tripwire the day its kit lands.
-    expect(REGISTRY.size).toBe(96)
+    //
+    // 97, not 96, and the +1 is GARDEN COMPLETING. The ASSEMBLY kit built
+    // `animal-slow-worm`, which every count in this file used to call out as
+    // "needs bespoke". It still does need bespoke for a `build` — that kit is
+    // still unbuilt and its record still has none — but `assembly` is additive
+    // (§9.2 of `docs/building-animals-from-parts.md`), so the species has shipped
+    // on the strength of an assembly alone. It is the first record in the repo
+    // that is real without a `build`, and this is the number that says so.
+    expect(REGISTRY.size).toBe(97)
     expect(shippedIn('base')).toHaveLength(24)
-    expect(shippedIn('garden')).toHaveLength(13)      // 14 rostered, slow-worm needs bespoke
+    expect(shippedIn('garden')).toHaveLength(14)      // COMPLETE — the slow worm is assembled
     expect(shippedIn('home-pets')).toHaveLength(14)   // 16 rostered, 1 bespoke + 1 swim
     expect(shippedIn('woodland')).toHaveLength(16)    // COMPLETE
     expect(shippedIn('africa')).toHaveLength(13)      // 16 rostered, 2 bespoke + 1 raptor
     expect(shippedIn('farm')).toHaveLength(16)        // COMPLETE
   })
 
-  it('leaves 224 species rostered but unshipped, on purpose', () => {
+  it('leaves 223 species rostered but unshipped, on purpose', () => {
     // The gap is the point. Nobody should "finish" the registry — a species
     // without a built kit renders as nothing, which is worse than absent.
     //
     // 246 after phase 2; 224 after phase 3 built the songbird kit and spent it
-    // on 22 more (woodland +2, home-pets +4, farm +16).
+    // on 22 more (woodland +2, home-pets +4, farm +16); 223 once the assembly
+    // kit built the slow worm, which is one animal and not a collection.
     const rostered = COLLECTIONS.flatMap(c => c.members)
     expect(rostered).toHaveLength(320)
-    expect(rostered.filter(id => !speciesRecord(id))).toHaveLength(224)
+    expect(rostered.filter(id => !speciesRecord(id))).toHaveLength(223)
   })
 
-  it('has TWO complete collections now — woodland and farm', () => {
+  it('has THREE complete collections now — garden, woodland and farm', () => {
     // This test used to assert ZERO, and said in its own comment: "if this test
     // ever goes red, a second kit landed and that question became live." That
     // is exactly what happened, so it is inverted rather than deleted — the
@@ -85,11 +94,18 @@ describe('the species registry', () => {
     // — is now answerable the easy way for at least these two: they have no
     // hole. Every further kit shrinks that question, which is the best answer
     // available while it is unanswered.
+    //
+    // GARDEN IS NOW THE THIRD, and it is the first one the ASSEMBLY kit closed:
+    // its one shortfall was `animal-slow-worm`, a legless lizard no kit could
+    // express, and the assembly kit built it from the pack's own geometry. Garden
+    // is roster row 1 and ship 1 — the first collection a child meets after the
+    // base 24 — so this is the collection where "may it unlock with a hole in it"
+    // mattered most, and the question no longer has to be answered for it.
     const complete = COLLECTIONS
       .filter(c => c.id !== 'base')
       .filter(c => c.members.every(id => speciesRecord(id)))
       .map(c => c.id)
-    expect([...complete].sort()).toEqual(['farm', 'woodland'])
+    expect([...complete].sort()).toEqual(['farm', 'garden', 'woodland'])
   })
 
   it('names the seven base animals roster §5 gives a threat badge', () => {

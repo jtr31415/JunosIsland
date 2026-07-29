@@ -454,17 +454,28 @@ describe('joe/names-audit.json', () => {
     // Joe to audit and voice-bake a name for a creature that cannot yet exist —
     // and `animal-slow-worm` was exactly that, so it came out when the fifty
     // went in. When a new kit lands and its species are built, they must be
-    // added here in the same pass, and this test is what says so.
+    // added here in the same pass, and this test is what says so. THAT HAPPENED:
+    // the assembly kit built the slow worm, so its row went back in and this
+    // count moved by one. It is the case the comment above was written for.
+    //
+    // BUILT is `build` OR `assembly`, and it has to be both halves — §9.2 of
+    // `docs/building-animals-from-parts.md` is explicit that the marker for a
+    // new-method animal is the PRESENCE of `assembly` and never the ABSENCE of
+    // `build`, and the slow worm is the first record carrying one and not the
+    // other. Filtering on `build` alone would have quietly asked for its row to
+    // be deleted again.
     expect(audit.schemaVersion).toBe(1)
-    const built = SHIPPED_SPECIES.filter(s => s.build !== undefined).map(s => s.id)
+    const built = SHIPPED_SPECIES
+      .filter(s => s.build !== undefined || s.assembly !== undefined).map(s => s.id)
     expect([...audit.names.map(e => e.speciesId)].sort()).toEqual([...built].sort())
-    // 14 after phase 1, 50 after phase 2, 72 after phase 3's songbird kit.
+    // 14 after phase 1, 50 after phase 2, 72 after phase 3's songbird kit, 73
+    // once the assembly kit gave the slow worm a build of its own.
     // The bench is REGENERATED whenever the built roster grows — every row is
     // rewritten from the registry — but Joe's three fields are carried across
     // by `speciesId`, so a regeneration never costs him a verdict he has
     // already given. That is the contract `tools/workbench/merge.mjs:92-107`
     // describes and it is why this file can grow under him safely.
-    expect(audit.names).toHaveLength(72)
+    expect(audit.names).toHaveLength(73)
   })
 
   it('gives every creature its own name, so the playground question works', () => {

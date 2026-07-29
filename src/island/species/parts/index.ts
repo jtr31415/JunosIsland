@@ -9,6 +9,7 @@ import type * as THREE from 'three'
 import { SPECIES_NAMES, SPECIES_COLLECTION } from '../roster'
 import { ASSEMBLED_BUILDS } from './assembled'
 import { buildAssembly } from './assembly'
+import type { ResolvedMotion } from './motion'
 
 /** One row per species the assembly kit can build. */
 export interface AssembledSpecies {
@@ -60,6 +61,22 @@ export function buildAssembled(id: string): THREE.Group {
   return buildAssembly(spec)
 }
 
+/**
+ * How one species moves, resolved. `[]` for a species that stands still, which
+ * is every species today — see `motion.ts`.
+ *
+ * A separate door rather than a field on `AssembledSpecies`, deliberately: that
+ * row is the public contract the review surfaces read and it is not to be
+ * widened for something only a viewer that actually animates needs. Throws by
+ * name on an unknown species, exactly as `buildAssembled` does, so a typo in a
+ * viewer is a message and not an empty list that reads as "stands still".
+ */
+export function motionOf(id: string): readonly ResolvedMotion[] {
+  const spec = ASSEMBLED_BUILDS[id]
+  if (!spec) throw new Error(`no assembly build for "${id}"`)
+  return spec.motion ?? []
+}
+
 export { buildAssembly } from './assembly'
 export type { AssemblyBuild, Feature, Hull, Paint, Placement, Spin } from './assembly'
 /**
@@ -73,6 +90,18 @@ export type { CreatureDef, PartDef, PartLike, PaintLike, RidgeDef, RidgeRow, Hul
   from './creature'
 /** Determinism, made checkable: pin a species and drift is red rather than found. */
 export { creatureFingerprint, groupFingerprint } from './fingerprint'
+/**
+ * Motion, as data. Four named motions, two dials each, and a phase seeded off a
+ * string rather than off `Math.random`. `motion.ts` also records the measurement
+ * of where the wings' current motion actually comes from, which is not the glTF
+ * clips everybody assumed.
+ */
+export {
+  MOTIONS, MOTION_KINDS, resolveMotion, motionPhase, motionSide, motionAt, motionFingerprint,
+} from './motion'
+export type {
+  MotionKind, MotionChannel, MotionAxis, MotionRow, MotionDef, ResolvedMotion,
+} from './motion'
 export { findShapes, hullShapes, SPIKE_QUERY, BRUSH_QUERY } from './query'
 export type { ShapeQuery } from './query'
 export {

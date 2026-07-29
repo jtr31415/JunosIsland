@@ -44,11 +44,28 @@ import {
  * and these are the hashes the hand-written records produced. They did not
  * change. Every vertex, normal, uv, index and node translation of both animals is
  * the same as the day Joe reviewed them.
+ *
+ * The other eleven are the FAN-OUT's pins, read off `npm run pets:creature` in
+ * one pass once all eleven species files existed. Every one is a first pin — the
+ * hash of the animal as it was built, recorded, not chosen — so none of them is
+ * evidence of anything yet. What they buy is the second run: from here on, any of
+ * these eleven moving is a change to that animal, by name, with both hashes.
  */
 const PINNED: Readonly<Record<string, string>> = {
   'animal-hedgehog': 'a839dd97acf556e9',
   'animal-squirrel': '6a9ea9c7855c48c5',
   'animal-mouse': '896afcc9e7c39067',
+  'animal-shrew': 'c54d4a52d6fce328',
+  'animal-dormouse': 'e1819320d0649b66',
+  'animal-vole': '1a861003a11a28c9',
+  'animal-frog': '95cc009b85563d69',
+  'animal-toad': 'e6cd7840215fcda2',
+  'animal-tortoise': '5d963604a4b492ba',
+  'animal-salamander': 'bfd5d6d3faeb517d',
+  'animal-newt': 'f6c36bd7e766cf11',
+  'animal-badger': '394a0415661ac7af',
+  'animal-mole': '51fa9409a320915b',
+  'animal-slow-worm': 'b93b77ddd7fb4e23',
 }
 
 describe('every assembled species has a pinned fingerprint', () => {

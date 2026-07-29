@@ -146,6 +146,18 @@
       "note": ""
     },
     {
+      "id": "natural/animal-slow-worm",
+      "setId": "natural",
+      "speciesId": "animal-slow-worm",
+      "species": "Slow-Worm",
+      "collection": "garden",
+      "band": "short",
+      "name": "Nunem",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
+    },
+    {
       "id": "natural/animal-salamander",
       "setId": "natural",
       "speciesId": "animal-salamander",

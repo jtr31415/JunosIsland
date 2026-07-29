@@ -32,16 +32,39 @@ import type { QuadrupedBuild, Species } from '../../src/island/species/types'
 /** The roster's own member list for `garden`, all fourteen of them. */
 const ROSTERED = (COLLECTIONS.find(c => c.id === 'garden') as { members: readonly string[] }).members
 
+/**
+ * Every member with a record, in roster order — all fourteen of them now.
+ *
+ * It was thirteen for the whole of phases 1-3, and the slow worm was the gap: no
+ * kit could express a legless lizard. The ASSEMBLY kit can, and `assembly` is
+ * additive rather than a kit swap (§9.2 of `docs/building-animals-from-parts.md`),
+ * so its record is here carrying an assembly and no `build` at all — the first
+ * such record in the repo.
+ */
 const BUILT = [
   'animal-hedgehog', 'animal-squirrel', 'animal-mouse', 'animal-mole',
   'animal-badger', 'animal-frog', 'animal-toad', 'animal-tortoise',
   'animal-newt', 'animal-shrew', 'animal-dormouse', 'animal-vole',
-  'animal-salamander',
+  'animal-slow-worm', 'animal-salamander',
 ]
 
 const quad = (s: Species): QuadrupedBuild => s.build as QuadrupedBuild
 
 const byId = new Map(GARDEN_SPECIES.map(s => [s.id, s]))
+
+/**
+ * The thirteen members the QUADRUPED kit builds, which is what most of this file
+ * is about.
+ *
+ * Filtered on the presence of a `build` rather than counted, and every sweep
+ * below that reaches into a `QuadrupedBuild` walks this list instead of
+ * `GARDEN_SPECIES`. The slow worm has no `build`, so a sweep that included it
+ * would read `undefined.ears` — and, worse, `buildSpecies` would be handed
+ * nothing and throw, which would look like a broken kit rather than an animal
+ * that was never a quadruped. Its own invariants are `assembly-slow-worm.test.ts`
+ * and the shared harness in `assembly-assert.ts`.
+ */
+const QUADRUPEDS: readonly Species[] = GARDEN_SPECIES.filter(s => s.build !== undefined)
 const build = (id: string): QuadrupedBuild => quad(byId.get(id) as Species)
 
 const measure = (g: THREE.Object3D): THREE.Box3 => {
@@ -117,8 +140,10 @@ const pairs = <T>(xs: readonly T[]): [T, T][] => {
 }
 
 describe('the Garden collection is exactly what the roster says it is', () => {
-  it('holds thirteen members, in the roster\'s own order', () => {
+  it('holds all fourteen members, in the roster\'s own order', () => {
     expect(GARDEN_SPECIES.map(s => s.id)).toEqual(BUILT)
+    // Thirteen on the quadruped kit, one on the assembly kit and nothing else.
+    expect(QUADRUPEDS).toHaveLength(13)
   })
 
   it('invents nothing — every member is a Garden member of the roster', () => {
@@ -131,24 +156,30 @@ describe('the Garden collection is exactly what the roster says it is', () => {
     }
   })
 
-  it('leaves out the slow worm, and nothing else', () => {
+  it('LEAVES NOTHING OUT — the slow worm was the gap and it is closed', () => {
     /*
-     * The one deliberate gap. A slow worm is a legless lizard; `legs` is
-     * structural in the quadruped kit — four boxes, always built — and clamps at
-     * a 0.25 minimum (`quadruped.ts` LIMIT), so a quadruped record for it would
-     * ship an animal with four legs it does not have. It needs the `bespoke`
-     * kit, declared at `types.ts:159` and not built.
+     * This test used to assert `missing` was exactly `['animal-slow-worm']`, and
+     * said in its own comment: "the day the bespoke kit lands, this test goes red
+     * and someone has to come and delete it rather than quietly leaving the slow
+     * worm out forever." This is that day, near enough — it was the ASSEMBLY kit
+     * and not the bespoke kit that closed it, and the reasoning is unchanged
+     * either way. So the assertion is INVERTED rather than deleted: Garden is
+     * complete, and if a member ever goes missing again this says so instead of
+     * quietly accepting a fourteenth hole.
      *
-     * Asserted as an equality rather than a "contains" so that the day the
-     * bespoke kit lands, this test goes red and someone has to come and delete
-     * it rather than quietly leaving the slow worm out forever.
+     * `legs` is still structural in the quadruped kit and still clamps at 0.25,
+     * so there is still no `QuadrupedBuild` for a legless lizard and there is
+     * still no `bespoke` kit. The slow worm's geometry comes off the assembly
+     * kit, and its record carries `assembly` and no `build`.
      */
     const missing = ROSTERED.filter(id => !byId.has(id))
-    expect(missing).toEqual(['animal-slow-worm'])
+    expect(missing, 'Garden is complete — no member may be absent').toEqual([])
+    expect(byId.get('animal-slow-worm')?.build).toBeUndefined()
+    expect(byId.get('animal-slow-worm')?.assembly).toBeDefined()
   })
 
-  it('gives every member a quadruped build the kit will accept', () => {
-    for (const s of GARDEN_SPECIES) {
+  it('gives every quadruped member a build the kit will accept', () => {
+    for (const s of QUADRUPEDS) {
       expect(s.kit).toBe('quadruped')
       expect(s.build, `${s.id} has no build`).toBeDefined()
       const b = quad(s)
@@ -162,7 +193,7 @@ describe('the Garden collection is exactly what the roster says it is', () => {
 
 describe('every Garden species actually builds', () => {
   it('produces a real, non-empty, finite group for all thirteen', () => {
-    for (const s of GARDEN_SPECIES) {
+    for (const s of QUADRUPEDS) {
       const g = buildSpecies(quad(s))
       expect(g, s.id).toBeInstanceOf(THREE.Group)
       expect(meshNames(g).length, `${s.id} built no meshes`).toBeGreaterThan(10)
@@ -185,7 +216,7 @@ describe('every Garden species actually builds', () => {
       spines: 'spine-1', snout: 'snout', shell: 'shell', crest: 'crest-1',
       whiskers: 'whisker-left-1',
     }
-    for (const s of GARDEN_SPECIES) {
+    for (const s of QUADRUPEDS) {
       const names = new Set(meshNames(buildSpecies(quad(s))))
       for (const e of quad(s).extras ?? []) {
         expect(names.has(WANTS[e] as string), `${s.id} asked for ${e}`).toBe(true)
@@ -205,7 +236,7 @@ describe('every Garden species actually builds', () => {
      * The upper bound is 1.35 rather than the kit test's 1.2 because the
      * tortoise is genuinely a wide low dome and that is what a tortoise is.
      */
-    for (const s of GARDEN_SPECIES) {
+    for (const s of QUADRUPEDS) {
       const [w, h] = dims(buildSpecies(quad(s)))
       const ratio = (w as number) / (h as number)
       expect(ratio, `${s.id} W/H ${ratio.toFixed(2)}`).toBeGreaterThan(0.55)
@@ -218,7 +249,7 @@ describe('every Garden species actually builds', () => {
     // what keeps a pet out of the trees. The measured pack's own worst is 1.17
     // (the fox, tail included), so nothing in the first collection a child
     // plays with may exceed it.
-    for (const s of GARDEN_SPECIES) {
+    for (const s of QUADRUPEDS) {
       const [w, , d] = dims(buildSpecies(quad(s)))
       const radius = Math.max(w as number, d as number) / 2
       expect(radius, `${s.id} keep-out ${radius.toFixed(2)}`).toBeLessThan(1.17)
@@ -234,7 +265,7 @@ describe('no two Garden species are silhouette twins', () => {
      * collection, because the flagged list is not exhaustive and this collection
      * proves it — newt/salamander are not on it and are the same problem.
      */
-    for (const [a, b] of pairs(GARDEN_SPECIES)) {
+    for (const [a, b] of pairs(QUADRUPEDS)) {
       const why = separations(quad(a), quad(b))
       expect(why.length, `${a.id} and ${b.id} are silhouette twins`).toBeGreaterThan(0)
     }
@@ -244,7 +275,7 @@ describe('no two Garden species are silhouette twins', () => {
     // The data check above can be satisfied by numbers that build the same
     // shape; this one measures the geometry that comes out. Both are needed.
     const seen = new Map<string, string>()
-    for (const s of GARDEN_SPECIES) {
+    for (const s of QUADRUPEDS) {
       const sig = signature(buildSpecies(quad(s)))
       expect(seen.has(sig), `${s.id} builds the same creature as ${seen.get(sig)}`).toBe(false)
       seen.set(sig, s.id)
@@ -255,7 +286,10 @@ describe('no two Garden species are silhouette twins', () => {
   it('gives every member its own coat colour', () => {
     // Palette cannot carry differentiation on its own (roster §4 is explicit),
     // but two species sharing a coat is a copy-paste, not a decision.
-    const coats = GARDEN_SPECIES.map(s => quad(s).palette.coat)
+    // The slow worm is not counted here and must not be: its four slots are the
+    // first ever proposed for it and they are UNREVIEWED, carried on the species
+    // file's own `flag` rather than agreed in `garden.ts` like these thirteen.
+    const coats = QUADRUPEDS.map(s => quad(s).palette.coat)
     expect(new Set(coats).size).toBe(13)
   })
 })

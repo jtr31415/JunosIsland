@@ -24,14 +24,19 @@
  *      and low by DROPPING `legs` and `height`, with `body` nudged only as far
  *      as it honestly needs to go. Nothing here goes near the 1.55 ceiling.
  *
- * WHY THIS COLLECTION IS THIRTEEN AND NOT FOURTEEN. The roster lists
- * `animal-slow-worm` as a Garden member and it is deliberately absent. A slow
- * worm is a legless lizard; `legs` is structural in this kit (four boxes, always
- * built) and clamps at a 0.25 minimum, so the quadruped kit cannot express it
- * without lying about the animal. It needs the `bespoke` kit, which is declared
- * in `types.ts:159` and not built. `buildSpecies` throws by name for it today,
- * which is the loud failure that is wanted — a species missing from a collection
- * is an honest gap, and a lizard with four legs is not.
+ * WHY THIS COLLECTION IS FOURTEEN, AND WHY THIRTEEN OF THEM ARE QUADRUPEDS.
+ * The roster lists `animal-slow-worm` as a Garden member and for the whole of
+ * phases 1-3 it was deliberately absent from this file: a slow worm is a legless
+ * lizard, `legs` is structural in the quadruped kit (four boxes, always built)
+ * and clamps at a 0.25 minimum, so that kit cannot express it without lying
+ * about the animal. It needs the `bespoke` kit, which is declared in `types.ts`
+ * and still not built. NONE OF THAT HAS CHANGED — `buildSpecies` still throws by
+ * name for it, and its record still carries no `build`. What changed is that the
+ * ASSEMBLY kit can build it from the pack's own geometry, and `assembly` is
+ * additive rather than a kit swap, so the fourteenth record is now here with an
+ * assembly and no build. Thirteen members carry a `QuadrupedBuild`; the
+ * fourteenth is the reason `tests/island/species-garden.test.ts` sweeps the
+ * quadruped claims over the members that HAVE one rather than over all of them.
  *
  * NO THREAT STATUSES. Same reason `registry.ts:56-76` gives for the base 24:
  * `Threat.checkedDate` exists so a status is a dated reading of the Red List
@@ -402,6 +407,36 @@ export const GARDEN_SPECIES: readonly Species[] = [
       palette: { coat: 0x9a6a3c, belly: 0xdcc7a6, detail: 0x74502c, accent: 0x4e361d },
     },
   }),
+
+  /*
+   * THE SLOW WORM, AND IT IS THE ONE RECORD HERE WITH NO `build` AT ALL.
+   *
+   * It is the collection's fourteenth and it was absent from this file entirely
+   * until the assembly kit could build it — the header above carried the reason
+   * for years of runs and that paragraph is now history rather than state.
+   * Nothing about the quadruped kit changed: `legs` is still structural in it
+   * (four boxes, always built) and still clamps at 0.25, so a `QuadrupedBuild`
+   * for a legless lizard would still ship an animal with four legs it does not
+   * have. There is still no `bespoke` kit — `types.ts` declares it and does not
+   * build it — which is why `kit` says so and `buildSpecies` still throws by
+   * name for this species. That is the honest state and it is unchanged.
+   *
+   * What changed is that `assembly` is ADDITIVE (§9.2 of
+   * `docs/building-animals-from-parts.md`): the geometry comes off
+   * `parts/assembled/animal-slow-worm.ts` and is attached BY ID off the
+   * register, so this record needs no `build` to be a real animal. It is the
+   * first record in the repo where `assembly !== undefined` and
+   * `build === undefined` at the same time, which is exactly the pair §9.2
+   * warns a review surface never to confuse: the marker is the PRESENCE of
+   * `assembly`, never the ABSENCE of `build`.
+   *
+   * NO PALETTE HERE, deliberately. Every other member of this collection agreed
+   * its colours in this file before its geometry existed; this one had no entry
+   * to agree them in, so the four slots it wears are the first ever proposed for
+   * it and they live in the species file behind an UNREVIEWED `flag` where Joe
+   * reads it. Copying them down here would make them look signed off.
+   */
+  defineSpecies('animal-slow-worm', 'bespoke'),
 
   /*
    * The salamander. The fire salamander: black with bright yellow, which is the

@@ -58,6 +58,10 @@ export { FROG_ASSEMBLY } from './animal-frog'
 export { TOAD_ASSEMBLY } from './animal-toad'
 export { TORTOISE_ASSEMBLY } from './animal-tortoise'
 export { SALAMANDER_ASSEMBLY } from './animal-salamander'
+export { NEWT_ASSEMBLY } from './animal-newt'
+export { BADGER_ASSEMBLY } from './animal-badger'
+export { MOLE_ASSEMBLY } from './animal-mole'
+export { SLOW_WORM_ASSEMBLY } from './animal-slow-worm'
 /* -- append the next species' line directly above this one -- */
 
 import { assembledBuilds } from './register'
