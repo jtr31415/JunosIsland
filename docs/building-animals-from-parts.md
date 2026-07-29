@@ -176,6 +176,51 @@ shape.
 
 ---
 
+## 3.1 A part's identity is its placement, not Kenney's label
+
+This is Joe's, 29 July, and it is the single largest multiplier on the banks:
+
+> the hog ears could potentially double up as dragon or croc back ridges as well
+> as hedgehog spikes (if added sunk into the torso, say 6 on each side.
+
+**The principle: a part's identity comes from where it is placed, how many there
+are, and how deep it is sunk — not from what Kenney called it.** One shape is a
+hog's ear, a hedgehog's spike, a dragon's back ridge and a crocodile's scute. The
+bank is therefore much larger than its raw count of shapes suggests, and this is
+"adapt before authoring" (rule 1) taken seriously rather than politely.
+
+Three things follow, and all three are binding:
+
+1. **Bank entries are named by SHAPE. Kenney's name is provenance, not the
+   label.** A bank record's `id` and `kind` describe the geometry —
+   `cone-flat-tapered`, `wedge-broad`, `blade-curved` — and the donor species and
+   Kenney's own part name live in a `provenance` field beside it. **If a shape is
+   filed as "hog ear" it will never be reached for as a spike**, and the
+   multiplier is lost to a naming decision. This is the same discipline the
+   anatomy view already uses: Kenney's names plain, ours marked as ours.
+   Where two shapes filed under different roles turn out to be identical after
+   translation, that is a dedup win and it is recorded.
+
+2. **Sinking into the torso is a legitimate placement, not a mistake to clamp
+   away.** The placement rule must express **N copies along a line** — six a
+   side, evenly spaced — and must take **depth as a first-class parameter** with
+   a measured range, not as a minimum to be enforced. A rule that assumes
+   one-per-side at the surface quietly makes this idea unbuildable. Depth was
+   already known to be real (every eared species buries its ear by at least
+   0.125); it is now a dial rather than a floor.
+
+3. **The "impossible" list is smaller than we told him.** §5 named four missing
+   shapes: fin, insect wing, frill, hooked beak. Joe has since confirmed **the
+   fish's "wings" are fins and the bee's are true insect wings** — so those two
+   were never missing, they were mislabelled. And **a row of sunk ear-shapes is
+   plausibly a frill**. That leaves the hooked beak as the only clearly absent
+   shape of the four. The 64-impossible figure in §5 is therefore an
+   overstatement and is to be re-derived before it is quoted to Joe again. Do
+   not chase this during a collection pilot; do not repeat the old number
+   either.
+
+---
+
 ## 4. Texture: we author it per animal
 
 We assemble the animal, so **we own its UVs**. That changes the colour problem
@@ -216,10 +261,17 @@ Measured, and honest. From lifted parts alone, of the roster's ~296:
 
 - **186 buildable.**
 - **46 partial** — Birds, Outback, Legendary.
-- **64 impossible** — Ocean, Critters, Dinosaurs, Raptors. There is no fin, no
-  flipper, no fluke, no membranous insect wing, no segmented leg, no frill, no
-  plate, no spine, no hooked beak, no talon, no spread wing anywhere in the pack.
-  Also missing: hoof, trunk, shell or carapace, long neck, tentacle, quill.
+- **64 impossible** — Ocean, Critters, Dinosaurs, Raptors, for want of a fin, a
+  flipper, a fluke, a membranous insect wing, a segmented leg, a frill, a plate,
+  a spine, a hooked beak, a talon, a spread wing. Also named as missing: hoof,
+  trunk, shell or carapace, long neck, tentacle, quill.
+
+  **This number is now known to be an overstatement and must not be re-quoted
+  until it is re-derived.** §3.1 already retires three of the four headline
+  gaps: the fish's "wings" are fins, the bee's are true insect wings, and a
+  frill is plausibly a row of sunk ear-shapes. Only the hooked beak of that four
+  is clearly absent. The 64 was counted under the assumption that a part's role
+  is fixed by its label, and that assumption is wrong.
 
 **We do not invent the missing parts.** Joe asked for that explicitly. A species
 that needs one goes through the escape clause: best attempt, flagged, with the
@@ -275,11 +327,19 @@ cards, a snout — so that the first look actually answers whether the method
 holds. Picking the simplest member to get something on screen quickly tells him
 nothing and wastes the one review that matters most.
 
-For Garden the first is the **squirrel**, because it uses every bank the method
-has (hull, leg ×4, ear ×2, a lifted brush tail carrying its own node transform,
-eye cards, snout, a belly boundary painted into the texture) and because it is
-*fox-adjacent* — a squirrel standing next to the fox is the hardest possible
-version of "does it look like a guest", not the easiest.
+For Garden the first is the **hedgehog**, because it is the only member that
+exercises **repeat-and-sink** (§3.1) — twelve copies of one shape, six a side,
+buried in the torso. That is the newest and least-proven mechanism in the whole
+method, and it is Joe's own idea, so it goes in front of him first. It also uses
+the hull, four legs, the eye cards and a snout on the way.
+
+The **squirrel is second**, and it carries the other half of the risk: a lifted
+brush tail that arrives with its own node transform, and a belly boundary that
+has to be painted into the texture rather than cut into geometry. It is also
+*fox-adjacent* — a squirrel beside `animal-fox` is the hardest version of "does
+it look like a guest", not the easiest.
+
+Between them those two prove the method. The remaining eleven are variations.
 
 ### The viewer must never let him compare the wrong thing
 
