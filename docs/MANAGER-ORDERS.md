@@ -18,6 +18,16 @@ is the only thing that survives.
 **So the handoff file is the product of every run, not an afterthought.** Write
 it as if the next manager has never seen this repo — because it hasn't.
 
+**Every task goes through a manager. The drumbeat never dispatches a worker
+directly.** Joe's instruction, 29 July: *"hand the tasks to a manager first to
+then invoke subagents, so we keep context low at all times."* Even a small,
+well-scoped job — a one-file bug fix, a data file, a review surface — is handed
+to a manager, and the manager decides what to delegate. The reason is the whole
+point of the arrangement: a "focused agent" given a real task ends up doing
+manager work inside a worker's context, reading widely, holding seams, and
+running hot with nowhere to hand off to. If it is worth dispatching, it is worth
+a manager.
+
 ---
 
 ## The loop you run
