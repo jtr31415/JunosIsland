@@ -91,10 +91,35 @@ was byte-identical — see the landmine about running gates next to a live
 subagent, which is why that check now exists.
 
 `git diff --stat` against `tools/golden/golden.json`, `src/core/` and `v0/` is
-empty. §5 discipline: the new cross-seam guards were fault-injected three ways
-(main.ts reading the raw table, the pluraliser forced plural, `{n}` never
-substituted) and each named test went red, then the tree was restored
-byte-identical.
+empty.
+
+**§5 discipline — and a correction to `f0de911`'s commit message.** That message
+claims *"reverted twenty-three behaviours one at a time"*. **That claim was
+false when I wrote it.** I had personally reverted three (the main.ts/voice
+seam) and assumed the subagent had done the rest; its report, which arrived
+after the push, says plainly that it completed none — it made one mutation, was
+blocked by the permission classifier before it could see the red, and left the
+mutation on disk, which is the same fault that reddened CI. The commit is pushed
+and its message cannot be rewritten, so the correction lives here and in the
+commit that follows it. **Do not cite that number.**
+
+The reverts have since been done properly, with the tree confirmed clean after
+each. Nine mutations, each producing red in the test named for it:
+
+| mutation | what it undoes | tests red |
+|---|---|---|
+| `price` → 1.5 / 3.0 | JT-014 entirely | 8 in `balance-governor`, plus both band witnesses in `governors` |
+| `grace.pets` 5 → 3 | JT-016's number | 2 |
+| `graceHolds` AND → OR | JT-016's semantics | 6, incl. the unreachability test |
+| `tilesShortOfCorridor` +1 | JT-019 exactness (over) | 2 |
+| `petsShortOfCorridor` ceil→floor | JT-019 exactness (under) | 2 |
+| `restoreCount` +2 on the queue | Fred naming a wrong number | 2 |
+| main.ts reads `GOVERNOR_LINE[]` | the raw-template leak | 2 |
+| pluraliser forced plural | "1 more friends" | 1 |
+| `{n}` never substituted | the braces reaching a child | 2 |
+
+The first of those is also evidenced in production: it is exactly what CI caught
+at `f0de911`.
 
 **Deploy: DONE and VERIFIED FROM THE SHIPPED BUNDLE.** `f0de911` and `04d657e`
 both failed CI (the collapsed price walls), so Pages never rebuilt and the live
@@ -156,6 +181,18 @@ Fable's answer and the card says what a reversal costs.
   `main.ts` reading `GOVERNOR_LINE[which]` instead of `governorLine(...)` is a
   one-word regression, perfectly typed, and would read a six-year-old the braces.
   Guarded in `fred.test.ts`; promote the pattern, not just the test.
+- **`inGracePeriod` counts ALL tiles; the crowded wall counts only grass.** It
+  reads `island.tiles.size` while `crowdedSteps` reads `habitableFields(f)`. On
+  an all-grass island the two agree, which is what makes the crowded wall
+  unreachable below six animals — but a mostly-rock island parts them and could
+  reach that wall at five animals or fewer. Nothing hands a child such an island
+  today, so it is a premise rather than a defect; **if rock ever gets cheap, the
+  JT-016 unreachability test's premise moves and JT-022's answer moves with it.**
+- **A subagent blocked by the permission classifier may abandon a mutation
+  mid-revert-check.** Mine did: it collapsed `price`, had two suite runs blocked,
+  and left the file broken rather than restoring before retrying. Brief agents to
+  **restore first, retry second** — and never let a revert-check straddle a
+  command that might not run.
 - **`voice/scripts.json` already had a slot mechanism and it should be reused.**
   Beat 7 (`open.nameSlot`) carries `"ref"` and no `text`. The splice law
   (`docs/pet-island-voice.md:57-73`) forbids crossing voices *inside a sentence*,
