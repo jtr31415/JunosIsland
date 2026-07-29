@@ -254,8 +254,8 @@
       "artefact": "src/island/harness.ts",
       "doneRule": "manual",
       "check": "",
-      "note": "",
-      "state": "open"
+      "note": "If a trickier-sums offer is due the same session, taking away wins - one offer per session forces the choice. This seems reasonable to open the subtraction path, which then runs from then on.",
+      "state": "done"
     },
     {
       "id": "JT-021",
@@ -268,8 +268,8 @@
       "artefact": "src/island/balance/balance.json",
       "doneRule": "manual",
       "check": "",
-      "note": "",
-      "state": "open"
+      "note": "lets keep for now, its very hard to predict and depends on play test. mark it in the code commentary so we find it easy if we need to change.",
+      "state": "done"
     },
     {
       "id": "JT-022",
@@ -282,8 +282,8 @@
       "artefact": "src/island/balance/index.ts",
       "doneRule": "manual",
       "check": "",
-      "note": "",
-      "state": "open"
+      "note": "accepted",
+      "state": "done"
     },
     {
       "id": "JT-023",
