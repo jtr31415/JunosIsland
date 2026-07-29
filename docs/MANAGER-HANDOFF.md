@@ -1,211 +1,229 @@
 # Manager handoff
 
-> ## ⚠ RUN 3 WAS KILLED MID-BUILD — READ THIS BEFORE THE REST
->
-> *Written by the drumbeat, 29 July 2026, ~00:35. Run 3 did not write a handoff
-> because it did not get to stop — it hit the account's weekly token limit
-> mid-edit and terminated. Its last words were "let me fix the tests I know are
-> wrong". So the body of this file is still RUN 2's handoff, and it is accurate
-> about everything except what run 3 did. What follows is what run 3 left behind,
-> measured by the drumbeat rather than reported by run 3.*
->
-> **What run 3 FINISHED and pushed — do not redo it:**
-> - The workbench repair, committed as `3c364b4` and pushed. Verified by reading
->   the file: all twenty tasks present, JT-020 restored and `open`, and Joe's
->   notes on JT-013…JT-019 all present and non-empty, **including his rewritten
->   JT-016**. Nothing of his was lost in the end. `origin/main` is up to date;
->   there are no unpushed commits.
-> - The safe-write procedure is already written into `docs/MANAGER-ORDERS.md`
->   (see "Writing to `joe/tasks.json` safely") and `docs/HANDOFF.md` — but both
->   files are UNCOMMITTED in the working tree. Commit them.
->
-> **What run 3 left HALF-DONE — this is your inheritance:**
-> The JT-014 build (warning and price at different crowding thresholds). The
-> working tree is dirty and **13 tests are RED across 2 files** (1375 passing of
-> 1388). Measured by the drumbeat at 07:31 UTC, not guessed:
-> ```
->  M docs/HANDOFF.md              M src/island/balance/index.ts
->  M docs/MANAGER-ORDERS.md       M src/island/governors.ts
->  M src/island/balance/balance.json  M src/island/main.ts
->  M tests/island/governors.test.ts
->  ?? tests/island/balance-governor.test.ts   (new, untracked)
-> ```
-> Two failures I saw directly: an `activeGovernor(f)` expectation around
-> `tests/island/governors.test.ts:592` expecting `'nursery-queue'`, and
-> `tests/island/stretch.test.ts:536` — a new governor line id **`space-surplus`
-> has no entry in `voice/scripts.json`**. That second one is a real gap in the
-> work, not a stale test: a new nudge was added without its voice line.
->
-> **Your first decision is whether to CONTINUE or DISCARD this half-build.**
-> Judge it on the code, not on sunk cost. It is uncommitted, so discarding is
-> cheap and safe — but note the two doc files above are also uncommitted and are
-> worth keeping regardless, so do not blanket-`checkout` the tree. If you
-> continue it, remember the tests may be red because the *implementation* is
-> half-written, not because the tests are wrong; run 3's dying instinct was to
-> "fix the tests", which is exactly the instinct to distrust.
->
-> **The deployed game is NOT affected.** Everything red is local and uncommitted.
-> The live site carries PB-042 as shipped and verified; Juno's game is fine.
-
-*Run 2, written 28 July 2026, late. Read `docs/MANAGER-ORDERS.md` for the job.*
+*Run 4, written 29 July 2026. Read `docs/MANAGER-ORDERS.md` for the job.*
 
 ## Queue position
 
-- **Item 1 (PB-042): REOPENED by Joe.** It was DONE. His JT-014 note reverses
-  part of it. **This is your first job — see Decisions.**
+- **Item 1 (PB-042): DONE.** JT-014 landed with JT-015, JT-016 and JT-019 folded
+  in. Committed `f0de911`, pushed, deployed and verified from the shipped
+  bundle. Three decisions raised for Joe (JT-021, JT-022, JT-023).
 - **Item 2 (addition/subtraction ladder = PB-030, Run B): IN PROGRESS, split.**
-  Slice B1 (the deciding half) is DONE, gated and committed as `1cf4e71`.
-  Slice B2 (the offer surface) is NOT STARTED. The seam is named below.
+  Slice B1 DONE (`1cf4e71`, run 2). **Slice B2, the offer surface, is NOT
+  STARTED and is your job.** The seam is written down below.
 - Item 3 (backlog sweep): NOT STARTED
 
 ## What this run did
 
-Item 2 is **PB-030, "Run B — automatic progression"** (`docs/pet-island-runA.md:225-241`).
-It is far too large for one run: gates, probes, the offer, mixed taking-away,
-65/35 weakness lean, mercy runs, whisper retirement, the month-walk. I split it
-at the only clean seam — **what decides** versus **what she sees** — and built
-the first half.
+**First decision: I CONTINUED run 3's half-build rather than discarding it.**
+Reading the diff settled it in one pass — the implementation was finished and
+correct, with the measured reasoning already written into the code; only the
+tests had been left behind. I re-derived every measurement in its tuning table
+myself before trusting it (walk of islands 1..40 animals) and all of them held
+exactly, including the specific failure sizes it named. The drumbeat was right
+to distrust "let me fix the tests I know are wrong", but in this case the tests
+genuinely encoded superseded rulings — so they were rebuilt to the NEW contract
+rather than relaxed, and the test count went 35 → 43 in that file with none
+removed and none skipped.
 
-`src/island/harness.ts` already declared `probeWanted` / `offerDue` /
-`noteOffer` and left them inert for Run B. They are now live policy. One round
-in eight, once the rung below reads ewma .75, is drawn from the next unticked
-stage. Probes land in their own 12-deep ring and move *nothing* else, because
-`ewma` is seeded by the first answer — a failed first probe would seed an
-unticked stage at zero and damn it for dozens of attempts, which is §19's
-"wrong answers cost nothing" violated in the ledger. The gate is ewma .85, 20
-attempts, 8 probes at .70, no rescue in either of the last two sessions, two
-distinct days. One offer per session; a decline costs nothing and buys two
-quiet sessions. Run B only ever ticks, and only on Auto paths (JT-011a).
-Nothing demotes — asserted against a collapsing ewma, a rescue storm and a
-wrong streak.
+The 13 red tests had three causes, all rulings changing under them: JT-016's
+wider grace period (5 animals / 10 tiles) swallowed fixtures that were built for
+a 2-pet/4-tile grace; JT-014 turned a biconditional into an implication; and
+JT-019 replaced the old "one thing Fred asks always lifts him" doctrine with
+Fred naming the exact number.
 
-**All of it is in the island layer.** `src/core/` and `tools/golden/golden.json`
-are byte-untouched; `git diff --stat` against both is empty. Parity is unmoved.
-That is the HANDOFF §6 landmine (`docs/HANDOFF.md:580-586`) honoured by
-construction rather than by care.
+**JT-014 — the numbers, and why.** Fred still speaks at the corridor Joe
+ratified (1.5 tiles/pet crowded, 3.0 empty). The price now starts at **1.2 and
+4.0**, strictly outside. Fixed by measurement: standing exactly on the crowded
+warning wall left **zero** spare animals at every pet count 1..40, so the
+warning had no room to act in; 1.2 is the tightest divisor buying at least one
+spare animal at every out-of-grace size (1.4 fails at 6, 7, 8, 10, 12; 1.3 still
+fails at 6 animals on 9 tiles). On the empty side the old wall charged at the
+**first** tile past it for every pet count 1..12; 3.5 and 3.75 don't fix it (at
+one animal the first overshoot is four tiles), and 4.0 is the smallest
+multiplier that absorbs it everywhere. The sides are deliberately asymmetric on
+Joe's own JT-018 reasoning — tiles are unlimited, the animal stash is not. The
+full derivation is the tuning table above `emptySteps` in `balance/index.ts`.
 
-§5 discipline: 24 behaviours reverted one at a time, each named test went red.
-The one that stayed green — the per-session offer limit, which was actually
-being blocked by the decline cooldown — was a bad test and is now a cross-path
-one that fails properly.
+**Also fixed: run 3 had rewritten `balance.json` entirely in CRLF** (25/25
+lines). That is the exact landmine in the memory file. Stripped before commit.
+
+**And one fault of my own, caught by CI and worth reading the landmine about:**
+`f0de911` shipped with the two price walls collapsed back to 1.5/3.0, because a
+subagent had deliberately collapsed them for a revert-check and I ran my gates
+in the window before it restored them. CI went red on both pushes, which is why
+Pages did not rebuild and the game was never affected. Fixed in the follow-up
+commit below.
 
 ## Gate results
 
 ```
 $ npx vitest run
- Test Files  71 passed (71)
-      Tests  1368 passed (1368)
-   Duration  25.98s
-                                   (baseline was 71 / 1322; +46 net)
+ Test Files  72 passed (72)
+      Tests  1402 passed (1402)
+   Duration  26.93s          (inherited 13 RED across 2 files; baseline 1388)
 
 $ npx tsc --noEmit -p tsconfig.json
-TSC OK exit=0                      (no output)
+TSC OK exit=0                (no output)
 
 $ npm run build
 PWA v1.3.0
-precache  8 entries (768.92 KiB)
+mode      generateSW
+precache  8 entries (769.55 KiB)
 files generated
   ../../dist/island/sw.js
   ../../dist/island/workbox-9c191d2f.js
 
 $ npm run smoke
+ok    battery is retired
 ok    reading mode is active
 ok    score bar initialised
 all boot checks passed
 
 $ npm run parity
 self-check  spoken utterances : 4 / 4
+self-check  first spoken      : ["run","got","am","a"]
 self-check  score bar         : "🐚 6" / "🐚 6"
 every step renders identically
 ```
 
+The tree was hashed immediately before and immediately after that gate run and
+was byte-identical — see the landmine about running gates next to a live
+subagent, which is why that check now exists.
+
+`git diff --stat` against `tools/golden/golden.json`, `src/core/` and `v0/` is
+empty. §5 discipline: the new cross-seam guards were fault-injected three ways
+(main.ts reading the raw table, the pluraliser forced plural, `{n}` never
+substituted) and each named test went red, then the tree was restored
+byte-identical.
+
+**Deploy: DONE and VERIFIED FROM THE SHIPPED BUNDLE.** `f0de911` and `04d657e`
+both failed CI (the collapsed price walls), so Pages never rebuilt and the live
+bundle stayed `index-DRKndamd.js` — Juno's game was never touched by the broken
+state. `f38cf60` fixed it, CI went green, and Pages rebuilt to
+`assets/index-B12HLUsZ.js`. Verified by grepping the live JavaScript, not by a
+tick (`agent-browser` still wedges on `open`; run 1's method is at the foot of
+this file):
+
+```
+price:{crowded:1.2,empty:4}      ← JT-014, and provably NOT collapsed
+corridor:{crowded:1.5,empty:3}   ← the warning walls, still Joe's
+grace:{pets:5,tiles:10}          ← JT-016, his re-entered answer
+"will fill it up"        1       ← JT-019's new line, present
+"more {friend|friends}"  1       ← the template, and its filler alongside it
+"They need homes first"  0       ← the old wording, gone
+```
+
 ## Where the next manager starts
 
-**First, JT-014 — Joe reopened PB-042.** His note: *"actually that probably
-does need reversing. suggest a number yourself at which to start warning and
-then at which it gets noticibly more expensive, which itself adds some
-elasticity."* Run 1 shipped the warning and the price starting at **the same**
-threshold (that was JT-016, deliberately). He now wants them **separated**: Fred
-warns at one crowding level, the surcharge starts at a later one. He is asking
-*you* to pick both numbers — that is an instruction, not a question, so do not
-send it back to him; choose, justify in the commit, and raise a JT only if you
-think he would disagree. Same visit, fold in **JT-015**: he accepted +25%/step
-capped ×3 but asked that the constants be *"mark[ed] … explicitly if user
-testing finds it needs adjusting"* — so give that block a loud, named home. Both
-land in `src/island/balance/`, and the shipped mechanism is commit `bdc9290`.
-**JT-013 needs no work:** he said yes, 2.0 tiles/pet is the target, which is
-what `bdc9290` already ships.
-
-**Then slice B2, the offer surface.** The seam is exactly two functions and
-nothing else:
+**Slice B2 of PB-030, the offer surface.** Run 2 named the seam and it is still
+exactly two functions and nothing else:
 
 - `harness.pendingOffer()` → `{ path, stage, kind: 'trickier' | 'takingAway' } | null`
-  (`src/island/harness.ts:~792-916`). It is complete on its own — priority,
-  cadence, cooldown and mode are all already applied. B2 renders whatever it
-  returns and must not re-derive any of it.
+  (`src/island/harness.ts:~792-916`). Complete on its own — priority, cadence,
+  cooldown and mode are already applied. **B2 renders whatever it returns and
+  must not re-derive any of it.**
 - `harness.noteOffer(path, accepted)` applies the consequence, including the
   tick and the honeymoon stamp.
 
-B2 owes: the overlay at a completion high, the two lines verbatim from
-`docs/pet-island-runA.md:230-236` — *"You are doing really well! Would you like
-some trickier questions? They will get you eggs and tiles faster."* and
-*"Would you like to do some taking away?"* — the minus sign popping on debut,
+B2 owes: the overlay at a completion high; the two lines verbatim from
+`docs/pet-island-runA.md:230-236`; the minus sign popping on debut;
 `honeymoonActive(path)` read by `src/island/balance/` for pay-3 and the frozen
-cost index (B1 deliberately stamped the marker and changed no economy), and
-"what Auto would do" going live in `src/island/grownups.ts`. Heed
-`docs/HANDOFF.md:588-601`: the plot/flow seam has produced three faults in two
-days and only a test driving *both* sides catches them.
+cost index; and "what Auto would do" going live in `src/island/grownups.ts`.
+Heed `docs/HANDOFF.md:588-601` — the plot/flow seam has produced faults no unit
+test on either side could see, and only a test driving BOTH sides catches them.
+`tests/island/fred.test.ts` now has a worked example of that shape at
+`describe('no child is ever read a placeholder — JT-019')`. **Then B3:** 65/35
+weakness lean, mercy runs, whisper retirement, and the month-walk.
 
-**Then B3:** 65/35 weakness lean, invisible mercy runs, whisper retirement, and
-the month-walk asserting refusal-inertness and the ratchet.
+**JT-020 is still open and unanswered** — do not guess it. `1cf4e71` is built on
+Fable's answer and the card says what a reversal costs.
 
 ## What I learned that is not in the code
 
-- **The docs disagree about the gate numbers, and `runA.md` wins.**
-  `docs/pet-island-difficulty.md` says A ≥ .90 / F ≥ .70 / C; `runA.md:227-229`
-  says ewma ≥ .85 / 20 attempts / probes ≥ .70 over 8 / 2 days. The difficulty
-  doc marks *itself* stale at its line 8 ("reconcile against the field report
-  when it lands"), and `runA.md` was ratified 27 July. I built to `runA.md`. If
-  a future run finds the numbers argued about again, this is why.
-- **`readAttainment` silently eats fields you add to `StageStats`.** It rebuilds
-  outward from the `STAGES` table (`harness.ts:207-264` in the old numbering) as
-  untrusted-input discipline, so a new persisted field that the reader does not
-  explicitly copy survives a save and vanishes on the next load — green tests,
-  data loss in the field. Any new attainment field means editing the reader.
-- **`takingAway` starts with nothing ticked**, which quietly breaks any gate
-  written in terms of a path's own history: a path with no ticked stage can
-  never probe itself, so it can never be promoted by the normal rule. Every
-  future path added dark will have this same hole.
-- Joe answers the workbench *while you are running*. Re-read `joe/tasks.json`
-  before you write the handoff, not only at the start — three of this run's
-  four pickups arrived mid-run.
+- **Grace at 5 animals AND 10 tiles silences one governor entirely.** With five
+  or fewer animals the only way out of grace is past ten tiles, and ten tiles
+  for five animals is exactly the 2.0 target — so `nursery-queue` is unreachable
+  below six animals. It is a real behavioural fact hiding inside two innocuous
+  numbers, and it is why so many old fixtures went dark at once. Raised as
+  JT-022. **Any future test of the crowded wall must use ≥ 6 animals.**
+- **The `ceiling()` / `floor()` helpers at the top of `governors.test.ts` scan
+  upward from a one-hex island and are therefore contaminated by grace.** Before
+  this run `floor(2)` returned 3; after JT-016 it returns 1, because grace
+  answers first. Anything that binary-searches for a wall has to leave grace
+  before it starts looking.
+- **A templated voice line splits "what is stored" from "what is spoken", and
+  every unit test on both sides stays green if the wrong one reaches the child.**
+  `main.ts` reading `GOVERNOR_LINE[which]` instead of `governorLine(...)` is a
+  one-word regression, perfectly typed, and would read a six-year-old the braces.
+  Guarded in `fred.test.ts`; promote the pattern, not just the test.
+- **`voice/scripts.json` already had a slot mechanism and it should be reused.**
+  Beat 7 (`open.nameSlot`) carries `"ref"` and no `text`. The splice law
+  (`docs/pet-island-voice.md:57-73`) forbids crossing voices *inside a sentence*,
+  not slots as such — so Fred's numbers had to be registered as Fred's own
+  `count.` family, never the teacher's.
+- **Run 3's CRLF rewrite of `balance.json` was invisible until `git diff` warned
+  about it.** `git status` says nothing. If a file you did not expect shows a
+  suspicious diff size, run `tr -cd '\r' < file | wc -c` before anything else.
+- **NEVER RUN THE GATES WHILE A SUBAGENT IS STILL LIVE. This cost me a red CI
+  and it is the most important thing in this file.** A subagent doing honest
+  revert-and-watch-it-fail work *mutates the tree and restores it*, so there is
+  a window of seconds in which a constant is deliberately wrong. My gates ran
+  green at 08:09:41; the agent then collapsed `price` to 1.5/3.0 to prove a test
+  bit, did not restore it, and I committed three minutes later. Local was green
+  because it was green *when I looked*. Two rules follow:
+  1. **A subagent is finished when it has REPORTED — not when its files stop
+     changing and not when its tests go green.** Mine never reported at all.
+  2. **Gate, stage and commit in one uninterrupted stretch**, and hash the files
+     either side of the gate run (`md5sum`) to prove nothing moved underneath.
+  `git diff` looked right when I staged, because the damage was two characters
+  inside a line I had legitimately changed. **Check `gh run list` after every
+  push.** The consolation: twenty assertions across the two new test files fired
+  on that collapse, led by `expected 1.5 to be less than 1.5`. The suite proved
+  in production that it bites when the walls are pushed back together.
 
 ## Decisions
 
 **Picked up this run (his nod):**
 
-- **JT-013 — no action needed.** *"yes, because now we have more elasticity
-  either way."* 2.0 tiles/pet is the target; `bdc9290` already ships that.
-- **JT-014 — ACTION REQUIRED, not done this run.** He reverses JT-016: the
-  warning and the price must start at *different* thresholds, and he has asked
-  the next manager to propose both numbers. First job above.
-- **JT-015 — accepted, small action outstanding.** +25%/step capped ×3 stands;
-  he wants the constants explicitly marked for later tuning.
-- **JT-016 — closed with no note.** Read as accepted-as-built, but note JT-014
-  supersedes it in substance.
-- **JT-017, JT-018, JT-019 — still `open`.** JT-018 and JT-019 are marked NEEDS
-  JOE with nothing built on them; they still are.
+- **JT-014 — DONE.** Warning and price separated at 1.5/3.0 and 1.2/4.0, both
+  argued from measurement. Shipped in `f0de911`.
+- **JT-015 — DONE.** The governor tuning table above `emptySteps` in
+  `src/island/balance/index.ts` names all nine constants, their values, the
+  `balance.json` line holding each and the ruling behind it. Retuning is a
+  five-line data edit; no code moves.
+- **JT-016 — DONE, his re-entered answer.** *"grace period up to 5 animals and
+  10 tiles."* Read from `balance.json` now, not hardcoded. See the landmine above.
+- **JT-018 — folded in, not separately actioned.** He wrote *"this overlays with
+  JT14, which i passed back to you for a shot"*, so his reasoning (unlimited
+  tiles, finite animal stash) became the argument for the asymmetric buffer. The
+  one place it cuts against the build is raised as JT-021.
+- **JT-019 — DONE.** *"we get fred to tell her how many she needs to restore
+  balance."* Fred names the exact number, asserted exact rather than
+  encouraging — that many clears him, one fewer does not.
+- **JT-020 — still open.** Untouched, as instructed.
 
 **Raised this run:**
 
-- **JT-020** — which rung introduces taking away? Fable chose "off sums 1 alone,
-  probe clause dropped, ahead of a trickier-sums offer in the same session", and
-  `1cf4e71` is built on it. The card names what a reversal costs (one line for
-  one alternative, a slice for the other) and flags a second, smaller call
-  inside it: the introduction requires *taking away* to be on Auto but does not
-  require *sums* to be.
+- **JT-021** — the price walls are 1.2 / 4.0, and the crowded one makes reading
+  10–15% cheaper past the wall, which cuts against his JT-018 line about the
+  finite animal stash. Nod or retune; both are single numbers in `balance.json`.
+- **JT-022** — grace at 5 animals AND 10 tiles means Fred can never mention
+  crowding below six animals. A consequence of his own numbers, not a question
+  about his intent.
+- **JT-023** — JT-019 gave Fred numerals to speak, so twenty clips need
+  recording in *his* voice before the one-time character bake. Nothing blocked.
 
-**Why this run stopped here.** PB-030 is a five-slice card and I finished one of
-them cleanly with all five gates green and the seam written down. Picking up
-JT-014 as well would have meant starting a second substantial piece past 30% of
-my window. Per the orders, a fresh manager at 5% beats a tired one at 60%.
+## Deploy verification (run 1's method — `agent-browser` wedges on `open`)
+
+```bash
+js=$(curl -s "https://jtr31415.github.io/JunosIsland/?cb=$(date +%s)" \
+     | grep -o 'assets/index-[A-Za-z0-9_-]*\.js' | head -1)
+curl -s "https://jtr31415.github.io/JunosIsland/$js" -o live.js
+grep -c "will fill it up" live.js     # JT-019's new line — 0 before, ≥1 after
+grep -c "will do it"     live.js      # the mirror
+```
+
+The pre-deploy bundle was `assets/index-DRKndamd.js` and contained the OLD
+wording (`"read with the egg to get some more friends!"`, `"They need homes
+first!"`) with zero hits for `will fill it up`. That string is the decisive
+marker: it cannot appear except from this change.
