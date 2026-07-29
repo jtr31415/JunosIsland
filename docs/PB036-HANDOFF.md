@@ -1,161 +1,179 @@
 # PB-036 handoff — themed animal collections
 
-*Run 13 (PB-036 manager, phase 5), written 29 July 2026. Read
+*Run 14 (PB-036 manager, phase 6), written 30 July 2026. Read
 `docs/MANAGER-ORDERS.md` for the job. This file is PB-036's baton only —
 `docs/MANAGER-HANDOFF.md` belongs to the queue manager and was not touched.*
 
 ## Queue position
 
-- **Phases 1–3: DONE.** Species-as-data, roster, quadruped + songbird kits, name
-  table, Joe's audit bench, 72 species.
-- **Phase 4: DONE.** Raptor kit built, no species. Four measurement passes over
-  the 24 GLBs, eight-row primitives bench, `docs/how-the-animals-are-made.md`.
-- **Phase 5 (this run): the decomposition question is ANSWERED with numbers, and
-  the answer changes the architecture.** Nothing was re-tuned, nothing rebuilt.
+- **Phases 1–5: DONE.** Species-as-data, roster, three kits, name table, Joe's
+  audit bench, the component census, the four pack axioms, the Anatomy gallery.
+- **Phase 6 (this run): Joe's size note is answered and fixed at the builder, and
+  the Garden closed at 14 species.** Five commits, all pushed.
 - Nothing is wired to a child yet, on purpose. Unchanged since phase 2.
+- **The 72 kit-built species remain scrap** and have no tab (`viewer.html:16-19`).
+  JT-034 is still open and still gates any kit work.
 
 ## What this run did
 
-Joe rejected the phase-4 primitives as *"most of them are not that"* and asked:
-*"the original animals decomposed into their constituent parts. we then use those
-parts to build new animals as far as we can, either by new assembly or by
-adjusting a copy of a primitive. we should not create our own primitives. is this
-doable?"* Phase 4 had answered a smaller question — it counted **node names** and
-concluded `body` was atomic. This run counted **connected components inside the
-meshes**, which nobody had done.
+**1. Joe's size note, which was the point of the run.** His words: *"the new
+animals look genuinely really good. general criticism is size. the body/cube
+should always be the standard size, its often bigger."* Measured before touching
+anything, and the obvious diagnosis was wrong in an instructive way:
 
-**1. The component census.** 24 bodies → **206 position-welded components**, 4–12
-each, median 9. (A first pass said 3,217; that is UV-seam vertex splitting, not
-structure. Weld first.)
+- **The geometry was already right.** All 14 built hulls measure exactly 1.250 on
+  x and y (1.125 on z for the three using `box-31`). **No node in any built
+  creature carries a non-identity scale.** No species set `hull.stretch`. The
+  badger's 1.539 is the `box-12` shell's own ear lugs, torso still exactly 1.250.
+- **The builder permitted it anyway.** `hull.stretch` multiplied the hull's
+  vertices by an arbitrary `Vec3` with **no bound of any kind** — the only guard
+  was that a non-empty `stretchWhy` sentence be present. `stretch: [4,4,4]`
+  compiled and built. **A dial defended only by prose is a dial that gets
+  turned**, and this was the second appearance of the fault (his first hedgehog
+  note was *"body cubic, its currently too wide"*, fixed for the hedgehog alone).
+  Now `Hull.stretch`/`HullDef.stretch` are `never` — a type error where written,
+  including through a spread — and `buildAssembly`/`creatureSpec` throw if one
+  arrives as data. Features keep their stretch; the tortoise rim and slow-worm
+  coil need it. The route to a different body is one of the ten real shells.
+- **What Joe was actually LOOKING at was the viewer.** `toUnitHeight` divided
+  every model by its **own** height, so an identical 1.250 cube drew at 0.8735 of
+  the frame for the 1.431-tall mouse and 0.6326 for the 1.976-tall squirrel — a
+  **1.38× swing in apparent body size invented by the review tool**, applied to
+  the pack reference beside it too, with a second normaliser in the camera fit and
+  a **third and different** one in grid view. All three now share one stated
+  divisor, `SHARED_SCALE = 1 / 1.611185` (the measured median height of the 24
+  originals), so the cube draws at 0.7758 for every species — spread 1.000×.
 
-**2. A head does NOT separate from a torso — 0 of 24.** Every body has exactly one
-hull spanning the head zone and the torso zone. **Joe's "head = body" axiom is the
-pack's topology.** The kits emit head and body as two boxes and never merge them
-(`quadruped.ts:229`/`:269`, `raptor.ts:289`/`:372`, `songbird.ts:205`/`:268`), so
-**all 72 built species differ structurally**, not by tuning.
+**2. The Garden closed at fourteen.** The orders said nine of thirteen definition
+files existed; in fact **all eleven missing ones had been written** by sessions
+that died on API errors before committing, and HEAD carried barrel lines for seven
+files that were not tracked. So this was a landing, not a build: badger, dormouse,
+frog, mole, newt, salamander, shrew, slow-worm, toad, tortoise, vole. The
+slow-worm was in `ASSEMBLED_BUILDS` and the roster with no species record, no
+fingerprint pin and no audit row, and five tests were red on that alone.
 
-**3. But 182 feature parts across ~25 kinds DO separate** — 48 eye cards, 42 ears,
-25 noses/snouts, 22 antler/horn/ossicone/crest, plus teeth, claws, torso bands, and
-zero left unnamed.
-
-**4. The finding nobody expected: Kenney already builds them Joe's way.** The hull
-is the **identical 1.250 cube in 13 of the 24** — same 60 triangles, same 120
-points. Only **10 distinct body shells exist**, not 24. His instruction is not a
-new method; it is the pack's method.
-
-**5. Portability.** One jig: same axes, ground at y=0 in 20/24, rear plane
-z=−0.625 in 23/24. **The eye card sits at z = 0.6350 with standard deviation
-0.0000 across all 24** — face parts drop in on an absolute translate. Ears scatter
-~0.15 units either way and must be placed by hand; snouts need z re-fitted to body
-depth. Ears vary 2.97× and snouts 2.90× naturally, so stretching copies is safe;
-**eye cards (1.44×) and face plates (1.07×) are fixed and must never be stretched.**
-Every eared species embeds its ear *into* the hull, minimum margin 0.125.
-
-**6. Colour on lift.** The set recolour is **not** a UV shift — it repaints the
-atlas (`recolour.ts:381`). Sub-node retargeting already ships per-vertex-run
-(`facedecals.ts:119-127`). The breaker: **39% of liftable components span more than
-one palette band**, minority colour at a median 37%, so a lifted head is two-tone
-and one column shift moves both halves to unrelated colours. JT-029 (*"we drop the
-colours"*) softens this for most of the roster.
-
-**7. Honest reach.** ~**2,100** distinguishable creatures from geometry alone,
-~300–600 reading as a different animal. **186 of 296 buildable from real parts; 64
-impossible** (Ocean, Critters, Dinosaurs, Raptors — no fin, insect wing, frill or
-hooked beak); **46 partial** (Birds, Outback, Legendary). **Phase 4's "24 faces is
-the ceiling" was wrong** — it assumed the head was atomic. It is, but the face is
-not part of it.
-
-**8. Joe's four axioms, pinned as tests over the real GLBs**
-(`tests/island/pack-axioms.test.ts`, 16 tests / 52 assertions, 0.58s, no fixture):
-head=body **24/24**, eyes flat **48/48** (exactly zero thickness), legs under body
-**23/23**. The sclera axiom is **refuted as stated** — five outlines, not two — but
-his two families cover **42 of 48 eyes on 21 of 24 species** and all three
-exceptions sit *between* the two he named. Note the legs deliberately **sink into
-the belly** (worst 0.225, lion), so "under the body" means under its middle; the
-stricter reading fails 22/23 and that refutation is pinned too.
-
-**9. The Anatomy gallery — what Joe asked to see.** `npm run workbench`, third tab.
-Decodes the real `.glb` in the browser and splits `body` live; nothing baked. Fox
-= 10 labelled parts, deer = 15. **Kenney's node names plain, our names amber and
-prefixed `our name:`** — he must always be able to tell a measurement from an
-opinion. Sizes in model units, so the eye cards visibly read `0.000` on an axis.
-Wrong labels being worse than none, the split is asserted against the census table
-and falls back to `unnamed component N`.
+**3. The inherited uncommitted work was triaged, not discarded.** Verdicts and
+what was done are in the Decisions section.
 
 ## Gate results
 
-Run by me on `0369387`, all five, back to back:
+Run by me on `9a0ba7d`, all five:
 
 ```
-$ npm test        Test Files 97 passed (97)   Tests 2046 passed (2046)
-$ npx tsc --noEmit -p tsconfig.json           exit 0, zero output
-$ npm run build   precache 8 entries (773.57 KiB), files generated
-$ npm run smoke   all boot checks passed
-$ npm run parity  every step renders identically
+$ npx tsc --noEmit -p tsconfig.json    TSC_EXIT=0, zero output
+$ npm run build                        precache 8 entries (774.36 KiB), files generated
+$ npm run smoke                        all boot checks passed
+$ npm run parity                       every step renders identically
+$ npm test                             Test Files 119 passed (119)
+                                       Tests 2668 passed (2668)
 ```
 
-Agent revert-checks reported to me, **not watched by me**: weld tolerance
-1e-5 → 0 gave 31 red of 152; `packsFor('anatomy')` returning `['pets']` gave 3 red
-including the cross-gallery guard; flipping the eye-outline count 10 → 11 gave 1
-red of 16. All restored green.
+**Fully green — but two of those tests are FLAKY and you should know which.** At
+`fe3f247`, before this run touched anything, `npm test` had 7 reds. Five were the
+slow-worm's half-wiring and are genuinely fixed. The other two went green without
+anybody touching them:
+
+- `tests/island/governors.test.ts` > *the floor is a RATIO too — PB-039, moved by
+  JT-012* > "leaves a wide corridor between the two walls at every size"
+- `tests/island/pettap.test.ts` > "does NOT let the camera into the keep-out or the
+  blob" — this one **fails standalone and passes inside a full `tests/island/` run**,
+  which is the clearest evidence of the two.
+
+So both are order- or state-dependent, not fixed. **Do not read a green `npm test`
+as proof either of those is sound**, and if one of them goes red under you, it is
+not necessarily your change. Neither is PB-036's ground (`29bb22b` and the camera
+work respectively), so I left them; a run whose actual job is either of those
+should expect an intermittent, not a bug at a fixed line.
+
+Revert-checks **watched by the agent and reported to me, not watched by me**: the
+new hull invariant went red on badger and hedgehog at `stretch [1.08,1,1]`, and
+again at `[1.0002,1,1]` so the tight 4dp claim earns its place; the viewer test has
+a negative control that feeds the old source back through the reader and requires
+both old divisors to be caught.
 
 ## Where the next manager starts
 
-**Read JT-034 first. It supersedes the premise of JT-032**, which is still open.
-JT-032 asks him to sign off primitives the kits build *from*; JT-034 tells him the
-kits are assembled the wrong way round regardless of which primitives they use, and
-gives three options with the rebuild cost. **Do not start a kit, and do not fan out
-species, until JT-034 is answered** — 72 species already exist against these kits.
+**Read JT-036 and JT-034, in that order.** JT-036 is this run's one open question
+and it is small and concrete: Kenney gets an animal's height from what sits **on
+top of** the cube (mean clearance 0.236 above the hull), ours is 0.134, and the
+**mouse, shrew, mole and badger have exactly 0.000** — the cube *is* the top of
+the animal, all four sit on the height floor 1.43125, and the cube takes 87.3% of
+their silhouette against the pack's median 77.6%. Our legs are the pack's own
+0.18125 **to the digit**, so it is not the legs. Three options are costed in the
+task; nothing is built on any of them. Do not choose for him — ear-or-no-ear on
+four animals is a look, not a measurement.
 
-If JT-034 comes back A or C, the first real build is **one new species assembled
-entirely from lifted, adjusted original components**, on the Anatomy bench beside
-the live 24. **I did not get to that** — Joe redirected mid-run to the exploded
-view and asked to hold everything else. It remains the honest proof and it should
-be the next thing built.
-
-The measurement artefacts are in the session scratchpad and will not survive:
-`component-census.json` (3.7 MB, every component of every body) and
-`portability.json`. **`tools/workbench/public/anatomy-names.ts` is the durable
-distillation** — 290 lines, generated by `tools/workbench/anatomy-names.mjs`. If
-the census is needed again, re-run the generator, do not hand-edit the table.
+JT-034 still gates all kit work and 72 species still hang off it.
 
 The three wiring seams remain unwired and unchanged: `pets.ts prototype()`,
 `atlas.ts dress()` early-returning for built species, and `main.ts:1174` swapping
 `petName(defaultRng)` for `givenName(species)` — one argument, not two.
 
+`joe/species-facts.json` covers 97 species. Its `notCovered` field is the tripwire:
+a newly shipped collection needs its id added to `coveredCollections` or its
+members reach Joe's bench factless **and nothing shouts**.
+
 ## What I learned that is not in the code
 
-- **Counting node names is not counting parts.** Phase 4 concluded the body was
-  atomic from the node list and was wrong for four passes. A mesh with one name can
-  hold twelve disconnected islands. Always weld by position first — the raw index
-  graph reports 3,217 components where there are 206, because the exporter splits
-  vertices at UV seams.
-- **Rank components by bounding-box volume, never by triangle count.** In 6 of 24
-  the largest-by-triangles part is an *ear*, not the body. A panda ear is 116
-  triangles against a body shell of 72.
-- **`git add <paths>` does not protect you from another manager's staged work.**
-  I staged my eight files, but the PB-052 manager had already `git add`-ed theirs
-  into the same index, and my commit swept up `flow.ts`, `world/props.ts`,
-  `world/mountains.ts`, `world/walk.ts` and three test files under my message.
-  Nothing was lost and all five gates are green, but their work is now attributed
-  to my commit. **Run `git diff --cached --name-only` and READ IT before
-  committing, not in the same `&&` chain** — mine ran in the same command, so the
-  commit had already happened by the time I saw the list. In a shared tree, check
-  the index is empty first.
-- **A screenshot is the only proof a viewer renders.** I looked at the image
-  myself rather than accepting "it renders", per the precedent that the last viewer
-  shipped verified and showed the wrong gallery.
+- **The orders can be stale in the direction of MORE work already done.** I was
+  told nine species files existed; fourteen did, written by dead sessions. Read
+  `git status` and `ls` the directory before believing a handoff's inventory —
+  three of those files were tracked and eleven were not, and HEAD was already
+  broken because barrel lines had been committed ahead of their files.
+- **`| tail -25` on a backgrounded test run destroys the evidence.** The task
+  notification said "exit code 0" while the captured tail said 6 files failed, and
+  the file held only the 25 lines. Pipe to `grep -E "FAIL|Test Files"` instead, and
+  **never trust a background exit code over the test summary**.
+- **A guard that checks for prose is not a guard.** `stretchWhy` demanded a
+  sentence and permitted any magnitude. If a field must stay within a bound, the
+  bound goes in the type or the throw — not in a comment field.
+- **The review tool can be the bug.** Joe's criticism was about the animals and
+  the animals were innocent; three separate size normalisers in `viewer.ts` were
+  manufacturing the difference. When he reports something visual, measure the
+  geometry AND trace the render path to the pixels before changing either.
+- **Fix the card in the same pass as the canvas.** `assembled.ts:318` told Joe on
+  screen "both are scaled to exactly one unit tall" for an hour after that stopped
+  being true, six inches from the animals it misdescribed — and a test was
+  *pinning* the false sentence (`assembled-gallery.test.ts:301`).
+- **Drafting a child-facing fact and checking it in the same pass is not a check.**
+  `joe/species-facts.json`'s own `method` says so. The slow-worm fact was drafted
+  by one agent and refuted by a second that never saw the draft and read only the
+  sources; it could not refute it and reached three authorities, so the row is
+  `verified` rather than `flagged`. That is JT-031's instruction carried out.
 
 ## Decisions
 
 **RAISED this run:**
-- **JT-034** — *NEEDS JOE: the kits build head and body as two shapes; every
-  original is ONE. Do we rebuild the 72? (PB-036)* Three options with cost. Fable
-  was not asked — this changes what a child sees.
+- **JT-036** — *NEEDS JOE: our animals carry almost nothing above the body cube —
+  do four of them get ears? (PB-036)* Three options with cost. Fable was not
+  asked; this is a look, not a measurement.
 
-**PICKED UP this run:** none. **JT-030 and JT-032 remain open**, and JT-032 is now
-partly overtaken by JT-034.
+**PICKED UP this run:**
+- **JT-031** (*"have an agent create the facts and fact check them"*) — carried out
+  for the slow-worm by the draft-then-refute method above.
+
+**Inherited uncommitted work — triaged, all of it kept, nothing discarded:**
+- **The species half** (11 animal files, 11 tests, `motion.ts`, the four modified
+  `parts/*.ts`) was coherent: no TODOs, no stubs, no `@ts-ignore`, a test per
+  animal. Committed as `b4f24da`. `motion.ts` resolves to `[]` for every species
+  and has **no consumer and no test** — named in the commit so nobody depends on
+  it unawares.
+- **The dead editor manager's half** (`tools/workbench/{api,merge,seed}.mjs`,
+  `public/editor/{def,library}.ts`, three `tests/tools/*.test.ts`,
+  `joe/species-edits.json`) had two of three layers finished and covered end to
+  end — persistence and the edit model — and **no page at all**. Committed as
+  `6bde9ec` with that stated, so nobody looks for a screen.
+- `tests/tools/editor-def.test.ts` had two type errors that were **not mine**. I
+  did not paper over them: they were two genuine typing slips (a dropped index
+  signature, a `readonly` cast) in tests that pass at runtime, and CI runs
+  `npm run typecheck`, so they were fixed properly. Two more errors appeared *from
+  my change* — the editor still offered a hull-stretch dial — and that branch now
+  returns `def` unchanged like `legs`/`eyes`/`ridge` already do. **A mouse gesture
+  must not be able to put a scaled body on screen.**
+- Still open in that file and left alone: `def.ts:913` holds two **literal NUL
+  bytes** where `'\x00'` was meant, which makes the largest new file in the repo
+  invisible to ripgrep. One character, whoever owns it.
 
 **NOT ACTED ON, deliberately, and inherited intact:** the wider half of JT-029 —
-*"we drop the colours"* — which touches pets Juno already owns. Phases 2–4 left it
+*"we drop the colours"* — which touches pets Juno already owns. Phases 2–5 left it
 and so did I. It needs Joe, and no subagent should tidy it away.
