@@ -368,6 +368,20 @@
       "check": "",
       "note": "",
       "state": "open"
+    },
+    {
+      "id": "JT-029",
+      "type": "ruling",
+      "title": "NEEDS JOE: is a pet's given name per SPECIES, or per species AND set? (PB-036)",
+      "detail": "Roster 3 says the given name is \"seeded deterministically from `species + set`, so every child's blue-set hedgehog is the same Bimo, forever\". I have built it exactly that way - the seed is a hash of `setId/speciesId`. But building it literally surfaces a number that changes how much work YOU have to do, by a factor of twenty-five, so it needs your word before any name is frozen.\n\nTHE NUMBER. There are 25 sets (src/island/variants/sets.ts) and, at the full roster, 320 species. Keyed on species AND set, that is 8,000 given names. Every one of them needs your manual audit - roster 3 requires pronunciation plus no real-word or rude-word collisions - and every one needs a clip baked in Olivia's voice. voice/scripts.json:34-41 already registers the name family as \"one entry per {setId, speciesId}\" with count \"~1000\", which was honest at 24 species and becomes 8,000 at 320.\n\nKeyed on species ALONE it is 320 names and 320 clips. That is a job you could actually finish.\n\nWHAT THE CHILD EXPERIENCES, which is why this is yours and not Fable's:\n(a) PER SPECIES AND SET (8,000). Her blue hedgehog and her green hedgehog are two different friends with two different names. Every coat is a fresh creature to collect and a fresh word to decode - the strongest version of the reading mechanic, and the strongest version of the playground currency too, because \"have you got the blue hedgehog?\" is a finer-grained question.\n(b) PER SPECIES (320). Her blue hedgehog and her green hedgehog are the SAME friend, Nachet, wearing a different coat. Sets become rarity and decoration rather than identity. The album is 320 names deep instead of 8,000, which is still far more than she can exhaust - your \"i cannot run out of animal rewards\" holds comfortably either way.\n(c) PER SPECIES AND SET, BUT AUDIT ONLY WHAT SHIPS. Keep (a)'s design and audit a collection's names one set at a time as sets unlock. Same total work, spread over years instead of demanded now. This is (a) with a schedule, not a different answer.\n\nNO FABLE ANSWER HERE, deliberately. This changes what she sees when a second hedgehog hatches, so per the standing orders it is yours alone and I did not ask.\n\nWHAT IS BUILT (commit 48a6dcf, src/island/species/naming.ts). The literal reading, (a) - `nameSeed(speciesId, setId)` is FNV-1a over `${setId}/${speciesId}`, the same string shape the collection deck already expects. NOTHING IS WASTED whichever way you go: option (b) is one line, dropping setId out of the hashed string, plus the pinned expected names in tests/island/naming.test.ts. Option (c) is no code change at all - it is a decision about how the audit file is filled.\n\nAND NOTHING HAS SHIPPED. The deterministic namer is NOT wired into the live hatch path - main.ts:1174 still calls petName(defaultRng) - because roster 3's own order is generate, then AUDIT, then freeze, and shipping unaudited names to her would invert it. joe/names-audit.json is seeded with exactly fourteen rows (Garden, natural set) so that no review work is wasted while this is open.\n\nURGENCY: this gates the first collection shipping, not the current game. Nothing she plays today changes.",
+      "blocks": [
+        "PB-036"
+      ],
+      "artefact": "src/island/species/naming.ts",
+      "doneRule": "manual",
+      "check": "",
+      "note": "",
+      "state": "open"
     }
   ],
   "archive": []
