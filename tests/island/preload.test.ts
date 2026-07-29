@@ -240,13 +240,14 @@ describe('main.ts decides the species early enough to preload it', () => {
 
   it('draws it once, outside the hatch, where it can be warmed', () => {
     /*
-     * `drawSpecies` was a bare uniform pick — `SPECIES[ri(...)]` — and is now a
-     * remembered draw (see species.test.ts for why). What this test cares about
-     * is unchanged and is not the implementation: ONE named function, defined
-     * outside `passed`, whose result is seated in `nextSpecies` where the
-     * preload can reach it.
+     * `drawSpecies` was a bare uniform pick — `SPECIES[ri(...)]` — then a
+     * remembered draw (species.test.ts), and is now a collection draw that will
+     * not deal an animal she already owns (collection.test.ts). What this test
+     * cares about has survived all three and is not the implementation: ONE
+     * named function, defined outside `passed`, whose result is seated in
+     * `nextSpecies` where the preload can reach it.
      */
-    expect(code).toMatch(/const drawSpecies = makeMemoryDeck<string>\(\s*defaultRng, SPECIES,/)
+    expect(code).toMatch(/const drawSpecies = makeCollectionDeck\(\s*defaultRng, SPECIES,/)
     expect(code).toContain('let nextSpecies = drawSpecies()')
   })
 

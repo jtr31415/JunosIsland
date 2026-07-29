@@ -28,7 +28,16 @@ import { SPECIES } from '../../src/island/pets'
 
 const MEMORY = balance.pets.speciesMemory
 
-/** A fresh island draw, exactly as `main.ts` builds it. */
+/**
+ * The window, at the island's own numbers.
+ *
+ * This WAS the island's whole draw. Since 29 Jul it is the fallback inside
+ * `makeCollectionDeck` — the branch that runs once she has met all 24 — so
+ * every property below is still a property of the shipped game, and is the
+ * only thing standing between a completed album and the clumping that Joe's
+ * "two cats in a row" report was about. `collection.test.ts` owns the rule that
+ * runs before then.
+ */
 const islandDeck = (seed: number): ReturnType<typeof makeMemoryDeck<string>> =>
   makeMemoryDeck<string>(mulberry32(seed), SPECIES, MEMORY)
 
@@ -121,12 +130,17 @@ describe('the species she meets next', () => {
 })
 
 describe('when she already owns all 24', () => {
-  it('deals on, because the deck knows nothing about ownership', () => {
+  it('deals on, because the window knows nothing about ownership', () => {
     /*
-     * A completed collection is a real state and the one that would break a
-     * naive "deal the ones she has not got" rule. The window is about the last
-     * few HATCHES, not about what is on her island, so a full album changes
-     * nothing: 19 of the 24 are eligible on every draw, for ever.
+     * A completed collection is a real state and the one that breaks a naive
+     * "deal the ones she has not got" rule outright — there are none left. The
+     * window is about the last few HATCHES rather than about what is on her
+     * island, which is exactly why it is the right thing to fall back TO: 19 of
+     * the 24 stay eligible on every draw, for ever, so PB-036 holds and an egg
+     * always has a friend in it.
+     *
+     * Read the other way round, this is also why the window was the wrong rule
+     * to have had FIRST — see `collection.test.ts`.
      */
     const draw = islandDeck(33)
     draw.remember([...SPECIES])              // every animal, most recent last
@@ -202,9 +216,17 @@ const code = source
   .join('\n')
 
 describe('main.ts draws the species with a memory', () => {
-  it('uses the shared dealer rather than a second mechanism', () => {
-    expect(code).toContain("import { makeDeck, makeMemoryDeck } from '../core/decks'")
-    expect(code).toMatch(/const drawSpecies = makeMemoryDeck<string>\(\s*defaultRng, SPECIES,/)
+  it('uses one named dealer rather than a second mechanism', () => {
+    /*
+     * The dealer moved on 29 Jul. `makeMemoryDeck` was the whole rule; it is
+     * now the FALLBACK inside `makeCollectionDeck`, for the completed-album
+     * case only — see `collection.test.ts` for the report that moved it and
+     * `src/island/collection.ts` for why a wider window was not the answer.
+     * What this file still guards is unchanged: one dealer, built from the
+     * island's own numbers, never a second mechanism inline.
+     */
+    expect(code).toContain("import { makeCollectionDeck } from './collection'")
+    expect(code).toMatch(/const drawSpecies = makeCollectionDeck\(\s*defaultRng, SPECIES,/)
     // Tuned in balance.json with everything else about pacing, never inline.
     expect(code).toContain('balance.pets.speciesMemory')
   })

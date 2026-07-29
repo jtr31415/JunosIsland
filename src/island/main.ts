@@ -60,7 +60,8 @@ import type { Axial } from './world/hex'
 import { createSpeaker } from '../platform/speech'
 import { createSfx } from '../platform/audio'
 import { defaultRng } from '../core/rng'
-import { makeDeck, makeMemoryDeck } from '../core/decks'
+import { makeDeck } from '../core/decks'
+import { makeCollectionDeck } from './collection'
 import { GREEN, RED } from '../core/wordlists'
 import { buildPool, buildNeighbours } from '../core/neighbours'
 import type { ReadState } from '../core/generators/read'
@@ -391,33 +392,39 @@ async function boot(): Promise<void> {
   flow = loaded.flow
 
   /**
-   * Who is in the egg, drawn with a short memory.
+   * Who is in the egg: someone she has not met, while there is anyone left.
    *
-   * Joe, from playtesting: *"investigate: two cats spawned in a row."* The
-   * draw was uniform over the 24 species and remembered nothing at all, so a
-   * repeat came up one hatch in 24 — unremarkable arithmetic, and to a child
-   * collecting friends it reads as the game being broken, or worse, as her
-   * reading not having counted.
+   * Joe, on the shipped build: *"a second animal of the same type has just
+   * spawned. that must not happen."*
    *
-   * The same problem the word lists solved with `makeDeck`, and deliberately
-   * NOT the same answer. A full deck deals all 24 before repeating any, which
-   * turns a collection into a checklist and puts a favourite 24 hatches away
-   * every time. `makeMemoryDeck` forbids only the repeats she can notice — the
-   * last `speciesMemory` — and still leaves 19 candidates on every draw, so the
-   * rate at which any one animal comes back is unchanged and only the clumping
-   * goes.
+   * This line used to build a `makeMemoryDeck`, which answered an EARLIER
+   * report — *"investigate: two cats spawned in a row"* — by forbidding the
+   * last `speciesMemory` hatches. That killed the clumping and left the actual
+   * complaint untouched, because a window of five over a pack of 24 leaves 19
+   * candidates on every draw and cannot see which of them are already standing
+   * on her island. At eight pets, about two hatches in five were a duplicate:
+   * not a collision, the ordinary case on a schedule. Measured, before the fix,
+   * over 24 hatches of the real state machine: 19 distinct animals and five
+   * repeats.
    *
-   * Built HERE, after the save, because her island is where the memory lives
-   * across a reload: `flow.pets` is the list of who has come home, in order.
-   * Nothing about the deck is persisted and nothing needs to be — priming it
-   * from what she already owns costs no save change (PHASE3-HANDOVER §6: a
-   * schema bump waits for the first `v*` tag). Without the priming the deck
-   * would start empty on every load and the reported bug walks back in through
-   * the front door: reload, hatch, cat again.
+   * `makeCollectionDeck` states the rule in the terms it is really about —
+   * never deal an animal she already has — and falls back to exactly the old
+   * window once she has met all 24, so PB-036 holds and an egg never has
+   * nothing to give (JT-027 is the open question about what that ought to
+   * become). See `collection.ts` for why widening the window is not this fix.
+   *
+   * Built HERE, after the save, because her island is where the collection
+   * lives: `flow.pets` is the list of who has come home, in order. Nothing
+   * about the deck is persisted and nothing needs to be — priming it from what
+   * she already owns costs no save change (PHASE3-HANDOVER §6: a schema bump
+   * waits for the first `v*` tag). Without the priming the deck would start
+   * empty on every load and the bug walks back in through the front door:
+   * reload, hatch, an animal she already had.
    */
-  // `string`, not the literal union SPECIES infers: a species read back out of
-  // a save is a plain string, and priming must be able to take it as read.
-  const drawSpecies = makeMemoryDeck<string>(
+  // Plain `string` in, plain `string` out: a species read back out of a save is
+  // a string rather than the literal union SPECIES infers, and priming must be
+  // able to take it as read.
+  const drawSpecies = makeCollectionDeck(
     defaultRng, SPECIES, balance.pets.speciesMemory)
   drawSpecies.remember(flow.pets.map(p => p.species))
 
