@@ -25,6 +25,44 @@
  * (`NAME_BANDS`, types.ts:246). Every band is a subrange of the generator's own
  * 5–9, so no band is unreachable, and `src/core/` is not touched at all.
  *
+ * ## Why the names are ALLOCATED and not merely drawn
+ *
+ * A per-species seed makes each draw independent, and independent draws collide
+ * — that is the birthday problem, not bad luck. At 320 species one collision was
+ * already real: `Gichesh` was drawn for both the warthog and the otter. A shared
+ * name is not a cosmetic blemish here, it is the failure of the whole feature.
+ * Roster §3 makes the given name "playground currency": two children comparing
+ * islands say "have you got Gichesh?" and must mean ONE creature. A name that
+ * names two animals is not currency, it is noise.
+ *
+ * So naming is an ALLOCATION over the whole roster, not a lookup per species.
+ * `_allocate` walks all 320 species in roster order and hands each one the first
+ * name off its own seeded stream that is both in-band and NOT ALREADY TAKEN.
+ * Deterministic, reproducible, pure, and — the point — collision-free by
+ * construction rather than by luck.
+ *
+ * THE ALLOCATION SET IS THE FULL RATIFIED ROSTER, NOT THE BUILT SPECIES. That is
+ * the load-bearing choice. All 320 are named whether or not a kit exists to
+ * build them, so finishing the songbird kit, or the swim kit, or the last
+ * bespoke one-off, cannot rename a single creature. If allocation ran over only
+ * what was built, every new kit would reshuffle the names of animals children
+ * already own, which is brief §19 with extra steps. The roster is ratified data;
+ * the build queue is not, so the roster is what we allocate over.
+ *
+ * Consequences worth knowing before you edit this:
+ *   - Only the LOSER of a collision moves — the species that comes later in
+ *     roster order. Fixing `Gichesh` renamed the otter (Woodland, collection 9)
+ *     and left the warthog (Africa, collection 4) exactly where it was. All 318
+ *     other names are byte-identical to the pre-allocation draw, and
+ *     `tests/island/naming.test.ts` proves that species by species.
+ *   - EDITING `COLLECTIONS` ORDER, OR INSERTING A SPECIES MID-ROSTER, CAN
+ *     RENAME CREATURES that come after the edit. Appending is safe; inserting is
+ *     not. If the roster must be reordered, pin the old names first.
+ *   - A pin wins everywhere and is reserved before any draw, so pinning is
+ *     order-independent. A pin renames somebody else only if the pinned STRING
+ *     is a name already allocated elsewhere — never merely by freeing the name
+ *     its own species would otherwise have drawn.
+ *
  * ## What is NOT here, deliberately
  *
  * There is no rename migration. Joe, 29 July: *"i will give you juno's already
@@ -41,7 +79,7 @@
  */
 import { petName } from '../../core/names'
 import { mulberry32 } from '../../core/rng'
-import { collectionOf } from './roster'
+import { COLLECTIONS, collectionOf } from './roster'
 import { NAME_BANDS } from './types'
 import type { NameBand } from './types'
 import pinFile from './name-pins.json'
@@ -143,15 +181,104 @@ export function nameBandOf(speciesId: string): NameBand {
 }
 
 /**
+ * Every species the roster knows, in the one canonical order: `COLLECTIONS` in
+ * declaration order, each collection's `members` in declaration order. 320 of
+ * them, base 24 first.
+ *
+ * This order IS the allocation priority. It is not ship order and must not be
+ * quietly swapped for one: ship order is a product decision that can change,
+ * and a name that changes when a ship order changes is not frozen at all.
+ */
+const ROSTER_ORDER: readonly string[] = COLLECTIONS.flatMap((c) => c.members)
+
+/**
+ * One species' name, drawn off its own seeded stream, skipping anything already
+ * spoken for.
+ *
+ * Preference order, and each fallback is deliberate:
+ *   1. free AND in band — what happens 320 times out of 320 today;
+ *   2. free but out of band — a name one letter off target is a reading
+ *      exercise slightly misaimed;
+ *   3. the very first draw, band and collisions be damned — because a child
+ *      must always get a name. A duplicate is survivable; a crash at the hatch
+ *      replaces the emotional peak of the game with an error.
+ * `MAX_REDRAWS` exists so a future band, or a future generator, can never spin
+ * this forever. With ~647,000 reachable names and 320 taken, it is never
+ * approached.
+ */
+function draw(
+  speciesId: string, band: { min: number; max: number }, taken: ReadonlySet<string>,
+): string {
+  const rng = mulberry32(nameSeed(speciesId))
+  let first = ''
+  let firstFree = ''
+  for (let i = 0; i < MAX_REDRAWS; i++) {
+    const w = petName(rng)
+    if (i === 0) first = w
+    if (taken.has(w)) continue
+    if (w.length >= band.min && w.length <= band.max) return w
+    if (firstFree === '') firstFree = w
+  }
+  return firstFree !== '' ? firstFree : first
+}
+
+/**
+ * The whole naming table, computed in one pass over the roster.
+ *
+ * Two passes, and the order of the two is the rule:
+ *   1. **Pins are reserved first, all of them.** A pin is a name a child
+ *      already says out loud; it outranks the band, and it outranks any
+ *      generated draw no matter where either sits in roster order. Reserving
+ *      them up front is what makes pinning order-independent — a pin on the
+ *      last species in the roster wins against the first just as surely.
+ *   2. **Then every unpinned species draws, in roster order**, taking the first
+ *      name off its own stream that nobody holds.
+ *
+ * Pure: same roster + same pins in, same table out, on every machine and every
+ * run. `givenName` memoises the `NAME_PINS` call of this; tests pass their own
+ * table and pay the (trivial) recompute.
+ */
+export function _allocate(
+  pins: Readonly<Record<string, string>>,
+): Readonly<Record<string, string>> {
+  const out: Record<string, string> = {}
+  const taken = new Set<string>()
+
+  for (const id of ROSTER_ORDER) {
+    const pinned = pins[`${NATURAL_SET}/${id}`]
+    if (pinned === undefined) continue
+    out[id] = pinned
+    taken.add(pinned)
+  }
+
+  for (const id of ROSTER_ORDER) {
+    if (out[id] !== undefined) continue
+    const name = draw(id, NAME_BANDS[nameBandOf(id)], taken)
+    out[id] = name
+    taken.add(name)
+  }
+
+  return out
+}
+
+/** The `NAME_PINS` allocation, computed once. 320 draws is cheap, but not free. */
+let memo: Readonly<Record<string, string>> | undefined
+
+/**
  * The resolution order, with an injectable pin table so tests need not touch
  * the JSON. `givenName` is this, called with `NAME_PINS`.
  *
  *   1. A pin for `${NATURAL_SET}/${speciesId}` wins outright — including over
  *      the band, because a pin is a name a child already says out loud and no
  *      length rule outranks that.
- *   2. Otherwise draw from `petName` on a `mulberry32` seeded by
- *      `nameSeed(speciesId)`, redrawing off the SAME stream until the length
- *      lands inside the band.
+ *   2. Otherwise the species takes its slot in the roster-wide allocation.
+ *   3. A species the roster has never heard of — a save from a future build —
+ *      still gets a name, drawn off its own seed and steered clear of every
+ *      allocated name so it cannot arrive already colliding.
+ *
+ * The identity check against `NAME_PINS` is how the memo is reached without
+ * making the pin table a hidden global on the hot path; a test's own table
+ * recomputes, which at 320 draws costs nothing anybody can measure.
  */
 export function _resolve(
   pins: Readonly<Record<string, string>>, speciesId: string,
@@ -159,15 +286,13 @@ export function _resolve(
   const pinned = pins[`${NATURAL_SET}/${speciesId}`]
   if (pinned !== undefined) return pinned
 
-  const band = NAME_BANDS[nameBandOf(speciesId)]
-  const rng = mulberry32(nameSeed(speciesId))
-  let first = ''
-  for (let i = 0; i < MAX_REDRAWS; i++) {
-    const w = petName(rng)
-    if (i === 0) first = w
-    if (w.length >= band.min && w.length <= band.max) return w
-  }
-  return first
+  const table = pins === NAME_PINS ? (memo ??= _allocate(NAME_PINS)) : _allocate(pins)
+  const allocated = table[speciesId]
+  if (allocated !== undefined) return allocated
+
+  return draw(
+    speciesId, NAME_BANDS[nameBandOf(speciesId)], new Set(Object.values(table)),
+  )
 }
 
 /**

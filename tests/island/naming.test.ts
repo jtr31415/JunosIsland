@@ -26,7 +26,7 @@ import { readFileSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
-  givenName, nameSeed, nameBandOf, NAME_PINS, NATURAL_SET, _resolve,
+  givenName, nameSeed, nameBandOf, NAME_PINS, NATURAL_SET, _resolve, _allocate,
 } from '../../src/island/species/naming'
 import {
   collection, collectionOf, COLLECTIONS, SPECIES_NAMES,
@@ -203,17 +203,83 @@ describe('one name per species — JT-029', () => {
     expect(seen.size).toBe(GARDEN.members.length)
   })
 
-  it('collides rarely across the whole roster', () => {
+  it('never collides across the whole roster', () => {
     // 320 names, not the 8,000 that species x sets implied — that is JT-029's
-    // headline number and the reason it was raised. A collision is POSSIBLE —
-    // 320 draws out of ~647,000 names — and would not be a bug, only two
-    // creatures sharing a name. Today there is exactly one. It must stay rare.
+    // headline number and the reason it was raised.
+    //
+    // This assertion used to allow up to three collisions, on the reasoning
+    // that two creatures sharing a name is untidy rather than broken. That was
+    // wrong. Roster §3 makes the given name "playground currency": "have you
+    // got Gichesh?" has to identify ONE creature, and a name that names two
+    // animals is not currency, it is noise. `_allocate` now makes the table
+    // collision-free by construction, so the slack is gone and the number is
+    // zero. If this goes red, a species is stealing another's name — fix the
+    // allocation, do not widen the bound back out.
     expect(ALL_SPECIES).toHaveLength(320)
     const names = ALL_SPECIES.map(s => givenName(s))
     expect(names).toHaveLength(ALL_SPECIES.length)
     for (const n of names) expect(n.length).toBeGreaterThan(0)
-    const distinct = new Set(names).size
-    expect(names.length - distinct).toBeLessThanOrEqual(3)
+    expect(new Set(names).size).toBe(names.length)
+  })
+
+  /**
+   * The evidence for the collision fix, in the same currency as 'renamed
+   * nobody' above: rebuild every name the OLD way and diff the whole roster.
+   *
+   * The old way is what this file's first version did — each species drawing
+   * off its own seed in isolation, blind to what anyone else drew. Making
+   * allocation collision-aware necessarily moves the loser of a collision, and
+   * exactly one collision existed in the 320. So exactly one creature may have
+   * moved, and this names it.
+   */
+  it('renamed exactly one creature: the otter, and only because it lost a clash', () => {
+    /** The pre-allocation draw: own seed, own band, blind to every other species. */
+    const alone = (speciesId: string): string => {
+      const band = NAME_BANDS[nameBandOf(speciesId)]
+      const rng = mulberry32(nameSeed(speciesId))
+      let first = ''
+      for (let i = 0; i < 200; i++) {
+        const w = petName(rng)
+        if (i === 0) first = w
+        if (w.length >= band.min && w.length <= band.max) return w
+      }
+      return first
+    }
+
+    const moved = ALL_SPECIES.filter(s => givenName(s) !== alone(s))
+    expect(moved).toEqual(['animal-otter'])
+
+    // The warthog came first in roster order (Africa is collection 4, Woodland
+    // is 9), so the warthog KEPT `Gichesh` and the otter redrew. Priority is
+    // roster order and nothing else — not ship order, which can change.
+    expect(alone('animal-warthog')).toBe('Gichesh')
+    expect(alone('animal-otter')).toBe('Gichesh')
+    expect(givenName('animal-warthog')).toBe('Gichesh')
+    expect(givenName('animal-otter')).not.toBe('Gichesh')
+
+    // And the replacement is a real, in-band, unique name — not a suffix, not a
+    // number. It is the next draw off the otter's OWN stream, so it is a name
+    // the generator would have given it anyway.
+    const otter = givenName('animal-otter')
+    const band = NAME_BANDS[collectionOf('animal-otter')!.band]
+    expect(otter.length).toBeGreaterThanOrEqual(band.min)
+    expect(otter.length).toBeLessThanOrEqual(band.max)
+    expect(ALL_SPECIES.filter(s => givenName(s) === otter)).toEqual(['animal-otter'])
+  })
+
+  it('allocates over the whole ROSTER, so a new kit cannot rename anybody', () => {
+    // The load-bearing choice, and the reason phase 3 could fix the collision
+    // without touching the fifty creatures already in Joe's bench. Allocation
+    // runs over all 320 rostered species whether or not a kit exists to build
+    // them, so building the songbird kit — or the swim kit, or the last bespoke
+    // one-off — cannot move a single name. If this ever ran over the BUILT
+    // species instead, every kit would reshuffle the names of animals children
+    // already own. Proven by construction: the allocation is a pure function of
+    // the roster and the pins, and `registry.ts` is not among its inputs.
+    const table = _allocate({})
+    expect(Object.keys(table)).toHaveLength(320)
+    expect(Object.keys(table)).toEqual([...ALL_SPECIES])
+    expect(new Set(Object.values(table)).size).toBe(320)
   })
 })
 
@@ -305,6 +371,45 @@ describe('pins', () => {
     expect(givenName('animal-frog')).toBe(_resolve({}, 'animal-frog'))
   })
 
+  /**
+   * THE TRIPWIRE FOR THE DAY JUNO'S SAVE ARRIVES, and the reason to read this
+   * before writing her names into `name-pins.json`.
+   *
+   * Allocation is collision-aware, so a pin is not a private edit — it takes a
+   * name out of circulation. The invariant we want, and the one asserted here,
+   * is that pinning moves ONLY the species pinned. It cannot move anybody else
+   * by freeing the name its own species would otherwise have drawn, because
+   * that name was never contested.
+   *
+   * There is exactly one way a pin CAN rename somebody else: if the pinned
+   * STRING is a name already allocated to another creature. That is a genuine
+   * clash between a name Juno says out loud and a name in the table, and the
+   * child's own pet wins — but it is a decision, not a detail. If this test
+   * goes red when her pins land, do not relax it: find which creature the pin
+   * displaced and say so in the handoff.
+   */
+  it('renames only the species it pins', () => {
+    const before = _allocate({})
+    // Pin a base-24 species — the shape Juno's save will actually take.
+    const after = _allocate({ 'natural/animal-fox': 'Rusty' })
+    expect(after['animal-fox']).toBe('Rusty')
+
+    const moved = Object.keys(before).filter(id => before[id] !== after[id])
+    expect(moved).toEqual(['animal-fox'])
+    expect(new Set(Object.values(after)).size).toBe(Object.keys(after).length)
+  })
+
+  it('makes a pin outrank a generated name that already holds the string', () => {
+    // The other half: pin somebody to a string the table has already handed
+    // out, and the pin wins while the holder redraws. Deterministic, and the
+    // table stays collision-free.
+    const held = givenName('animal-hedgehog')
+    const after = _allocate({ 'natural/animal-tiger': held })
+    expect(after['animal-tiger']).toBe(held)
+    expect(after['animal-hedgehog']).not.toBe(held)
+    expect(new Set(Object.values(after)).size).toBe(Object.keys(after).length)
+  })
+
   /*
    * A DELIBERATE TRIPWIRE, not a bug.
    *
@@ -358,21 +463,23 @@ describe('joe/names-audit.json', () => {
 
   it('gives every creature its own name, so the playground question works', () => {
     // Roster §3: the given name is "playground currency" — "have you got
-    // Bimo?" has to identify ONE creature. A collision does not break the
-    // build, so nothing here throws; it is surfaced for Joe to settle with a
-    // `replacement`, which is precisely what the bench is for.
+    // Bimo?" has to identify ONE creature.
     //
-    // TODAY THERE IS ONE: `Gichesh` is drawn for both the warthog (africa) and
-    // the otter (woodland). Flagged in the PB-036 handoff for his review hour.
-    // When he sets a replacement this count drops and the expectation tightens.
+    // Phase 2 shipped `Gichesh` on BOTH the warthog (africa) and the otter
+    // (woodland) and left the count at "at most one clash", to be settled by
+    // Joe with a `replacement`. That was the wrong place to fix it: it made a
+    // guaranteed property of the generator into a manual chore that recurs
+    // every time the roster grows. Phase 3 made the generator collision-free
+    // instead (`naming.ts _allocate`), so this is now ZERO and stays zero
+    // without Joe touching anything. A `replacement` he sets by hand must not
+    // reintroduce one either, which is why the check reads `replacement || name`.
     const byName = new Map<string, string[]>()
     for (const e of audit.names) {
       const chosen = e.replacement || e.name
       byName.set(chosen, [...(byName.get(chosen) ?? []), e.speciesId])
     }
     const clashes = [...byName.entries()].filter(([, ids]) => ids.length > 1)
-    expect(clashes.length, `name collisions: ${JSON.stringify(clashes)}`)
-      .toBeLessThanOrEqual(1)
+    expect(clashes, `name collisions: ${JSON.stringify(clashes)}`).toEqual([])
   })
 
   it('cannot drift from the generator', () => {
