@@ -641,3 +641,47 @@ describe('the honeymoon index survives a reload', () => {
     expect(sumsForTile(flow)).toBe(tileCost(5))
   })
 })
+
+describe('colour comfort — the grown-ups word-colour setting', () => {
+  /*
+   * The whole safety case for this feature is "default is exactly as today".
+   * If any of these three drift, Juno's screen changes without Joe asking,
+   * which is the one outcome the setting was built to avoid.
+   */
+  it('is off on a fresh island', () => {
+    expect(fromSave(null).calmColours).toBe(false)
+  })
+
+  it('is off for every save written before it existed', () => {
+    const before = {
+      tiles: [['0,0', 'grass']] as Array<[string, 'grass']>,
+      pets: [], bankedTiles: 0, openingSeen: true,
+    }
+    expect(fromSave(before).calmColours).toBe(false)
+  })
+
+  it('is off when nobody passes it, even on a played island', () => {
+    expect(toSave(playedFlow(), true).calmColours).toBe(false)
+  })
+
+  it('survives a round trip once a grown-up turns it on', () => {
+    const back = fromSave(toSave(playedFlow(), true, 'Juno', null, undefined, undefined, true))
+    expect(back.calmColours).toBe(true)
+  })
+
+  it('survives an actual write and reload, not just a round trip', async () => {
+    const store = createLocalStore(mem)
+    await saveIsland(store, 'p1', playedFlow(), true, 'Juno', null,
+      undefined, undefined, true)
+    expect((await loadIsland(store, 'p1')).calmColours).toBe(true)
+  })
+
+  it('reads a hand-edited non-boolean as off rather than trusting it', () => {
+    const meddled = {
+      tiles: [['0,0', 'grass']] as Array<[string, 'grass']>,
+      pets: [], bankedTiles: 0, openingSeen: true,
+      calmColours: 'yes',
+    } as unknown as Parameters<typeof fromSave>[0]
+    expect(fromSave(meddled).calmColours).toBe(false)
+  })
+})

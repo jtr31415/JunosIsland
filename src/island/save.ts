@@ -23,6 +23,14 @@ interface IslandSave {
   pets: Pet[]
   bankedTiles: number
   openingSeen: boolean
+  /**
+   * The grown-ups colour-comfort setting: red word cards painted green.
+   *
+   * Absent means off, which is what every save written before this existed
+   * says and what a fresh island says — so the default is "exactly as today"
+   * with no migration and no version bump.
+   */
+  calmColours?: boolean
   /** Progress toward the next hatch and the next tile. Earned work: it must
    *  survive a reload or the child silently starts over (brief section 18). */
   readProgress?: number
@@ -163,10 +171,12 @@ export function toSave(
   flow: Flow, openingSeen: boolean, childName?: string,
   persistGranted: boolean | null = null,
   attainment?: Attainment, onceFlags?: OnceFlags,
+  calmColours = false,
 ): IslandSave {
   return {
     attainment,
     onceFlags,
+    calmColours,
     tiles: [...flow.island.tiles.entries()],
     pets: [...flow.pets],
     bankedTiles: flow.bankedTiles,
@@ -194,6 +204,7 @@ function readPlot(v: unknown): Flow['plot'] {
 export interface Loaded {
   flow: Flow
   openingSeen: boolean
+  calmColours: boolean
   childName: string
   persistGranted: boolean | null
   attainment: Attainment
@@ -204,7 +215,8 @@ export function fromSave(save: IslandSave | null): Loaded {
   const fresh = createFlow()
   if (!save || !Array.isArray(save.tiles) || save.tiles.length === 0) {
     return {
-      flow: fresh, openingSeen: false, childName: '', persistGranted: null,
+      flow: fresh, openingSeen: false, calmColours: save?.calmColours === true,
+      childName: '', persistGranted: null,
       attainment: readAttainment(save?.attainment),
       onceFlags: readOnceFlags(save?.onceFlags),
     }
@@ -292,6 +304,7 @@ export function fromSave(save: IslandSave | null): Loaded {
       sumHeld: false,
     },
     openingSeen: save.openingSeen === true,
+    calmColours: save.calmColours === true,
     childName: typeof save.childName === 'string' ? save.childName : '',
     persistGranted: typeof save.persistGranted === 'boolean' ? save.persistGranted : null,
     attainment: readAttainment(save.attainment),
@@ -310,7 +323,9 @@ export async function saveIsland(
   store: SaveStore, profileId: string, flow: Flow, openingSeen: boolean,
   childName?: string, persistGranted: boolean | null = null,
   attainment?: Attainment, onceFlags?: OnceFlags,
+  calmColours = false,
 ): Promise<void> {
   await store.put(profileId, 'save',
-    toSave(flow, openingSeen, childName, persistGranted, attainment, onceFlags))
+    toSave(flow, openingSeen, childName, persistGranted, attainment, onceFlags,
+      calmColours))
 }

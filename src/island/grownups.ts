@@ -220,6 +220,41 @@ export function askConfirm(
   })
 }
 
+/* --------------------------------------------------------- colour comfort */
+
+/**
+ * The class that repaints red word cards green, and where it goes.
+ *
+ * On <body>, NOT on the word. The renderers still emit `.word.red` exactly as
+ * they always have, so `src/challenges/`, its tests and the 2D parity shell
+ * are untouched by this setting — the only thing that reads it is one CSS rule
+ * in `src/ui/challenges.css`. A setting that changed the challenge DOM would
+ * be a setting that could diverge the two shells, and that is the one thing
+ * this must not do.
+ *
+ * Why anyone wants it: red marks a phonics "tricky word", not a mistake, but
+ * Juno reads red as WRONG and stops tapping those cards. Off by default —
+ * nothing changes for anyone until a grown-up asks for it.
+ */
+export const CALM_COLOURS_CLASS = 'calm-colours'
+
+/** Paint the word cards. Idempotent, and safe to call before the first round. */
+export function applyWordColours(root: HTMLElement, calm: boolean): void {
+  root.classList.toggle(CALM_COLOURS_CLASS, calm)
+}
+
+/**
+ * The two options, in a parent's words.
+ *
+ * Plainly about comfort, never about correctness: a grown-up choosing this is
+ * not marking work, and the wording must not suggest the red words were wrong
+ * or that turning it on makes anything easier.
+ */
+export const WORD_COLOUR_CHOICES: readonly Choice[] = [
+  { id: 'mixed', label: 'Green and red', detail: 'red marks a tricky word' },
+  { id: 'green', label: 'All green', detail: 'gentler if red puts her off' },
+]
+
 /* ------------------------------------------- A4/A6: what she is working on */
 
 /**

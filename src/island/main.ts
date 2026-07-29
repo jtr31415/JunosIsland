@@ -31,7 +31,10 @@ import { createHarness } from './harness'
 import type { Path } from './harness'
 import { openingGate } from './opening'
 import { commit, ceremony } from './ceremony'
-import { askPin, askChoice, askConfirm, showLearning, stageLabel } from './grownups'
+import {
+  askPin, askChoice, askConfirm, showLearning, stageLabel,
+  applyWordColours, WORD_COLOUR_CHOICES,
+} from './grownups'
 import type { Committed, Exits } from './ceremony'
 import { createLocalStore } from '../platform/storage'
 import { createDurableStore } from '../platform/durable'
@@ -359,9 +362,19 @@ async function boot(): Promise<void> {
   // The tab follows her name too, once she has given one (#10).
   if (childName) document.title = `${childName}'s Island`
 
+  /*
+   * Colour comfort, applied before the first word is ever dealt.
+   *
+   * It is painted here at boot rather than when a round opens, because the
+   * rule lives on <body> and a class arriving after the cards are on screen
+   * would repaint them in front of her.
+   */
+  let calmColours = loaded.calmColours
+  applyWordColours(document.body, calmColours)
+
   const persist = (): Promise<void> =>
     saveIsland(store, PROFILE, flow, opening.seen(), childName, persistGranted,
-      attainment, onceFlags)
+      attainment, onceFlags, calmColours)
 
   /**
    * Save, wait for it, and come back with proof.
@@ -721,6 +734,7 @@ async function boot(): Promise<void> {
     const friends = `${n} friend${n === 1 ? '' : 's'}`
     const choice = await askChoice(document.body, 'Grown-ups', [
       { id: 'learning', label: 'What she is working on', detail: 'what she is dealt, and how it is going' },
+      { id: 'colours', label: 'Word colours', detail: calmColours ? 'all green' : 'green and red' },
       { id: 'backup', label: 'Back up to a file', detail: `${friends} and this island` },
       { id: 'restore', label: 'Restore from a backup', detail: 'replaces what is here' },
       { id: 'story', label: 'Play the story again', detail: 'the opening, from the top' },
@@ -729,6 +743,7 @@ async function boot(): Promise<void> {
     if (choice === null) return
 
     if (choice === 'learning') { await learning(); return }
+    if (choice === 'colours') { await wordColours(); return }
     if (choice === 'backup') { await backup(); return }
     if (choice === 'restore') { await restore(); return }
     /*
@@ -753,6 +768,31 @@ async function boot(): Promise<void> {
      * the safe direction. removeProfile clears both copies and the ring.
      */
     void store.removeProfile(PROFILE).then(() => location.reload())
+  }
+
+  /**
+   * Red word cards, or green ones.
+   *
+   * Written to the disk BEFORE the screen changes, which is the same order the
+   * learning panel's tick uses (grownups.ts, A5) and for the same reason: a
+   * grown-up who sees the colours change has been told the choice is kept, and
+   * if the write failed that is a lie he will only discover on the next
+   * reload. On a failed write nothing changes and nothing is claimed.
+   */
+  async function wordColours(): Promise<void> {
+    const picked = await askChoice(document.body, 'Word colours', WORD_COLOUR_CHOICES)
+    if (picked === null) return
+    const wanted = picked === 'green'
+    if (wanted === calmColours) return
+    const was = calmColours
+    calmColours = wanted
+    try {
+      await persist()
+    } catch {
+      calmColours = was
+      return
+    }
+    applyWordColours(document.body, calmColours)
   }
 
   /**

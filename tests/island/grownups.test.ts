@@ -13,7 +13,12 @@
  * would test the mock.
  */
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { showLearning, stageLabel } from '../../src/island/grownups'
+import {
+  showLearning, stageLabel,
+  applyWordColours, CALM_COLOURS_CLASS, WORD_COLOUR_CHOICES,
+} from '../../src/island/grownups'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import type { LearningDeps } from '../../src/island/grownups'
 import { createAttainment, createHarness } from '../../src/island/harness'
 import type { Attainment, Harness, Mode, Path } from '../../src/island/harness'
@@ -403,5 +408,61 @@ describe('the way out', () => {
     tap(root.querySelector('.overlay-back') as HTMLElement)
     await done
     expect(root.querySelector('.overlay.grownups')).toBeNull()
+  })
+})
+
+describe('colour comfort — the switch that repaints red words green', () => {
+  /*
+   * `red` is a phonics CATEGORY here — "tricky word", the sibling of `green`'s
+   * "sound it out" (src/core/wordlists.ts:15) — not a wrong answer. Joe's
+   * report is that Juno reads it as wrong anyway and avoids those cards, so a
+   * grown-up may put them into the green palette.
+   *
+   * Two things make that safe, and both are asserted below: the switch never
+   * touches the challenge DOM, and it is one CSS rule that must actually exist.
+   */
+  it('puts the switch on the root, never on the word', () => {
+    const host = document.createElement('div')
+    const word = document.createElement('span')
+    word.className = 'word red'
+    host.append(word)
+
+    applyWordColours(host, true)
+    expect(host.classList.contains(CALM_COLOURS_CLASS)).toBe(true)
+    // The renderers' contract with the frozen 2D shell is untouched.
+    expect(word.className).toBe('word red')
+
+    applyWordColours(host, false)
+    expect(host.classList.contains(CALM_COLOURS_CLASS)).toBe(false)
+    expect(word.className).toBe('word red')
+  })
+
+  it('is the only thing standing between the two palettes', () => {
+    /*
+     * Asserts the STYLESHEET, not a mock. The setting IS one CSS rule; if that
+     * rule is renamed or dropped the panel goes on toggling a class happily
+     * and Joe sees no change whatever on the tablet. Nothing else catches it —
+     * no renderer test reads colour.
+     */
+    // From cwd, not import.meta.url: under jsdom that is an http: URL.
+    const css = readFileSync(resolve(process.cwd(), 'src/ui/challenges.css'), 'utf8')
+    const body = (re: RegExp): string => re.exec(css)?.[1]?.trim() ?? ''
+    const green = body(/^\.word\.green\s*\{([^}]*)\}/m)
+    expect(CALM_COLOURS_CLASS).toBe('calm-colours')
+    const calm = body(/^body\.calm-colours \.word\.red\s*\{([^}]*)\}/m)
+    expect(green).toBeTruthy()
+    expect(calm).toBe(green)
+    // And the default red is untouched: off means exactly as it was.
+    expect(css).toMatch(/^\.word\.red\s+\{ color: #8c2b3f; background: #ffe9ee; \}$/m)
+  })
+
+  it('offers a grown-up two options, in plain words about comfort', () => {
+    expect(WORD_COLOUR_CHOICES.map(c => c.id)).toEqual(['mixed', 'green'])
+    const words = WORD_COLOUR_CHOICES
+      .flatMap(c => [c.label, c.detail ?? '']).join(' ').toLowerCase()
+    // Never framed as marking: this changes paint, not whether she is right.
+    for (const forbidden of ['wrong', 'correct', 'mistake', 'error']) {
+      expect(words).not.toContain(forbidden)
+    }
   })
 })
