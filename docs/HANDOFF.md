@@ -610,3 +610,19 @@ three sessions, all wedged on `open`, each needing `TaskStop`. Screenshots
 earlier the same session worked, so it is environmental. Budget for it failing
 and keep a non-browser way to verify: `createGrowingPlot` and friends take
 injected deps and can be driven with stubs (`tests/island/increments.test.ts`).
+
+**`joe/tasks.json` is a whole-file save, and appending to it races Joe.** The
+workbench UI (`npm run dev:workbench`) loads the entire file and writes the
+entire file back, so a `JT-0xx` appended while he has the page open is destroyed
+by his next save — his copy was loaded before your record existed, and the append
+always loses. It has cost work twice in two days, both confirmed, and in both
+directions: JT-020 (raised at commit `3588e27`) vanished, and an earlier answer
+of his to JT-016 vanished too, which he had to re-enter — *"16 now rewritten, got
+killed somehow"*. Agents lose their raises and Joe loses his notes. **Re-read
+`joe/tasks.json` from disk immediately before you write it** — never from a copy
+read earlier in the run — append, write, then re-parse and verify that BOTH your
+new record and every pre-existing `note` survived. If a raise and a save of his
+have collided, **his notes win**: keep his file and re-append your record from
+the commit blob. Recovery only exists because every write is committed, so commit
+`joe/tasks.json` on its own and the lost record is always one
+`git show <commit>:joe/tasks.json` away.

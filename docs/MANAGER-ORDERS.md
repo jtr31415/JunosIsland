@@ -130,11 +130,18 @@ filled in. That note is the ruling. Act on it — including **reverting or
 amending what Fable's answer was built on** if he decided differently. Record in
 your handoff which JT ids you picked up and what you did about each.
 
-**Writing to `joe/tasks.json` safely.** It is a live file Joe may be editing in
-the UI. Read it, append your record, write it back preserving formatting and
-LF line endings — and never with Python text mode on Windows (see
-Non-negotiables). Commit it on its own with a `data(workbench):` message so a
-decision is never entangled with a code change.
+**Writing to `joe/tasks.json` safely.** It is a live file Joe edits in the UI,
+and the UI saves the WHOLE file — so an append made while his page is open is
+silently destroyed by his next save. This has cost work twice; HANDOFF §6 has the
+autopsy. The procedure is not optional: **re-read the file from disk immediately
+before you write it** — never from a copy read earlier in the run — append, write
+it back preserving formatting and LF line endings, then **re-parse and confirm
+both your new record and every pre-existing `note` survived**. If your raise and
+a save of his collided, **his notes win**: keep them and re-append your record
+from the commit blob (`git show <commit>:joe/tasks.json`). Never write it with
+Python text mode on Windows (see Non-negotiables). Commit it on its own with a
+`data(workbench):` message — a decision is never entangled with a code change,
+and the blob stays recoverable.
 
 Fable also earns its keep as a reviewer at a phase boundary — give it the real
 diff and ask it to attack specific things (HANDOFF §7).
