@@ -382,6 +382,20 @@
       "check": "",
       "note": "we drop the colours, only the sets in their natural color. we may add silver and gold later if we run low and we can just add something like \"the great\" to their original name, lets just focus on the existing collections and their name.",
       "state": "done"
+    },
+    {
+      "id": "JT-030",
+      "type": "ruling",
+      "title": "NEEDS JOE: no collection can ship complete yet - does a collection unlock with a hole in it? (PB-036)",
+      "detail": "MEASURED FACT: not one of the 20 collections is 100% quadruped, and quadruped is the only kit built so far. So no collection can currently ship complete. Garden is the closest at 13 of 14 (the slow-worm is legless and needs the bespoke kit). Woodland is 14 of 16 until the songbird kit lands, Home Pets 10 of 16, Africa 13 of 16.\n\nThe kit split across all 296 new species: quadruped 142, bespoke 53, songbird 41, swim 22, raptor 20, minibeast 18. Songbird has now been built, which completes Woodland and Farm; every further kit shrinks the problem, and when all six are built the question disappears. But that is several runs away, and the unlock ladder you ruled on in JT-027 is already built and waiting.\n\nTHE QUESTION: when a collection unlocks and some of its animals cannot be built yet, what does Juno see on the album page?\n\n(a) WAIT - a collection only unlocks when every member is buildable. Cleanest promise: the album page is never a lie. Cost: nothing ships to her until several kits are done, and the unlock ladder sits idle.\n\n(b) UNLOCK PARTIAL, SHOW ONLY WHAT IS BUILT - the page shows 13 animals and never mentions the 14th. She can complete the collection as she sees it. Cost: when the missing animals land later, the page silently grows and a 'complete' collection becomes incomplete, which is the one thing brief 19 makes me nervous about - nothing she has earned is lost, but a finished thing becoming unfinished may still feel like a loss.\n\n(c) UNLOCK PARTIAL WITH SILHOUETTES - the page shows 13 animals and 1 dark 'not yet' slot. Honest, and a coming-soon slot is a reason to come back. Cost: she can never reach 100 percent on that page until we build it, and JT-027's 80-percent rule for opening the next collection would need to count against BUILT members, not rostered ones, or the ladder stalls.\n\nNOTHING IS BUILT ON THE ANSWER, and nothing she plays today changes either way. shippedIn() already returns only built members, so it supports all three for free. This gates the WIRING of the species layer into the game, not the data - the three seams (pets.ts prototype, atlas.ts dress, main.ts hatch naming) stay unwired until it is answered.\n\nNOT ASKED OF FABLE: this changes what a child experiences, so it is yours alone.\n\nHOUSEKEEPING: phase 2 believed it had raised this as JT-030 and it never reached the file - the id was never written to joe/tasks.json in any commit. So this is the first time you are seeing it, and the delay is ours, not yours.",
+      "blocks": [
+        "PB-036"
+      ],
+      "artefact": "src/island/species/unlock.ts",
+      "doneRule": "manual",
+      "check": "",
+      "note": "",
+      "state": "open"
     }
   ],
   "archive": []
