@@ -410,6 +410,34 @@
       "check": "",
       "note": "have an agent create the facts and fact check them. they then become part of my final sign off for each animal along with its name.",
       "state": "done"
+    },
+    {
+      "id": "JT-032",
+      "type": "ruling",
+      "title": "NEEDS JOE: sign off the primitives the kits are allowed to build from (PB-036)",
+      "detail": "YOUR INSTRUCTION, and this is the surface for it: \"i'd like to sign off the primitives to be used first.\" Nothing has been re-tuned. No kit changes until you have ticked the shapes it would be built from. WHERE IT IS: `npm run workbench` -> viewer -> the Primitives tab. Eight rows, each with the measured Kenney value, what the kits do today, the gap in one line, and what we would change it to. Tick or strike one at a time; you can close the tab and come back, and a later agent adding a row can never cost you a verdict you have already given. READ FIRST, it is written for you and answers \"how is the asset data put together\": docs/how-the-animals-are-made.md. THE THREE THINGS YOU ARE ACTUALLY DECIDING, in order of how much they change: (1) ADOPT THE PACK'S REAL LIMBS. The whole Kenney pack contains only nine part names across 133 pieces, and the leg is ONE shape used 86 times - 24 vertex positions, identical everywhere, already origin-centred and placed by a pure translation. We have been approximating with boxes a part that already exists as a reusable buffer. Same for 8 real tail shapes and 5 wings. This lands exactly on what you said was wrong (\"feet and legs are too large\") and it dissolves the problem rather than tuning it. THE PRICE: colour is welded to the geometry, so an adopted part gets about six usable hues off the atlas rather than any colour we like. That is the one thing that might make you say no. (2) BODY AND HEAD STAY PROCEDURAL, permanently. There is no part called head, ear, muzzle, nose or eye anywhere in the pack - `body` is torso, head, ears, horns and mane fused into one buffer, all 24 different. 24 faces against a 296-species roster, and a child names an animal by its face. This row is a written-down NO so it is not revisited. (3) THE EYE. Every original face is a flat cut-out sheet exactly 0.01 in front of the head, in 24 files of 24, and the eye is an ABSOLUTE size - a fox and an elephant have the same eye. The kits made it a fraction of head size, which produces a 2.95x spread across the 72 built species; the hippo and the goose were both on your screen. That is the whole of \"the eye design is inconsistent\" and it is a rule that was wrong, not a number that needs tuning. Two sub-decisions inside it are genuinely yours: our primitive vocabulary is deliberately closed to boxes and lumps and a flat cut-out is a third shape; and 13 birds currently have eyes on the SIDES of their heads, which no original does. ALSO ON THE BENCH: the pack is SMOOTH-shaded and our own code comment says it is flat-shaded and has been steering every kit since the first one. Cheapest fix on the bench, probably the biggest visible win, and most of what \"they are too square\" is. And a real cost trade - a stock rounded box is 108 triangles per part against 12 today, which would make our animals heavier than real Kenney pets; a hand-built chamfered box matches the pack exactly and costs less. NOTHING IS BUILT ON ANY OF THIS YET, deliberately, so no commit has to be reversed whichever way you go. Phase 4 measured and carded; it did not re-tune.",
+      "blocks": [
+        "PB-036"
+      ],
+      "artefact": "joe/primitives-audit.json",
+      "doneRule": "manual",
+      "check": "",
+      "note": "",
+      "state": "open"
+    },
+    {
+      "id": "JT-033",
+      "type": "ruling",
+      "title": "NEEDS JOE: may a rock tap silently become grass, to stop a pet being walled in? (PB-052)",
+      "detail": "A DEFECT WAS MEASURED THIS RUN AND IT IS REAL: six rock hexes placed around one grass hex seal a pet in permanently. All six place, none is refused, every consecutive pair of keep-out circles overlaps, and a pet of radius ZERO cannot get out. There is no pathfinder by design, so the pet lives in a small disc forever and it survives save/reload. Rock unlocks at 15 tiles and all six sockets glow, so the cost of doing it by accident is six taps. Full proof is on card PB-052. THE FIX NEEDS A RULING FROM YOU BECAUSE IT CHANGES WHAT SHE EXPERIENCES. The only fix that closes the class is a pet-side corridor check - before a rock hex is placed, prove every place a pet can stand is still connected to every other. When it would not be, something has to give. OPTION A - REFUSE THE KIND, KEEP THE TAP. The rock she asked for silently becomes grass. This is not a new behaviour: flow.ts:511-524 ALREADY does exactly this when rock would sit beside water, and it is the reason she never loses a tap. Consistent with what is shipped, and she never sees a refusal. But she taps rock and gets grass, and she may well notice. OPTION B - REFUSE THE SOCKET. The hex stops glowing so the situation cannot arise. Honest, but it takes a choice away and the socket goes dark for a reason no child could infer. OPTION C - LET HER DO IT AND RESCUE THE PET. Allow the seal, and move any pet trapped by it to open ground. Nothing is refused and nothing is taken away. But a pet teleporting out of her mountain ring is visible, and brief 19 says nothing she owns is ever lost - a pet that vanishes from where she put it may read as exactly that. FABLE WAS NOT ASKED. This changes what a child experiences, so it is yours alone under the standing orders. NOTHING IS BUILT ON ANY ANSWER - the defect is carded, not fixed, and no commit has to change whichever you pick. MY OWN READ, for what it is worth: A is the least surprising because the machinery already does it in the neighbouring case, and the sealed-in pet is worse than a substituted tile. But C is the only one that costs her nothing at all, and that is the brief 19 instinct. ONE MORE THING ON THE SAME CARD, which needs no ruling: 14.5% of adjacent rock-hex pairs currently leave a bare rock hex with no mountain on it, permanently, for the same underlying reason. That is PB-053 and it is almost certainly already visible in play.",
+      "blocks": [
+        "PB-052"
+      ],
+      "artefact": "joe/backlog.json",
+      "doneRule": "manual",
+      "check": "",
+      "note": "",
+      "state": "open"
     }
   ],
   "archive": []
