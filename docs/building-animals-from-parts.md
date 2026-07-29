@@ -165,6 +165,31 @@ unmistakably in the viewer, and say in writing which rule it strained and why.
 A flagged approximation that Joe can see and rule on is worth more than a gap in
 the collection or a silent violation.
 
+### The clause has now been used, and this is what it looks like
+
+Joe, 29 July, having reviewed the hedgehog:
+
+> all good but the pink tongue as the nose. **create a bespoke sphere for that**
+
+That is the escape clause completing its circuit for the first time: a part the
+bank chose, shown to him, rejected by name, and a bespoke shape commissioned in
+its place. **He is overruling rule 1, deliberately and for one part.**
+
+Three things this establishes, all of them binding on the next commission:
+
+1. **Authored geometry lives in `src/island/species/parts/authored.ts`, never in
+   the bank.** §6's "the bank is generated, never hand-edited" holds unchanged,
+   and an authored shape is **not searchable** — `findShapes` cannot return one,
+   so no later builder can author its way past rule 1 without deciding to.
+2. **The id is `bespoke-*` and the wearer's `flag` names it.** It shows up in
+   `userData.part`, in any anatomy view and in the viewer. A `provenance` of
+   length zero is exactly the set of shapes the pack did not give us, and it is
+   checkable rather than claimed.
+3. **Do not re-run the search that produced the rejected part.** It will produce
+   it again. The rejected candidate and the reason are recorded in the species'
+   own comment and pinned by a test, so the next builder does not helpfully
+   "fix" it back.
+
 ---
 
 ## 3. The primitive banks
@@ -330,6 +355,33 @@ between two parts an agent would confuse, is **deleted and the deletion is
 recorded** — which axes earned their place is itself a deliverable, because it
 is how the remaining 19 collections get classified.
 
+### A shape's IDENTITY is not one of its measurements
+
+The hedgehog's nose is what taught this and it cost a review round.
+
+`wedge-10` was returned by a size query and was right on **every axis the
+classification has**: smallest solid nose-tip in the pack, taper 0.707, mirror-
+symmetric, attaching `z +1`, and already the correct pink measured off its own
+texels. Its provenance even calls it `nose-tip`, in the dog and the monkey.
+Joe's verdict was *"the pink tongue as the nose"*.
+
+**§3.1 is true and it is not the whole truth.** A part's identity does come from
+its placement, and that is the multiplier — but some shapes carry a read that
+survives being moved. A tongue, a beak, a horn, a claw, an eye. Repurposing
+those is where §3.1 stops paying and starts costing, and **no measured axis will
+ever catch it**, because the confusion is semantic and the axes are geometric.
+
+**What to do about it, and what not to.** Not a new `shape` axis: §3.2 above is
+explicit that the block is derived and never assigned by opinion, and a "reads
+as" caveat is opinion by construction. The cheap version is a small hand-kept
+list *beside* the generated bank naming the few shapes with a travelling
+identity, surfaced as a **caveat on a result and never a filter on it** — a
+filter would throw the multiplier away exactly as `form` did. It is scheduled
+work, not margin work; **the note in `query.ts` is the record until it is done.**
+Until then, the practical rule is the cheap one: **look at what the query
+returned before placing it, and if it has a name in `provenance`, ask whether
+that name is a job or a thing.**
+
 ---
 
 ## 4. Texture: we author it per animal
@@ -347,6 +399,34 @@ both are legitimate:
    arrives already split into its own colour regions.
 2. **Paint the boundary into the image** — finer, and unavailable to Kenney.
    Belly patches, blazes, socks and eye rings without touching geometry.
+
+### Way 2, now that the squirrel has actually used it
+
+Both ways are on the squirrel on purpose, so the difference is visible on one
+animal: its ear is split at Kenney's own edges (way 1, the cat's inner ear) and
+its belly is painted (way 2).
+
+**The correction that matters: a painted part must read ACROSS its cell.** It
+was written here and in `texture.ts` that painting inside a cell needed no UV
+change. That is wrong. If every corner of every triangle reads the same point,
+nothing painted around that point can be seen. So a patched part maps **one v
+per vertex** from that vertex's own height, and the boundary lives in the image
+at whichever row the two colours meet. `Paint.patch` in `parts/assembly.ts`.
+
+Three things follow, and they are the argument for way 2 over way 1:
+
+- **The line is exact.** `v` is affine in position and barycentric interpolation
+  of an affine function is exact, so the boundary is a **plane**, dead level
+  across every face and chamfer whatever the tessellation. Kenney's boundary has
+  to follow triangle edges, and the tiger's own belly line wanders 0.067 of its
+  hull height as a result (§7).
+- **It costs no geometry.** The squirrel's hull is the *same* 32 vertices and 60
+  triangles as the hedgehog's; one of them has a two-tone coat. A vertex splits
+  only if it lands exactly on the seam.
+- **`SLOT_PX` is 16 because the pack is authored on a 1/16 grid.** Sixteen rows
+  per cell puts every boundary a builder can ask for on one of Kenney's own grid
+  lines. `assemblyTexture` **throws** on an `at` that falls between two — a
+  boundary you cannot name in the pack's units is one nobody can check.
 
 This **dissolves the two-tone problem**, which was the real blocker: 39% of
 liftable components span more than one palette band, minority colour at a median
@@ -541,6 +621,45 @@ classified:
   directly. Any search that filters on form throws away the multiplier §3.1
   exists to create.
 
+### Where the pack puts a belly line, measured
+
+Three of the ten hulls carry a pale underside, and the boundary is a **zone**
+rather than a line every time, because a split-triangle boundary can only follow
+edges the model already has:
+
+| Hull | Donor | Pale reaches | Dark starts | Zone |
+|---|---|---|---|---|
+| `box-21` | fox | 0.208 | — | a low chest patch, 6 triangles |
+| `box-41` | tiger | **0.548** | **0.481** | **0.067** |
+| `box-39` | penguin | 0.841 | — | the white front, up to the chin |
+
+*(Fractions of the hull's own height.)*
+
+**The tiger's is the mammal case** — a pale belly running the length of the body
+— and it is the one to carry over to any species that wants one. **The only
+point on the pack's 1/16 grid inside its zone is 8/16**, which is also the
+hull's own equator. So a painted belly line at `at: 0.5` is the tiger's own
+boundary made exact, and that is where the squirrel's is.
+
+### The seven tails split on THICKNESS, not on length
+
+Measured, because a query for a big tail returns a whip otherwise:
+
+- **Thin — 0.200 to 0.345**: cat/monkey `wedge-07`, tiger `wedge-18`, lion
+  `wedge-15`, elephant `box-18`.
+- **Thick — 0.589 to 0.744**: beaver `wedge-03`, parrot `box-38`, fox `box-23`.
+
+A 1.7x gap with nothing in it. On `longest` the fox's brush (0.910) and the
+tiger's whip (1.047) are neighbours, and on `taper` the brush (0.961) and the
+parrot's fan (0.839) are 0.12 apart — so **neither existing axis separates a
+plume from a whip and `minThinnest` was added to `ShapeQuery` for it.** It is
+the SIZE axis §3.2 kept (absolute model units), not the `aspect` axis it
+deleted (normalised proportion). `BRUSH_QUERY` in `query.ts` is the query.
+
+Among the three thick ones the fox's `box-23` is the plume: it barely narrows
+(taper 0.961), its section is **round** — y and z both 0.910248 — and it is
+1.67x the volume of either other.
+
 ### Two-tone is exact, not a vote
 
 **Zero of 15,333 triangles have corners in two different swatch columns.** Every
@@ -602,6 +721,49 @@ placement rather than a hack: the pack already buries a part completely.
 
 **The one placement that is never adjusted is the eye.** Absolute z, absolute
 size, zero sink. Rule 5 and the measurement agree, from opposite directions.
+
+### THE DONOR TRANSFER — how to place a part without choosing a number
+
+This is the idiom that placed almost everything on the squirrel, and it turns
+"not derivable" (the ear, the muzzle) into "derivable, per part":
+
+> **If a shape's donor wears it on `box-03`, join the copy at the face the donor
+> joined it to and sink it by the donor's own `sunkFraction`. The part's centre
+> then lands on the bank's recorded `offset` for that shape — and if it does,
+> that agreement is the EVIDENCE the transfer is legitimate.**
+
+It is a recovery, not a copy, and that is the whole value: you solve for the
+join point and check the answer against a number you did not use.
+
+- **Ear, `wedge-06`** (cat, the only donor): joined at the cube's top face
+  y = 1.43125, sunk its own 0.573575 → centre at **1.431251 − shift = 1.404572**
+  against the recorded 1.404599. One part in a million.
+- **Muzzle, `tube-01`** (beaver, the only donor): joined at the front face
+  z = 0.625, sunk its own 0.000 → centre at the beaver's own z = 0.710803.
+- **Eye card, `plate-01`**: no solve needed. Sixteen species donate it and the
+  bank records one point — x 0.2625, **y 0.933646**, z 0.6350. Use it.
+
+**`box-03`'s recorded `offset` is the BEAVER's hull centre**, because the beaver
+is that shape's first donor and the bank records the first donor's placement. It
+is `[0, 0.80625, 0]`, which is exactly where the solve puts our hull — so any
+beaver part transfers with certainty rather than by argument. For a donor that is
+not the beaver the transfer is an inference, and the recovered-offset agreement
+above is how you check it rather than assume it.
+
+### The chamfer idiom is per EDGE, not just the top ones
+
+§8's idiom was written for the +x/+y edges (the hedgehog's spikes). It is the
+same cube and it works on any of the twelve. The squirrel's tail uses the
+**+y/−z** edge: chamfer running (y 0.625, z −0.3125) to (y 0.3125, z −0.625),
+midpoint **(0.46875, −0.46875)** off the hull centre — the same 0.46875 — and
+outward normal (0, 0.7071, −0.7071). A `z −1` part reaches that normal with
+`{ axis: 'x', deg: 45 }`.
+
+That single placement is what makes a squirrel out of the fox's own tail: the
+same shape, joined to the back of the same cube, **carried up instead of
+trailing**. It is also cheaper front-to-back — the squirrel's keep-out is 0.92
+against the fox's own 1.15, which matters because `pets.ts:652` charges keep-out
+from `max(width, depth) / 2`.
 
 ### THE CHAMFER IDIOM — a named placement, and Joe's idea
 

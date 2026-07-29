@@ -68,7 +68,8 @@
  */
 import * as THREE from 'three'
 import { partById, type BakedPart } from './bank.generated'
-import { assemblyTexture, slotUv } from './texture'
+import { authoredById } from './authored'
+import { assemblyTexture, slotUv, patchUv, type SlotSplit } from './texture'
 
 export type Vec3 = readonly [number, number, number]
 export type Axis = 'x' | 'y' | 'z'
@@ -115,6 +116,23 @@ const spun = (
 export interface Paint {
   base: string
   byBand?: Readonly<Record<number, string>>
+  /**
+   * §4's OTHER way to two-tone: a boundary painted into the image.
+   *
+   * `byBand` above is Kenney's mechanism and it can only cut where he already
+   * cut — along triangle edges the donor happens to have. `patch` needs no edge
+   * at all: `base`'s cell is drawn as two colours, this part's vertices read
+   * ACROSS that cell by their own height, and the line falls wherever the image
+   * says. A pale belly and chest on a hull with sixty triangles in it, without
+   * adding one.
+   *
+   * `at` is a fraction of the part's own height and must sit on the pack's 1/16
+   * grid; `texture.ts` refuses anything else. Defined on the part's OWN y, which
+   * is world-parallel for an unspun part — spin a patched part and the line
+   * spins with it, which is a thing you might want and is not a thing anything
+   * has needed yet.
+   */
+  patch?: { below: string; at: number }
 }
 
 /**
@@ -274,25 +292,51 @@ function bakeGeometry(
   const order = mirror ? [0, 2, 1] : [0, 1, 2]
   const flip = mirror ? -1 : 1
 
+  /* A patched part reads ACROSS its cell, so it needs to know how tall it is
+   * BEFORE any vertex is written. Measured on the built vertices — stretched and
+   * spun — because that is the y the boundary will actually land on. */
+  const place = (vi: number): [number, number, number] => spun([
+    part.positions[vi * 3]! * stretch[0],
+    part.positions[vi * 3 + 1]! * stretch[1],
+    part.positions[vi * 3 + 2]! * stretch[2],
+  ], spins)
+  let loY = Infinity, hiY = -Infinity
+  if (paint.patch) {
+    for (const vi of new Set(part.indices)) {
+      const y = place(vi)[1]
+      if (y < loY) loY = y
+      if (y > hiY) hiY = y
+    }
+  }
+  const height = hiY - loY
+
   for (let t = 0; t < part.tris; t++) {
     const band = part.bands[t] ?? -1
     const name = paint.byBand?.[band] ?? paint.base
     const slot = slots.indexOf(name)
     if (slot < 0) throw new Error(`assembly: part "${part.id}" paints slot "${name}", which is not in the palette`)
+    /* The patch applies to the BASE slot only. A triangle `byBand` has already
+     * sent somewhere else keeps its own flat colour — an eye card's pupil does
+     * not want a belly line through it. */
+    const patched = paint.patch !== undefined && name === paint.base && height > 1e-9
     const [u, v] = slotUv(slot, slots.length)
 
     for (const k of order) {
       const vi = part.indices[t * 3 + k]!
       const px = part.positions[vi * 3]!, py = part.positions[vi * 3 + 1]!, pz = part.positions[vi * 3 + 2]!
       const nx = part.normals[vi * 3]!, ny = part.normals[vi * 3 + 1]!, nz = part.normals[vi * 3 + 2]!
+      const [pu, pv] = patched
+        ? patchUv(slot, slots.length, (place(vi)[1] - loY) / height)
+        : [u, v]
       /* Keyed on the BANK's own numbers, which are exact 4-dp values, so the key
-       * never depends on float arithmetic the transform happens to do. */
-      const key = `${px},${py},${pz}|${nx},${ny},${nz}|${slot}`
+       * never depends on float arithmetic the transform happens to do — plus the
+       * uv, because a patched part legitimately splits a vertex at the seam. */
+      const key = `${px},${py},${pz}|${nx},${ny},${nz}|${slot}|${pv}`
       let ni = seen.get(key)
       if (ni === undefined) {
         ni = pos.length / 3
         seen.set(key, ni)
-        const p = spun([px * stretch[0], py * stretch[1], pz * stretch[2]], spins)
+        const p = place(vi)
         pos.push(p[0] * flip, p[1], p[2])
         // Rule 7: the file's own smooth normals, copied. Not recomputed, and no
         // inverse-transpose correction for `stretch` either — the spec says
@@ -301,7 +345,7 @@ function bakeGeometry(
         // and a spun part lit by unspun normals is lit from the wrong side.
         const n = spun([nx, ny, nz], spins)
         nrm.push(n[0] * flip, n[1], n[2])
-        uv.push(u, v)
+        uv.push(pu!, pv!)
       }
       idx.push(ni)
     }
@@ -365,8 +409,16 @@ function copiesOf(p: Placement): Copy[] {
 
 /* --------------------------------------------------------------- build --- */
 
+/**
+ * The bank first, then the small set of shapes Joe has sanctioned us to author.
+ *
+ * The order is the rule: rule 1 is adapt-before-author, so a `bespoke-*` id is
+ * only ever reached when the bank has already been asked and has already
+ * answered. `authored.ts` explains what has to be true before a shape gets in
+ * there, and the species wearing one carries a `flag` saying so.
+ */
 const lookup = (id: string): BakedPart => {
-  const p = partById(id)
+  const p = partById(id) ?? authoredById(id)
   if (!p) throw new Error(`assembly: "${id}" is not in the parts bank`)
   return p
 }
@@ -379,9 +431,34 @@ const lookup = (id: string): BakedPart => {
  * z = 0.6350 is a measured absolute and re-centring on the bounding box would
  * quietly move it whenever a snout got longer.
  */
+/**
+ * Every boundary this build paints, by the slot whose cell carries it.
+ *
+ * Gathered rather than declared, so the image and the UVs cannot disagree: the
+ * one place that says where the belly line goes is the part that wears it. Two
+ * parts patching the same slot at different heights would be one cell asked to
+ * hold two pictures, and that is a throw rather than a last-writer-wins.
+ */
+function splitsOf(spec: AssemblyBuild): Record<string, SlotSplit> {
+  const out: Record<string, SlotSplit> = {}
+  for (const p of [spec.hull.paint, ...spec.features.map(f => f.paint)]) {
+    if (!p.patch) continue
+    const had = out[p.base]
+    if (had && (had.below !== p.patch.below || had.at !== p.patch.at)) {
+      throw new Error(
+        `assembly: slot "${p.base}" is patched twice and differently — `
+        + `${had.below}@${had.at} and ${p.patch.below}@${p.patch.at}. One cell, one picture.`,
+      )
+    }
+    out[p.base] = { below: p.patch.below, at: p.patch.at }
+  }
+  return out
+}
+
 export function buildAssembly(spec: AssemblyBuild): THREE.Group {
   const slots = Object.keys(spec.palette)
-  const texture = assemblyTexture(slots, spec.palette)
+  const splits = splitsOf(spec)
+  const texture = assemblyTexture(slots, spec.palette, splits)
   // One material, one texture, one map lookup per fragment. Never disposed, for
   // the same reason the texture is not: a clone shares it.
   const material = new THREE.MeshStandardMaterial({
@@ -397,6 +474,7 @@ export function buildAssembly(spec: AssemblyBuild): THREE.Group {
   ): THREE.BufferGeometry => {
     const key = `${part.id}|${stretch.join(',')}|${spins.map(s => s.axis + s.deg).join('/')}`
       + `|${mirror}|${paint.base}|${JSON.stringify(paint.byBand ?? {})}`
+      + `|${paint.patch ? `${paint.patch.below}@${paint.patch.at}` : ''}`
     const hit = geoms.get(key)
     if (hit) return hit
     const made = bakeGeometry(part, stretch, spins, mirror, paint, slots)

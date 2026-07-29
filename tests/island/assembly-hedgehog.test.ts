@@ -48,9 +48,11 @@ import { weldedComponents, componentFacts, orderComponents, namesFor }
 import {
   assembledSpecies, buildAssembled, findShapes, SPIKE_QUERY,
   assemblyTextureCount, detachAssemblyTextures, HEDGEHOG_ASSEMBLY,
-  buildAssembly, PACK_PUPIL, type AssemblyBuild, type Hull, type Spin,
+  buildAssembly, PACK_PUPIL, SLOT_PX, SLOT_W,
+  type AssemblyBuild, type Hull, type Spin,
 } from '../../src/island/species/parts'
 import { ASSEMBLED_BUILDS } from '../../src/island/species/parts/assembled'
+import { AUTHORED_PARTS, authoredById } from '../../src/island/species/parts/authored'
 import { PARTS_BANK, partById, type BakedPart }
   from '../../src/island/species/parts/bank.generated'
 import { GARDEN_SPECIES } from '../../src/island/species/collections/garden'
@@ -178,7 +180,15 @@ function isCopyOf(points: readonly P3[], part: BakedPart, mirror: boolean): bool
   return true
 }
 
-/** Which bank record this mesh's vertices came out of — found, not trusted. */
+/**
+ * Which bank record this mesh's vertices came out of — found, not trusted.
+ *
+ * Returns null for a shape the bank does not have, which since 29 July is a real
+ * possibility and not only a failure: `authored.ts` holds the one piece of
+ * geometry Joe sanctioned us to author, it is deliberately NOT in `PARTS_BANK`
+ * so that no search can reach it, and its id says `bespoke-`. The caller below
+ * checks that set by name and nothing else is allowed to be missing.
+ */
 function traceToBank(mesh: THREE.Mesh): string | null {
   const spins = (mesh.userData['spin'] ?? []) as readonly Spin[]
   const raw = posOf(mesh)
@@ -311,19 +321,60 @@ describe('a hull cannot leave its authored proportions quietly', () => {
 
 /* -------------------------------------------------------------- lineage --- */
 
-describe('nothing in the hedgehog is authored', () => {
-  it('traces every mesh back to a bank record by its vertices', () => {
+describe('nothing in the hedgehog is authored except the one thing Joe asked for', () => {
+  it('traces every mesh back to a bank record, and names the one that cannot', () => {
     const g = build()
     const found = new Set<string>()
+    const bespoke = new Set<string>()
     for (const m of meshesOf(g)) {
+      const claimed = m.userData['part'] as string
+      if (claimed.startsWith('bespoke-')) {
+        // Authored, and it has to say so in three places at once: the id, the
+        // absence of any donor, and the species' own flag.
+        const p = authoredById(claimed)!
+        expect(p, `${m.name} claims ${claimed}, which is not in authored.ts`).toBeTruthy()
+        expect(p.provenance, `${claimed} claims a donor`).toHaveLength(0)
+        expect(partById(claimed), `${claimed} leaked into PARTS_BANK`).toBeUndefined()
+        // Not `fingerprint` here: a sphere's every vertex is the same distance
+        // from its centre, so the fingerprint is one value repeated and float32
+        // storage puts a 0.0625 radius exactly on the snapping boundary. The
+        // direct check is both stronger and stable — every built vertex is on
+        // the authored radius, and the count is the authored count.
+        const built = posOf(m)
+        expect(built, m.name).toHaveLength(p.verts)
+        // The geometry is origin-centred, so distance from zero IS the radius.
+        for (const q of built) {
+          expect(Math.hypot(q[0], q[1], q[2])).toBeCloseTo(p.size[0] / 2, 5)
+        }
+        bespoke.add(claimed)
+        continue
+      }
       const id = traceToBank(m)
       expect(id, `${m.name} matches no shape in the bank`).not.toBeNull()
       // And it is the shape the builder SAYS it is.
-      expect(id, `${m.name} claims ${m.userData['part']}`).toBe(m.userData['part'])
+      expect(id, `${m.name} claims ${claimed}`).toBe(claimed)
       found.add(id!)
     }
     expect([...found].sort())
-      .toEqual(['box-01', 'box-03', 'cone-01', 'cone-06', 'plate-01', 'wedge-10'])
+      .toEqual(['box-01', 'box-03', 'cone-01', 'cone-06', 'plate-01'])
+    // EXACTLY one authored shape on the whole animal, and the flag names it.
+    expect([...bespoke]).toEqual(['bespoke-sphere-01'])
+    expect(HEDGEHOG_ASSEMBLY.flag).toMatch(/RULE 1 OVERRULED, BY JOE/)
+    expect(HEDGEHOG_ASSEMBLY.flag).toMatch(/AUTHORED/)
+  })
+
+  it('keeps authored geometry out of every search, so nobody finds it by accident', () => {
+    // Rule 1 is adapt-before-author. A `bespoke-*` shape that turned up in a
+    // query result would let the next species author its way past rule 1 without
+    // anyone deciding to — so the bank and the authored set are disjoint by
+    // construction, and this is the assertion that keeps them that way.
+    const ids = new Set(PARTS_BANK.map(p => p.id))
+    for (const p of AUTHORED_PARTS) {
+      expect(ids.has(p.id), `${p.id} is in PARTS_BANK`).toBe(false)
+      expect(p.id.startsWith('bespoke-'), `${p.id} is not marked bespoke`).toBe(true)
+    }
+    expect(findShapes({}).some(p => p.id.startsWith('bespoke-'))).toBe(false)
+    expect(findShapes({ maxLongest: 0.22 }).some(p => p.id.startsWith('bespoke-'))).toBe(false)
   })
 
   it('keeps a spun part rigid — its shape survives the rotation exactly', () => {
@@ -343,7 +394,8 @@ describe('nothing in the hedgehog is authored', () => {
     // coordinates carries nothing here. Position AND normal, never position
     // alone — rule 7's hard edges ARE one position with two normals.
     for (const m of meshesOf(g)) {
-      const part = partById(m.userData['part'] as string)!
+      const claimed = m.userData['part'] as string
+      const part = partById(claimed) ?? authoredById(claimed)!
       const keys = new Set<string>()
       for (const vi of new Set(part.indices)) {
         keys.add([part.positions[vi * 3], part.positions[vi * 3 + 1], part.positions[vi * 3 + 2],
@@ -488,41 +540,70 @@ describe('the nose is higher, and the height is derived (Joe, 16:53)', () => {
   })
 })
 
-describe('the pink pointy nose tip came out of the bank (Joe, 16:57)', () => {
-  it('is a shape a size query returns, not something authored', () => {
-    // Rule 1 is adapt-before-author, and "small sphere will do" is permission to
-    // keep it simple rather than an instruction to author geometry. The query
-    // names no species, no role and no form — only a size.
+describe('the nose tip is a BESPOKE SPHERE, because Joe overruled rule 1', () => {
+  it('records why the bank\'s own answer was rejected, so nobody re-runs it', () => {
+    // The query was right on every axis it has and the part still reads as a
+    // TONGUE. This assertion is the record of that, and it is what stops the
+    // next builder "fixing" the hedgehog by putting wedge-10 back.
     const small = findShapes({ maxLongest: 0.22 }).map(p => p.id)
     expect(small).toContain('wedge-10')
     const tip = partById('wedge-10')!
     expect(tip.roles).toContain('nose')
     expect(tip.provenance.map(p => p.species).sort()).toEqual(['dog', 'monkey'])
-    // Pointy: it narrows. And mirror-symmetric, so one copy is a whole nose tip
-    // rather than a handed half needing its partner.
     expect(tip.shape.taper).toBeLessThan(0.75)
     expect(tip.shape.symmetry).toBe('mirror')
     expect(tip.attachment!.axis).toBe('z')
-    expect(tip.attachment!.dir).toBe(1)
-    // The smallest solid nose-tip in the pack.
     const noses = PARTS_BANK.filter(p => p.roles.includes('nose') && p.size[2] > 0)
     expect(Math.min(...noses.map(p => p.shape.longest))).toBe(tip.shape.longest)
-    expect(HEDGEHOG_ASSEMBLY.flag).not.toMatch(/authored/i)
+    // Five measured axes agreed. The hedgehog wears none of it.
+    expect(HEDGEHOG_ASSEMBLY.features.some(f => f.part === 'wedge-10')).toBe(false)
+    expect(HEDGEHOG_ASSEMBLY.flag).toMatch(/tongue/i)
   })
 
-  it('sits on the snout\'s own measured apex, and forward of everything', () => {
+  it('is a real sphere, generated rather than typed, and small', () => {
+    const s = authoredById('bespoke-sphere-01')!
+    // Round to a thousandth on all three axes, and every vertex the same
+    // distance from the centre — which is what makes it a sphere rather than a
+    // blob somebody typed.
+    expect(s.size[0]).toBeCloseTo(0.125, 3)
+    expect(s.size[1]).toBeCloseTo(0.125, 3)
+    expect(s.size[2]).toBeCloseTo(0.125, 3)
+    const radii = new Set(referenced(s).map(p => Math.hypot(p[0], p[1], p[2]).toFixed(6)))
+    expect(radii.size).toBe(1)
+    expect(Number([...radii][0])).toBeCloseTo(0.0625, 6)
+    // Smooth-shaded on exact normals (rule 7): a sphere's normal IS its point
+    // over its radius, so no normal is averaged and no corner is split.
+    for (let i = 0; i < s.positions.length; i += 3) {
+      for (let c = 0; c < 3; c++) {
+        expect(s.normals[i + c]).toBeCloseTo(s.positions[i + c]! / 0.0625, 6)
+      }
+    }
+    // 2/16 on the pack's grid, and under its own smallest solid nose-tips.
+    expect(s.size[1] * 16).toBeCloseTo(2, 6)
+    expect(s.size[1]).toBeLessThan(partById('box-09')!.size[1])
+    expect(s.size[1]).toBeLessThan(partById('box-22')!.size[1])
+    expect(s.tris).toBe(48)
+    expect(s.verts).toBe(26)
+  })
+
+  it('sits with its CENTRE on the snout\'s own measured apex', () => {
     const g = build()
     const tip = named(g, 'nose-tip')[0]!
     const snout = named(g, 'snout')[0]!
-    expect(tip).toBeTruthy()
+    expect(tip.userData['part']).toBe('bespoke-sphere-01')
     // The apex of `cone-06` is its front-most welded point, measured at local
     // (0, +0.1122, +0.1434) off the bank's own numbers.
     const beak = partById('cone-06')!
     let apex: P3 = [0, 0, -Infinity]
     for (const p of referenced(beak)) if (p[2] > apex[2]) apex = p
     expect(world(tip).y).toBeCloseTo(world(snout).y + apex[1], 3)
+    // `sink: 0.5` on a bbox-centred shape puts the centre ON the join point, so
+    // exactly half stands proud. For a sphere that is the one placement that
+    // needs no number, and this is it measured rather than asserted.
+    const j = tip.userData['joinedAt'] as [number, number, number]
+    expect(tip.position.z).toBeCloseTo(j[2], 9)
     expect(worldBox(tip).max.z).toBeGreaterThan(worldBox(snout).max.z)
-    // Nothing floats (§3): it is sunk into the beak by the pack's own amount.
+    // Nothing floats (§3): the back half is inside the snout.
     expect(worldBox(tip).min.z).toBeLessThan(worldBox(snout).max.z)
   })
 
@@ -763,11 +844,12 @@ describe('the hedgehog stands where the pack stands', () => {
 
     // TRIANGLES ARE OVER, DELIBERATELY, AND THIS IS THE RECORD OF IT. The pack
     // measures 422-951 per model; twenty spikes at 34 triangles each is 680 and
-    // the animal comes to 1,044. No pack animal wears twenty protrusions, so the
+    // the animal comes to 1,046. No pack animal wears twenty protrusions, so the
     // envelope is the one Joe's count leaves. Pinned exactly rather than relaxed,
     // so a further regression is still red, and named in the species' `flag` so
-    // he sees it in the viewer rather than in a test file.
-    expect(tris).toBe(1044)
+    // he sees it in the viewer rather than in a test file. (It was 1,044 until
+    // the authored nose sphere replaced `wedge-10`: 48 triangles against 46.)
+    expect(tris).toBe(1046)
     expect(HEDGEHOG_ASSEMBLY.flag).toMatch(/RULE 9 STRAINED/)
   })
 })
@@ -971,10 +1053,13 @@ describe('the texture is cached, and detached rather than disposed', () => {
     expect(mats.size).toBe(1)
     const mat = [...mats][0] as THREE.MeshStandardMaterial
     expect(mat.map).not.toBeNull()
-    // Six slots, four pixels each: 4 x 24. A column, not an atlas.
+    // Six slots, one cell each. A column, not an atlas. The cell is SLOT_PX rows
+    // deep — 16 since the squirrel, because the pack is authored on a 1/16 grid
+    // and a painted boundary has to land on one of its lines (see texture.ts).
+    // The hedgehog paints no boundary, so all 16 rows of each cell are one hue.
     const img = mat.map!.image as ImageData
-    expect(img.width).toBe(4)
-    expect(img.height).toBe(Object.keys(HEDGEHOG_ASSEMBLY.palette).length * 4)
+    expect(img.width).toBe(SLOT_W)
+    expect(img.height).toBe(Object.keys(HEDGEHOG_ASSEMBLY.palette).length * SLOT_PX)
     // Rule 8: a single-slot part reads ONE point on that column, so the hull is
     // one hue and cannot be a blend of two.
     const uv = (g.getObjectByName('hull') as THREE.Mesh).geometry.getAttribute('uv')
@@ -1005,7 +1090,8 @@ describe('the texture is cached, and detached rather than disposed', () => {
     expect(assemblyTextureCount()).toBe(0)
     expect(disposed).toBe(0)
     // Still usable: the pet on screen keeps its pixels.
-    expect((ta.image as ImageData).data.length).toBe(4 * 24 * 4)
+    expect((ta.image as ImageData).data.length)
+      .toBe(SLOT_W * Object.keys(HEDGEHOG_ASSEMBLY.palette).length * SLOT_PX * 4)
 
     const c = build()
     const tc = ((c.getObjectByName('hull') as THREE.Mesh).material as THREE.MeshStandardMaterial).map
@@ -1032,7 +1118,9 @@ describe('the texture is cached, and detached rather than disposed', () => {
 describe('the roster stays the authority on names and facts', () => {
   it('reads name and collection off the roster and carries the flag', () => {
     const rows = assembledSpecies()
-    expect(rows.map(r => r.id)).toEqual(['animal-hedgehog'])
+    // The hedgehog is first because it shipped first (§6, one species at a
+    // time). The squirrel joined it; this file speaks only for the hedgehog.
+    expect(rows[0]!.id).toBe('animal-hedgehog')
     const row = rows[0]!
     expect(row.name).toBe(SPECIES_NAMES['animal-hedgehog'])
     expect(row.name).toBe('Hedgehog')
@@ -1057,6 +1145,9 @@ describe('the roster stays the authority on names and facts', () => {
   })
 
   it('refuses a species it has no build for, by name', () => {
-    expect(() => buildAssembled('animal-squirrel')).toThrow(/animal-squirrel/)
+    // Was the squirrel, which now HAS one. The mole is the next Garden member
+    // with no assembly, and the point of the assertion is unchanged: an id with
+    // no build throws by name rather than returning null (§9.3).
+    expect(() => buildAssembled('animal-mole')).toThrow(/animal-mole/)
   })
 })

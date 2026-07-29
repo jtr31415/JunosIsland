@@ -62,10 +62,18 @@ export function buildAssembled(id: string): THREE.Group {
 
 export { buildAssembly } from './assembly'
 export type { AssemblyBuild, Feature, Hull, Paint, Placement, Spin } from './assembly'
-export { findShapes, hullShapes, SPIKE_QUERY } from './query'
+export { findShapes, hullShapes, SPIKE_QUERY, BRUSH_QUERY } from './query'
 export type { ShapeQuery } from './query'
 export {
-  assemblyTexture, assemblyTextureCount, detachAssemblyTextures, slotUv, paletteKey,
-  PACK_PUPIL, PACK_SCLERA,
+  assemblyTexture, assemblyTextureCount, detachAssemblyTextures, slotUv, patchUv, paletteKey,
+  PACK_PUPIL, PACK_SCLERA, SLOT_PX, SLOT_W,
 } from './texture'
-export { ASSEMBLED_BUILDS, HEDGEHOG_ASSEMBLY } from './assembled'
+export type { SlotSplit, SlotSplits } from './texture'
+export { ASSEMBLED_BUILDS, HEDGEHOG_ASSEMBLY, SQUIRREL_ASSEMBLY } from './assembled'
+/**
+ * The shapes Joe sanctioned us to author. Exported so a review surface can
+ * LABEL them — a `bespoke-*` part is one he ruled on, and §9.2's discipline
+ * about showing the flag applies to showing this too. Deliberately not merged
+ * into `PARTS_BANK`; see `authored.ts`.
+ */
+export { AUTHORED_PARTS, authoredById } from './authored'

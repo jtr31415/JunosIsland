@@ -47,7 +47,7 @@
  * the collection is separated rather than trusting these comments.
  */
 import { defineSpecies } from '../define'
-import { HEDGEHOG_ASSEMBLY } from '../parts/assembled'
+import { HEDGEHOG_ASSEMBLY, SQUIRREL_ASSEMBLY } from '../parts/assembled'
 import type { Species } from '../types'
 
 export const GARDEN_SPECIES: readonly Species[] = [
@@ -84,6 +84,18 @@ export const GARDEN_SPECIES: readonly Species[] = [
   }),
 
   /*
+   * THE SQUIRREL IS THE SECOND ANIMAL BUILT THE NEW WAY, and it carries BOTH
+   * builds for the same reason the hedgehog does — §6, until Joe rules on
+   * JT-034. The `build` below is untouched, byte for byte as it shipped.
+   *
+   * It is second because it carries the half of the risk the hedgehog did not
+   * (§6): a lifted TAIL, which is a separate node with its own transform, and a
+   * two-tone coat whose boundary is PAINTED into the texture rather than cut
+   * into geometry. `parts/assembled.ts` shows every measurement behind it. The
+   * two comments below now describe two different animals — the kit one and the
+   * assembled one — and they agree on the character: tufted ears, a bushy tail,
+   * and the tallest thing in the collection (the assembly measures 1.976).
+   *
    * The squirrel. The tallest thing in the collection and the only `tufted` ear
    * in it — red squirrel ear tufts are the whole read, and the kit draws the
    * tuft in `accent` precisely so it survives being 0.16 scale. Legs at 0.85 is
@@ -101,6 +113,7 @@ export const GARDEN_SPECIES: readonly Species[] = [
       tail: 'bushy',
       palette: { coat: 0xc4692f, belly: 0xfbf1e2, detail: 0x9c4a1e, accent: 0x6e3413 },
     },
+    assembly: SQUIRREL_ASSEMBLY,
   }),
 
   /* ---- the four small ground creatures ------------------------------------
