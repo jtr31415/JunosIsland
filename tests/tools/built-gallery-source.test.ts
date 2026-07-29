@@ -29,7 +29,7 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { builtBench } from '../../tools/workbench/public/built'
-import { buildCatalogue, packsFor, type Gallery, type Pack } from '../../tools/workbench/public/registry'
+import { buildCatalogue, packsFor, GALLERIES, type Gallery, type Pack } from '../../tools/workbench/public/registry'
 import { SHIPPED_SPECIES, speciesRecord } from '../../src/island/species/registry'
 
 const REPO = resolve(__dirname, '../..')
@@ -68,23 +68,62 @@ describe('packsFor: which disk packs a gallery may list', () => {
     expect(packsFor('built')).toEqual([])
   })
 
+  /*
+   * And the primitives gallery none either, for a stronger version of the same
+   * reason. A primitive is not a thing on disk at all — it is a decision about
+   * the shapes a kit may build out of. It DOES put real models on the turntable,
+   * a Kenney GLB beside a kit build, but it borrows both from the galleries that
+   * own them; a borrowed model is not this gallery's to be an orphan of.
+   */
+  it('gives the primitives gallery no pack at all either', () => {
+    expect(packsFor('primitives')).toEqual([])
+  })
+
   it('keeps the other three on their own packs, so a swap fails here', () => {
     expect(packsFor('species')).toEqual(['pets'])
     expect(packsFor('tiles')).toEqual(['tiles'])
     expect(packsFor('props')).toEqual(['props', 'forest'])
   })
 
+  /*
+   * THE LATENT TRAP, and what it cost to find it.
+   *
+   * This test used to hold its own copy of the gallery list —
+   * `['built','species','tiles','props']`, typed inline — so the very test
+   * written to stop a gallery inheriting another's source could not see a fifth
+   * gallery at all. Adding `primitives` to the union would have compiled, run
+   * green here, and been silently uncovered: exactly the shape of the fault of
+   * 29 July, one level up.
+   *
+   * `GALLERIES` in `registry.ts` is now the single place the set exists, and the
+   * union is DERIVED from it. So this loop cannot fall behind the union, and a
+   * gallery added without an arm in `packsFor` fails to compile before it ever
+   * reaches here.
+   */
   it('never lets one gallery reach another gallery data', () => {
-    const galleries: Gallery[] = ['built', 'species', 'tiles', 'props']
     const seen = new Map<Pack, Gallery>()
-    for (const gallery of galleries) {
+    for (const gallery of GALLERIES) {
       for (const pack of packsFor(gallery)) {
         expect(seen.has(pack), `${pack} is claimed by ${seen.get(pack)} and ${gallery}`).toBe(false)
         seen.set(pack, gallery)
       }
     }
-    /* Exhaustive: no gallery is served by an unwritten else. */
-    expect(galleries.every(g => Array.isArray(packsFor(g)))).toBe(true)
+  })
+
+  it('answers for every gallery there is, off the one list there is', () => {
+    /* Not `.length === 5`: the point is that the loop follows the union, not
+     * that the union is a particular size today. */
+    expect(GALLERIES.length).toBeGreaterThan(0)
+    expect(new Set(GALLERIES).size).toBe(GALLERIES.length)
+    for (const gallery of GALLERIES) {
+      expect(Array.isArray(packsFor(gallery)), `${gallery} has no arm in packsFor`).toBe(true)
+    }
+    /* And the chrome can reach each one: a gallery in the union with no tab is a
+     * gallery nobody can open. The tab rail is HTML, so it is read as HTML. */
+    const html = readFileSync(resolve(REPO, 'tools/workbench/public/viewer.html'), 'utf8')
+    for (const gallery of GALLERIES) {
+      expect(html, `no tab for the ${gallery} gallery`).toContain(`data-gallery="${gallery}"`)
+    }
   })
 })
 

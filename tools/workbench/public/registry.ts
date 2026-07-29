@@ -23,15 +23,28 @@ import { INCREMENTS, PALETTE } from '../../../src/island/world/increments'
 import { TILE_URL } from '../../../src/island/world/tiles'
 
 /**
- * `built` is the odd one and is NOT in this file's catalogue.
+ * Every gallery the viewer's chrome can switch to, and the LIST IS THE UNION.
  *
- * The other three are things on disk that a loader opens. A built animal has no
- * file at all — it is constructed at runtime by `buildSpecies`, from a record in
- * `src/island/species/` — so nothing about it can be crossed against a directory
- * listing, and it has its own bench in `built.ts`. It is named in the union
- * because the viewer's chrome switches on it.
+ * Written this way round — `Gallery` derived from `GALLERIES` rather than a
+ * hand-typed union beside a hand-typed array — because the two were about to
+ * drift for the second time. `built-gallery-source.test.ts:78` held its own
+ * copy, `['built','species','tiles','props']`, so the very test written to stop
+ * a gallery inheriting another's source could not see a fifth gallery at all.
+ * One `as const` array is now the only place the set exists: a gallery added
+ * here appears in the test that iterates it, and cannot compile until
+ * `packsFor` below has written its arm.
+ *
+ * `built` and `primitives` are the odd ones and are NOT in this file's
+ * catalogue. The other three are things on disk that a loader opens. A built
+ * animal has no file at all — it is constructed at runtime by `buildSpecies`,
+ * from a record in `src/island/species/` — so nothing about it can be crossed
+ * against a directory listing, and it has its own bench in `built.ts`. A
+ * PRIMITIVE is less of a file still: it is a decision about the shapes a kit is
+ * allowed to build out of, benched in `primitives.ts`, and the models it puts on
+ * the turntable are borrowed from the other galleries rather than owned.
  */
-export type Gallery = 'built' | 'species' | 'tiles' | 'props'
+export const GALLERIES = ['built', 'primitives', 'species', 'tiles', 'props'] as const
+export type Gallery = typeof GALLERIES[number]
 export type Pack = 'pets' | 'props' | 'forest' | 'tiles'
 
 export interface Entry {
@@ -81,9 +94,19 @@ export const packOf = (id: string): Pack => (/^[A-Z]/.test(id) ? 'forest' : 'pro
  * `built` gets an empty list, and that is the correct answer rather than a
  * missing one. A built animal is constructed at runtime by `buildSpecies` and
  * has no file anywhere, so there is no directory listing it could be measured
- * against; its only source is the bench in `built.ts`. Every gallery is written
- * out here, so adding a fifth means writing its arm rather than inheriting the
- * fourth's.
+ * against; its only source is the bench in `built.ts`.
+ *
+ * `primitives` gets an empty list for a stronger version of the same reason. A
+ * primitive is not a thing at all — it is a decision about the shapes a kit may
+ * build out of, benched in `primitives.ts`. It puts real models on the
+ * turntable, but it BORROWS them from the pets pack and from the kits, and a
+ * borrowed model is not this gallery's to be an orphan of. Had it inherited the
+ * props arm it would have listed every prop on disk, which is precisely what
+ * `built` did on 29 July.
+ *
+ * The switch has no default and the return type is not optional, so a gallery
+ * added to `GALLERIES` without an arm here does not compile. That, plus the
+ * test that iterates `GALLERIES`, is the whole guard.
  */
 export const packsFor = (gallery: Gallery): readonly Pack[] => {
   switch (gallery) {
@@ -91,6 +114,7 @@ export const packsFor = (gallery: Gallery): readonly Pack[] => {
     case 'tiles': return ['tiles']
     case 'props': return ['props', 'forest']
     case 'built': return []
+    case 'primitives': return []
   }
 }
 

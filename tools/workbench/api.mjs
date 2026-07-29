@@ -28,6 +28,7 @@ const WRITABLE = {
   voices: 'joe/voices.json',
   notes: 'joe/asset-notes.json',
   names: 'joe/names-audit.json',
+  primitives: 'joe/primitives-audit.json',
 }
 
 /**
@@ -86,6 +87,18 @@ function state(root) {
      * depends on a comparator this end.
      */
     names: readJson(root, 'joe/names-audit.json', { schemaVersion: 1, names: [] }).names ?? [],
+    /*
+     * The primitives bench, in the file's own order — which is the order he
+     * reads them in and the order his place is kept in. Never sorted here, for
+     * the same reason `names` is not: the page groups as it renders, so nothing
+     * he sees depends on a comparator this end.
+     *
+     * Unlike the names, this file arrives SEEDED with its rows (see `seed.mjs`),
+     * because a primitive is a measurement rather than something generated off
+     * the roster. That is what makes his review hour resumable with nothing
+     * running but this server.
+     */
+    primitives: readJson(root, 'joe/primitives-audit.json', { schemaVersion: 1, rows: [] }).rows ?? [],
     /*
      * The species facts, RAW and unexamined.
      *

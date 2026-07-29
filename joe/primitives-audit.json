@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "rows": [
+    {
+      "id": "eye-size",
+      "group": "Face",
+      "title": "How big an eye is",
+      "question": "Should an eye be an absolute size, the same on every animal, instead of a fraction of that animal's head?",
+      "packSays": "The pack's eye is an absolute 0.400 × 0.320 model units, on a face plate that is 0.625 × 0.625 and byte-identical in all 24 models. Eye width is 0.64 of the plate. Relative to model height it stays in a narrow 0.19–0.29 band — a 1.54× spread across all 24.",
+      "kitSays": "The kits size the eye as 0.26 × head multiplier (quadruped.ts:296-302) and 0.30 × head (songbird.ts:278-284) — a function of the species' head, not a constant. Measured across the 72 built species, eye width relative to pet height runs 0.0597 to 0.1603, a 2.95× spread, and animal-hippo against animal-goose is that whole spread inside one viewer screen.",
+      "gap": "The kits made the eye a function of `head`; the pack made it a constant. A kit eye is also about 2.4× smaller relative to the animal than any original's.",
+      "proposal": "Freeze the eye at an absolute pre-fit size (~0.400 × 0.320) rather than a fraction of head. The consequence, said out loud: a small-headed species then gets an eye wider than its head's front face. That is canon, not a bug — the pack's own eye pair spans 0.925 against a 0.625 plate and overhangs the plate's side edges by 0.15 each side.",
+      "evidence": "src/island/species/kits/quadruped.ts:296-302 (hd × 0.26 white, hd × 0.14 pupil) · src/island/species/kits/songbird.ts:278-284 (hd × 0.30) · measured over the 24 GLBs in src/island/public/pets/ and over the 72 species SHIPPED_SPECIES builds.",
+      "signoff": "",
+      "note": ""
+    },
+    {
+      "id": "eye-relief",
+      "group": "Face",
+      "title": "Whether an eye sticks out or lies flat",
+      "question": "Should the eye be a flat cut-out sheet lying on the face, as every original is, instead of a protruding ball with a second ball in front of it?",
+      "packSays": "The face is a flat cut-out sheet exactly 0.0100 units in front of the head, in 24 of 24 models. Every one of the 63 decals faces +Z, with an area-weighted normal z of 1.000000 exactly. colormap.png contains no drawn face at all — the eye is polygons cut to an eye shape, flat-shaded from two swatch columns (u=112 whites, u=496 darks). The pupil is polygons inside the same sheet, not a separate mesh. Only 10 distinct outlines exist in the whole pack, and 32 of the 63 decals are the same 27-triangle mesh.",
+      "kitSays": "The kits build protruding spheres — an `eye-*` lump plus a separate `pupil-*` lump floating further forward still. The white protrudes 0.031–0.094 world units off the face and the pupil 0.045–0.137. The songbird kit puts eyes on the ±X faces of the head; no original does this — all 63 decals face +Z.",
+      "gap": "Flat cut-out versus protruding ball, and front-facing versus side-facing for 13 of the 72.",
+      "proposal": "Place the eye flat, 0.0100 off the head front, as a coplanar sheet. TWO SUB-DECISIONS ARE YOURS. (i) shared.ts:17-22 states that the primitive vocabulary is closed to boxes and lumps and that src/ \"must not gain\" a third geometry type — a cut-out sheet IS a third type, so this asks you to reopen a rule that was written down deliberately. (ii) Moving 13 songbirds' eyes to the front is a look change for a fifth of the built roster.",
+      "evidence": "src/island/variants/recolour.ts:124-125 (u=112 the pale column, u=496 the dark column) · src/island/public/pets/Textures/colormap.png · src/island/species/kits/shared.ts:17-22 (the vocabulary is closed) · src/island/species/kits/songbird.ts:278-284 (eyes on the ±X faces) · src/island/species/kits/quadruped.ts:290-302.",
+      "signoff": "",
+      "note": ""
+    },
+    {
+      "id": "eye-collisions",
+      "group": "Face",
+      "title": "What else is already sitting inside the eye",
+      "question": "Do the four part types that already intersect the eye get re-placed in the same change that flattens it, rather than afterwards?",
+      "packSays": "Nothing overlaps a decal. It is a clean sheet on a clean plate.",
+      "kitSays": "Four existing part types already intersect the eye's bounding box today: `eye-stripe` (quail, songbird.ts:447-456), `cheek-patch` (cockatiel and guinea-fowl, songbird.ts:457-465), `whisker-*-3` (ten quadrupeds — mouse, shrew, chinchilla, rat, otter, chipmunk, lynx, wildcat, coypu, cheetah — quadruped.ts:535-549), and on the quail the eye intersects the `body` itself.",
+      "gap": "These are hidden today because the eye is a bulge they can sit inside. A flat decal makes every one of them worse, not better.",
+      "proposal": "Re-place those three extras in the same change that flattens the eye. This is a consequence of the other two Face rows and cannot be deferred past them — flattening the eye without it ships thirteen animals with a stripe through the pupil.",
+      "evidence": "src/island/species/kits/songbird.ts:447-456 (eye-stripe) · src/island/species/kits/songbird.ts:457-465 (cheek-patch) · src/island/species/kits/quadruped.ts:535-549 (whisker-*-3) · src/island/species/kits/quadruped.ts:296-302 and songbird.ts:278-284 (the eye bounding boxes they intersect).",
+      "signoff": "",
+      "note": ""
+    },
+    {
+      "id": "edge-shading",
+      "group": "Edges",
+      "title": "Whether the pack is flat-shaded (it is not)",
+      "question": "Should the kit primitives be smooth-shaded, the way every original actually is?",
+      "packSays": "The pack is SMOOTH-shaded. Every vertex normal is the area-weighted average of the faces meeting it — on the crab's cube, 32 unique positions each carrying exactly one normal, pure diagonals like (0.577, −0.577, −0.577) at a 3-way corner. Pack-wide the median angle between a vertex normal and its own nearest face normal is 25.2°, and only 13.2% of 25,848 vertices sit within 1° of a face normal. Normal splits exist only at UV/material seams and on the flat face decals.",
+      "kitSays": "shared.ts:81 states in as many words that this is \"the chunky, flat-shaded read the Kenney pack has\". That comment is false, and it has been steering every kit since the first one.",
+      "gap": "Averaging normals across a cut is what makes a hard 45° chamfer read as a soft round-over. We are not doing it, so our edges read as hard as they are.",
+      "proposal": "Smooth-shade the kit primitives, and correct the comment at shared.ts:81 so the next kit does not inherit the mistake. This is the cheapest change on the whole bench and probably the largest visible win.",
+      "evidence": "src/island/species/kits/shared.ts:81 (the false comment) · measured over 25,848 vertices across the 24 GLBs in src/island/public/pets/.",
+      "signoff": "",
+      "note": ""
+    },
+    {
+      "id": "edge-bevel",
+      "group": "Edges",
+      "title": "How a corner is cut",
+      "question": "Should a kit box become a chamfered box, cut at 45° by about a fifth of its own smallest dimension — accepting that it ends one-geometry-scaled-per-part?",
+      "packSays": "Chamfered, not filleted. 72.0% of corners (3135 of 4354) carry a single flat 45° cut; 18.0% use a two-step round-over; 9.7% are genuinely sharp. Counted once per unique species/part, 111 of 132 parts use one facet, 21 use two, none use three. Median dihedral turn pack-wide is 45.0° exactly. The setback is NOT a constant absolute distance — it spans 35× in model units (cv 0.84) but is tight as a ratio to the part's own size (cv 0.25), landing on exact fractions: 1/6 of the cross-section for every leg (96 of 132 parts, cv 0.00) and 1/4 for the bodies. Against min(w,h,d) it is 0.20 for limbs to 0.25 for bodies. Within a part it is isotropic in ABSOLUTE units — the shared leg is cut 0.0625 in x, z and y despite h ≠ w. The pack is hand-authored on a 1/16 grid (0.0625, 0.125, 0.3125; leg width 0.375, body width 1.25).",
+      "kitSays": "`box()` in shared.ts is a single unit BoxGeometry scaled per part — perfectly sharp, 12 triangles.",
+      "gap": "Sharp against a 45° chamfer sized to the part.",
+      "proposal": "A chamfered box primitive with r = min(w, h, d) × 0.22. TWO CONSEQUENCES ARE YOURS TO WEIGH. (1) COST: three.js's stock RoundedBoxGeometry at its minimum segments=1 is 108 triangles per part against 12 today — roughly 1,300 for a quadruped, which is MORE than a real Kenney pet (422–951 total). A hand-built 60-triangle chamfered box matches the pack exactly and costs less. Both are real options and this is a real trade. (2) IT ENDS ONE-UNIT-GEOMETRY-SCALED-PER-PART: the bevel is isotropic in absolute units, so a unit geometry scaled non-uniformly would give an anisotropic bevel, which the pack never has. It becomes one cached geometry per distinct (w,h,d) — a change to how the kits allocate geometry, and shared.ts:86-88 explains why the present scheme was chosen (one buffer, because a species is cloned per pet).",
+      "evidence": "src/island/species/kits/shared.ts:86-88 (one unit BoxGeometry scaled per part, and why) · measured over 4,354 corners across the 24 GLBs. ALSO BOUNDING HOW CLOSE BOXES CAN EVER GET: the corner profile is a superellipse of exponent about 1.36, not circular (arc midpoint at 0.60 of the corner diagonal where a circle is 0.707), and the 3-way corners converge to a single apex vertex rather than a sphere octant — so RoundedBoxGeometry reads slightly rounder than Kenney, which is invisible at the 0.16 field scale and nobody should chase it. And the denominator matters: pet heights run 1.431 (koala) to 2.010 (bunny), median 1.612, so pet height is the WRONG denominator for a bevel (cv 0.86); the part's own size is the invariant (cv 0.25).",
+      "signoff": "",
+      "note": ""
+    },
+    {
+      "id": "leg-adopt",
+      "group": "Limbs",
+      "title": "Whether a kit leg should BE the pack's leg",
+      "question": "Should the kits stop approximating a leg with boxes and drop in the pack's actual leg mesh?",
+      "packSays": "The leg is ONE shape. All 86 leg instances across 23 species resolve to a single set of 24 unique vertex positions, world bbox 0.375 × 0.3063 × 0.375, identical in every instance — the 43 distinct buffers differ only in vertex order and UV splits. Authored once, re-exported 86 times. It is origin-centred and its placement is a pure node translation, so it is ALREADY a reusable primitive. The whole pack contains only nine node names across 133 mesh nodes — `body` ×24, the four `leg-*` ×86, `tail` ×8, `wing-*` ×10 and five `Group` oddments — and there are ZERO nodes named head, ear, muzzle, nose, horn, antler, beak or eye. The pack decomposes, but it stops exactly where a kit needs it most.",
+      "kitSays": "The kits approximate a leg with boxes and lumps (quadruped.ts:248-262 — a `leg-*` box plus a `paw-*` box). This is the exact part Joe pointed at when he said the feet and legs are too large.",
+      "gap": "We are approximating with primitives a part the pack already ships as a single reusable buffer. There is nothing to approximate.",
+      "proposal": "Use the pack's real `leg` buffer wherever a kit draws a leg — one 24-vertex geometry, dropped in with a translation. This DISSOLVES the \"too square\" read on the limbs rather than tuning it, and it costs one shared buffer.",
+      "evidence": "src/island/species/kits/quadruped.ts:248-262 (the box leg and paw) · the `leg-front-left`, `leg-front-right`, `leg-back-left`, `leg-back-right` nodes in src/island/public/pets/*.glb. MOST KENNEY PARTS ARE NOT BOXES, which strengthens this row: bodies are sculpted shells of 190–418 triangles, the pig's snout is a 12-sided elliptical cylinder with a chamfered rim, and the legs are tapered octagonal frusta. The only true cube in the pack is the crab's claw. COLOUR IS WELDED TO UVs, so a lifted fox tail stays fox-orange — but re-pointing is proven, shipped code: tools/pets/reserve.mjs and src/island/variants/facedecals.ts already rewrite a named node's UVs to a different atlas column, idempotently. The atlas is 8 hue columns at u·512 = 48…496, so an adopted part gets about 6 usable hues, NOT arbitrary colour — that is the main constraint on this whole idea. TRANSFORMS: all 133 nodes carry their own, but only ONE node in the pack carries a scale (cow/Group), so measuring cold misreports position everywhere and size almost nowhere — much less dangerous than docs/HANDOFF.md's general warning about KayKit transforms implies. OPEN QUESTION, NOT YET SETTLED: the parts inventory reports all 86 leg instances resolving to a single set of 24 unique vertex positions; the edge measurement reports 75 of 86 leg nodes hashing identically (44 triangles, 24 welded positions), with cow and polar carrying their own variant and the deer and fox back legs a 46-triangle variant. Both may be true at once — identical positions, differing triangulation — but that has not been proved, and \"one leg\" versus \"one leg plus three variants\" are different propositions to adopt. Settle it before any code is written against this row.",
+      "signoff": "",
+      "note": ""
+    },
+    {
+      "id": "tail-wing-adopt",
+      "group": "Limbs",
+      "title": "Whether tails and wings come from the pack too",
+      "question": "Should the kits adopt the pack's 8 tails and 5 wings alongside its leg, accepting that some species will share a tail?",
+      "packSays": "`tail` is 8 real shapes (fox brush, cat/tiger/monkey rope, lion tufted, beaver paddle, elephant rope, parrot fan) and `wing-*` is 5. The five `Group` oddments are cat whiskers, cow muzzle, pig snout, a second crab body cube, and the parrot crest and beak.",
+      "kitSays": "The kits build tails and wings from boxes and lumps.",
+      "gap": "13 authored shapes exist for exactly the parts the kits approximate.",
+      "proposal": "Adopt them alongside the leg. The honest limit: 8 tails and 5 wings is a small vocabulary against a 296-species roster, so a kit still needs to scale and tint them, and some species will share a tail.",
+      "evidence": "The `tail` and `wing-*` nodes across src/island/public/pets/*.glb (133 mesh nodes, nine distinct names). Colour is welded to UVs and re-pointing gives about 6 usable hues off the 8 atlas columns — see the `leg-adopt` row, which this one rides on.",
+      "signoff": "",
+      "note": ""
+    },
+    {
+      "id": "body-stays-procedural",
+      "group": "Limbs",
+      "title": "The body and head stay procedural — a NO, written down",
+      "question": "Do you agree that adopting real parts is a HYBRID — real limbs, procedural body and head — and that the body is never adopted?",
+      "packSays": "`body` is 24 unique meshes with 24 unique UV buffers, and it carries torso, head, ears, muzzle, nose, eyes, horns, antlers, mane and shell FUSED into one buffer. Lifting a head means triangle-range surgery, not cloning a node.",
+      "kitSays": "The kits build body and head procedurally.",
+      "gap": "None. This is the part where approximating is correct.",
+      "proposal": "Keep body and head procedural, permanently. There are only 24 distinct faces in the pack and the roster wants 296 species, and a child names an animal by its face. Adopting real parts is therefore a hybrid, not a rebuild.",
+      "evidence": "The `body` node in each of the 24 GLBs in src/island/public/pets/ · roster §1 (296 new species) · this row exists so the question is not reopened every time someone reads the `leg-adopt` row.",
+      "signoff": "",
+      "note": ""
+    }
+  ]
+}

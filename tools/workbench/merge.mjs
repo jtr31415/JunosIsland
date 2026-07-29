@@ -151,6 +151,44 @@ const MERGEABLE = {
       factNote: { kind: 'text' },
     },
   },
+  /*
+   * `joe/primitives-audit.json` — PB-036 phase 4, and the same two-writer shape
+   * as the names above, sharpened.
+   *
+   * Joe, on the fix for 72 animals that are too square: *"i'd like to sign off
+   * the primitives to be used first."* So a row is one SHAPE DECISION — how big
+   * an eye is, how a corner is cut, whether a kit leg should be the pack's real
+   * leg — carrying the measured value from the Kenney pack, what the kits do
+   * instead, and the gap. Eight of the fields on a row are MEASUREMENTS and are
+   * rewritten wholesale whenever anyone measures the pack again. Two are his.
+   *
+   *   signoff  THE gate, and the only one. '' is not-yet-judged, 'ok' is "the
+   *            kits may build out of this", 'reject' is "they may not". A flag:
+   *            one click, visibly wrong when wrong. `idle: ''` is what makes a
+   *            regenerated row — which carries '' or carries no such key at all
+   *            — incapable of unticking one he has made.
+   *   note     His words, so text: a genuine disagreement is a 409 rather than a
+   *            guess. Losing it costs him the thinking, not the keystrokes.
+   *
+   * NOTHING ELSE IS OWNED, and that is the load-bearing half. `packSays`,
+   * `kitSays`, `gap`, `proposal` and `evidence` are measurements with file:line
+   * provenance; a page that could overwrite one could quietly change what he
+   * signed off after he signed it off.
+   *
+   * No counter. Ids are slugs an agent writes deliberately (`eye-size`,
+   * `leg-adopt`), not numbers dealt from a pool, so there is no id space for two
+   * writers to race over — which is exactly the `names` case and not the
+   * `backlog` one. If a page ever grows an "add a primitive" button it will need
+   * a `counter` and everything `needsAnId` does; today nothing adds a row from
+   * the page at all.
+   */
+  primitives: {
+    list: 'rows', key: 'id',
+    owns: {
+      signoff: { kind: 'flag', idle: '' },
+      note: { kind: 'text' },
+    },
+  },
 }
 
 /*

@@ -12,6 +12,12 @@
     <a class="back" href="/">← bench</a>
     <nav id="galleries">
       <button data-gallery="built" class="on">Built animals</button>
+      <!--
+        The primitives sign-off. PB-036 phase 4, and it sits SECOND rather than
+        last because nothing on the Built animals tab may be re-tuned until the
+        primitive it rides on has been ticked here.
+      -->
+      <button data-gallery="primitives">Primitives</button>
       <button data-gallery="species">Species</button>
       <button data-gallery="tiles">Tiles</button>
       <button data-gallery="props">Props</button>
@@ -71,6 +77,21 @@
         control on it has to know which creature it is patching.
       -->
       <section id="creature" hidden></section>
+
+      <!--
+        One PRIMITIVE, and one gate over it.
+
+        Joe: "i'd like to sign off the primitives to be used first." So the row
+        is the argument laid out in the order it has to be read — the question,
+        what the pack measures, what the kits do, the gap, the proposal, the
+        provenance — with accept and refuse beneath it. Refuse is a real answer
+        and is not the absence of one, so it has its own button rather than being
+        expressed by not clicking.
+
+        Built by hand in `viewer.ts` rather than declared here, because every
+        control on it has to know which row it is patching.
+      -->
+      <section id="primitive" hidden></section>
 
       <form id="noteForm">
         <textarea name="note" rows="3" placeholder="what is wrong with it" required></textarea>

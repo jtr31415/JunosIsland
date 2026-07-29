@@ -737,6 +737,178 @@ describe('the pet-name audit', () => {
   })
 })
 
+/**
+ * PB-036 phase 4: the primitives sign-off, through the same merge.
+ *
+ * Joe, on the fix for 72 animals that are too square with legs and feet too big:
+ * *"i'd like to sign off the primitives to be used first."* So the rows are
+ * SHAPE DECISIONS, eight fields of measurement apiece with file:line provenance,
+ * and exactly two fields — `signoff` and `note` — that are his. The measured
+ * eight are rewritten wholesale every time anyone measures the Kenney pack
+ * again, so the whole surface turns on whether that rewrite can cost him a
+ * verdict. It cannot, and there is no second persistence route for it to cost
+ * him one down: it is `/api/save`, `WRITABLE` and `MERGEABLE`, the same three
+ * the names audit uses.
+ */
+describe('the primitives sign-off', () => {
+  const REL = 'joe/primitives-audit.json'
+  const onDisk = () => JSON.parse(readFileSync(join(root, REL), 'utf8'))
+  const rowOf = (id: string) => onDisk().rows.find((r: any) => r.id === id)
+
+  const status = async (body: unknown) => {
+    const res = await fetch(base + '/api/save', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+    })
+    return { code: res.status, body: (await res.json()) as any }
+  }
+
+  /** An agent that has measured the pack again, rewriting every measured field. */
+  const remeasure = (mark: string) => {
+    const file = onDisk()
+    for (const r of file.rows) {
+      r.packSays = `${mark}: the pack`
+      r.kitSays = `${mark}: the kits`
+      r.gap = `${mark}: the gap`
+      r.proposal = `${mark}: the proposal`
+      r.evidence = `${mark}: some/file.ts:1`
+      r.title = `${mark}: title`
+      r.question = `${mark}: question?`
+    }
+    return file
+  }
+
+  it('is seeded with its rows, so his review hour needs nothing running but this', async () => {
+    /* The opposite decision from `names-audit.json`, and deliberately: a name is
+     * generated off the roster so seeding one would be a second copy of a table
+     * the code owns, while a primitive is a MEASUREMENT and `seed.mjs` holds the
+     * only copy there is. */
+    expect(existsSync(join(root, REL))).toBe(true)
+    const rows = (await api('/api/state')).primitives
+    expect(rows.map((r: any) => r.id)).toEqual([
+      'eye-size', 'eye-relief', 'eye-collisions',
+      'edge-shading', 'edge-bevel',
+      'leg-adopt', 'tail-wing-adopt', 'body-stays-procedural',
+    ])
+    /* Unjudged, every one. A seed that arrived with a tick on it would be a
+     * forgery of the one thing on the file that is his. */
+    expect(rows.every((r: any) => r.signoff === '' && r.note === '')).toBe(true)
+    /* And the measurement is actually there to read — an empty row is a row he
+     * cannot decide. */
+    expect(rows[0].packSays).toContain('0.400 × 0.320')
+    expect(rows[0].evidence).toContain('quadruped.ts:296-302')
+  })
+
+  it('takes a sign-off, a rejection and a note, and gives them back', async () => {
+    expect((await status({ what: 'primitives', patch: { id: 'edge-shading', signoff: 'ok' } })).code).toBe(200)
+    expect((await status({
+      what: 'primitives',
+      patch: { id: 'eye-relief', signoff: 'reject', note: 'not until the third geometry type is ruled on' },
+    })).code).toBe(200)
+
+    expect(rowOf('edge-shading').signoff).toBe('ok')
+    expect(rowOf('eye-relief')).toMatchObject({
+      signoff: 'reject', note: 'not until the third geometry type is ruled on',
+    })
+    /* The measured fields are untouched by his verdict. */
+    expect(rowOf('eye-relief').packSays).toContain('0.0100 units in front of the head')
+
+    /* Visible to the next page that asks — the viewer resumes from this and
+     * nothing else, with no agent running. */
+    const s = await api('/api/state')
+    expect(s.primitives.find((r: any) => r.id === 'edge-shading').signoff).toBe('ok')
+
+    /* The file is still the file: its own order, two spaces, LF, trailing newline. */
+    const raw = readFileSync(join(root, REL), 'utf8')
+    expect(raw).not.toContain('\r')
+    expect(raw.endsWith('\n')).toBe(true)
+    expect(raw).toContain('\n  "rows": [')
+  })
+
+  it('THE CONTRACT: a whole-file re-measurement can never cost him a verdict', async () => {
+    await status({ what: 'primitives', patch: { id: 'leg-adopt', signoff: 'ok', note: 'yes — adopt the leg' } })
+    await status({ what: 'primitives', patch: { id: 'edge-bevel', signoff: 'reject' } })
+
+    /* Every measured field rewritten and his two blank, exactly as a generator
+     * produces them, plus a row nobody has measured before. */
+    const fresh = remeasure('RE-MEASURED')
+    for (const r of fresh.rows) { r.signoff = ''; r.note = '' }
+    fresh.rows.push({
+      id: 'head-body', group: 'Limbs', title: 'how big a head is against a body',
+      question: 'is it right?', packSays: 'measured', kitSays: 'measured', gap: 'x',
+      proposal: 'y', evidence: 'z', signoff: '', note: '',
+    })
+    expect((await status({ what: 'primitives', value: fresh })).code).toBe(200)
+
+    expect(rowOf('leg-adopt')).toMatchObject({ signoff: 'ok', note: 'yes — adopt the leg' })
+    expect(rowOf('edge-bevel').signoff).toBe('reject')
+    /* The row it had never heard of is on the bench to be judged. */
+    expect(rowOf('head-body').title).toBe('how big a head is against a body')
+
+    /*
+     * AND THE OTHER DIRECTION, which is the half that surprised me and is worth
+     * pinning: the payload could not rewrite a MEASURED field either.
+     * `mergeWhole` takes only the fields the page owns off the payload and reads
+     * everything else off the copy the server just read, so `/api/save` is not
+     * a route by which a re-measurement lands at all. It lands the way it really
+     * happens — an agent writing the file — which is why `primitives.ts`
+     * exports `regenerate()` and why that function is tested separately.
+     *
+     * This is a good property, not a gap. It means a stale page cannot revert a
+     * measurement any more than an agent can revert a verdict.
+     */
+    expect(rowOf('leg-adopt').packSays).not.toBe('RE-MEASURED: the pack')
+    expect(rowOf('leg-adopt').packSays).toContain('24 unique vertex positions')
+    expect(rowOf('leg-adopt').evidence).toContain('quadruped.ts:248-262')
+  })
+
+  it('a generator that has never heard of `signoff` cannot untick one either', async () => {
+    await status({ what: 'primitives', patch: { id: 'eye-size', signoff: 'ok' } })
+
+    /* Rows carrying no such key at all — which is what a generator written
+     * before the field existed produces. An ABSENT field is the absence of a
+     * decision, exactly as '' is. */
+    const fresh = remeasure('AGAIN')
+    for (const r of fresh.rows) { delete r.signoff; delete r.note }
+    expect((await status({ what: 'primitives', value: fresh })).code).toBe(200)
+    expect(rowOf('eye-size').signoff).toBe('ok')
+
+    /* A patch is intent, said out loud, so his own hand re-opens it. */
+    expect((await status({ what: 'primitives', patch: { id: 'eye-size', signoff: '' } })).code).toBe(200)
+    expect(rowOf('eye-size').signoff).toBe('')
+  })
+
+  it('his note is his words, and a disagreement is a 409 that writes nothing', async () => {
+    await status({ what: 'primitives', patch: { id: 'eye-collisions', note: 'do the whiskers in the same change' } })
+
+    const forged = remeasure('FORGED')
+    forged.rows.find((r: any) => r.id === 'eye-collisions').note = 'something an agent decided'
+    const clash = await status({ what: 'primitives', value: forged })
+    expect(clash.code).toBe(409)
+    expect(clash.body.clashes[0]).toMatchObject({ id: 'eye-collisions', field: 'note' })
+    expect(rowOf('eye-collisions').note).toBe('do the whiskers in the same change')
+    /* Refused, not half-applied: the sign-off set earlier in this file is
+     * exactly where it was, and so is every other row's. */
+    expect(rowOf('edge-shading').signoff).toBe('ok')
+  })
+
+  it('refuses a patch for a measured field — nobody edits the evidence from the page', async () => {
+    /* The load-bearing half of the ownership split. A page that could rewrite
+     * `packSays` could quietly change what he signed off, after he signed it. */
+    for (const field of ['packSays', 'evidence', 'proposal', 'group']) {
+      const r = await status({ what: 'primitives', patch: { id: 'eye-size', [field]: 'nope' } })
+      expect(r.code, `${field} was accepted`).toBe(400)
+      expect(r.body.error).toContain(field)
+    }
+    expect(rowOf('eye-size').packSays).toContain('0.400 × 0.320')
+  })
+
+  it('did not widen the allowlist while adding itself to it', async () => {
+    const r = await status({ what: 'primitives-audit', value: { schemaVersion: 1, rows: [] } })
+    expect(r.body.error).toContain('not a writable file')
+    expect(existsSync(join(root, 'joe/primitives-audit'))).toBe(false)
+  })
+})
+
 describe('the workbench cannot be talked out of the repo', () => {
   it('refuses a write to a file that is not on the list', async () => {
     const r = await post('/api/save', { what: 'package', value: { hacked: true } })

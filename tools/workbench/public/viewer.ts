@@ -70,6 +70,10 @@ import {
   builtBench, progressOf, readFacts, SIGNED_OFF, STRUCK, VERIFIED,
   type Creature,
 } from './built'
+import {
+  primitivesBench, primitivesProgress, signedOff, struck,
+  type Comparison, type Primitive,
+} from './primitives'
 
 const $ = <T extends HTMLElement>(s: string): T => document.querySelector(s) as T
 const say = (t: string, bad = false) => {
@@ -218,6 +222,135 @@ async function loadBuilt(speciesId: string): Promise<THREE.Object3D> {
   return buildSpecies(record.build)
 }
 
+/* --------------------------------------------------- the side-by-side --- */
+
+/**
+ * Scale a thing so it is exactly one unit tall, feet on y = 0, centred on x
+ * and z.
+ *
+ * THE MATCH, and the one judgement in the whole render. The pack's models and
+ * the kits' output are not the same size and never were, so "matched scale" has
+ * to mean something specific: it means MATCHED HEIGHT. That is not an arbitrary
+ * pick — every number on the eye rows is already a ratio against the animal's
+ * height (the pack holds 0.19–0.29, the kits run 0.0597–0.1603), and Joe's
+ * complaint about legs and feet is a claim about their size relative to the
+ * animal they are attached to. Normalising by height makes the picture say
+ * exactly what the numbers say.
+ *
+ * What it deliberately does NOT preserve is absolute model units. Nobody can see
+ * those, and a fox at 1.66 beside a hyena at 1.05 would show a size difference
+ * that has nothing to do with the question being asked.
+ */
+function toUnitHeight(object: THREE.Object3D): THREE.Group {
+  const holder = new THREE.Group()
+  holder.add(object)
+  holder.updateMatrixWorld(true)
+
+  const box = new THREE.Box3().setFromObject(object)
+  if (box.isEmpty()) return holder
+  const scale = 1 / Math.max(1e-6, box.max.y - box.min.y)
+  object.scale.multiplyScalar(scale)
+  object.position.multiplyScalar(scale)
+
+  holder.updateMatrixWorld(true)
+  const after = new THREE.Box3().setFromObject(object)
+  const centre = after.getCenter(new THREE.Vector3())
+  object.position.sub(new THREE.Vector3(centre.x, after.min.y, centre.z))
+  return holder
+}
+
+/** A thing whose name a comparison can ask for. */
+class NoSuchPart extends Error {}
+
+/**
+ * Lift named meshes out of a model, keeping the size and pose they had in it.
+ *
+ * The pack ships nine node names across 133 mesh nodes, and `leg-front-left` is
+ * one of them — the kits happen to name their own leg the same string, which is
+ * what makes the Limbs comparison the same part from both sides rather than an
+ * approximation invented here. Each mesh is copied with its WORLD matrix frozen
+ * onto it, so a part is lifted exactly as it sat: the pack's transforms are
+ * translations almost everywhere (only `cow/Group` carries a scale anywhere in
+ * the pack) but "almost" is not a thing to build on.
+ *
+ * A name that matches nothing THROWS, by name. An empty group on a turntable is
+ * the worst possible answer — it looks like a part that renders as nothing —
+ * which is the same reasoning `kit.ts` gives for `UnbuiltKitError`.
+ */
+function lift(root: THREE.Object3D, names: readonly string[]): THREE.Object3D {
+  if (!names.length) return root
+  root.updateMatrixWorld(true)
+
+  const out = new THREE.Group()
+  root.traverse(node => {
+    const mesh = node as THREE.Mesh
+    if (!mesh.isMesh || !names.includes(node.name)) return
+    const copy = mesh.clone()
+    copy.matrixAutoUpdate = false
+    copy.matrix.copy(mesh.matrixWorld)
+    out.add(copy)
+  })
+  if (!out.children.length) {
+    throw new NoSuchPart(`no mesh named ${names.join(' or ')} in it — the model has `
+      + `${[...new Set(meshNames(root))].join(', ') || 'no named meshes'}`)
+  }
+  return out
+}
+
+const meshNames = (root: THREE.Object3D): string[] => {
+  const found: string[] = []
+  root.traverse(n => { if ((n as THREE.Mesh).isMesh && n.name) found.push(n.name) })
+  return found
+}
+
+/**
+ * The pack's real geometry beside the kit's real geometry, on one turntable.
+ *
+ * Both halves already existed on this page and neither is new: the left is the
+ * species gallery's loader, `wearFaceUVs` and all, so the fox arrives wearing
+ * the face decal that is the whole subject of the Face rows; the right is
+ * `buildSpecies` called for real, exactly as the built-animals gallery calls it.
+ *
+ * NOTHING IS BAKED. The header of this file argues that at length for the built
+ * animals and every word of it applies harder here: a baked preview is a copy,
+ * a copy drifts, and Joe would be signing off a primitive against a picture of
+ * what the kits used to do. When the kits are re-tuned after he signs, the right
+ * half of this picture changes on the next reload with nobody remembering to
+ * make it.
+ *
+ * Order of operations is load-bearing: each animal is scaled to one unit tall
+ * BEFORE its part is lifted, so a lifted leg carries the size it had relative to
+ * its own animal. Lifting first and then normalising the two legs to the same
+ * height would show the leg's shape and hide the complaint — that they are too
+ * big — which is most of what the Limbs rows are about.
+ */
+async function loadComparison(compare: Comparison): Promise<THREE.Object3D> {
+  const [packWhole, kitWhole] = await Promise.all([
+    loadPet(compare.packSpecies, ''),
+    loadBuilt(compare.kitSpecies),
+  ])
+
+  const sides = [
+    lift(toUnitHeight(packWhole), compare.packParts),
+    lift(toUnitHeight(kitWhole), compare.kitParts),
+  ]
+
+  /* Grounded and centred, then pushed apart by their own half-widths, so a leg
+   * and a whole fox both land side by side without one sitting inside the other. */
+  const pair = new THREE.Group()
+  const gap = 0.25
+  sides.forEach((side, i) => {
+    const box = new THREE.Box3().setFromObject(side)
+    const centre = box.getCenter(new THREE.Vector3())
+    side.position.sub(new THREE.Vector3(centre.x, box.min.y, centre.z))
+    /* LEFT is the pack, RIGHT is the kit, always and in that order — the card
+     * beside the canvas says so in those words and they must not disagree. */
+    side.position.x += (i === 0 ? -1 : 1) * ((box.max.x - box.min.x) / 2 + gap / 2)
+    pair.add(side)
+  })
+  return pair
+}
+
 /* ------------------------------------------------------------ the catalogue */
 
 interface Shown extends Entry { onDisk: boolean; notes: number }
@@ -232,6 +365,12 @@ let notes: Array<{ assetId: string; note: string; at: string }> = []
  * is the file's order and must stay it.
  */
 let bench: Creature[] = []
+/**
+ * The primitive decisions, joined to his verdicts. Rebuilt from `/api/state` on
+ * boot and never sorted after: group order then the file's own order, which is
+ * where his place is kept — see `primitives.ts`.
+ */
+let primitives: Primitive[] = []
 let picked = ''
 /** Bumped on every selection, so a slow load cannot overwrite a newer one. */
 let token = 0
@@ -306,9 +445,26 @@ function benchShown(): Creature[] {
     `${c.speciesId} ${c.species} ${c.given} ${c.collectionName}`.toLowerCase().includes(q))
 }
 
+/**
+ * The primitives on screen. Filtered by the search box and by NOTHING ELSE.
+ *
+ * Same rule as `benchShown` above and learned the same expensive way: a row that
+ * vanishes the moment he ticks it takes his place in the list with it. A signed
+ * off primitive keeps its place and shows its tick.
+ */
+function primitivesShown(): Primitive[] {
+  const q = $<HTMLInputElement>('#search').value.trim().toLowerCase()
+  if (!q) return primitives
+  return primitives.filter(p =>
+    `${p.id} ${p.group} ${p.title} ${p.question}`.toLowerCase().includes(q))
+}
+
 /** Every id currently listed, in list order — what the arrow keys page through. */
-const listedIds = (): string[] =>
-  gallery === 'built' ? benchShown().map(c => c.speciesId) : shown().map(e => e.id)
+const listedIds = (): string[] => {
+  if (gallery === 'built') return benchShown().map(c => c.speciesId)
+  if (gallery === 'primitives') return primitivesShown().map(p => p.id)
+  return shown().map(e => e.id)
+}
 
 function drawBenchList(): void {
   const list = $('#list')
@@ -377,8 +533,80 @@ function drawProgress(): void {
   $('#benchMeta').textContent = bits.join(' · ')
 }
 
+/**
+ * The primitives rail: grouped by Face / Edges / Limbs, each heading carrying
+ * how far through that group he is.
+ *
+ * A group this build has no heading for still gets one, spelled with the string
+ * the file actually used. The rows are written by agents that measure the pack
+ * and they land ahead of the viewer that renders them, so an unknown group is a
+ * real and temporary state; hiding those rows would make "3 of 8" a lie about
+ * how much is left.
+ */
+function drawPrimitiveList(): void {
+  const list = $('#list')
+  list.replaceChildren()
+  const items = primitivesShown()
+
+  let group = ''
+  for (const p of items) {
+    if (p.group !== group) {
+      group = p.group
+      const head = document.createElement('li')
+      head.className = 'group'
+      const inGroup = items.filter(x => x.group === group)
+      head.textContent = `${group || 'no group'} · ${inGroup.filter(signedOff).length} of ${inGroup.length}`
+      list.append(head)
+    }
+
+    const li = document.createElement('li')
+    li.className = 'item creature'
+      + (p.id === picked ? ' on' : '')
+      + (signedOff(p) ? ' done' : '')
+      + (struck(p) ? ' struckrow' : '')
+
+    const tick = document.createElement('span')
+    tick.className = 'tick'
+    tick.textContent = signedOff(p) ? '✓' : struck(p) ? '✗' : '·'
+    li.append(tick, `${p.title || p.id} `)
+
+    const who = document.createElement('span')
+    who.className = 'meta'
+    who.textContent = p.id
+    li.append(who)
+
+    li.title = p.compare
+      ? `${p.id} · ${p.compare.packSpecies} beside ${p.compare.kitSpecies}`
+      : `${p.id} · no side-by-side is defined for the group '${p.group}'`
+    li.onclick = () => void select(p.id)
+    list.append(li)
+  }
+
+  const p = primitivesProgress(primitives)
+  $('#count').textContent = `${items.length} shown · ${p.left} to go`
+}
+
+/** Where he has got to across the WHOLE primitives bench, never the filtered view. */
+function drawPrimitiveProgress(): void {
+  const p = primitivesProgress(primitives)
+  const bar = $<HTMLProgressElement>('#benchBar')
+  bar.max = Math.max(1, p.total)
+  bar.value = p.done
+  $('#benchDone').textContent = p.label
+
+  const bits: string[] = [`${p.left} to go`]
+  /* A refusal is an answer and is counted as one. Rolling it into "to go" would
+   * make the bench look unfinished forever over decisions he has already made. */
+  if (p.struck) bits.push(`${p.struck} rejected`)
+  if (p.odd) bits.push(`${p.odd} carrying a verdict nothing here understands`)
+  if (p.ungrouped) bits.push(`${p.ungrouped} in an unknown group`)
+  if (p.withoutPicture) bits.push(`${p.withoutPicture} with no side-by-side`)
+  $('#benchMeta').textContent = bits.join(' · ')
+}
+
 function drawList(): void {
   if (gallery === 'built') { drawBenchList(); drawProgress(); return }
+  if (gallery === 'primitives') { drawPrimitiveList(); drawPrimitiveProgress(); return }
   const items = shown()
   const list = $('#list')
   list.replaceChildren()
@@ -438,6 +666,16 @@ async function select(id: string): Promise<void> {
 
 function build(id: string): Promise<THREE.Object3D> {
   if (gallery === 'built') return loadBuilt(id)
+  if (gallery === 'primitives') {
+    const row = primitives.find(p => p.id === id)
+    if (!row) return Promise.reject(new Error(`${id} is not on the primitives bench`))
+    if (!row.compare) {
+      return Promise.reject(new Error(
+        `no side-by-side is defined for the group '${row.group}' — the row is still readable, `
+        + 'but there is nothing to look at while deciding it'))
+    }
+    return loadComparison(row.compare)
+  }
   if (gallery === 'species') return loadPet(id, $<HTMLSelectElement>('#setSelect').value)
   if (gallery === 'tiles') return loadTile(id, $<HTMLSelectElement>('#seasonSelect').value as Season)
   return loadProp(id, $<HTMLInputElement>('#greyToggle').checked)
@@ -445,7 +683,9 @@ function build(id: string): Promise<THREE.Object3D> {
 
 function drawDetail(): void {
   if (gallery === 'built') return drawCreature()
+  if (gallery === 'primitives') return drawPrimitive()
   $('#creature').hidden = true
+  $('#primitive').hidden = true
   const entry = shown().find(e => e.id === picked)
   $('#assetId').textContent = picked || '—'
   const facts = $('#facts')
@@ -546,6 +786,7 @@ function drawCreature(): void {
   const box = $('#creature')
   box.hidden = false
   box.replaceChildren()
+  $('#primitive').hidden = true
 
   $('#assetId').textContent = c ? c.given : '—'
   const dl = $('#facts')
@@ -666,6 +907,133 @@ function drawCreature(): void {
   }
 }
 
+/* ------------------------------------------------- the primitive sign-off */
+
+/**
+ * One field of one primitive row, onto the file as it stands THIS INSTANT.
+ *
+ * The SAME `/api/save` patch path the creature card and `app.js` use, and
+ * deliberately so: `joe/primitives-audit.json` has two authors — an agent
+ * rewrites all eight measured fields of every row whenever it goes and measures
+ * the pack again, Joe owns `signoff` and `note` — and the server re-reads and
+ * merges inside the request so neither can silently overwrite the other. A
+ * second persistence route would have to re-learn all of that and would learn it
+ * wrong; `merge.mjs` exists because it was learned three times the expensive way.
+ */
+async function patchPrimitive(p: Primitive, fields: Record<string, string>): Promise<void> {
+  const out = await api('/api/save', { what: 'primitives', patch: { id: p.id, ...fields } })
+  if (out?.error) say(out.error, true)
+  else say(`saved ${out.saved}`)
+}
+
+/**
+ * One primitive's card: the question, the two measurements, the gap, the
+ * proposal, the provenance, and one gate.
+ *
+ * Laid out in the order the argument has to be read, and nothing is hidden when
+ * it is missing. What he is being asked is not "does this look nice" — the
+ * models are on the turntable for that — it is whether the kits may build out of
+ * this shape, and the answer stops or starts a re-tune. So `evidence` is on the
+ * card rather than in a tooltip: a claim about the pack with no file:line beside
+ * it is a claim he has no way to check, and this whole surface exists because
+ * seventy-two animals were built on assumptions nobody wrote down.
+ *
+ * Two buttons, not one. 'reject' is a real answer — "the kits may NOT build out
+ * of this" — and folding it into the absence of a tick would make a decision he
+ * has made indistinguishable from one he has not reached.
+ */
+function drawPrimitive(): void {
+  const p = primitives.find(x => x.id === picked)
+  const box = $('#primitive')
+  box.hidden = false
+  box.replaceChildren()
+  $('#creature').hidden = true
+
+  $('#assetId').textContent = p ? (p.title || p.id) : '—'
+  const dl = $('#facts')
+  dl.replaceChildren()
+  if (!p) { box.hidden = true; return }
+
+  const put = (label: string, value: string) => {
+    if (!value) return
+    dl.append(el('dt', '', label), el('dd', '', value))
+  }
+  put('group', p.group)
+  put('id', p.id)
+
+  if (!p.known) {
+    box.append(el('p', 'alarm',
+      `This row is in a group called '${p.group}', which this build of the viewer has no `
+      + 'heading, no order and no side-by-side for. The row is still readable and still '
+      + 'signable; the picture beside it is what is missing.'))
+  }
+  if (p.odd) {
+    box.append(el('p', 'alarm',
+      `Its sign-off field reads '${p.signoff}', which is none of the three this bench knows `
+      + "('' not yet judged, 'ok' accepted, 'reject' refused). It is NOT being counted as a "
+      + 'tick. Click one of the two buttons below to say what you meant.'))
+  }
+
+  /* ---- the question, first and largest. Everything under it is the case. */
+  if (p.question) box.append(el('p', 'question', p.question))
+
+  const section = (heading: string, text: string, className = ''): void => {
+    if (!text) return
+    const row = el('div', 'judge')
+    row.append(el('h3', '', heading))
+    row.append(el('p', 'factText' + (className ? ' ' + className : ''), text))
+    box.append(row)
+  }
+  section('What the pack measures', p.packSays)
+  section('What the kits do today', p.kitSays)
+  section('The gap', p.gap)
+  section('What we would change it to', p.proposal)
+
+  /* Where the models beside this row come from, in the same words the canvas is
+   * arranged in — LEFT is the pack, RIGHT is the kit, always. */
+  if (p.compare) section('What you are looking at', p.compare.why, 'meta')
+  else {
+    section('What you are looking at', 'Nothing — no side-by-side is defined for this row, so it '
+      + 'is numbers only. That is a gap in this viewer, not a statement about the primitive.', 'meta')
+  }
+  section('Evidence', p.evidence, 'meta')
+
+  /* ---- his note */
+  const noteRow = el('div', 'judge')
+  noteRow.append(el('h3', '', 'Your note'))
+  const why = el('input')
+  why.value = p.note
+  why.placeholder = 'note — what you want instead, or what this turns on'
+  why.onchange = () => { p.note = why.value; void patchPrimitive(p, { note: why.value }) }
+  noteRow.append(why)
+  box.append(noteRow)
+
+  /* ---- the one gate, in two directions */
+  const gates = el('div', 'row gates')
+  const yes = el('button', 'signoff' + (signedOff(p) ? ' on' : ''),
+    signedOff(p) ? '✓ signed off — click to re-open' : 'Sign this primitive off')
+  const no = el('button', 'refuse' + (struck(p) ? ' on' : ''),
+    struck(p) ? '✗ rejected — click to re-open' : 'Reject it')
+
+  /* Clicking the state it already has clears it: a mis-click is one click to
+   * undo, and '' is a real state — not yet judged, and not a rejection. */
+  const setTo = (want: string) => () => {
+    p.signoff = p.signoff === want ? '' : want
+    p.odd = false
+    drawPrimitive()
+    drawList()
+    void patchPrimitive(p, { signoff: p.signoff })
+  }
+  yes.onclick = setTo(SIGNED_OFF)
+  no.onclick = setTo(STRUCK)
+  gates.append(yes, no)
+  box.append(gates)
+
+  box.append(el('p', 'meta',
+    'Nothing in src/ is re-tuned until the primitive it rides on is ticked here. Signing this '
+    + 'off is what unblocks the change; rejecting it is what stops it being made anyway.'))
+}
+
 /* ------------------------------------------------------------- grid mode */
 
 /**
@@ -729,10 +1097,38 @@ function setGallery(next: Gallery): void {
   $('#setPick').hidden = next !== 'species'
   $('#seasonPick').hidden = next !== 'tiles'
   $('#greyPick').hidden = next !== 'props'
-  /* The progress bar belongs to the bench and would be a lie over the props. */
-  $('#bench').hidden = next !== 'built'
-  $('#noteForm').hidden = next === 'built'
-  $('#notes').hidden = next === 'built'
+  /*
+   * The progress bar belongs to the two SIGN-OFF benches and would be a lie over
+   * the props, which have nothing to be finished with. Both fill the same three
+   * elements, from `drawProgress` and `drawPrimitiveProgress` respectively.
+   */
+  const signing = next === 'built' || next === 'primitives'
+  $('#bench').hidden = !signing
+  /* The asset-note box is per-FILE and there is no file behind either bench: a
+   * creature is built at runtime and a primitive is a decision. Both carry their
+   * own note field inside the card, which is where a note about one belongs. */
+  $('#noteForm').hidden = signing
+  $('#notes').hidden = signing
+  /* Nothing to grid: a primitive is already showing two models at once, and the
+   * "group" it belongs to is Face or Limbs, which is not a thing to lay out. */
+  $('#grid').hidden = next === 'primitives'
+  /*
+   * THE TURNTABLE STOPS HERE, and it is not a preference.
+   *
+   * Every other gallery shows one object and spinning it is how you read a
+   * silhouette. This one shows two, side by side, and the card beside the canvas
+   * says in as many words that the LEFT is the pack and the RIGHT is the kit. A
+   * turntable makes that sentence false every few seconds — the pair swings
+   * right round — so he would be reading the pack's numbers against the kit's
+   * geometry without a thing on screen looking wrong. Caught by screenshotting
+   * the `leg-adopt` row four seconds after selecting it, by which point the
+   * stand had turned about 115°.
+   *
+   * Stopped rather than removed: the button and the space bar still work, and
+   * `clearStand()` puts the rotation back to zero on every selection, so a spin
+   * he starts himself is one he knows about.
+   */
+  if (next === 'primitives' && spinning) $('#spin').click()
   drawList()
   const first = listedIds()[0]
   if (first) void select(first)
@@ -791,6 +1187,15 @@ async function boot(): Promise<void> {
    * it.
    */
   bench = builtBench(state.names ?? [], readFacts(state.facts))
+  /*
+   * The primitives bench, joined here and nowhere else.
+   *
+   * `state.primitives` is the whole of it — the measurements an agent wrote and
+   * the two fields Joe owns, in one file, seeded with its rows so this surface
+   * is resumable with nothing running but the workbench server. That was the
+   * requirement: a review hour needs no manager.
+   */
+  primitives = primitivesBench(state.primitives ?? [])
 
   const select$ = $<HTMLSelectElement>('#setSelect')
   for (const set of SETS) {

@@ -102,3 +102,25 @@ button.signoff { width: 100%; margin-top: .8rem; padding: .55rem; font-size: .95
   font-weight: 600; border-color: var(--dim); }
 button.signoff.on { background: var(--ok); color: var(--bg); border-color: var(--ok); }
 button.signoff:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ---------------------------------------------------------- the primitives */
+
+/* The question he is being asked, above the case for it. The largest text in
+   the pane, because everything under it is evidence for one decision. */
+#primitive .question { margin: .2rem 0 .4rem; font-size: .95rem; line-height: 1.45;
+  color: var(--ink); font-weight: 600; }
+#primitive .factText.meta { font-size: .78rem; color: var(--dim); }
+#primitive .judge input { width: 100%; }
+
+/* Accept and refuse, side by side and equal. A refusal is an answer, so it is
+   not expressed by declining to click the other one. */
+#primitive .gates { display: flex; gap: .5rem; margin-top: .8rem; flex-wrap: nowrap; }
+#primitive .gates button { flex: 1 1 0; margin-top: 0; padding: .55rem; font-size: .9rem;
+  font-weight: 600; border-color: var(--dim); }
+button.refuse.on { background: var(--warn); color: var(--bg); border-color: var(--warn); }
+
+/* A rejected row keeps its place and shows its cross, exactly as a signed-off
+   one keeps its place and shows its tick. */
+#list .item.struckrow { color: var(--warn); }
+#list .item.struckrow .tick { color: var(--warn); }
+#list .item.on.struckrow, #list .item.on.struckrow .tick { color: inherit; }
