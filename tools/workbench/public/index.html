@@ -16,6 +16,7 @@
     <nav id="tabs">
       <button data-tab="tasks" class="on">Your queue</button>
       <button data-tab="backlog">Backlog</button>
+      <button data-tab="names">Pet names</button>
       <button data-tab="lessons">Lessons</button>
       <button data-tab="bake">Bake</button>
       <button data-tab="voices">Voices &amp; key</button>
@@ -28,6 +29,16 @@
   <main>
     <section id="tasks" class="tab on"></section>
     <section id="backlog" class="tab"></section>
+
+    <!--
+      The name audit. Two parts, because the bar has to survive a verdict:
+      every tick redraws #namesBar and the one row it changed, and nothing
+      else, so the list does not jump under him 350 times in a sitting.
+    -->
+    <section id="names" class="tab">
+      <div id="namesBar"></div>
+      <div id="namesRows"></div>
+    </section>
 
     <section id="lessons" class="tab">
       <div class="split">

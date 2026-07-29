@@ -29,7 +29,7 @@ let picked = null
 
 async function refresh() {
   S = await api('/api/state')
-  drawTasks(); drawBacklog(); drawLessons(); drawBake(); drawVoices(); drawNotes()
+  drawTasks(); drawBacklog(); drawNames(); drawLessons(); drawBake(); drawVoices(); drawNotes()
 }
 
 const save = (what, value) => api('/api/save', { body: { what, value } }).then(r => { say(`saved ${r.saved}`); return refresh() })
@@ -137,6 +137,179 @@ function drawBacklog() {
 }
 
 const writeCard = (id, fields) => patchRecord('backlog', id, fields)
+
+/* --------------------------------------------------------------- pet names */
+
+/**
+ * The name audit — PB-036. The one panel built for a long sitting.
+ *
+ * Roster §3 says every generated name is checked for how it SAYS and for what
+ * it collides with — a real word, or a rude one in disguise — before it is
+ * frozen, and Joe may do that in a session with no manager running. So the
+ * name is the big thing on the row, accept and reject are one click and land
+ * on disk that instant, and the bar says where he got to. He can close the tab
+ * mid-row and lose nothing.
+ *
+ * Never sorted. The file arrives in the roster's order and stays in it; the
+ * headings below are drawn as the collection CHANGES, so grouping costs no
+ * reordering and a name never moves between one visit and the next.
+ */
+const NAME_FILTERS = {
+  todo: ['still to review', n => !n.verdict],
+  all: ['every name', () => true],
+  ok: ['kept', n => n.verdict === 'ok'],
+  reject: ['rejected', n => n.verdict === 'reject'],
+}
+
+/*
+ * Rendered in chunks, and filtered before it is chunked.
+ *
+ * 350 rows would survive being drawn in one go; the roster is meant to reach
+ * several thousand, and at that size a page that draws the lot rebuilds tens
+ * of thousands of nodes to tick one box. The counts in the bar always describe
+ * the WHOLE file, so the cap can never mislead him about how much is left.
+ */
+const NAME_PAGE = 150
+let nameFilter = 'todo'
+let nameSet = ''
+let nameLimit = NAME_PAGE
+
+const namesShown = () => (S.names ?? []).filter(n =>
+  NAME_FILTERS[nameFilter][1](n) && (!nameSet || n.collection === nameSet))
+
+function drawNames() {
+  drawNamesBar()
+  const rows = $('#namesRows')
+  rows.replaceChildren()
+
+  const all = S.names ?? []
+  if (!all.length) {
+    rows.append(el('p', { className: 'hint' },
+      'joe/names-audit.json has no names in it yet — the rows are generated with the roster. ' +
+      'This panel fills itself the moment they land.'))
+    return
+  }
+
+  const shown = namesShown()
+  if (!shown.length) {
+    rows.append(el('p', { className: 'ok' }, '✓ nothing left under this filter.'))
+    return
+  }
+
+  let group = null
+  for (const n of shown.slice(0, nameLimit)) {
+    if (n.collection !== group) {
+      group = n.collection
+      rows.append(el('h2', { className: 'nameGroup' }, group ?? '—'))
+    }
+    rows.append(nameRow(n))
+  }
+
+  if (shown.length > nameLimit) {
+    const more = el('button', {}, `Show the next ${Math.min(NAME_PAGE, shown.length - nameLimit)}`)
+    more.onclick = () => { nameLimit += NAME_PAGE; drawNames() }
+    rows.append(el('div', { className: 'row' }, [more]))
+  }
+}
+
+/** Where he got to, in numbers, at the top of the screen and always true. */
+function drawNamesBar() {
+  const bar = $('#namesBar')
+  bar.replaceChildren()
+
+  const all = S.names ?? []
+  if (!all.length) return
+  const done = all.filter(n => n.verdict).length
+  const kept = all.filter(n => n.verdict === 'ok').length
+  const gone = all.filter(n => n.verdict === 'reject').length
+
+  bar.append(el('div', { className: 'row' }, [
+    el('strong', {}, `${done} of ${all.length} reviewed`),
+    el('progress', { max: all.length, value: done }),
+    el('span', { className: 'meta' }, `${kept} kept · ${gone} rejected · ${all.length - done} to go`),
+  ]))
+
+  const filter = el('select')
+  for (const [k, [label]] of Object.entries(NAME_FILTERS)) {
+    filter.append(el('option', { value: k, selected: k === nameFilter }, label))
+  }
+  filter.onchange = () => { nameFilter = filter.value; nameLimit = NAME_PAGE; drawNames() }
+
+  const set = el('select')
+  set.append(el('option', { value: '', selected: !nameSet }, 'every collection'))
+  for (const c of [...new Set(all.map(n => n.collection).filter(Boolean))]) {
+    set.append(el('option', { value: c, selected: c === nameSet }, c))
+  }
+  set.onchange = () => { nameSet = set.value; nameLimit = NAME_PAGE; drawNames() }
+
+  const shown = namesShown()
+  bar.append(el('div', { className: 'row' }, [
+    el('span', { className: 'meta' }, 'showing'), filter, set,
+    el('span', { className: 'meta' }, `${Math.min(nameLimit, shown.length)} of ${shown.length} on screen`),
+  ]))
+  bar.append(el('p', { className: 'hint' },
+    'Say each one aloud. Reject anything that trips the tongue, that is already a word, ' +
+    'or that is a word in disguise — then type the name you want instead.'))
+}
+
+function nameRow(n) {
+  const card = el('div', { className: 'card name ' + (n.verdict || '') })
+
+  card.append(el('div', { className: 'row nameHead' }, [
+    el('span', { className: 'species' }, n.species || n.speciesId || ''),
+    el('span', { className: 'theName' }, n.name || ''),
+    el('span', { className: 'meta' }, [n.collection, n.band, n.setId].filter(Boolean).join(' · ')),
+  ]))
+
+  const keep = el('button', { className: 'verdict' + (n.verdict === 'ok' ? ' on' : '') }, n.verdict === 'ok' ? '✓ Kept' : 'Keep')
+  const drop = el('button', { className: 'verdict' + (n.verdict === 'reject' ? ' on' : '') }, n.verdict === 'reject' ? '✗ Rejected' : 'Reject')
+  const better = el('input', { className: 'replacement', value: n.replacement ?? '', placeholder: 'the name you want instead' })
+  const note = el('input', { value: n.note ?? '', placeholder: 'note — what is wrong with it' })
+
+  /*
+   * The row re-draws, the LIST does not.
+   *
+   * A ticked row stays where it is even under "still to review": he is working
+   * down a list reading aloud, and a row that vanishes from under the cursor
+   * takes his place with it. The bar's counts move immediately, so the tick is
+   * never in doubt, and the row is gone next time he opens the tab.
+   */
+  const rule = v => () => {
+    /* Clicking the verdict it already has clears it. A mis-click is one click
+     * to undo, and '' is a real state — not yet reviewed, not a rejection. */
+    n.verdict = n.verdict === v ? '' : v
+    const fresh = nameRow(n)
+    card.replaceWith(fresh)
+    drawNamesBar()
+    /* He rejects because he has a better name in mind. Put the cursor there. */
+    if (n.verdict === 'reject') fresh.querySelector('.replacement').focus()
+    patchName(n.id, { verdict: n.verdict })
+  }
+  keep.onclick = rule('ok')
+  drop.onclick = rule('reject')
+
+  better.onchange = () => { n.replacement = better.value; patchName(n.id, { replacement: better.value }) }
+  note.onchange = () => { n.note = note.value; patchName(n.id, { note: note.value }) }
+
+  card.append(el('div', { className: 'row' }, [keep, drop, better, note]))
+  return card
+}
+
+/**
+ * A patch, without the whole-page refresh the other panels take.
+ *
+ * `patchRecord` re-reads every file and redraws every panel on each save,
+ * which is right for a queue of seven and wrong for a sitting of 350 verdicts.
+ * The server still merges onto the file as it stands this instant — that part
+ * is not negotiable and is not skipped here. Only the redraw is: the row has
+ * already shown the change. If the save is refused, `api` says so in red and
+ * the reload puts the page back in step with the disk rather than leaving a
+ * tick on screen that is not in the file.
+ */
+const patchName = (id, fields) =>
+  api('/api/save', { body: { what: 'names', patch: { id, ...fields } } })
+    .then(r => say(`saved ${r.saved}`))
+    .catch(() => { refresh().catch(() => {}) })
 
 /* ------------------------------------------------------------------ lessons */
 

@@ -35,6 +35,23 @@ textarea { font-family: ui-monospace, monospace; font-size: 13px; }
 .hint { color: var(--dim); font-size: .82rem; font-style: italic; }
 code { background: #efe9e0; padding: 0 .2em; border-radius: 3px; }
 
+/* The name audit. Built for one long sitting: the name loud, the rest quiet. */
+#namesBar { position: sticky; top: 2.4rem; background: var(--bg); padding: .5rem 0 .6rem; z-index: 1;
+  border-bottom: 1px solid var(--line); margin-bottom: .6rem; }
+#namesBar progress { width: 11rem; height: .55rem; }
+#namesBar .hint { margin: .35rem 0 0; }
+.nameGroup { font-size: .78rem; font-weight: 400; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--dim); margin: 1.1rem 0 .35rem; }
+.card.name { padding: .5rem .9rem .6rem; }
+.card.name.ok { border-color: var(--ok); }
+.card.name.reject { border-color: var(--warn); }
+.nameHead { gap: .7rem; align-items: baseline; margin-bottom: .35rem; }
+.nameHead .species { font-size: 1rem; color: var(--dim); min-width: 9rem; }
+.nameHead .theName { font-size: 1.6rem; font-weight: 600; line-height: 1.1; }
+.card.name input { width: auto; flex: 1 1 9rem; }
+.card.name button.verdict { min-width: 6.5rem; }
+.card.name button.verdict.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+
 .split { display: grid; grid-template-columns: 15rem 1fr; gap: 1rem; align-items: start; }
 #lessonList { list-style: none; margin: 0; padding: 0; }
 #lessonList li { padding: .35rem .5rem; border-radius: 4px; cursor: pointer; font-size: .9rem; }

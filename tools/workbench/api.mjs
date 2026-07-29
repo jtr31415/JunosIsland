@@ -27,6 +27,7 @@ const WRITABLE = {
   backlog: 'joe/backlog.json',
   voices: 'joe/voices.json',
   notes: 'joe/asset-notes.json',
+  names: 'joe/names-audit.json',
 }
 
 /**
@@ -78,6 +79,13 @@ function state(root) {
     blocking: blocking(tasksFile.tasks),
     backlog: readJson(root, 'joe/backlog.json', { cards: [], nextId: 1 }),
     notes: readJson(root, 'joe/asset-notes.json', { notes: [] }).notes,
+    /*
+     * The pet-name audit, in the file's own order — which is the roster's
+     * order, and the order Joe will read them aloud in. Never sorted here: the
+     * page groups by collection as it renders, so nothing about what he sees
+     * depends on a comparator this end.
+     */
+    names: readJson(root, 'joe/names-audit.json', { schemaVersion: 1, names: [] }).names ?? [],
     voices,
     statuses: STATUSES,
     /*

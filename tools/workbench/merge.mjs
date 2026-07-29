@@ -91,6 +91,29 @@ const MERGEABLE = {
      * case the counter cannot cover on its own. */
     counter: { field: 'nextId', prefix: 'PB-', pad: 3 },
   },
+  /*
+   * `joe/names-audit.json` is the same two-writer shape from the other
+   * direction, and the worse one: the LIST is generated — an agent rewrites
+   * every row of it whenever the roster changes — while three fields of each
+   * row are Joe's judgement, made once, by reading the name out loud.
+   *
+   * `verdict` is a flag: '' is the absence of a decision, which is what every
+   * name is born with and what a regenerated file carries, so it can never
+   * untick an 'ok'. `replacement` and `note` are his own words — the name he
+   * wants instead of the generated one, and why — so they are text and a
+   * genuine disagreement is refused rather than guessed at.
+   *
+   * No counter: ids are `setId/speciesId`, derived from the roster and never
+   * dealt, so there is no id space for two writers to race over.
+   */
+  names: {
+    list: 'names', key: 'id',
+    owns: {
+      verdict: { kind: 'flag', idle: '' },
+      replacement: { kind: 'text' },
+      note: { kind: 'text' },
+    },
+  },
 }
 
 /*

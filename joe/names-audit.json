@@ -1,0 +1,173 @@
+{
+  "schemaVersion": 1,
+  "names": [
+    {
+      "id": "natural/animal-hedgehog",
+      "setId": "natural",
+      "speciesId": "animal-hedgehog",
+      "species": "Hedgehog",
+      "collection": "garden",
+      "band": "short",
+      "name": "Nachet",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
+    },
+    {
+      "id": "natural/animal-squirrel",
+      "setId": "natural",
+      "speciesId": "animal-squirrel",
+      "species": "Squirrel",
+      "collection": "garden",
+      "band": "short",
+      "name": "Chobad",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
+    },
+    {
+      "id": "natural/animal-mouse",
+      "setId": "natural",
+      "speciesId": "animal-mouse",
+      "species": "Mouse",
+      "collection": "garden",
+      "band": "short",
+      "name": "Sallda",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
+    },
+    {
+      "id": "natural/animal-mole",
+      "setId": "natural",
+      "speciesId": "animal-mole",
+      "species": "Mole",
+      "collection": "garden",
+      "band": "short",
+      "name": "Dormup",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
+    },
+    {
+      "id": "natural/animal-badger",
+      "setId": "natural",
+      "speciesId": "animal-badger",
+      "species": "Badger",
+      "collection": "garden",
+      "band": "short",
+      "name": "Sandu",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
+    },
+    {
+      "id": "natural/animal-frog",
+      "setId": "natural",
+      "speciesId": "animal-frog",
+      "species": "Frog",
+      "collection": "garden",
+      "band": "short",
+      "name": "Daweb",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
+    },
+    {
+      "id": "natural/animal-toad",
+      "setId": "natural",
+      "speciesId": "animal-toad",
+      "species": "Toad",
+      "collection": "garden",
+      "band": "short",
+      "name": "Fiwoff",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
+    },
+    {
+      "id": "natural/animal-tortoise",
+      "setId": "natural",
+      "speciesId": "animal-tortoise",
+      "species": "Tortoise",
+      "collection": "garden",
+      "band": "short",
+      "name": "Tupzu",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
+    },
+    {
+      "id": "natural/animal-newt",
+      "setId": "natural",
+      "speciesId": "animal-newt",
+      "species": "Newt",
+      "collection": "garden",
+      "band": "short",
+      "name": "Watash",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
+    },
+    {
+      "id": "natural/animal-shrew",
+      "setId": "natural",
+      "speciesId": "animal-shrew",
+      "species": "Shrew",
+      "collection": "garden",
+      "band": "short",
+      "name": "Dithit",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
+    },
+    {
+      "id": "natural/animal-dormouse",
+      "setId": "natural",
+      "speciesId": "animal-dormouse",
+      "species": "Dormouse",
+      "collection": "garden",
+      "band": "short",
+      "name": "Zihuth",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
+    },
+    {
+      "id": "natural/animal-vole",
+      "setId": "natural",
+      "speciesId": "animal-vole",
+      "species": "Vole",
+      "collection": "garden",
+      "band": "short",
+      "name": "Nawuck",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
+    },
+    {
+      "id": "natural/animal-slow-worm",
+      "setId": "natural",
+      "speciesId": "animal-slow-worm",
+      "species": "Slow-Worm",
+      "collection": "garden",
+      "band": "short",
+      "name": "Nunem",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
+    },
+    {
+      "id": "natural/animal-salamander",
+      "setId": "natural",
+      "speciesId": "animal-salamander",
+      "species": "Salamander",
+      "collection": "garden",
+      "band": "short",
+      "name": "Loonpo",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
+    }
+  ]
+}

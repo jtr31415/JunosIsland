@@ -493,6 +493,166 @@ describe('two writers, one file', () => {
   })
 })
 
+/**
+ * PB-036: the pet-name audit, and the merge that has to hold under it.
+ *
+ * The same two-writer shape as the queue, from the worse direction. The LIST is
+ * generated — an agent rewrites every row whenever the roster moves — while
+ * three fields of each row are Joe's judgement, made once, by reading the name
+ * out loud and deciding whether a six-year-old can say it and whether it is a
+ * rude word in disguise. Regenerating the file must therefore be incapable of
+ * costing him that, or the audit is work that can be destroyed by a build step.
+ *
+ * The generator's half is written with `writeFileSync` where it stands in for
+ * an agent editing the file (that is how it really happens), and posted as a
+ * whole `value` where the point is what the MERGE does with it.
+ */
+describe('the pet-name audit', () => {
+  const REL = 'joe/names-audit.json'
+  const onDisk = () => JSON.parse(readFileSync(join(root, REL), 'utf8'))
+  const row = (id: string) => onDisk().names.find((n: any) => n.id === id)
+
+  const status = async (body: unknown) => {
+    const res = await fetch(base + '/api/save', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+    })
+    return { code: res.status, body: (await res.json()) as any }
+  }
+
+  /** What the generator produces: every field filled but Joe's three. */
+  const generated = () => ({
+    schemaVersion: 1,
+    names: [
+      ['natural/animal-hedgehog', 'natural', 'animal-hedgehog', 'Hedgehog', 'garden', 'short', 'Bimo'],
+      ['natural/animal-fox', 'natural', 'animal-fox', 'Fox', 'garden', 'long', 'Rusanna'],
+      ['natural/animal-owl', 'natural', 'animal-owl', 'Owl', 'woodland', 'short', 'Whoop'],
+      ['dawn/animal-deer', 'dawn', 'animal-deer', 'Deer', 'woodland', 'long', 'Fennimore'],
+    ].map(([id, setId, speciesId, species, collection, band, name]) =>
+      ({ id, setId, speciesId, species, collection, band, name, verdict: '', replacement: '', note: '' })),
+  })
+
+  /** The generator, run again, straight onto the file — no API, as it happens. */
+  const regenerate = () => writeFileSync(join(root, REL), JSON.stringify(generated(), null, 2) + '\n')
+
+  it('is seeded on first boot with a shape the page can patch', async () => {
+    /* Empty on purpose: the rows come from the roster, not from the seeder. What
+     * the seed guarantees is that the file EXISTS, so the panel opens and a
+     * patch has somewhere to land before the generator has ever run. */
+    expect(existsSync(join(root, REL))).toBe(true)
+    expect(onDisk()).toEqual({ schemaVersion: 1, names: [] })
+    expect((await api('/api/state')).names).toEqual([])
+  })
+
+  it('serves the generated list and takes a verdict, a replacement and a note', async () => {
+    regenerate()
+    const s = await api('/api/state')
+    expect(s.names.map((n: any) => n.id)).toEqual([
+      'natural/animal-hedgehog', 'natural/animal-fox', 'natural/animal-owl', 'dawn/animal-deer',
+    ])
+    expect(s.names[0]).toMatchObject({ species: 'Hedgehog', collection: 'garden', band: 'short', name: 'Bimo', verdict: '' })
+
+    expect((await status({ what: 'names', patch: { id: 'natural/animal-hedgehog', verdict: 'ok' } })).code).toBe(200)
+    expect((await status({
+      what: 'names',
+      patch: { id: 'natural/animal-owl', verdict: 'reject', replacement: 'Hoot', note: 'reads as a noise, not a name' },
+    })).code).toBe(200)
+
+    expect(row('natural/animal-hedgehog').verdict).toBe('ok')
+    expect(row('natural/animal-owl')).toMatchObject({
+      verdict: 'reject', replacement: 'Hoot', note: 'reads as a noise, not a name',
+    })
+    /* The generated fields are untouched by his verdict. */
+    expect(row('natural/animal-owl').name).toBe('Whoop')
+
+    /* The file is still the file: roster order, two spaces, LF, trailing newline. */
+    const raw = readFileSync(join(root, REL), 'utf8')
+    expect(onDisk().names.map((n: any) => n.id)).toEqual(generated().names.map(n => n.id))
+    expect(raw).not.toContain('\r')
+    expect(raw.endsWith('\n')).toBe(true)
+    expect(raw).toContain('\n  "names": [')
+  })
+
+  it('a regenerated list never walks over a verdict, a replacement or a note', async () => {
+    regenerate()
+    await status({ what: 'names', patch: { id: 'natural/animal-fox', verdict: 'reject', replacement: 'Rusty', note: 'four syllables is two too many' } })
+    await status({ what: 'names', patch: { id: 'natural/animal-owl', verdict: 'ok' } })
+
+    /* The roster moves and the generator runs again — through the API, with
+     * every one of Joe's fields blank, exactly as it produces them. */
+    const fresh = generated()
+    fresh.names.push({
+      id: 'dawn/animal-badger', setId: 'dawn', speciesId: 'animal-badger', species: 'Badger',
+      collection: 'woodland', band: 'short', name: 'Tuck', verdict: '', replacement: '', note: '',
+    })
+    expect((await status({ what: 'names', value: fresh })).code).toBe(200)
+
+    const fox = row('natural/animal-fox')
+    expect(fox.verdict).toBe('reject')
+    expect(fox.replacement).toBe('Rusty')
+    expect(fox.note).toBe('four syllables is two too many')
+    expect(row('natural/animal-owl').verdict).toBe('ok')
+    /* And the name it did not know about is on the list to be judged. */
+    expect(row('dawn/animal-badger').name).toBe('Tuck')
+  })
+
+  it("an 'ok' cannot be un-ticked by a blank verdict, but his own hand can clear it", async () => {
+    regenerate()
+    await status({ what: 'names', patch: { id: 'natural/animal-hedgehog', verdict: 'ok' } })
+
+    /* '' is the absence of a decision — what every name is born with and what a
+     * regenerated row carries. An absence never unticks anything. */
+    expect((await status({ what: 'names', value: generated() })).code).toBe(200)
+    expect(row('natural/animal-hedgehog').verdict).toBe('ok')
+
+    /* A patch is intent, said out loud, so it clears it. */
+    expect((await status({ what: 'names', patch: { id: 'natural/animal-hedgehog', verdict: '' } })).code).toBe(200)
+    expect(row('natural/animal-hedgehog').verdict).toBe('')
+  })
+
+  it('the owns kinds are the judgement: prose is refused, a token is not', async () => {
+    regenerate()
+    await status({ what: 'names', patch: { id: 'natural/animal-fox', verdict: 'ok', replacement: 'Rusty', note: 'his own words' } })
+
+    /* A verdict is a token — one click, visible when wrong, and the only writer
+     * that ever carries a meaningful one is a page echoing Joe himself. It is a
+     * flag, so a disagreeing one lands. */
+    const flag = generated()
+    flag.names.find(n => n.id === 'natural/animal-fox')!.verdict = 'reject'
+    expect((await status({ what: 'names', value: flag })).code).toBe(200)
+    expect(row('natural/animal-fox').verdict).toBe('reject')
+
+    /* His words are not. Two meaningful notes and no third version to break the
+     * tie is a 409 that writes NOTHING, rather than a guess. */
+    const prose = generated()
+    prose.names.find(n => n.id === 'natural/animal-fox')!.note = 'a note no agent should have'
+    const clash = await status({ what: 'names', value: prose })
+    expect(clash.code).toBe(409)
+    expect(clash.body.clashes[0]).toMatchObject({ id: 'natural/animal-fox', field: 'note' })
+    expect(row('natural/animal-fox').note).toBe('his own words')
+
+    /* The replacement is his words too — the name he wants instead. */
+    const stolen = generated()
+    stolen.names.find(n => n.id === 'natural/animal-fox')!.replacement = 'Vixen'
+    expect((await status({ what: 'names', value: stolen })).code).toBe(409)
+    expect(row('natural/animal-fox').replacement).toBe('Rusty')
+  })
+
+  it('refuses a patch for a field the page does not own', async () => {
+    regenerate()
+    const r = await status({ what: 'names', patch: { id: 'natural/animal-fox', species: 'Otter' } })
+    expect(r.code).toBe(400)
+    expect(r.body.error).toContain('species')
+    expect(row('natural/animal-fox').species).toBe('Fox')
+  })
+
+  it('did not widen the allowlist while adding itself to it', async () => {
+    /* The key is the whole allowlist — a near miss is not a file. */
+    const r = await status({ what: 'names-audit', value: { schemaVersion: 1, names: [] } })
+    expect(r.body.error).toContain('not a writable file')
+    expect(existsSync(join(root, 'joe/names-audit'))).toBe(false)
+  })
+})
+
 describe('the workbench cannot be talked out of the repo', () => {
   it('refuses a write to a file that is not on the list', async () => {
     const r = await post('/api/save', { what: 'package', value: { hacked: true } })

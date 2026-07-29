@@ -234,6 +234,17 @@ export function seed(root, { force = false } = {}) {
   })
   put('joe/voices.json', VOICES)
   put('joe/asset-notes.json', { schemaVersion: 1, notes: [] })
+  /*
+   * The name audit arrives empty on purpose.
+   *
+   * The rows are GENERATED — one per pet name, written by whatever run last
+   * built the roster — so seeding them here would create a second copy that
+   * drifts from it, which is the same mistake retyping Appendix L would be.
+   * What the seed guarantees is the SHAPE: the file exists, so the panel opens
+   * and a patch has somewhere to land before the generator has ever run. And
+   * create-if-absent means booting the server can never walk over a verdict.
+   */
+  put('joe/names-audit.json', { schemaVersion: 1, names: [] })
 
   /* Lessons come from the spec, and only if the spec is where we expect it. */
   const specPath = inside(REPO, 'docs/pet-island-runA.md')
