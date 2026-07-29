@@ -1,199 +1,255 @@
 # PB-036 handoff — themed animal collections
 
-*Run 10 (PB-036 manager, phase 2), written 29 July 2026. Read
+*Run 11 (PB-036 manager, phase 3), written 29 July 2026. Read
 `docs/MANAGER-ORDERS.md` for the job. This file is PB-036's baton only —
 `docs/MANAGER-HANDOFF.md` belongs to the queue manager and was not touched.*
 
 ## Queue position
 
-- **Phase 1 (the spine): DONE.** Species-as-data, the roster, the quadruped kit,
-  the name table, Joe's audit bench.
-- **Phase 2 (fan out, one agent per collection): DONE for every collection the
-  built kit can carry.** Four collections, 50 species, all five gates green,
-  pushed. `origin/main` is level at `9ee9e38`.
-- **Phase 3 (the next kit): NOT STARTED, and it is the whole of the next run.**
-  See "Where the next manager starts". **Songbird.**
-- Nothing ships to a child yet, on purpose — see "Why nothing is wired".
+- **Phase 1 (the spine): DONE.** Species-as-data, roster, quadruped kit, name
+  table, Joe's audit bench.
+- **Phase 2 (fan out on quadruped): DONE.** Four collections, 50 species.
+- **Phase 3 (the name collision + the songbird kit): DONE.** 72 species built,
+  **woodland and farm are the first two COMPLETE collections in the game**.
+  All five gates green, pushed, `origin/main` level at `88b290b`.
+- **Phase 4 (the next kit): NOT STARTED. Raptor — see "Where the next manager
+  starts", and note it is now the CHEAPEST kit, not just the next one.**
+- Nothing is wired to a child yet, on purpose — see "Why nothing is wired".
 
 ## What this run did
 
-Four subagents, one collection each, against the one kit that exists. Every
-brief named the members AND the kit per member, so no agent ever chose a shape.
+**1. The defect first: `Gichesh` named two animals.** Phase 2 shipped that name
+on both the warthog and the otter and left it for Joe to settle by hand with a
+`replacement`. That was the wrong place to fix it — the seed is per species, so
+independent draws collide by the birthday problem, and a manual fix recurs every
+time the roster grows. Roster §3 makes the given name playground currency: "have
+you got Gichesh?" must identify ONE creature.
 
-| collection | built | rostered | missing, and the kit it needs |
-|---|---|---|---|
-| garden | 13 | 14 | slow-worm — legless, **bespoke** |
-| home-pets | 10 | 16 | budgie/canary/cockatiel/lovebird **songbird**, corn-snake **bespoke**, goldfish **swim** |
-| woodland | 14 | 16 | pheasant, capercaillie — **songbird** |
-| africa | 13 | 16 | crocodile, ostrich **bespoke**, vulture **raptor** |
+So the generator was fixed instead. `naming.ts _allocate` walks all 320 rostered
+species in roster order and gives each the first name off its **own** seeded
+stream that is both in band and not already taken. Deterministic, pure,
+collision-free by construction.
 
-**The measured fact that shapes everything after this: no collection in the
-roster is 100% quadruped.** Independently classified all 296; the kit split is
-quadruped 142, bespoke 53, songbird 41, swim 22, raptor 20, minibeast 18.
-Garden is the closest to complete at 13/14. So "collections ship one at a time"
-cannot happen at all yet, which is JT-030 (raised, open).
+**The load-bearing choice: allocation runs over the whole ratified ROSTER, not
+over the built species.** All 320 are named whether or not a kit exists to build
+them, so finishing songbird — or swim, or the last bespoke one-off — cannot
+rename a single creature. Had it run over what is built, every new kit would
+reshuffle names of animals children already own.
 
-Also landed Joe's two rulings — see Decisions.
+**Exactly one creature moved, and it is named:** the warthog is Africa
+(collection 4), the otter is Woodland (9), so the warthog KEPT `Gichesh` and the
+otter took the next name off its own stream — **`Vuhick`**. A test rebuilds all
+320 names the old blind way and asserts the diff is `['animal-otter']`; that is
+phase 2's "renamed nobody" discipline extended, not discarded. The slack that
+permitted three collisions is now zero. Juno's pets are untouched: pin table
+still empty, no save read, no id moved.
+
+**2. The songbird kit, then one agent per collection.** Songbird was chosen over
+bespoke (which unlocks more species, 53 v 41) because it CLOSES collections
+rather than widening the front. Woodland +2 game birds → **16/16**. Farm arrives
+whole → **16/16**. Home Pets 10 → 14. Total built 50 → 72.
+
+`kits/shared.ts` now holds the primitives, colour maths and `fitRig`, as a pure
+move with no number changed; quadruped imports them. Every measured expectation
+in the five pinning test files passed untouched — that is the evidence the move
+was pure, and it is why six kits will not drift apart.
 
 ## Gate results
 
-Tree hashed immediately before and immediately after a clean back-to-back run
-of all five, with no edits in between:
+Hashed over the files this run owns, immediately before and after a clean
+back-to-back run of all five, no edits between:
 
 ```
-BEFORE: f704df6d8cb8c76368506b647cded1759ea4ec9d13ecf5a2496e2ddcd25935b1
-$ npm test          Test Files  85 passed (85)   Tests  1730 passed (1730)
-$ npx tsc --noEmit -p tsconfig.json      exit 0, zero bytes of output
-$ npm run build     2 bundles, dist/island/assets/index-BVdYwsHj.js 736.95 kB
-                    gzip 200.70 kB, PWA precache 8 entries (773.57 KiB)
-$ npm run smoke     8 ok checks — all boot checks passed
-$ npm run parity    every step renders identically
-AFTER : f704df6d8cb8c76368506b647cded1759ea4ec9d13ecf5a2496e2ddcd25935b1
+BEFORE: 293aaf4e17ed725996421f9fdb06817de802c690371fb782adf3ea2abbb13802
+$ npm test        Test Files 89 passed (89)  Tests 1837 passed (1837)
+$ npx tsc --noEmit -p tsconfig.json          exit 0, zero bytes of output
+$ npm run build   dist/island/assets/index-DVaKOGjz.js 736.95 kB gzip 200.70 kB
+                  PWA precache 8 entries (773.57 KiB)
+$ npm run smoke   all boot checks passed
+$ npm run parity  every step renders identically
+AFTER : 293aaf4e17ed725996421f9fdb06817de802c690371fb782adf3ea2abbb13802
 TREE UNMOVED
 ```
 
-**My own revert-check, which I personally watched go red:** raised the bear's
-`body` 0.95 → 1.45 in `collections/woodland.ts`; `species-silhouette.test.ts`
-went red twice — *"a creature this wide cannot path between two trees"* and
-*"a collection got wider — retune it, do not raise the cap: 'woodland was 1.58
-and is now 1.90'"*. Restored, 6 passed.
+**Two honest caveats, both about a CONCURRENT SESSION in this repo.**
+1. `npm test` unfiltered reports **1 failed / 1852**:
+   `species-facts.test.ts > covers every shipped species`. That test and
+   `joe/species-facts.json` are **untracked** — another session's live JT-031
+   work. It fails because I added 22 species and their fact file has 74 rows.
+   The 89/1837 above is the same suite with that one untracked file excluded,
+   i.e. the committed tree. **I did not write facts for the 22.** Joe's JT-031
+   ruling is that facts are agent-written *and fact-checked*; inventing 22 pairs
+   as a side effect of a kit run would defeat the checking.
+2. The whole-index hash moved mid-run because that session staged its own files
+   while my gates ran. That is why the hash above is scoped to my paths, and it
+   is why I committed by explicit path rather than from the index.
 
-**Agents' own revert-checks, reported to me separately and NOT watched by me:**
-garden broke a dormouse tail and watched the four-small-creatures test fail;
-home-pets broke a degu `body` and then added a stub budgie, 2 red; woodland
-dropped a wolverine height, 1 red; africa cloned the meerkat off the mongoose,
-4 red; unlock broke `OPEN_AT`, the held-back filter and the fallback, 8 red
-across three checks; naming re-pinned a hedgehog name, 3 red.
+**My own revert-check, personally watched:** disabled the `taken` check in
+`naming.ts draw()` — six named tests went red across three describes
+(`never collides across the whole roster`, `renamed exactly one creature…`,
+`allocates over the whole ROSTER…`, both pin tests, and `cannot drift from the
+generator`). Restored, 32 passed.
+
+**Agents' own revert-checks, reported to me and NOT watched by me:** the kit
+agent broke `wingbar-*` into `wing-bar-*` (which would hand `pets.ts` four flap
+targets) — 1 red; woodland gave the capercaillie the pheasant's tail — 2 red
+including the geometric one; home-pets gave the lovebird the canary's tail — 1
+red; farm collapsed the mule into the donkey — 2 red.
 
 ## Where the next manager starts
 
-**Build the SONGBIRD kit, then fan out onto it.** That is the entire next run
-and it is the same shape phase 1 used for quadruped: build the kit, test it,
-then one subagent per collection with the members and the kit named for them.
+**Build the RAPTOR kit, then fan out.** It is now both the highest value and the
+cheapest, which has not been true of any kit until this one:
 
-Why songbird and not bespoke, even though bespoke unlocks more species (53 vs
-41): bespoke is not a kit, it is thirty one-offs that happen to share a look
-(`types.ts:27`), so it is the least uniform and the worst thing to build while
-learning the pattern. Songbird immediately **completes two collections** —
-woodland (2 birds) and farm (7) — and farm is in Joe's own proposed ship order.
-Bespoke should be last.
+- **It completes a whole collection in one run.** Raptors is 16 members and
+  essentially all of them ride this kit — the same "close a collection" logic
+  that made songbird the right second kit. It also releases birds' owlet and
+  africa's vulture.
+- **Most of it already exists.** A raptor is a songbird with a hooked beak,
+  broad wings and talons. `beak: 'hooked'` was deliberately LEFT OUT of
+  `SongbirdBuild` and the reason is written in `types.ts` — hooked beaks belong
+  to raptor, so an owl cannot be smuggled in as a songbird. Build `RaptorBuild`
+  beside `SongbirdBuild`, reuse `kits/shared.ts`, keep its extras list CLOSED.
+- Order after that: **swim** (22, and Ocean is the biggest untouched
+  collection), then **minibeast** (18, Critters), then **bespoke LAST** — it is
+  ~30 one-offs, not a kit, and it is the last blocker for garden (the slow-worm
+  alone, 13/14), home-pets and africa.
 
-- `src/island/species/types.ts:159 PendingBuild` is the placeholder every
-  unbuilt kit shares. Songbird becomes a real `SongbirdBuild` interface beside
-  `QuadrupedBuild`, and **its extras list must be CLOSED for the same reason**
-  (`types.ts:131` explains it): an open list lets phase 3 invent a part per
-  species and quietly rebuild the sculpting roster §1 rules out.
-- `src/island/species/kit.ts:56 KITS` is where it registers; `buildSpecies`
-  currently throws `UnbuiltKitError` by name for all five.
-- **Read the `>>>` block in `kits/quadruped.ts` before choosing any number.**
-  It is the correction below and it will bite the bird kit too.
-- Songbird's collections: birds (17 of 18), farm (7), home-pets (4), outback
-  (3), ice (2), woodland (2), and singles elsewhere.
+The three wiring seams remain unwired and unchanged:
+1. `src/island/pets.ts` `prototype()` — the early return that registers a built
+   species instead of loading a GLB. Exact line at the foot of `kit.ts`.
+2. `src/island/variants/atlas.ts` `dress()` must return early for built species;
+   a built pet has no atlas UVs. `paletteFor()` in `kit.ts` replaces it.
+3. `src/island/main.ts:1174` — swap `petName(defaultRng)` for `givenName(species)`.
+   **One argument, not two** (JT-029 removed the set).
 
-**The three wiring seams remain unwired and are unchanged from phase 1**, except
-that one instruction is now WRONG:
-1. `src/island/pets.ts:554` in `prototype()` — the early return that registers a
-   built species instead of loading a GLB. Exact line at the foot of `kit.ts`.
-2. `src/island/variants/atlas.ts:146 dress()` must return early for built
-   species; a built pet has no atlas UVs. `paletteFor()` in `kit.ts` replaces it.
-3. `src/island/main.ts:1174` — swap `petName(defaultRng)` for `givenName(...)`.
-   **Phase 1 said to call `givenName(species, setId)`. JT-029 removed that second
-   argument. It is `givenName(species)` and you pass no set at all.**
+## The keep-out question: ASKED, ANSWERED, AND THE ANSWER IS NO
 
-## Why nothing is wired
+Phase 2 left "harmonise the four bars" open and warned against a third guess. I
+tested a real hypothesis rather than guessing: keep-out is a *pathing* radius, so
+the principled bar should come from the island's geometry — the narrowest gap a
+pet must fit through. **It is false, and the measurements are in
+`species-silhouette.test.ts` so nobody looks there again.**
 
-Roster §3's order is generate → audit → freeze, and Joe is auditing now. Beyond
-that, **JT-030 is open**: no collection can ship complete, so whether a
-collection may unlock with a hole in it is unanswered, and it decides what she
-sees on an album page. `shippedIn()` already returns only built members, so it
-supports either answer for free.
+- `pets.ts:652` measures radius AFTER the 0.16 field scale, so kit-space 1.16 is
+  0.186 world units; adjacent hex centres are 2.0.
+- The largest obstacle is a mountain tile, not a tree: `footprintBelow` at
+  walking height is 1.062.
+- Two adjacent rock-hex mountains are both centred, so the gap between them is
+  `2.0 − 2 × 1.062 = **−0.124**`. Negative before any pet exists. No bar on pet
+  width can be derived from a corridor that is already sealed.
+- `clearOf` fails SOFT and `randomSpot` degrades to "stay put", so keep-out was
+  never a hard invariant. It is a quality bar.
+
+**The ratchet therefore stays, and stays labelled a ratchet** (garden 1.16,
+home-pets 1.28, africa 1.40, woodland 1.58, farm 1.38 — added this run from the
+water buffalo at 1.379). No fourth guess was shipped.
+
+**DEFECT FOUND ON THE WAY — IT NEEDS A BACKLOG CARD AND I DID NOT WRITE ONE.**
+Placement checks overlap with `footprintOf` (axis-aligned half-extent, 0.938,
+measured PRE-ROTATION) while pets collide against `blocks`, which uses
+`footprintBelow`'s rotation-invariant reach (1.062). **Two different,
+disagreeing metrics on the same object**, so the island can legally place a pair
+of mountains a pet of any size cannot pass. `props.ts:1214` vs `props.ts:1271`.
+I did not card it because `joe/backlog.json` was being edited by the concurrent
+session and colliding with it was the worse risk. **Card it.**
+
+## For Joe's review hour, in the workbench
+
+`joe/names-audit.json` is now **72 rows**, regenerated and ordered by ship order
+then roster order. The regeneration carries his three fields across by
+`speciesId`, so it can grow under him without ever costing him a verdict — that
+contract is now asserted in `naming.test.ts`. The new animals also appear in the
+3D turntable the concurrent session shipped at `d5e2921`, which is kit-agnostic
+and picked them up for free.
+
+**Flagged by the agents for his eye, in confidence order:**
+- **`animal-water-buffalo` (farm) vs `animal-buffalo` (africa)** — the farm agent
+  is least confident here. 2.25 v 2.15, separated by a colour temperature. Two
+  collections, no agent could see both.
+- **`animal-cockatiel` vs the FROZEN `animal-parrot`** — 1.52 v 1.55. The whole
+  separation rides on the crest and the grey.
+- **`animal-capercaillie` (woodland) vs `animal-turkey` (farm)** — same beak,
+  same tail, same wings, a shared `ruff`, heights 0.07 apart, built in the same
+  hour by two agents neither of whom could see the other. Now guarded by the
+  WATCHED list in `species-silhouette.test.ts`.
+- **`animal-canary` vs `animal-lovebird`** — keep-outs 0.001 apart.
+- **`animal-mule` vs `animal-pony`** — 2.00 v 1.95, separated by long ears and a
+  dun coat.
+- **`animal-quail` at 1.30** is below the pack floor of 1.43. Deliberate — the
+  album wants one little one — but it is the one departure.
+- **Names worth reading aloud:** `Vuhick` (otter, the replacement), `Hissdu`
+  (turkey), `Goncha` (pheasant), `Pewod` (budgie), plus phase 2's `Chashet`
+  (bear), `Thuckwa` (chipmunk), `Hecksa` (hamster), `Nawuck` (vole).
+- **A real finding, not a workaround:** `'stout'` stands in for a parrot's
+  hooked bill and reads as "seed-eater", not "parrot". The raptor kit's
+  `'hooked'` will fix budgie/cockatiel/lovebird properly and free `'short'`/
+  `'stout'` back up as separators. Not worth blocking on.
+
+**Still undone and it needs a browser, not Joe:** the seven badged base-24
+species carry no IUCN category. Three phases have now refused to write them from
+memory — `Threat.checkedDate` exists so a status is a dated reading of the Red
+List, and a remembered one only looks checked.
 
 ## What I learned that is not in the code
 
-- **The quadruped kit's own header gave backwards advice, and three agents found
-  it independently.** It said express long-and-low by dropping `legs` and
-  `height`, "which costs nothing". The fit is uniform and solves for `height`,
-  so dropping `legs` lowers the raw silhouette, RAISES the fit scale and
-  stretches the body in world units. A stoat built as the comment said measured
-  **1.78** keep-out against a live pack whose widest is the fox at **1.16**.
-  Corrected in place with the measurements; `species-silhouette.test.ts` now
-  enforces it. Separately, `ears: 'long'` inflates pre-fit height, so a
-  long-eared species silently measures SLIM.
-- **I could not find a principled keep-out rule and stopped guessing.** Two were
-  tried and both are wrong: "small species stay inside the pack envelope"
-  condemns the stoat/otter/mink/ferret/gecko, which are genuinely long;
-  "keep-out ≤ pack × `body`" condemns the hippo, which is wide from bulk, not
-  length. `body` is a length multiplier and keep-out is `max(width, depth)` —
-  different axes. The file ships a hard ceiling plus a per-collection **ratchet**
-  and says outright it is not a rule. **Harmonising the four bars (garden 1.16,
-  home-pets 1.28, africa 1.40, woodland 1.58) is a real open question.**
-- **Parallel agents will each pick their own bar and every one will be
-  defensible.** None of the four could see the others. Cross-collection
-  invariants are the manager's job and cannot be delegated — that is the entire
-  reason `species-silhouette.test.ts` exists.
-- **`joe/tasks.json` moved under me three times in one run.** The re-read-append-
-  reparse-verify procedure in MANAGER-ORDERS is not paranoia; it saved two of his
-  notes. Committing it alone immediately after each pickup is what keeps the blob
-  recoverable.
-- **A test asserting a thing is ABSENT becomes a landmine the moment you wire the
-  thing in.** `species-woodland.test.ts` asserted `speciesRecord(id)` was
-  undefined; wiring the registry made it fail, and the tempting fix is to delete
-  it. Its real invariant was "must not resolve to a FROZEN pack animal", which is
-  what it asserts now.
+- **A test that predicts its own death should be believed.**
+  `species-registry.test.ts` asserted no collection was 100% shipped and said in
+  its comment "if this test ever goes red, a second kit landed and that question
+  became live." It went red. It was INVERTED, not deleted — it now names farm
+  and woodland explicitly, so completeness stays a stated fact rather than a
+  side effect.
+- **`m.body` in `species-silhouette.test.ts` was dead** and carried a TODO
+  saying a second kit would need a per-kit read of it. It was collected and
+  never asserted on — a leftover of the abandoned "keep-out ≤ pack × body" rule.
+  Removed. Everything that file enforces is measured off BUILT geometry, which
+  is kit-agnostic by construction, so a new kit needs to do nothing to be
+  measured. That TODO would have cost the next manager an hour.
+- **This repo is not single-writer any more.** A second session was committing
+  to `main`, editing `joe/tasks.json`, `joe/backlog.json` and
+  `joe/names-audit.json`, and had files STAGED in the index while my gates ran.
+  Commit by explicit path (`git commit -- <paths>`), never from the index, or
+  you will ship their half-finished work under your message. One of my agents
+  also swept an in-flight edit of theirs into a `git stash -u` and had to undo
+  it carefully.
+- **`JT-030 was never actually written.`** Phase 2's handoff says it raised the
+  card; no commit of `joe/tasks.json` has ever contained a JT-030. The append
+  was lost, most likely to the UI-save race HANDOFF §6 documents. **Verify a
+  workbench raise by re-reading the file from disk after committing it** — the
+  handoff claim is not the evidence, the blob is.
+- **`tests/island/pettap.test.ts > does NOT let the camera into the keep-out or
+  the blob` is a pre-existing flake**, ~1 run in 6 under cold-cache load, proved
+  by an agent against the *committed* tree (2 failures in 12 cold runs). `pets.ts`
+  seeds `phase`/`goal`/`restFor` from `Math.random()` and the pet resets to
+  (0,0,0), exactly the obstacle centre, where push-out is degenerate.
+  `governors.test.ts > leaves a wide corridor…` shows the same load sensitivity.
+  Not species code. Worth its own card.
+
+## Why nothing is wired
+
+Unchanged from phase 2: roster §3's order is generate → audit → freeze, and Joe
+is auditing. **JT-030 is still open** and it decides what a child sees on an
+album page. `shippedIn()` returns only built members, so it supports every answer
+for free.
 
 ## Decisions
 
 **RAISED this run:**
-- **JT-030** — *NEEDS JOE: no collection can ship complete on one kit — does a
-  collection unlock PARTIAL?* Options (a) wait for kits, (b) unlock partial and
-  show only what is built, (c) unlock partial with silhouetted "not yet" slots.
-  Nothing is built on the answer; it gates the wiring, not the data.
+- **JT-030** — *NEEDS JOE: does a collection unlock with a hole in it?* Phase 2
+  believed it raised this and the record never reached the file, so **Joe is
+  seeing it for the first time**. Options: (a) wait for kits, (b) unlock partial
+  showing only what is built, (c) unlock partial with silhouetted "not yet"
+  slots. Nothing is built on the answer; it gates the wiring, not the data.
+- **JT-030 amended** later the same day, because the songbird kit falsified its
+  own opening premise: two collections are now complete, so option (a) is a real
+  choice rather than a way of shipping nothing. Corrected rather than left to
+  mislead him.
 
-**PICKED UP this run:**
-- **JT-029** — *"we drop the colours, only the sets in their natural color…"*
-  Names key on SPECIES alone. `givenName`/`nameSeed` lost their `setId`
-  argument; `NATURAL_SET` keeps the hashed key's shape so **not one creature was
-  renamed** — a new test rebuilds every name from the old two-part key to prove
-  it. The audit bench went 14 → 50 rows. **The wider half of his sentence — that
-  pets stop wearing the 25 variant sets at all — was NOT acted on.** It touches
-  what a child already owns, the recolour machinery is no longer on the critical
-  path, and nothing was built on it either way.
-- **JT-027** — the unlock ladder, built pure and unwired in
-  `src/island/species/unlock.ts` (+27 tests). 80% opens the next; four active at
-  most; at the cap only a completion releases one; random order via a supplied
-  seeded rng; legendary/dinosaurs/prehistoric held back. **"Perceived as related"
-  is my judgement, not his** — a `RELATED_GROUP` table, marked as mine and
-  overrulable by moving one string; its point is that the four conservation
-  tiers share a group so they cannot open back to back. **The brief's "existing
-  85% cadence" never existed in code**; 80 is the first real number, not a
-  correction, and `types.ts:202` now says so.
-- **JT-026** (*"c)"*) and **JT-028** (*"lets stick with a)"*) — both resolve to
-  what is already live. Verified rather than assumed: `9138176` built option (c),
-  and `interactions.ts:159` still carries the `!flow.plot` guard that IS option
-  (a). **No code change, and none was made.** Neither is a PB-036 card.
+**PICKED UP this run:** none. JT-030 is the only open ruling. **JT-031** (facts
+get written by an agent, then checked, then signed off with the name) was raised
+and answered by the concurrent session, not by me — its work is that session's.
 
-## For Joe's review hour, in the workbench
-
-`joe/names-audit.json`, 50 rows, ordered by ship order then roster order.
-**One collision to settle first: `Gichesh` is drawn for BOTH the warthog
-(africa) and the otter (woodland)** — roster §3 wants the name to be playground
-currency, and "have you got Gichesh?" currently names two creatures. A
-`replacement` on either fixes it. Worth reading aloud early: `Chashet` (bear),
-`Thuckwa` (chipmunk), `Buthtu` (guinea pig), `Hecksa` (hamster), `Nawuck`
-(vole), `Chahoop` (elk). The `natural/animal-slow-worm` row was REMOVED — it has
-no kit, so auditing and voice-baking a name for it would be premature; nothing
-of his was on it.
-
-**Still unblocked but undone, and it needs a browser, not Joe:** the seven badged
-base-24 species in `registry.ts` still carry no IUCN category. Phase 1 refused to
-write them from memory and so did I — `Threat.checkedDate` exists so a status is
-a dated reading of the Red List, and a remembered one only looks checked.
-
-## Why this run stopped here
-
-Context. I was asked to keep building through Joe's hour and to start the next
-kit; at ~28% of the window, building songbird properly AND fanning out onto it
-would have run past the 30% ceiling, and a half-built kit is exactly the
-incompatible-kit failure the phase-2 brief was written to avoid. Everything
-in flight is finished, gated, committed and pushed, and the songbird brief above
-is complete. A fresh manager at 5% beats a tired one at 60%.
+**NOT ACTED ON, deliberately, and inherited intact:** the wider half of JT-029 —
+*"we drop the colours"*, which implies the 25 variant sets stop applying to pets.
+It touches pets Juno already owns, so phase 2 left it and so did I. Nothing is
+built on it either way. **It needs Joe, and no subagent should tidy it away.**
