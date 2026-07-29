@@ -27,30 +27,31 @@ import { TILE_URL } from '../../../src/island/world/tiles'
  *
  * Written this way round — `Gallery` derived from `GALLERIES` rather than a
  * hand-typed union beside a hand-typed array — because the two were about to
- * drift for the second time. `built-gallery-source.test.ts:78` held its own
- * copy, `['built','species','tiles','props']`, so the very test written to stop
+ * drift for the second time. `gallery-source.test.ts` held its own
+ * copy — back then `['built','species','tiles','props']`, from before the
+ * scrapped `built` gallery was folded away — so the very test written to stop
  * a gallery inheriting another's source could not see a fifth gallery at all.
  * One `as const` array is now the only place the set exists: a gallery added
  * here appears in the test that iterates it, and cannot compile until
  * `packsFor` below has written its arm.
  *
- * `assembled` is a fourth odd one and is odder still. It shows an animal built
- * under `docs/building-animals-from-parts.md` — assembled at runtime out of
- * geometry lifted from the pack — standing beside a real Kenney GLB. Neither
- * half is this gallery's to list: the right half has no file at all, and the left
- * half is borrowed from the pets pack, which `species` owns. It sits FIRST
- * because it is the live method; `built` sits second and is labelled SCRAPPED.
+ * `assembled` sits FIRST because it is the whole job now: one animal assembled
+ * at runtime under `docs/building-animals-from-parts.md`, standing beside a real
+ * Kenney GLB, with Joe's one approval over its name, its fact and its model.
+ * Neither half of the pair is this gallery's to list — the right half has no
+ * file at all, and the left half is borrowed from the pets pack, which `species`
+ * owns.
  *
- * `built` and `primitives` are the odd ones and are NOT in this file's
- * catalogue. The other three are things on disk that a loader opens. A built
- * animal has no file at all — it is constructed at runtime by `buildSpecies`,
- * from a record in `src/island/species/` — so nothing about it can be crossed
- * against a directory listing, and it has its own bench in `built.ts`. A
- * PRIMITIVE is less of a file still: it is a decision about the shapes a kit is
- * allowed to build out of, benched in `primitives.ts`, and the models it puts on
- * the turntable are borrowed from the other galleries rather than owned.
+ * Two galleries were removed on 29 July 2026 and the removal is the point rather
+ * than a tidy-up. `built` benched the seventy-two the kits built, and Joe:
+ * *"everything built already in terms of animals is scrap."* A scrapped model he
+ * can still put on a turntable is a scrapped model he can approve by accident, so
+ * the gallery is gone rather than relabelled. `primitives` benched the decisions
+ * those kits were tuned against, and with the kits scrapped there is nothing left
+ * for that sign-off to unblock. `primitives.ts` and `joe/primitives-audit.json`
+ * stay on disk — the reasoning in them is worth keeping — but no tab reaches them.
  */
-export const GALLERIES = ['assembled', 'built', 'primitives', 'anatomy', 'species', 'tiles', 'props'] as const
+export const GALLERIES = ['assembled', 'anatomy', 'species', 'tiles', 'props'] as const
 export type Gallery = typeof GALLERIES[number]
 export type Pack = 'pets' | 'props' | 'forest' | 'tiles'
 
@@ -92,43 +93,32 @@ export const packOf = (id: string): Pack => (/^[A-Z]/.test(id) ? 'forest' : 'pro
  * function rather than three lines inside `shown()`.
  *
  * It WAS three lines inside `shown()`: species → pets, tiles → tiles, and an
- * ELSE that meant props and forest. Three arms for four galleries. When
- * `built` joined the union it fell out of that else and inherited the props,
- * so the Built animals gallery listed every prop file on disk — which is
- * precisely what Joe reported on 29 July. Nothing caught it: the else compiles,
- * and no test named the join between a gallery and its source.
+ * ELSE that meant props and forest. Three arms for four galleries. When the
+ * since-deleted `built` gallery joined the union it fell out of that else and
+ * inherited the props, so a gallery of animals listed every prop file on disk —
+ * which is precisely what Joe reported on 29 July. Nothing caught it: the else
+ * compiles, and no test named the join between a gallery and its source. That is
+ * why every arm below is written out even when the answer is nothing.
  *
- * `built` gets an empty list, and that is the correct answer rather than a
- * missing one. A built animal is constructed at runtime by `buildSpecies` and
- * has no file anywhere, so there is no directory listing it could be measured
- * against; its only source is the bench in `built.ts`.
- *
- * `anatomy` gets an empty list too, and it is the case that tests the rule
+ * `anatomy` gets an empty list, and it is the case that tests the rule
  * hardest: it puts REAL pack GLBs on the turntable, `pets/animal-fox.glb` and
  * the other 23, so claiming `pets` would look reasonable. It is still wrong.
  * The species gallery owns that pack and is where a missing or unused pet file
  * should be reported; a second gallery claiming it would report every one of
  * them twice and would trip the cross-gallery guard in
- * `built-gallery-source.test.ts`. Anatomy borrows those files to take apart —
+ * `gallery-source.test.ts`. Anatomy borrows those files to take apart —
  * it is a view OF the pets, not a listing of them.
  *
- * `primitives` gets an empty list for a stronger version of the same reason. A
- * primitive is not a thing at all — it is a decision about the shapes a kit may
- * build out of, benched in `primitives.ts`. It puts real models on the
- * turntable, but it BORROWS them from the pets pack and from the kits, and a
- * borrowed model is not this gallery's to be an orphan of. Had it inherited the
- * props arm it would have listed every prop on disk, which is precisely what
- * `built` did on 29 July.
- *
- * `assembled` gets an empty list, and it is the hardest case of the three to get
+ * `assembled` gets an empty list, and it is the harder of the two to get
  * right because BOTH its halves look claimable. The right half is an animal
- * assembled at runtime out of lifted parts and has no file, exactly like a
- * `built` one. The left half is a real `pets/animal-fox.glb` — so claiming
+ * assembled at runtime out of lifted parts and has no file anywhere, so there is
+ * no directory listing it could be measured against. The left half is a real
+ * `pets/animal-fox.glb` — so claiming
  * `pets` would look not merely reasonable but obviously correct. It is still
  * wrong, for the reason spelled out for `anatomy` above: the species gallery owns
  * that pack and is where a missing pet file must be reported once. A second
  * claim reports all 24 twice and trips the cross-gallery guard in
- * `built-gallery-source.test.ts`. This gallery borrows the fox to stand something
+ * `gallery-source.test.ts`. This gallery borrows the fox to stand something
  * next to; it is not a listing of foxes.
  *
  * The switch has no default and the return type is not optional, so a gallery
@@ -140,8 +130,6 @@ export const packsFor = (gallery: Gallery): readonly Pack[] => {
     case 'species': return ['pets']
     case 'tiles': return ['tiles']
     case 'props': return ['props', 'forest']
-    case 'built': return []
-    case 'primitives': return []
     case 'anatomy': return []
     case 'assembled': return []
   }

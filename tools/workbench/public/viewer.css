@@ -113,28 +113,6 @@ button.signoff { width: 100%; margin-top: .8rem; padding: .55rem; font-size: .95
 button.signoff.on { background: var(--ok); color: var(--bg); border-color: var(--ok); }
 button.signoff:disabled { opacity: .4; cursor: not-allowed; }
 
-/* ---------------------------------------------------------- the primitives */
-
-/* The question he is being asked, above the case for it. The largest text in
-   the pane, because everything under it is evidence for one decision. */
-#primitive .question { margin: .2rem 0 .4rem; font-size: .95rem; line-height: 1.45;
-  color: var(--ink); font-weight: 600; }
-#primitive .factText.meta { font-size: .78rem; color: var(--dim); }
-#primitive .judge input { width: 100%; }
-
-/* Accept and refuse, side by side and equal. A refusal is an answer, so it is
-   not expressed by declining to click the other one. */
-#primitive .gates { display: flex; gap: .5rem; margin-top: .8rem; flex-wrap: nowrap; }
-#primitive .gates button { flex: 1 1 0; margin-top: 0; padding: .55rem; font-size: .9rem;
-  font-weight: 600; border-color: var(--dim); }
-button.refuse.on { background: var(--warn); color: var(--bg); border-color: var(--warn); }
-
-/* A rejected row keeps its place and shows its cross, exactly as a signed-off
-   one keeps its place and shows its tick. */
-#list .item.struckrow { color: var(--warn); }
-#list .item.struckrow .tick { color: var(--warn); }
-#list .item.on.struckrow, #list .item.on.struckrow .tick { color: inherit; }
-
 /* ------------------------------------------------------------- the anatomy */
 
 /*
@@ -180,43 +158,38 @@ button.refuse.on { background: var(--warn); color: var(--bg); border-color: var(
 #anatomy .key b { color: var(--warn); font-weight: 600; }
 #explodeRange { width: 9rem; vertical-align: middle; }
 
-/* --------------------------------------------------------- the assembled */
+/* ---------------------------------------------------------- the approver */
 
 /*
- * TELLING THE TWO KINDS OF ANIMAL APART, WITHOUT READING.
+ * TELLING OURS FROM KENNEY'S, WITHOUT READING.
  *
- * The viewer now has two galleries of animals and only one of them is the live
- * method. Joe has been burned by a stale page once and by a gallery listing the
- * wrong pack once, so "which of these am I looking at" must be answerable from
- * across the room. Every new-method row wears an amber ASSEMBLED chip — the same
- * amber the anatomy view uses for OURS as opposed to Kenney's, which is already
- * the house rule — and the scrapped bench carries a struck-through note at the
- * top of its rail and on every card.
+ * The scrapped gallery is gone, but the question it was labelled against has not
+ * gone with it: two animals stand side by side on this bench and a man who cannot
+ * tell at a glance which is ours is approving Kenney's work as ours. Joe has been
+ * burned by a stale page once and by a gallery listing the wrong pack once, so
+ * "which of these am I looking at" must be answerable from across the room. Every
+ * row wears an amber ASSEMBLED chip — the same amber the anatomy view uses for
+ * OURS as opposed to Kenney's, which is already the house rule.
  */
 #list .item .chip { font-size: .6rem; letter-spacing: .06em; font-weight: 700;
   border: 1px solid #6a5427; border-radius: 3px; padding: 0 .25rem; flex: none; }
 #list .item .chip.ours { color: var(--warn); }
 #list .item.on .chip { color: inherit; border-color: currentColor; }
 
-/* A note the rail carries about a whole bench, rather than about a row. Not
-   clickable, so it does not get `.item`'s hover or cursor. */
+/* A note the rail carries about the whole bench, rather than about a row. Not
+   clickable, so it does not get `.item`'s hover or cursor. `.scrapped` is the
+   fault colour: an empty bench because the pilot has not started is a normal
+   state and reads calm, an empty bench because the assembler threw is not. */
 #list .railnote { padding: .5rem .7rem; font-size: .72rem; line-height: 1.5;
   color: var(--dim); border-bottom: 1px solid var(--line); }
 #list .railnote.scrapped { color: var(--warn); border-left: 3px solid var(--warn); }
 
 /* The method's name at the top of the card, so the first thing read on the pane
-   is which of the two kinds of animal is on the turntable. */
-#assembled .methodmark { margin: 0 0 .5rem; font-size: .72rem; font-weight: 700;
+   is how the animal under it was made. */
+#creature .methodmark { margin: 0 0 .5rem; font-size: .72rem; font-weight: 700;
   letter-spacing: .06em; color: var(--warn); border: 1px solid #6a5427;
   border-radius: 4px; padding: .3rem .45rem; }
-#assembled h3 { margin: 0; font-size: .7rem; text-transform: uppercase; letter-spacing: .06em;
-  color: var(--dim); font-weight: 600; }
-#assembled .factText.meta { font-size: .78rem; color: var(--dim); }
-
-/* The same sentence on the scrapped bench's card. Struck through nothing — the
-   NAME and the FACT on that card still stand; it is the geometry that is scrap. */
-#creature .scrapnote { margin: 0 0 .6rem; font-size: .76rem; line-height: 1.5;
-  color: var(--warn); border-left: 3px solid var(--warn); padding-left: .5rem; }
+#creature .factText.meta { font-size: .78rem; color: var(--dim); }
 
 /*
  * THE FLAG. A note, deliberately made — never an error.
@@ -225,10 +198,10 @@ button.refuse.on { background: var(--warn); color: var(--bg); border-color: var(
  * standing explanation of the escape clause and the build's own words, and those
  * two must not run together into one paragraph.
  */
-#assembled .flagnote { border: 1px solid var(--note); border-radius: 4px;
+#creature .flagnote { border: 1px solid var(--note); border-radius: 4px;
   padding: .5rem .6rem; margin: .6rem 0; background: rgba(143, 182, 216, .07); }
-#assembled .flagnote h3 { color: var(--note); }
-#assembled .flagnote .factText { white-space: pre-line; font-size: .82rem; margin-top: .4rem; }
+#creature .flagnote h3 { color: var(--note); }
+#creature .flagnote .factText { white-space: pre-line; font-size: .82rem; margin-top: .4rem; }
 .flagmark { color: var(--note); font-weight: 700; }
 .flagmark.big { font-size: 1rem; }
 #list .item .flagmark { flex: none; }

@@ -17,16 +17,19 @@
  *   roster's collection names, and it is fed fixtures here rather than the real
  *   bank, so the arithmetic is provable before a single animal has been built.
  *
- *   THE LABELS. `NEW_METHOD_MARK` and `SCRAPPED_MARK` must not merely differ —
- *   neither may contain the other, in either direction, because a label that is
- *   a substring of the other one is a label he can misread at a glance. That is
- *   what "unmistakably" means when written down as an assertion.
+ *   THE LABELS. `NEW_METHOD_MARK` and `KENNEY_NOTE` must not merely differ —
+ *   neither may contain the other, in either direction, and neither may sit on
+ *   the wrong half of the pair, because a label he can misread at a glance is no
+ *   label at all. That is what "unmistakably" means when written down as an
+ *   assertion. The pair it once guarded was assembled against the scrapped kit
+ *   builds; those have no gallery now, so it guards the pair still on the
+ *   turntable — ours against the pack's.
  *
- *   THE WIRING. The same guard `built-gallery-source.test.ts` and
- *   `anatomy.test.ts` keep: a gallery in the union with no `packsFor` arm, no
- *   tab, or another gallery's disk pack. This one is the hardest case that rule
- *   has faced — half of what it puts on the turntable IS `pets/animal-fox.glb` —
- *   so it claiming `pets` would look correct and would still be wrong.
+ *   THE WIRING. The same guard `gallery-source.test.ts` and `anatomy.test.ts`
+ *   keep: a gallery in the union with no `packsFor` arm, no tab, or another
+ *   gallery's disk pack. This one is the hardest case that rule has faced — half
+ *   of what it puts on the turntable IS `pets/animal-fox.glb` — so it claiming
+ *   `pets` would look correct and would still be wrong.
  *
  * Nothing here imports `src/island/species/parts`. That module is written by the
  * assembly run and lands one species at a time; a test that could not run until
@@ -39,7 +42,7 @@ import {
   assembledRows, filterRows, groupRows, groupHeading, countLabel, rowTitle,
   pairCard, flagNote, referenceOr,
   REFERENCE_ANIMALS, DEFAULT_REFERENCE, NEW_METHOD_MARK, NEW_METHOD_SHORT,
-  SCRAPPED_MARK, SCRAPPED_SHORT, NEW_METHOD_TAB, SCRAPPED_TAB, SCRAPPED_NOTE,
+  APPROVER_TAB, KENNEY_NOTE,
   NOTHING_YET, FLAG_HEADING, FLAG_PREAMBLE, FLAG_GLYPH, OURS_PREFIX,
   type AssembledEntry,
 } from '../../tools/workbench/public/assembled'
@@ -55,38 +58,32 @@ const GARDEN = COLLECTIONS.find(c => c.id === 'garden') ?? COLLECTIONS[0]!
 const entry = (id: string, name: string, flag?: string): AssembledEntry =>
   ({ id, name, collection: GARDEN.id, ...(flag === undefined ? {} : { flag }) })
 
-describe('the two methods are labelled so they cannot be confused', () => {
+describe('ours and the pack are labelled so they cannot be confused', () => {
   /*
-   * THE ASSERTION THE WHOLE GALLERY EXISTS FOR.
+   * WHAT THIS BLOCK BECAME, AND WHY IT DID NOT SIMPLY SHRINK.
    *
-   * Not `not.toBe` — that would pass for 'ASSEMBLED' against 'ASSEMBLED (old)',
-   * which is exactly the sort of pair a tired eye reads as the same word. Neither
-   * string may contain the other, in either direction, at either length.
+   * It used to hold the two METHODS apart — assembled against the kit builds —
+   * with a substring test in both directions, because 'ASSEMBLED' beside
+   * 'ASSEMBLED (old)' is the sort of pair a tired eye reads as one word. There is
+   * one method left: the seventy-two are scrapped and have no gallery, which
+   * `gallery-source.test.ts` holds down.
+   *
+   * The requirement did not go with them. Joe: *"i like the side by side
+   * comparison with an original animal, keep that."* Two models are still on that
+   * turntable and one of them is Kenney's — so the pair that must never be
+   * confused is now OURS against THE PACK's, and it is a harder pair than the one
+   * this block started with, because both halves are on screen at once.
    */
-  it('shares no substring between the new mark and the scrapped one', () => {
-    for (const [a, b] of [
-      [NEW_METHOD_MARK, SCRAPPED_MARK],
-      [NEW_METHOD_SHORT, SCRAPPED_SHORT],
-      [NEW_METHOD_TAB, SCRAPPED_TAB],
-    ]) {
-      expect(a!.toLowerCase().includes(b!.toLowerCase()), `${a} contains ${b}`).toBe(false)
-      expect(b!.toLowerCase().includes(a!.toLowerCase()), `${b} contains ${a}`).toBe(false)
-    }
-  })
-
-  it('says what each one IS, in a word, not just that they differ', () => {
+  it('says what the live method IS, in a word, not merely that it is ours', () => {
     expect(NEW_METHOD_MARK).toMatch(/ASSEMBLED/)
     expect(NEW_METHOD_SHORT).toBe('ASSEMBLED')
-    expect(SCRAPPED_MARK).toMatch(/SCRAPPED/)
-    expect(SCRAPPED_SHORT).toBe('SCRAPPED')
   })
 
-  /* His ruling, kept as his words. A paraphrase drifts into a softer version. */
-  it('quotes Joe rather than summarising him on the scrapped bench', () => {
-    expect(SCRAPPED_NOTE).toContain("the 3D part is junk i'm afraid")
-    /* And says what SURVIVES, or the bench looks pointless and he stops using it. */
-    expect(SCRAPPED_NOTE).toMatch(/name and the fact/)
-    expect(SCRAPPED_NOTE).toContain(NEW_METHOD_TAB)
+  /* The tab names the ACT, because the method is no longer a choice he is being
+   * asked about: there is one kind of animal left and one thing to do with it. */
+  it('names the tab for the act he is there to perform', () => {
+    expect(APPROVER_TAB).toBe('Animals — approve')
+    expect(APPROVER_TAB).toMatch(/approve/)
   })
 
   it('marks ours as ours, the way the anatomy view already does', () => {
@@ -100,6 +97,37 @@ describe('the two methods are labelled so they cannot be confused', () => {
     expect(card.right).toBe(`${OURS_PREFIX}hedgehog`)
     expect(card.rightMeta).toContain(NEW_METHOD_MARK)
   })
+
+  /*
+   * AND THE TWO MARKS ARE DISJOINT, which is the assertion inherited from the
+   * pair this block used to guard, pointed at the pair that is actually on screen.
+   *
+   * `not.toBe` would not do it: it passes for 'OURS' against 'OURS (ref)'.
+   * Neither label may contain the other in either direction, or a glance at the
+   * wrong half of the turntable is a glance he has no way to catch.
+   */
+  it('shares no substring between our mark and the pack own note', () => {
+    expect(NEW_METHOD_MARK.toLowerCase().includes(KENNEY_NOTE.toLowerCase())).toBe(false)
+    expect(KENNEY_NOTE.toLowerCase().includes(NEW_METHOD_MARK.toLowerCase())).toBe(false)
+    expect(KENNEY_NOTE.includes(OURS_PREFIX)).toBe(false)
+    expect(KENNEY_NOTE).toMatch(/Kenney/)
+  })
+
+  /*
+   * The one that would actually catch a swap: the notes must be on the correct
+   * halves. A card that puts Kenney's note under our model, or ours under his, is
+   * wrong in the single way the whole side-by-side exists to prevent — and every
+   * string in it would still be individually correct.
+   */
+  it('puts the pack note on the left half and ours on the right, never crossed', () => {
+    const [row] = assembledRows([entry('animal-hedgehog', 'hedgehog')])
+    const card = pairCard(row!, DEFAULT_REFERENCE)
+    expect(card.leftMeta).toContain(KENNEY_NOTE)
+    expect(card.leftMeta).toContain(`pets/${DEFAULT_REFERENCE}.glb`)
+    expect(card.leftMeta).not.toContain(NEW_METHOD_MARK)
+    expect(card.rightMeta).toContain(NEW_METHOD_MARK)
+    expect(card.rightMeta).not.toContain(KENNEY_NOTE)
+  })
 })
 
 describe('the rows: the assembler output joined to the roster', () => {
@@ -112,8 +140,8 @@ describe('the rows: the assembler output joined to the roster', () => {
 
   /*
    * A build filed under a collection that does not exist is SHOWN and marked,
-   * never dropped. Same rule as `built.ts` benching a creature the audit file has
-   * never heard of: hiding a real mistake makes every count on the page a lie.
+   * never dropped. Same rule as `approver.ts` benching a creature the audit file
+   * has never heard of: hiding a real mistake makes every count on the page a lie.
    */
   it('shows a build filed under an unknown collection, and says so', () => {
     const [row] = assembledRows([{ id: 'animal-x', name: 'x', collection: 'no-such-collection' }])
@@ -298,12 +326,10 @@ describe('the assembled gallery is registered, and claims nobody else pack', () 
     expect(packsFor('assembled' as Gallery)).toEqual([])
   })
 
-  it('leaves the other six exactly as they were', () => {
+  it('leaves the other four exactly as they were', () => {
     expect(packsFor('species')).toEqual(['pets'])
     expect(packsFor('tiles')).toEqual(['tiles'])
     expect(packsFor('props')).toEqual(['props', 'forest'])
-    expect(packsFor('built')).toEqual([])
-    expect(packsFor('primitives')).toEqual([])
     expect(packsFor('anatomy')).toEqual([])
   })
 
@@ -321,24 +347,36 @@ describe('the assembled gallery is registered, and claims nobody else pack', () 
 describe('the chrome can reach it, and says which tab is which', () => {
   const html = (): string => readFileSync(resolve(REPO, 'tools/workbench/public/viewer.html'), 'utf8')
 
+  /*
+   * The card is `#creature` and not `#assembled`, which is worth a sentence
+   * because the name does not match the gallery. It is the approver panel —
+   * the name, the fact and the verdict — and `viewer.ts drawDetail()` routes
+   * this gallery straight into `drawCreature()`. Naming the element the test
+   * looks for after the gallery would have been tidier and would have asserted
+   * the existence of something nothing draws into.
+   */
   it('has a tab, a reference picker and a card to draw into', () => {
     expect(html()).toContain('data-gallery="assembled"')
+    expect(html()).toContain('id="besidePick"')
     expect(html()).toContain('id="besideSelect"')
-    expect(html()).toContain('id="assembled"')
+    expect(html()).toContain('id="creature"')
   })
 
   /*
    * THE LABELLING REQUIREMENT, ASSERTED AGAINST THE PAGE ITSELF.
    *
-   * Two tabs of animals and only one live method. If the captions ever drift
-   * back to "Built animals" beside "Assembled" this fails, which is the whole
-   * point: the rule is that he can never be looking at the scrapped seventy-two
-   * believing they are the new work.
+   * ONE tab of animals and one live method, which is the state the consolidation
+   * of 29 July left behind. The caption quotes `APPROVER_TAB` rather than a
+   * string typed here, so the page and the module cannot drift apart, and the two
+   * captions that would mean he is looking at scrap are asserted ABSENT: the rule
+   * is that he can never be looking at the scrapped seventy-two believing they are
+   * the new work, and the cheapest way to guarantee that is that there is no
+   * second animal tab to be looking at.
    */
-  it('names the live method NEW and the kit builds SCRAPPED, on the tabs', () => {
-    expect(html()).toContain(`>${NEW_METHOD_TAB}<`)
-    expect(html()).toContain(`>${SCRAPPED_TAB}<`)
-    /* And the old caption is gone, not merely joined by a new one. */
+  it('captions the one animal tab for the act, and offers no scrapped one', () => {
+    expect(html()).toContain(`>${APPROVER_TAB}<`)
+    /* The old captions are gone, not merely joined by a new one. */
     expect(html()).not.toContain('>Built animals<')
+    expect(html()).not.toContain('SCRAPPED')
   })
 })

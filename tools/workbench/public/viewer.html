@@ -12,32 +12,26 @@
     <a class="back" href="/">← bench</a>
     <nav id="galleries">
       <!--
-        THE LIVE METHOD, and it sits first because it is the one that is not
-        scrapped. An animal here is assembled at runtime out of geometry lifted
-        from the 24 original Kenney files (docs/building-animals-from-parts.md)
-        and always stands BESIDE a real pack animal, because the question the
-        method has to answer is whether it "sits next to the fox without looking
-        like a guest" — which is a question about a pair, not about an animal.
+        THE ONE ANIMAL TAB, and there is only one now on purpose. Every animal
+        here is assembled at runtime out of geometry lifted from the 24 original
+        Kenney files (docs/building-animals-from-parts.md); the seventy-two the
+        kits built are scrap and have no tab, because a scrapped model he can
+        still put on a turntable is one he can approve by accident.
 
-        The captions on this tab and the next are `NEW_METHOD_TAB` and
-        `SCRAPPED_TAB` in `assembled.ts`, and a test asserts the HTML still says
-        both. Two tabs of animals with no word about which one is superseded is
-        precisely the confusion the labelling requirement exists to prevent.
+        It always stands BESIDE a real pack animal, and that pairing is the
+        gallery rather than a feature of it: the question the method has to answer
+        is whether ours "sits next to the fox without looking like a guest", which
+        is a question about a pair and cannot be asked one animal at a time. The
+        caption is `APPROVER_TAB` in `assembled.ts`, so the HTML and the tests
+        quote one string.
       -->
-      <button data-gallery="assembled">Assembled — NEW</button>
-      <button data-gallery="built" class="on">Kit builds — SCRAPPED</button>
-      <!--
-        The primitives sign-off. PB-036 phase 4, and it sits SECOND rather than
-        last because nothing on the kit-builds tab may be re-tuned until the
-        primitive it rides on has been ticked here.
-      -->
-      <button data-gallery="primitives">Primitives</button>
+      <button data-gallery="assembled" class="on">Animals — approve</button>
       <!--
         One pack animal taken apart, with a label against every piece. Joe:
         "i need one example of an original animal, ripped apart in the viewer
-        with a label against each part." It sits beside Primitives because it is
-        the evidence those rows are argued from — head = body, and all eyes are
-        flat, measured off the file rather than read off a screenshot.
+        with a label against each part." Kept because it is the reference the
+        assemblies are argued from — head = body, and all eyes are flat, measured
+        off the file rather than read off a screenshot.
       -->
       <button data-gallery="anatomy">Anatomy</button>
       <button data-gallery="species">Species</button>
@@ -117,34 +111,21 @@
       <dl id="facts"></dl>
 
       <!--
-        One creature's whole bench, and ONE gate over it.
+        ONE ANIMAL, ONE APPROVAL — the model, the name and the fact together.
 
-        JT-031, in his words: "have an agent create the facts and fact check
-        them. they then become part of my final sign off for each animal along
-        with its name." So the fact and the name sit above a single Sign off
-        button, and the two strike buttons beside them are not second gates —
-        they are how he says "the model and the name are fine, the sentence is
-        not" without having to write a paragraph about it.
+        Joe, 29 July 2026: "ultimately i want to approve name, fact and 3D model
+        in one go." So the pane reads top to bottom as one judgement: how the
+        animal was made, which half of the pair on the canvas is ours, the name
+        it was given, the sentence written about it, and then a single button
+        that covers all three. The two strike buttons above it are not rival
+        gates — they are how he approves the ANIMAL while saying the name is
+        wrong, or the sentence is, which the three separate fields in
+        joe/names-audit.json are there to hold apart.
 
         Built by hand in `viewer.ts` rather than declared here, because every
         control on it has to know which creature it is patching.
       -->
       <section id="creature" hidden></section>
-
-      <!--
-        One PRIMITIVE, and one gate over it.
-
-        Joe: "i'd like to sign off the primitives to be used first." So the row
-        is the argument laid out in the order it has to be read — the question,
-        what the pack measures, what the kits do, the gap, the proposal, the
-        provenance — with accept and refuse beneath it. Refuse is a real answer
-        and is not the absence of one, so it has its own button rather than being
-        expressed by not clicking.
-
-        Built by hand in `viewer.ts` rather than declared here, because every
-        control on it has to know which row it is patching.
-      -->
-      <section id="primitive" hidden></section>
 
       <!--
         The same parts as the labels on the canvas, as a list you can read down.
@@ -154,20 +135,6 @@
         disagree about a part.
       -->
       <section id="anatomy" hidden></section>
-
-      <!--
-        One animal built under the NEW method, and what it is standing beside.
-
-        It carries the method's own label at the top rather than at the bottom,
-        so the first thing read on this pane is which of the two kinds of animal
-        is on the turntable. If the build raised a flag it goes here too, as a
-        note rather than an alarm — the escape clause is the method working, and
-        a flag Joe cannot see is worse than useless.
-
-        Built by hand in `viewer.ts`; the strings come from `assembled.ts` so the
-        list, the card and the labels over the canvas cannot word it differently.
-      -->
-      <section id="assembled" hidden></section>
 
       <form id="noteForm">
         <textarea name="note" rows="3" placeholder="what is wrong with it" required></textarea>

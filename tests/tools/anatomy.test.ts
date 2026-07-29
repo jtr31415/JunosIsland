@@ -241,7 +241,7 @@ describe('the anatomy gallery is registered, and claims nobody else pack', () =>
   })
 
   /*
-   * No pack, for the same reason `primitives` has none: this gallery puts real
+   * No pack, for the same reason `assembled` has none: this gallery puts real
    * pack GLBs on the turntable but it BORROWS them from the species gallery,
    * which owns `pets`. A borrowed model is not this gallery's to be an orphan
    * of, and claiming `pets` here would make every pet file appear twice over.
@@ -250,12 +250,11 @@ describe('the anatomy gallery is registered, and claims nobody else pack', () =>
     expect(packsFor('anatomy' as Gallery)).toEqual([])
   })
 
-  it('leaves the other five exactly as they were', () => {
+  it('leaves the other four exactly as they were', () => {
     expect(packsFor('species')).toEqual(['pets'])
     expect(packsFor('tiles')).toEqual(['tiles'])
     expect(packsFor('props')).toEqual(['props', 'forest'])
-    expect(packsFor('built')).toEqual([])
-    expect(packsFor('primitives')).toEqual([])
+    expect(packsFor('assembled')).toEqual([])
   })
 
   it('never reaches another gallery data', () => {

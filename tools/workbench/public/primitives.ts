@@ -4,6 +4,12 @@
  *
  * JOE_WORKBENCH_ONLY.
  *
+ * RETIRED 29 July 2026 on Joe's instruction — *"we can drop the primitives
+ * tab"* — along with the kit builds the measurements were taken to fix. The tab
+ * is gone from the viewer and the file stays here as the written record of the
+ * measurements themselves, which are true about the Kenney pack whatever we
+ * build out of it.
+ *
  * Joe looked at the 72 procedurally-built animals and said they are too square,
  * that the legs and feet are too big, and that the eyes are inconsistent. Then,
  * of the fix: *"i'd like to sign off the primitives to be used first."*
@@ -55,10 +61,12 @@
  */
 import { SPECIES } from '../../../src/island/pets'
 import { SHIPPED_SPECIES } from '../../../src/island/species/registry'
-/* The two verdict tokens come from `built.ts` rather than being written again
- * here. They are the same words in the same file format, and two copies of the
- * string 'ok' is how one of them ends up being 'OK'. */
-import { SIGNED_OFF, STRUCK } from './built'
+/* The two verdict tokens come from the animal approver rather than being written
+ * again here. They are the same words in the same file format, and two copies of
+ * the string 'ok' is how one of them ends up being 'OK'. They moved out of
+ * `built.ts` when the seventy-two kit builds it benched were scrapped; the token
+ * `approver.ts` calls APPROVED is the same 'ok' this file has always meant. */
+import { APPROVED as SIGNED_OFF, STRUCK } from './approver'
 
 export { SIGNED_OFF, STRUCK }
 

@@ -1,6 +1,6 @@
 /**
- * The gallery of animals ASSEMBLED FROM THE PACK'S OWN PARTS — and the labelling
- * that stops one of them ever being mistaken for one of the scrapped seventy-two.
+ * The animals ASSEMBLED FROM THE PACK'S OWN PARTS — the rows, the pairing, and
+ * the labelling that keeps him certain which half of the pair is ours.
  *
  * JOE_WORKBENCH_ONLY.
  *
@@ -12,8 +12,13 @@
  * The method that replaces them is `docs/building-animals-from-parts.md`: lift
  * real geometry out of the 24 authored Kenney `.glb` files, bank it, and
  * assemble new species out of the bank, so that every vertex on screen came out
- * of a file Kenney shipped. This module is the data half of the surface where he
- * judges whether that worked.
+ * of a file Kenney shipped. This module is the data half of the ONE surface left
+ * standing: the approver, where an assembled animal turns beside a real pack
+ * animal and Joe approves its name, its fact and its model in a single click.
+ * The scrapped bench that used to sit beside it is gone — not relabelled, gone —
+ * because a scrapped model he can still put on a turntable is a scrapped model he
+ * can approve by accident. `approver.ts` is the other half, and owns the join to
+ * `joe/names-audit.json` and `joe/species-facts.json`.
  *
  * ## The standing question, and why comparison is not an option here
  *
@@ -31,14 +36,16 @@
  * constants rather than inline text:
  *
  * > Animals built under this method are labelled **distinctly and unmistakably**
- * > from the scrapped kit builds, in the list and on the model. He has already
- * > been burned by a stale page once and by a gallery listing props once. An
- * > unlabelled side-by-side is worse than no side-by-side.
+ * > from the pack's own, in the list and on the model. He has already been burned
+ * > by a stale page once and by a gallery listing props once. An unlabelled
+ * > side-by-side is worse than no side-by-side.
  *
- * So `NEW_METHOD_MARK` and `SCRAPPED_MARK` are exported, are used by BOTH
- * galleries, and are asserted in `tests/tools/assembled-gallery.test.ts` to share
- * no substring — a label that can be misread at a glance is not a label. The
- * convention they follow is the anatomy view's, which is already the house rule:
+ * With the kit builds gone, the confusion that remains is the one INSIDE the
+ * pair, and it is the worse of the two: two animals stand side by side and a man
+ * who cannot tell at a glance which is Kenney's is judging our work against
+ * itself. So the labels are exported constants used by the rail, by the card and
+ * by the two tags over the canvas, and none of those three may word it its own
+ * way. The convention is the anatomy view's, which is already the house rule:
  * **Kenney's own names plain, ours marked as ours and visibly different.** The
  * left-hand model is `animal-fox`, printed exactly as the file names it; the
  * right-hand model wears `OURS_PREFIX` and a different colour.
@@ -51,8 +58,8 @@
  * only geometry and DOM.
  *
  * It deliberately does NOT import `src/island/species/parts`. `assembledSpecies()`
- * is passed IN as data, exactly as `builtBench` takes the audit rows in, so the
- * shape of the join is provable against fixtures rather than only against
+ * is passed IN as data, exactly as `approverBench` takes the audit rows in, so
+ * the shape of the join is provable against fixtures rather than only against
  * whatever the bank happens to hold today.
  */
 import { COLLECTIONS } from '../../../src/island/species/roster'
@@ -61,7 +68,7 @@ import { ANATOMY_SPECIES, petIdOf } from './anatomy'
 /* ------------------------------------------------------------- the labels */
 
 /**
- * What a NEW-METHOD animal is called, everywhere it appears.
+ * What an ASSEMBLED animal is called, everywhere it appears.
  *
  * Long, and on purpose. This string goes on the model, in the card and in the
  * list heading; the one place it is too long for is the rail row, which uses
@@ -69,42 +76,23 @@ import { ANATOMY_SPECIES, petIdOf } from './anatomy'
  * wording that means the same thing but does not match.
  */
 export const NEW_METHOD_MARK = "ASSEMBLED — lifted from Kenney's own geometry"
-/** The rail chip and the tab. Short enough for a 16rem column. */
+/** The rail chip. Short enough for a 16rem column. */
 export const NEW_METHOD_SHORT = 'ASSEMBLED'
-
-/**
- * What a KIT build is called, on the gallery that still shows the scrapped 72.
- *
- * The `built` gallery is not deleted — the names and the facts on it are still
- * Joe's to sign off, and JT-034 (whether the old kits go) is his ruling to make —
- * so it stays, wearing this. A tab reading "Built animals" beside a tab reading
- * "Assembled" tells him nothing about which one is the live method.
- */
-export const SCRAPPED_MARK = 'SCRAPPED — kit build, superseded'
-/** The rail chip and the tab for the scrapped bench. */
-export const SCRAPPED_SHORT = 'SCRAPPED'
 
 /** Before our model's name, in the list and on the canvas. The anatomy convention. */
 export const OURS_PREFIX = 'OURS — '
 /** Before the reference animal's name. Nothing: Kenney's own names go plain. */
 export const KENNEY_NOTE = "Kenney's own, straight off the .glb"
 
-/** The tab captions, so the HTML and the tests quote the same two strings. */
-export const NEW_METHOD_TAB = 'Assembled — NEW'
-export const SCRAPPED_TAB = 'Kit builds — SCRAPPED'
-
 /**
- * The banner that sits at the top of the SCRAPPED bench's list.
+ * The tab caption, so the HTML and the tests quote one string rather than two.
  *
- * His own words, kept as his words, because a paraphrase of a ruling drifts into
- * a softer version of it. What survives is named explicitly: the sign-off on this
- * bench is still worth doing, it is just no longer a sign-off on the geometry.
+ * It names the ACT and not the method, because the method is no longer a choice
+ * he is being asked about — there is one kind of animal left and one thing to do
+ * with it. `NEW_METHOD_MARK` still says how it was made, on the card and over the
+ * model, where a man looking at geometry is the man who needs to know.
  */
-export const SCRAPPED_NOTE =
-  'The MODELS on this bench are scrap. Joe, 29 July 2026: "everything built already in terms of '
-  + 'animals is scrap. names and facts ok, the 3D part is junk i\'m afraid." The name and the fact '
-  + 'against each animal still stand and are still signed off here — the shape turning beside them '
-  + 'is superseded by the ' + NEW_METHOD_TAB + ' tab and is not what will ship.'
+export const APPROVER_TAB = 'Animals — approve'
 
 /**
  * What the assembled bench says when it is empty, which is its NORMAL state
@@ -170,8 +158,8 @@ export interface AssembledRow {
   /**
    * True when `collection` names nothing in `COLLECTIONS`.
    *
-   * Shown rather than swallowed, for the reason `built.ts` benches a creature the
-   * audit file has never heard of: a build filed under a collection that does not
+   * Shown rather than swallowed, for the reason `approver.ts` benches a creature
+   * the audit file has never heard of: a build filed under a collection that does not
    * exist is a real state and a real mistake, and hiding it makes the counts lie.
    */
   unknownCollection: boolean
@@ -187,7 +175,7 @@ const collectionNames = (): Map<string, string> => {
  * The bench, joined to the roster's collection titles.
  *
  * Order is the assembler's own order and is never re-sorted, for the reason
- * `built.ts` gives about the audit bench: he works down a list, and a row that
+ * `approver.ts` gives about the bench: he works down a list, and a row that
  * moves under the cursor takes his place with it.
  */
 export function assembledRows(entries: readonly AssembledEntry[]): AssembledRow[] {
@@ -207,7 +195,11 @@ export function assembledRows(entries: readonly AssembledEntry[]): AssembledRow[
   })
 }
 
-/** Filtered by the search box and by NOTHING ELSE — the rule the other benches keep. */
+/**
+ * Filtered by the search box and by NOTHING ELSE — the rule every bench here has
+ * kept, and the reason is that an approved animal must not vanish from under the
+ * cursor the moment it is ticked.
+ */
 export function filterRows(rows: readonly AssembledRow[], query: string): AssembledRow[] {
   const q = query.trim().toLowerCase()
   if (!q) return [...rows]
@@ -238,9 +230,10 @@ export function groupRows(rows: readonly AssembledRow[]): AssembledGroup[] {
 /**
  * A group's heading, which carries the method's name.
  *
- * `Garden · ASSEMBLED · 1` rather than `Garden · 1`. The scrapped bench's headings
- * read `Garden · 3 of 14`, so the two lists cannot be confused by a glance at the
- * rail alone — which is the failure mode the labelling requirement exists for.
+ * `Garden · ASSEMBLED · 1` rather than `Garden · 1`. The word is repeated on
+ * every heading and on every row rather than said once at the top, because the
+ * top of a list is the part he scrolled past ten minutes ago — and the rail is
+ * where he decides which animal to look at next.
  */
 export const groupHeading = (g: AssembledGroup): string =>
   `${g.collectionName} · ${NEW_METHOD_SHORT} · ${g.items.length}`

@@ -16,25 +16,26 @@
  * elegance — because a viewer with its own loader is a viewer that shows Joe
  * something the child will never see.
  *
- * ## The built animals, and why there is no preview pipeline
+ * ## The assembled animals, and why there is no preview pipeline
  *
- * The fourth gallery is new and is a different KIND of thing. The live 24 are
- * authored GLBs; the fifty new animals are constructed at runtime from records
- * in `src/island/species/` by `buildSpecies()`, so there is no file to point a
- * loader at. Two ways to show them were available and only one of them is
- * honest:
+ * The first gallery is a different KIND of thing and is the reason this page
+ * imports the game's own TypeScript. The live 24 are authored GLBs; an assembled
+ * animal is constructed at runtime by `buildAssembled()` out of geometry lifted
+ * from those same 24 files, so there is no file to point a loader at. Two ways to
+ * show one were available and only one of them is honest:
  *
  *   BAKE A PREVIEW — render each species to a GLB or a PNG in a tool, and serve
- *   that. Cheap, and wrong. The preview is a COPY of the kit's output, and a
- *   copy drifts: retune the quadruped kit's leg length and every preview is a
- *   lie until someone remembers to re-bake. Joe would be signing off something
- *   that is not what ships, which is worse than not showing him anything.
+ *   that. Cheap, and wrong. The preview is a COPY of the assembler's output, and
+ *   a copy drifts: retune a hull or a placement and every preview is a lie until
+ *   someone remembers to re-bake. Joe would be approving something that is not
+ *   what ships, which is worse than not showing him anything.
  *
- *   RUN THE KIT — import `buildSpecies` and call it, here, in the browser. That
- *   is what this does. The `THREE.Group` on the turntable is the same object,
- *   from the same function, that `pets.ts` will clone at the integration seam
- *   (`kit.ts`, bottom). There is nothing between the code and his eyes, so there
- *   is nothing to drift.
+ *   RUN THE ASSEMBLER — import `buildAssembled` and call it, here, in the
+ *   browser. That is what this does. The `THREE.Group` on the turntable is the
+ *   same object, from the same function, that `pets.ts` clones at the integration
+ *   seam. There is nothing between the code and his eyes, so there is nothing to
+ *   drift — and the pilot re-tunes the assembler between species, which is
+ *   exactly when a baked picture would go quietly stale.
  *
  * It costs nothing to do it this way, which is the tell that it is right: the
  * workbench is already a Vite host that imports the game's TypeScript, which is
@@ -43,10 +44,11 @@
  * directions — this file imports FROM `src/`, and nothing in `src/` has ever
  * heard of it.
  *
- * The lighting is the island's here too, and for the built animals it matters
- * more than it does for the GLBs: a built creature's colour is per-part material
- * colour (`kit.ts paletteFor`), not a recoloured atlas, so a white studio would
- * misreport every palette in the fifty.
+ * The lighting is the island's here too, and for an assembled animal it matters
+ * more than it does for the GLBs: its colour is a slotted palette texture rather
+ * than the atlas the pack wears, so a white studio would misreport every one of
+ * them — and it would misreport them BESIDE a pack animal lit the same way, which
+ * is the one comparison this page exists to make.
  */
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
@@ -60,20 +62,15 @@ import type { RenderKind, Season } from '../../../src/island/world/tiles'
 import { createSetAtlas } from '../../../src/island/variants/atlas'
 import { SETS } from '../../../src/island/variants/sets'
 import { wearFaceUVs } from '../../../src/island/variants/facedecals'
-import { speciesRecord } from '../../../src/island/species/registry'
-import { buildSpecies } from '../../../src/island/species/kit'
 import {
   buildCatalogue, tileEntries, incrementSteps, grouped, basenameOf, fileOf, packsFor,
   type Entry, type Gallery,
 } from './registry'
 import {
-  builtBench, progressOf, readFacts, SIGNED_OFF, STRUCK, VERIFIED,
+  approverBench, progressOf, readFacts, approvePatch, reopenPatch,
+  APPROVED, STRUCK, VERIFIED, APPROVE_LABEL, REOPEN_LABEL, NO_AUDIT_ROW,
   type Creature,
-} from './built'
-import {
-  primitivesBench, primitivesProgress, signedOff, struck,
-  type Comparison, type Primitive,
-} from './primitives'
+} from './approver'
 import {
   weldedComponents, componentFacts, orderComponents, namesFor, explodeOffset, sizeLabel,
   ANATOMY_SPECIES, DEFAULT_SPECIES, SPLIT_NODE, petIdOf,
@@ -82,7 +79,7 @@ import {
 import {
   assembledRows, filterRows, groupRows, groupHeading, countLabel, rowTitle, pairCard, flagNote,
   referenceOr, REFERENCE_ANIMALS, DEFAULT_REFERENCE, NEW_METHOD_MARK, NEW_METHOD_SHORT,
-  SCRAPPED_NOTE, NOTHING_YET, FLAG_HEADING, FLAG_GLYPH,
+  NOTHING_YET, FLAG_HEADING, FLAG_GLYPH,
   type AssembledRow,
 } from './assembled'
 /*
@@ -226,29 +223,6 @@ async function loadTile(id: string, season: Season): Promise<THREE.Object3D> {
 
 const loadProp = (id: string, grey: boolean): Promise<THREE.Object3D> => props.load(id, grey)
 
-/**
- * A built animal: the real kit, called for real.
- *
- * `buildSpecies` is synchronous — the kits make boxes and spheres, there is
- * nothing to fetch — but this returns a promise so it slots into `build()`
- * beside the three loaders without the call sites growing a special case, and
- * so a throw arrives as a rejection that `select()` already knows how to print.
- *
- * It DOES throw, deliberately and by name: a species whose kit is declared but
- * unbuilt raises `UnbuiltKitError` rather than yielding an empty group
- * (`kit.ts`), and an empty group on a turntable is the worst possible answer —
- * it looks like a creature that renders as nothing, which is the exact failure
- * the loud error exists to prevent. So the message lands in the status line.
- */
-async function loadBuilt(speciesId: string): Promise<THREE.Object3D> {
-  const record = speciesRecord(speciesId)
-  if (!record) throw new Error(`${speciesId} is not in the shipped registry`)
-  if (!record.build) {
-    throw new Error(`${speciesId} carries kit '${record.kit}' and no build — it is an authored GLB, not a kit build`)
-  }
-  return buildSpecies(record.build)
-}
-
 /* --------------------------------------------------- the side-by-side --- */
 
 /**
@@ -286,93 +260,15 @@ function toUnitHeight(object: THREE.Object3D): THREE.Group {
   return holder
 }
 
-/** A thing whose name a comparison can ask for. */
-class NoSuchPart extends Error {}
-
-/**
- * Lift named meshes out of a model, keeping the size and pose they had in it.
- *
- * The pack ships nine node names across 133 mesh nodes, and `leg-front-left` is
- * one of them — the kits happen to name their own leg the same string, which is
- * what makes the Limbs comparison the same part from both sides rather than an
- * approximation invented here. Each mesh is copied with its WORLD matrix frozen
- * onto it, so a part is lifted exactly as it sat: the pack's transforms are
- * translations almost everywhere (only `cow/Group` carries a scale anywhere in
- * the pack) but "almost" is not a thing to build on.
- *
- * A name that matches nothing THROWS, by name. An empty group on a turntable is
- * the worst possible answer — it looks like a part that renders as nothing —
- * which is the same reasoning `kit.ts` gives for `UnbuiltKitError`.
- */
-function lift(root: THREE.Object3D, names: readonly string[]): THREE.Object3D {
-  if (!names.length) return root
-  root.updateMatrixWorld(true)
-
-  const out = new THREE.Group()
-  root.traverse(node => {
-    const mesh = node as THREE.Mesh
-    if (!mesh.isMesh || !names.includes(node.name)) return
-    const copy = mesh.clone()
-    copy.matrixAutoUpdate = false
-    copy.matrix.copy(mesh.matrixWorld)
-    out.add(copy)
-  })
-  if (!out.children.length) {
-    throw new NoSuchPart(`no mesh named ${names.join(' or ')} in it — the model has `
-      + `${[...new Set(meshNames(root))].join(', ') || 'no named meshes'}`)
-  }
-  return out
-}
-
-const meshNames = (root: THREE.Object3D): string[] => {
-  const found: string[] = []
-  root.traverse(n => { if ((n as THREE.Mesh).isMesh && n.name) found.push(n.name) })
-  return found
-}
-
-/**
- * The pack's real geometry beside the kit's real geometry, on one turntable.
- *
- * Both halves already existed on this page and neither is new: the left is the
- * species gallery's loader, `wearFaceUVs` and all, so the fox arrives wearing
- * the face decal that is the whole subject of the Face rows; the right is
- * `buildSpecies` called for real, exactly as the built-animals gallery calls it.
- *
- * NOTHING IS BAKED. The header of this file argues that at length for the built
- * animals and every word of it applies harder here: a baked preview is a copy,
- * a copy drifts, and Joe would be signing off a primitive against a picture of
- * what the kits used to do. When the kits are re-tuned after he signs, the right
- * half of this picture changes on the next reload with nobody remembering to
- * make it.
- *
- * Order of operations is load-bearing: each animal is scaled to one unit tall
- * BEFORE its part is lifted, so a lifted leg carries the size it had relative to
- * its own animal. Lifting first and then normalising the two legs to the same
- * height would show the leg's shape and hide the complaint — that they are too
- * big — which is most of what the Limbs rows are about.
- */
-async function loadComparison(compare: Comparison): Promise<THREE.Object3D> {
-  const [packWhole, kitWhole] = await Promise.all([
-    loadPet(compare.packSpecies, ''),
-    loadBuilt(compare.kitSpecies),
-  ])
-
-  return standSideBySide(
-    lift(toUnitHeight(packWhole), compare.packParts),
-    lift(toUnitHeight(kitWhole), compare.kitParts),
-  )
-}
-
 /**
  * Two already-normalised things, grounded, centred and pushed apart by their own
- * half-widths, so a leg and a whole fox both land beside each other without one
- * sitting inside the other.
+ * half-widths, so neither sits inside the other whatever their proportions are.
  *
- * LEFT is the pack and RIGHT is ours, always and in that order — every card in
- * this viewer that describes a pair says so in those words, and they must not
- * disagree. Named rather than left inline because there are now two galleries
- * that stand two models next to each other and a second copy of this arithmetic
- * would drift from the first the moment either gap changed.
+ * LEFT is the pack and RIGHT is ours, always and in that order — the card beside
+ * the canvas and the two tags over it say so in those words, and all three must
+ * not disagree. Named rather than left inline because the sentence is the whole
+ * point of the pairing: the moment the arithmetic and the labels come apart, Joe
+ * is judging Kenney's animal as ours with nothing on screen looking wrong.
  */
 function standSideBySide(left: THREE.Object3D, right: THREE.Object3D): THREE.Group {
   const pair = new THREE.Group()
@@ -782,8 +678,6 @@ function movePairTags(): void {
 /** The same parts, read down the side: name, whose name it is, size, triangles. */
 function drawAnatomy(): void {
   $('#creature').hidden = true
-  $('#primitive').hidden = true
-  $('#assembled').hidden = true
   $('#anatomy').hidden = false
   $('#assetId').textContent = picked || '—'
   $('#facts').replaceChildren()
@@ -839,26 +733,31 @@ function drawAnatomy(): void {
 
 interface Shown extends Entry { onDisk: boolean; notes: number }
 
-let gallery: Gallery = 'built'
+let gallery: Gallery = 'assembled'
 let catalogue: Entry[] = []
 let disk: Record<string, string[]> = {}
 let notes: Array<{ assetId: string; note: string; at: string }> = []
 /**
- * The fifty, joined to his verdicts and to their facts. Rebuilt from
- * `/api/state` on boot and never sorted after: see `built.ts` on why the order
- * is the file's order and must stay it.
+ * THE BENCH: every assembled animal, joined to its name, its fact and whatever
+ * Joe has already said about it.
+ *
+ * One entry per row of `assembled` below and in the same order, because
+ * `approverBench` promises exactly that — see the exhaustiveness note at the top
+ * of `approver.ts`. Rebuilt from `/api/state` on boot and never sorted after: he
+ * works down a list, and a row that moves under the cursor takes his place with
+ * it.
  */
 let bench: Creature[] = []
 /**
- * The primitive decisions, joined to his verdicts. Rebuilt from `/api/state` on
- * boot and never sorted after: group order then the file's own order, which is
- * where his place is kept — see `primitives.ts`.
- */
-let primitives: Primitive[] = []
-/**
- * The animals built under the NEW method, joined to the roster's collection
- * titles. Read once at boot off `assembledSpecies()` and never sorted after: the
- * assembler's order is the pilot's order and is where his place is kept.
+ * The same animals as GEOMETRY: what the assembler can build, joined to the
+ * roster's collection titles. Read once at boot off `assembledSpecies()` and
+ * never sorted after: the assembler's order is the pilot's order and is where his
+ * place is kept.
+ *
+ * Held beside `bench` rather than folded into it because the two are read by
+ * different halves of the page — `bench` is what the card judges, `assembled` is
+ * what the canvas and the pair labels are built from, and `groupRows` takes these
+ * rows.
  *
  * Empty is a NORMAL state here and is not an error — the pilot lands one species
  * at a time, so before the hedgehog arrives there is genuinely nothing to show.
@@ -935,46 +834,22 @@ function shown(): Shown[] {
 /* -------------------------------------------------------------- the bench */
 
 /**
- * The creatures on screen. Filtered by the search box and by NOTHING ELSE.
+ * The animals on screen. Filtered by the search box and by NOTHING ELSE.
  *
- * In particular a signed-off animal is not hidden. `app.js` learned this the
+ * In particular an APPROVED animal is not hidden. `app.js` learned this the
  * expensive way on the name audit: he is working down a list, and a row that
  * vanishes from under the cursor the moment he ticks it takes his place with it.
  * A tick shows as a tick and the row stays exactly where it was; the bar above
  * moves immediately, so the save is never in doubt.
  */
-function benchShown(): Creature[] {
-  const q = $<HTMLInputElement>('#search').value.trim().toLowerCase()
-  if (!q) return bench
-  return bench.filter(c =>
-    `${c.speciesId} ${c.species} ${c.given} ${c.collectionName}`.toLowerCase().includes(q))
-}
-
-/**
- * The primitives on screen. Filtered by the search box and by NOTHING ELSE.
- *
- * Same rule as `benchShown` above and learned the same expensive way: a row that
- * vanishes the moment he ticks it takes his place in the list with it. A signed
- * off primitive keeps its place and shows its tick.
- */
-function primitivesShown(): Primitive[] {
-  const q = $<HTMLInputElement>('#search').value.trim().toLowerCase()
-  if (!q) return primitives
-  return primitives.filter(p =>
-    `${p.id} ${p.group} ${p.title} ${p.question}`.toLowerCase().includes(q))
-}
-
-/**
- * The new-method animals on screen. Filtered by the search box and NOTHING ELSE,
- * the same rule the other three benches keep and for the same reason.
- */
 const assembledShown = (): AssembledRow[] =>
   filterRows(assembled, $<HTMLInputElement>('#search').value)
 
+/** The creature behind a rail row. Always present — `approverBench` emits one per row. */
+const creatureOf = (id: string): Creature | undefined => bench.find(c => c.speciesId === id)
+
 /** Every id currently listed, in list order — what the arrow keys page through. */
 const listedIds = (): string[] => {
-  if (gallery === 'built') return benchShown().map(c => c.speciesId)
-  if (gallery === 'primitives') return primitivesShown().map(p => p.id)
   if (gallery === 'anatomy') return anatomyShown()
   if (gallery === 'assembled') return assembledShown().map(r => r.id)
   return shown().map(e => e.id)
@@ -1007,13 +882,25 @@ function drawAnatomyList(): void {
 }
 
 /**
- * The new-method rail, and the second half of the labelling requirement.
+ * The approver's rail: one row per animal, grouped by collection, each carrying
+ * how far he has got with it.
  *
- * Every row wears `ASSEMBLED` and every group heading wears it too, so the rail
- * alone tells him which of the two animal galleries he is looking at without
- * reading the tab. A flagged build carries `⚑` in its own colour — a note's
- * colour, not the warning colour the missing-file rows use — because a flag is
- * the escape clause working rather than a fault.
+ * The row is named by the GIVEN name and not by the species, because the given
+ * name is what a child sees and what the album prints; the species follows in the
+ * meta so the row can still be found by what it is. A creature the audit file has
+ * never heard of has no given name to print, so it prints its species and wears
+ * the `missing` styling — the same styling a registry entry with no file on disk
+ * wears, and for the same reason: something real is named here that the files
+ * have not caught up with.
+ *
+ * Every row wears `ASSEMBLED` and every group heading wears it too. The gallery
+ * it distinguished them from is gone, but the mark is not decoration now either —
+ * it is the answer to "is this the new geometry or the junk", which he asked once
+ * and would have to trust the tab for otherwise.
+ *
+ * A flagged build carries `⚑` in its own colour — a note's colour, not the
+ * warning colour the missing rows use — because a flag is the escape clause
+ * working rather than a fault.
  */
 function drawAssembledList(): void {
   const list = $('#list')
@@ -1046,13 +933,23 @@ function drawAssembledList(): void {
     list.append(head)
 
     for (const row of group.items) {
+      const c = creatureOf(row.id)
+      const approved = c?.signoff === APPROVED
+
       const li = document.createElement('li')
-      li.className = 'item creature assembledrow' + (row.id === picked ? ' on' : '')
+      li.className = 'item creature assembledrow'
+        + (row.id === picked ? ' on' : '')
+        + (approved ? ' done' : '')
+        + (c?.onBench ? '' : ' missing')
+
+      const tick = document.createElement('span')
+      tick.className = 'tick'
+      tick.textContent = approved ? '✓' : '·'
 
       const chip = document.createElement('span')
       chip.className = 'chip ours'
       chip.textContent = NEW_METHOD_SHORT
-      li.append(chip, `${row.name} `)
+      li.append(tick, chip, `${c?.given || row.name} `)
 
       if (row.flagged) {
         const flag = document.createElement('span')
@@ -1063,10 +960,11 @@ function drawAssembledList(): void {
 
       const who = document.createElement('span')
       who.className = 'meta'
-      who.textContent = row.id
+      who.textContent = row.name
       li.append(who)
 
       li.title = rowTitle(row)
+        + (c && !c.onBench ? `\n${row.id} ${NO_AUDIT_ROW}` : '')
       li.onclick = () => void select(row.id)
       list.append(li)
     }
@@ -1075,162 +973,27 @@ function drawAssembledList(): void {
   $('#count').textContent = countLabel(assembled, items)
 }
 
-function drawBenchList(): void {
-  const list = $('#list')
-  list.replaceChildren()
-  const items = benchShown()
-
-  /*
-   * THE SCRAPPED BANNER, at the top of the list and not in a tooltip.
-   *
-   * The tab already says SCRAPPED; this says what survives. Joe signs names and
-   * facts off on this bench and those still stand — it is only the geometry
-   * turning beside them that has been superseded — and a bench that said nothing
-   * would leave him signing off shapes that will never ship.
-   */
-  const scrapped = document.createElement('li')
-  scrapped.className = 'railnote scrapped'
-  scrapped.textContent = SCRAPPED_NOTE
-  list.append(scrapped)
-
-  let group = ''
-  for (const c of items) {
-    if (c.collectionName !== group) {
-      group = c.collectionName
-      const head = document.createElement('li')
-      head.className = 'group'
-      const inGroup = items.filter(x => x.collectionName === group)
-      head.textContent = `${group} · ${inGroup.filter(x => x.signoff === SIGNED_OFF).length} of ${inGroup.length}`
-      list.append(head)
-    }
-
-    const li = document.createElement('li')
-    li.className = 'item creature'
-      + (c.speciesId === picked ? ' on' : '')
-      + (c.signoff === SIGNED_OFF ? ' done' : '')
-      + (c.onBench ? '' : ' missing')
-
-    const tick = document.createElement('span')
-    tick.className = 'tick'
-    tick.textContent = c.signoff === SIGNED_OFF ? '✓' : '·'
-    li.append(tick, `${c.given} `)
-
-    const who = document.createElement('span')
-    who.className = 'meta'
-    who.textContent = c.species
-    li.append(who)
-
-    li.title = c.onBench
-      ? `${c.speciesId} · ${c.collectionName} · ${c.kit}`
-      : `${c.speciesId} has no row in joe/names-audit.json, so it cannot be signed off yet`
-    li.onclick = () => void select(c.speciesId)
-    list.append(li)
-  }
-
-  const p = progressOf(bench)
-  $('#count').textContent = `${items.length} shown · ${p.left} to go`
-}
-
 /**
  * Where he has got to, over the WHOLE bench.
  *
  * The counts never describe the filtered view, for the same reason the name
  * panel's bar does not: a number that shrinks when he types in the search box
- * cannot tell him how much of the job is left.
+ * cannot tell him how much of the job is left. Every clause under the bar is
+ * `progressOf`'s, in its fixed order, so a number he has learned the position of
+ * does not move when another one goes to zero.
  */
 function drawProgress(): void {
   const p = progressOf(bench)
   const bar = $<HTMLProgressElement>('#benchBar')
   bar.max = Math.max(1, p.total)
-  bar.value = p.done
+  bar.value = p.approved
   $('#benchDone').textContent = p.label
-
-  const bits: string[] = [`${p.left} to go`]
-  if (p.withoutFact) bits.push(`${p.withoutFact} with no fact yet`)
-  if (p.unverified) bits.push(`${p.unverified} unverified`)
-  /* His ruling makes the fact part of the sign-off, so a tick that landed
-   * before one existed is worth saying out loud rather than burying. */
-  if (p.signedWithoutFact) bits.push(`${p.signedWithoutFact} signed off before a fact existed`)
-  if (p.unsignable) bits.push(`${p.unsignable} not in the audit file`)
-  $('#benchMeta').textContent = bits.join(' · ')
-}
-
-/**
- * The primitives rail: grouped by Face / Edges / Limbs, each heading carrying
- * how far through that group he is.
- *
- * A group this build has no heading for still gets one, spelled with the string
- * the file actually used. The rows are written by agents that measure the pack
- * and they land ahead of the viewer that renders them, so an unknown group is a
- * real and temporary state; hiding those rows would make "3 of 8" a lie about
- * how much is left.
- */
-function drawPrimitiveList(): void {
-  const list = $('#list')
-  list.replaceChildren()
-  const items = primitivesShown()
-
-  let group = ''
-  for (const p of items) {
-    if (p.group !== group) {
-      group = p.group
-      const head = document.createElement('li')
-      head.className = 'group'
-      const inGroup = items.filter(x => x.group === group)
-      head.textContent = `${group || 'no group'} · ${inGroup.filter(signedOff).length} of ${inGroup.length}`
-      list.append(head)
-    }
-
-    const li = document.createElement('li')
-    li.className = 'item creature'
-      + (p.id === picked ? ' on' : '')
-      + (signedOff(p) ? ' done' : '')
-      + (struck(p) ? ' struckrow' : '')
-
-    const tick = document.createElement('span')
-    tick.className = 'tick'
-    tick.textContent = signedOff(p) ? '✓' : struck(p) ? '✗' : '·'
-    li.append(tick, `${p.title || p.id} `)
-
-    const who = document.createElement('span')
-    who.className = 'meta'
-    who.textContent = p.id
-    li.append(who)
-
-    li.title = p.compare
-      ? `${p.id} · ${p.compare.packSpecies} beside ${p.compare.kitSpecies}`
-      : `${p.id} · no side-by-side is defined for the group '${p.group}'`
-    li.onclick = () => void select(p.id)
-    list.append(li)
-  }
-
-  const p = primitivesProgress(primitives)
-  $('#count').textContent = `${items.length} shown · ${p.left} to go`
-}
-
-/** Where he has got to across the WHOLE primitives bench, never the filtered view. */
-function drawPrimitiveProgress(): void {
-  const p = primitivesProgress(primitives)
-  const bar = $<HTMLProgressElement>('#benchBar')
-  bar.max = Math.max(1, p.total)
-  bar.value = p.done
-  $('#benchDone').textContent = p.label
-
-  const bits: string[] = [`${p.left} to go`]
-  /* A refusal is an answer and is counted as one. Rolling it into "to go" would
-   * make the bench look unfinished forever over decisions he has already made. */
-  if (p.struck) bits.push(`${p.struck} rejected`)
-  if (p.odd) bits.push(`${p.odd} carrying a verdict nothing here understands`)
-  if (p.ungrouped) bits.push(`${p.ungrouped} in an unknown group`)
-  if (p.withoutPicture) bits.push(`${p.withoutPicture} with no side-by-side`)
-  $('#benchMeta').textContent = bits.join(' · ')
+  $('#benchMeta').textContent = p.meta.join(' · ')
 }
 
 function drawList(): void {
-  if (gallery === 'built') { drawBenchList(); drawProgress(); return }
-  if (gallery === 'primitives') { drawPrimitiveList(); drawPrimitiveProgress(); return }
   if (gallery === 'anatomy') { drawAnatomyList(); return }
-  if (gallery === 'assembled') { drawAssembledList(); return }
+  if (gallery === 'assembled') { drawAssembledList(); drawProgress(); return }
   const items = shown()
   const list = $('#list')
   list.replaceChildren()
@@ -1300,17 +1063,6 @@ async function select(id: string): Promise<void> {
 }
 
 function build(id: string): Promise<THREE.Object3D> {
-  if (gallery === 'built') return loadBuilt(id)
-  if (gallery === 'primitives') {
-    const row = primitives.find(p => p.id === id)
-    if (!row) return Promise.reject(new Error(`${id} is not on the primitives bench`))
-    if (!row.compare) {
-      return Promise.reject(new Error(
-        `no side-by-side is defined for the group '${row.group}' — the row is still readable, `
-        + 'but there is nothing to look at while deciding it'))
-    }
-    return loadComparison(row.compare)
-  }
   if (gallery === 'anatomy') return loadAnatomy(id)
   /* Always the pair, never the animal alone — see `loadAssembled`. Grid mode
    * therefore lays out a grid of PAIRS, which is the right answer for the
@@ -1323,14 +1075,10 @@ function build(id: string): Promise<THREE.Object3D> {
 }
 
 function drawDetail(): void {
-  if (gallery === 'built') return drawCreature()
-  if (gallery === 'primitives') return drawPrimitive()
+  if (gallery === 'assembled') return drawCreature()
   if (gallery === 'anatomy') return drawAnatomy()
-  if (gallery === 'assembled') return drawAssembled()
   $('#creature').hidden = true
-  $('#primitive').hidden = true
   $('#anatomy').hidden = true
-  $('#assembled').hidden = true
   const entry = shown().find(e => e.id === picked)
   $('#assetId').textContent = picked || '—'
   const facts = $('#facts')
@@ -1358,13 +1106,12 @@ function drawDetail(): void {
 /**
  * The notes he has left against whatever is selected.
  *
- * Named rather than inlined at the bottom of `drawDetail` because the assembled
- * gallery wants them too and has nowhere else to put a remark. A creature on the
- * scrapped bench and a primitive both carry their own note field inside a card
- * that patches an audit file; an assembled animal has no audit file yet, so the
- * per-asset note box — which keys on the id and already persists — is the honest
- * place for "the spikes are too big" until the pilot says what a sign-off on one
- * of these should look like.
+ * Named rather than inlined at the bottom of `drawDetail` because the approver
+ * wants them too. The card's own two note fields are about the NAME and the FACT
+ * specifically — they land in `joe/names-audit.json` beside the verdicts they
+ * qualify — and there is nowhere in that file for "the spikes are too big". The
+ * per-asset note box keys on the species id and already persists, so it is the
+ * honest place for a remark about the MODEL.
  */
 function drawNotes(): void {
   const ul = $('#notes')
@@ -1404,16 +1151,24 @@ function el<K extends keyof HTMLElementTagNameMap>(
  *
  * The card has already shown the change, so a success is silent; a refusal says
  * so in the status line and the value on screen is stale until he reloads,
- * which is the honest way round. It never redraws the LIST — see `drawBenchList`.
+ * which is the honest way round.
+ *
+ * It returns WHETHER IT SAVED, and that is not decoration. The strike buttons
+ * change one field and can afford to show the change first and let a refusal
+ * shout; the one approval writes three fields at once, and a card that ticked
+ * itself over a save that never happened would tell him an animal was approved
+ * when the file says nothing of the kind. So the gate waits for this answer
+ * before it moves.
  */
-async function patchCreature(c: Creature, fields: Record<string, string>): Promise<void> {
+async function patchCreature(c: Creature, fields: Record<string, string>): Promise<boolean> {
   if (!c.onBench) {
-    say(`${c.speciesId} has no row in joe/names-audit.json — nothing to save against`, true)
-    return
+    say(`${c.speciesId} ${NO_AUDIT_ROW}`, true)
+    return false
   }
   const out = await api('/api/save', { what: 'names', patch: { id: c.auditId, ...fields } })
-  if (out?.error) say(out.error, true)
-  else say(`saved ${out.saved}`)
+  if (out?.error) { say(out.error, true); return false }
+  say(`saved ${out.saved}`)
+  return true
 }
 
 /** The check the fact-checking pass recorded, as a word and a colour. */
@@ -1425,69 +1180,124 @@ function checkPill(c: Creature): HTMLElement {
 }
 
 /**
- * One creature's card: the name, the collection, the fact, and one gate.
+ * THE CARD. One animal, everything he needs to judge it, and one button.
  *
- * JT-031 is what shapes it. His words were *"they then become part of my final
- * sign off for each animal along with its name"* — one decision per animal,
- * covering the model turning beside it, the collection it was assigned, the
- * name it was given and the sentence written about it. So there is exactly one
- * Sign off button, and the two Strike buttons above it are not rival gates:
- * they are how he says which PART he is unhappy with, in the shape
- * `names-audit.json` already uses for a name he rejects.
+ * Joe, 29 July 2026: *"ultimately i want to approve name, fact and 3D model in
+ * one go."* So the pane reads top to bottom as a single judgement and is ordered
+ * for that read rather than by what is easiest to build:
+ *
+ *   1. HOW IT WAS MADE, first and unmissable, so nothing below is read against
+ *      the wrong kind of animal.
+ *   2. Any alarm — a stale audit row, a collection the roster has never heard
+ *      of, no row to save into at all.
+ *   3. The build's flag, if it raised one. A note, not an alarm: the escape
+ *      clause is the method working.
+ *   4. WHICH HALF OF THE PAIR IS OURS, in `pairCard`'s own words, because the
+ *      model is half of what he is approving and the two animals on the canvas
+ *      look equally real.
+ *   5. The name, the fact, and then the one button that covers all three.
+ *
+ * The two Strike buttons above the button are not rival gates: they are how he
+ * approves the ANIMAL while saying the name is wrong, or the sentence is. An
+ * existing strike survives the approval — see the long note in `approver.ts` —
+ * so the strike is a considered judgement rather than a blocker.
  *
  * Nothing here is hidden when it is missing. A fact that has not been drafted
- * says so, a fact nobody checked says so, and a creature the audit file has
- * never heard of says that its sign-off has nowhere to land. A surface that
- * quietly showed a blank where a fact belongs would let him sign off fifty
- * animals and believe he had read fifty sentences.
+ * says so, a fact nobody checked says so in the pill AND in the body, and a
+ * creature the audit file has never heard of says that its approval has nowhere
+ * to land. A surface that quietly showed a blank where a fact belongs would let
+ * him approve a dozen animals and believe he had read a dozen sentences.
  */
 function drawCreature(): void {
-  const c = bench.find(x => x.speciesId === picked)
   const box = $('#creature')
   box.hidden = false
   box.replaceChildren()
-  $('#primitive').hidden = true
   $('#anatomy').hidden = true
-  $('#assembled').hidden = true
 
-  $('#assetId').textContent = c ? c.given : '—'
+  const c = creatureOf(picked)
+  const row = assembled.find(r => r.id === picked)
   const dl = $('#facts')
   dl.replaceChildren()
-  if (!c) { box.hidden = true; return }
+  $('#assetId').textContent = c ? (c.given || c.species) : '—'
 
-  /* The same sentence the rail carries, on the card he is actually reading while
-   * he clicks Sign off. He has been burned by a stale page once; a bench whose
-   * geometry has been superseded says so on every card, not once at the top of a
-   * list he scrolled past ten minutes ago. */
-  box.append(el('p', 'scrapnote', SCRAPPED_NOTE))
+  /* Nothing selected is a NORMAL state here and is not a blank card: the pilot
+   * lands one species at a time, so before the first one arrives there is
+   * genuinely nothing to approve. A throw out of the assembler is a different
+   * thing entirely and wears the alarm. */
+  if (!c || !row) {
+    if (assembledFault) {
+      box.append(el('p', 'alarm',
+        `src/island/species/parts refused to list what it can build: ${assembledFault}`))
+    } else {
+      box.append(el('p', 'pending', NOTHING_YET))
+    }
+    drawNotes()
+    return
+  }
+
+  /* ---- 1. which method built it, first and unmissable */
+  box.append(el('p', 'methodmark', NEW_METHOD_MARK))
 
   const put = (label: string, value: string) => {
     dl.append(el('dt', '', label), el('dd', '', value))
   }
   put('species', c.species)
-  put('collection', `${c.collectionName} (${c.collection}) · ship ${c.ship}`)
-  put('given name', c.given + (c.replacement ? `  →  ${c.replacement}` : ''))
-  put('name band', c.band)
-  put('built by', `${c.kit} kit · ${c.speciesId}`)
+  put('collection', `${c.collectionName} (${c.collection})`
+    + (c.unknownCollection ? '  — not a collection the roster knows' : ''))
+  put('given name', (c.given || 'none yet') + (c.replacement ? `  →  ${c.replacement}` : ''))
+  put('name band', c.band || 'unknown')
+  put('built by', `src/island/species/parts — assembled from lifted pack geometry · ${c.speciesId}`)
 
+  /* ---- 2. the alarms */
   /* The audit file was generated from a roster that has since moved. Loud,
    * because `naming.ts` is explicit that inserting a species mid-roster renames
-   * the ones after it, and a name he signs off has to be the name that ships. */
+   * the ones after it, and a name he approves has to be the name that ships. */
   if (c.drift) {
     box.append(el('p', 'alarm',
-      `joe/names-audit.json calls this one ${c.benched}; the code now generates ${c.given}. `
-      + 'The audit file is stale against the roster — do not sign this off until they agree.'))
+      `joe/names-audit.json calls this one ${c.benched}; the roster now calls it ${c.species}. `
+      + 'The audit file is stale against the roster — do not approve this until they agree.'))
   }
   if (!c.onBench) {
     box.append(el('p', 'alarm',
-      'No row in joe/names-audit.json for this species yet, so there is nowhere for a '
-      + 'sign-off to land. It appears here because the registry builds it; the audit file '
-      + 'catches up when the roster is regenerated.'))
+      'No row in joe/names-audit.json for this species yet, so there is nowhere for an '
+      + 'approval to land. It appears here because the assembler can build it; the audit '
+      + 'file catches up when the roster is regenerated.'))
+  }
+  if (c.unknownCollection) {
+    box.append(el('p', 'alarm',
+      `This build is filed under '${c.collection}', which is in no collection the roster has. `
+      + 'The animal still shows; what is wrong is where it says it belongs.'))
   }
 
-  /* ---- the name */
+  /* ---- 3. the flag, as a NOTE rather than an alarm */
+  if (c.flagged) {
+    const note = el('div', 'flagnote')
+    const flagHead = el('div', 'row')
+    flagHead.append(el('span', 'flagmark big', FLAG_GLYPH), el('h3', '', FLAG_HEADING))
+    note.append(flagHead, el('p', 'factText', flagNote(row)))
+    box.append(note)
+  }
+
+  /* ---- 4. what is on the turntable, in the same words the labels over it use */
+  const pairing = el('div', 'judge')
+  pairing.append(el('h3', '', 'What you are looking at'))
+  pairing.append(el('p', 'factText meta',
+    pairCard(row, referenceOr($<HTMLSelectElement>('#besideSelect').value)).why))
+  box.append(pairing)
+
+  /* ---- 5a. the name */
   const nameRow = el('div', 'judge')
   nameRow.append(el('h3', '', 'The name'))
+  /*
+   * The word itself, inside the section that judges it.
+   *
+   * It was only in the `#facts` list above the card, which meant the one
+   * section headed "The name" showed a strike button and two empty boxes and no
+   * name — so the thing being struck was several inches away from the button
+   * striking it. The fact sits next to its own strike button; the name now does
+   * too, and both read the same way.
+   */
+  nameRow.append(el('p', 'factText', c.given === '' ? `${c.speciesId} ${NO_AUDIT_ROW}` : c.given))
   const strikeName = el('button', 'strike' + (c.verdict === STRUCK ? ' on' : ''),
     c.verdict === STRUCK ? '✗ struck' : 'strike the name')
   const better = el('input', 'replacement')
@@ -1511,7 +1321,7 @@ function drawCreature(): void {
   nameRow.append(nameBits)
   box.append(nameRow)
 
-  /* ---- the fact */
+  /* ---- 5b. the fact */
   const factRow = el('div', 'judge')
   const head = el('div', 'row')
   head.append(el('h3', '', 'The fact'), checkPill(c))
@@ -1520,6 +1330,35 @@ function drawCreature(): void {
   if (c.fact) {
     factRow.append(el('p', 'factText', c.fact))
     if (c.factSource) factRow.append(el('p', 'meta', `source: ${c.factSource}`))
+    /* What the source SAYS, beside the sentence it is meant to back. A bare URL
+     * is not evidence to a man reading a dozen of these in a sitting. */
+    if (c.sourceNote) factRow.append(el('p', 'meta', `the source says: ${c.sourceNote}`))
+
+    /*
+     * AN UNCHECKED OR FLAGGED FACT IS NEVER PRESENTED AS FINE.
+     *
+     * The pill says `verified` or it does not, and a pill is a glance. Twelve of
+     * the sentences in `joe/species-facts.json` came back `flagged`, and the
+     * whole reason JT-031 puts the fact inside the approval is that a wrong one
+     * ends up printed in front of a child as true. So the state is spelled out in
+     * the body as well, and the checker's own preferred wording is put in front
+     * of him when it had one — offered, never applied. Only his verdict is
+     * written; taking the rewrite is a thing he does by hand.
+     */
+    if (c.factCheck !== VERIFIED) {
+      factRow.append(el('p', 'pending', c.factCheck
+        ? `The fact-checking pass returned '${c.factCheck}' for this sentence rather than `
+          + 'verified. Read it against the source before approving it, or strike it.'
+        : 'Nothing has checked this sentence. It is a draft standing where a fact belongs '
+          + 'until the checking pass reaches it.'))
+      if (c.proposedRewrite) {
+        factRow.append(el('h3', '', 'The wording the checker would rather have'))
+        factRow.append(el('p', 'factText', c.proposedRewrite))
+        factRow.append(el('p', 'meta',
+          'A suggestion from the drafting side, applied by nothing here. Put it in the note '
+          + 'below if you want it taken.'))
+      }
+    }
   } else {
     /*
      * Empty and obviously pending, never a plausible-looking sentence.
@@ -1553,229 +1392,44 @@ function drawCreature(): void {
   factRow.append(factBits)
   box.append(factRow)
 
-  /* ---- the one gate */
-  const done = c.signoff === SIGNED_OFF
-  const gate = el('button', 'signoff' + (done ? ' on' : ''),
-    done ? '✓ signed off — click to re-open' : 'Sign this animal off')
+  /*
+   * ---- 5c. THE ONE BUTTON. One click, one save, three fields.
+   *
+   * `approvePatch` returns all three verdicts as one object and it goes to the
+   * server in ONE request, because three requests are three chances for the
+   * second to fail after the first has landed — and an animal whose name is
+   * approved and whose model is not is a state nothing on this page can show him.
+   * The local copy is then updated from THAT SAME OBJECT rather than from three
+   * lines written out again here, so the card and the file cannot disagree about
+   * what he just did.
+   *
+   * Clicking it again re-opens: a mis-click is one click to undo, and '' is a
+   * real state — not yet judged, and not a rejection. What re-opening does NOT do
+   * is clear a strike; see the note in `approver.ts`.
+   */
+  const done = c.signoff === APPROVED
+  const gate = el('button', 'signoff' + (done ? ' on' : ''), done ? REOPEN_LABEL : APPROVE_LABEL)
   gate.disabled = !c.onBench
-  gate.onclick = () => {
-    /* Clicking the state it already has clears it: a mis-click is one click to
-     * undo, and '' is a real state — not yet judged, not a rejection. */
-    c.signoff = done ? '' : SIGNED_OFF
-    drawCreature()
+  gate.onclick = async () => {
+    const patch = done ? reopenPatch(c) : approvePatch(c)
+    if (!await patchCreature(c, patch)) return
+    c.signoff = patch['signoff'] ?? ''
+    c.verdict = patch['verdict'] ?? ''
+    c.factVerdict = patch['factVerdict'] ?? ''
     drawList()
-    void patchCreature(c, { signoff: c.signoff })
+    drawProgress()
+    drawCreature()
   }
   box.append(gate)
 
   if (!done && !c.fact) {
     box.append(el('p', 'meta',
-      'Signing off now covers the model, the collection and the name only — there is no '
-      + 'fact yet to cover. The bar counts these separately so they can be revisited.'))
-  }
-}
-
-/* ------------------------------------------------- the primitive sign-off */
-
-/**
- * One field of one primitive row, onto the file as it stands THIS INSTANT.
- *
- * The SAME `/api/save` patch path the creature card and `app.js` use, and
- * deliberately so: `joe/primitives-audit.json` has two authors — an agent
- * rewrites all eight measured fields of every row whenever it goes and measures
- * the pack again, Joe owns `signoff` and `note` — and the server re-reads and
- * merges inside the request so neither can silently overwrite the other. A
- * second persistence route would have to re-learn all of that and would learn it
- * wrong; `merge.mjs` exists because it was learned three times the expensive way.
- */
-async function patchPrimitive(p: Primitive, fields: Record<string, string>): Promise<void> {
-  const out = await api('/api/save', { what: 'primitives', patch: { id: p.id, ...fields } })
-  if (out?.error) say(out.error, true)
-  else say(`saved ${out.saved}`)
-}
-
-/**
- * One primitive's card: the question, the two measurements, the gap, the
- * proposal, the provenance, and one gate.
- *
- * Laid out in the order the argument has to be read, and nothing is hidden when
- * it is missing. What he is being asked is not "does this look nice" — the
- * models are on the turntable for that — it is whether the kits may build out of
- * this shape, and the answer stops or starts a re-tune. So `evidence` is on the
- * card rather than in a tooltip: a claim about the pack with no file:line beside
- * it is a claim he has no way to check, and this whole surface exists because
- * seventy-two animals were built on assumptions nobody wrote down.
- *
- * Two buttons, not one. 'reject' is a real answer — "the kits may NOT build out
- * of this" — and folding it into the absence of a tick would make a decision he
- * has made indistinguishable from one he has not reached.
- */
-function drawPrimitive(): void {
-  const p = primitives.find(x => x.id === picked)
-  const box = $('#primitive')
-  box.hidden = false
-  box.replaceChildren()
-  $('#creature').hidden = true
-  $('#anatomy').hidden = true
-  $('#assembled').hidden = true
-
-  $('#assetId').textContent = p ? (p.title || p.id) : '—'
-  const dl = $('#facts')
-  dl.replaceChildren()
-  if (!p) { box.hidden = true; return }
-
-  const put = (label: string, value: string) => {
-    if (!value) return
-    dl.append(el('dt', '', label), el('dd', '', value))
-  }
-  put('group', p.group)
-  put('id', p.id)
-
-  if (!p.known) {
-    box.append(el('p', 'alarm',
-      `This row is in a group called '${p.group}', which this build of the viewer has no `
-      + 'heading, no order and no side-by-side for. The row is still readable and still '
-      + 'signable; the picture beside it is what is missing.'))
-  }
-  if (p.odd) {
-    box.append(el('p', 'alarm',
-      `Its sign-off field reads '${p.signoff}', which is none of the three this bench knows `
-      + "('' not yet judged, 'ok' accepted, 'reject' refused). It is NOT being counted as a "
-      + 'tick. Click one of the two buttons below to say what you meant.'))
+      'Approving now covers the model, the collection and the name only — there is no fact '
+      + 'yet to cover. The bar counts those separately so they can be revisited.'))
   }
 
-  /* ---- the question, first and largest. Everything under it is the case. */
-  if (p.question) box.append(el('p', 'question', p.question))
-
-  const section = (heading: string, text: string, className = ''): void => {
-    if (!text) return
-    const row = el('div', 'judge')
-    row.append(el('h3', '', heading))
-    row.append(el('p', 'factText' + (className ? ' ' + className : ''), text))
-    box.append(row)
-  }
-  section('What the pack measures', p.packSays)
-  section('What the kits do today', p.kitSays)
-  section('The gap', p.gap)
-  section('What we would change it to', p.proposal)
-
-  /* Where the models beside this row come from, in the same words the canvas is
-   * arranged in — LEFT is the pack, RIGHT is the kit, always. */
-  if (p.compare) section('What you are looking at', p.compare.why, 'meta')
-  else {
-    section('What you are looking at', 'Nothing — no side-by-side is defined for this row, so it '
-      + 'is numbers only. That is a gap in this viewer, not a statement about the primitive.', 'meta')
-  }
-  section('Evidence', p.evidence, 'meta')
-
-  /* ---- his note */
-  const noteRow = el('div', 'judge')
-  noteRow.append(el('h3', '', 'Your note'))
-  const why = el('input')
-  why.value = p.note
-  why.placeholder = 'note — what you want instead, or what this turns on'
-  why.onchange = () => { p.note = why.value; void patchPrimitive(p, { note: why.value }) }
-  noteRow.append(why)
-  box.append(noteRow)
-
-  /* ---- the one gate, in two directions */
-  const gates = el('div', 'row gates')
-  const yes = el('button', 'signoff' + (signedOff(p) ? ' on' : ''),
-    signedOff(p) ? '✓ signed off — click to re-open' : 'Sign this primitive off')
-  const no = el('button', 'refuse' + (struck(p) ? ' on' : ''),
-    struck(p) ? '✗ rejected — click to re-open' : 'Reject it')
-
-  /* Clicking the state it already has clears it: a mis-click is one click to
-   * undo, and '' is a real state — not yet judged, and not a rejection. */
-  const setTo = (want: string) => () => {
-    p.signoff = p.signoff === want ? '' : want
-    p.odd = false
-    drawPrimitive()
-    drawList()
-    void patchPrimitive(p, { signoff: p.signoff })
-  }
-  yes.onclick = setTo(SIGNED_OFF)
-  no.onclick = setTo(STRUCK)
-  gates.append(yes, no)
-  box.append(gates)
-
-  box.append(el('p', 'meta',
-    'Nothing in src/ is re-tuned until the primitive it rides on is ticked here. Signing this '
-    + 'off is what unblocks the change; rejecting it is what stops it being made anyway.'))
-}
-
-/* --------------------------------------------------- the assembled card */
-
-/**
- * One new-method animal: what it is, what it is standing beside, and any flag.
- *
- * There is no gate on this card and that is deliberate. The pilot is running —
- * one species, then stop and report — and what Joe is being asked for here is a
- * look and a remark, not a verdict on a bench that does not exist yet. Inventing
- * a sign-off field would mean inventing a file to keep it in, and the method
- * document is explicit that the instructions get sharpened between collections
- * before anything is scaled up. The per-asset note box below the card is where a
- * remark lands, on the same persistence path every other note uses.
- *
- * The order is fixed: WHAT KIND OF ANIMAL THIS IS first, the flag second if
- * there is one, the pairing third. Anything else risks him reading the model
- * before he has read which of the two methods built it, which is the single
- * confusion this gallery was added to prevent.
- */
-function drawAssembled(): void {
-  const box = $('#assembled')
-  box.hidden = false
-  box.replaceChildren()
-  $('#creature').hidden = true
-  $('#primitive').hidden = true
-  $('#anatomy').hidden = true
-
-  const row = assembled.find(r => r.id === picked)
-  const dl = $('#facts')
-  dl.replaceChildren()
-  $('#assetId').textContent = row ? row.name : '—'
-
-  if (!row) {
-    if (assembledFault) box.append(el('p', 'alarm', assembledFault))
-    else box.append(el('p', 'pending', NOTHING_YET))
-    drawNotes()
-    return
-  }
-
-  /* ---- which method built it, first and unmissable */
-  const badge = el('p', 'methodmark', NEW_METHOD_MARK)
-  box.append(badge)
-
-  const put = (label: string, value: string) => {
-    dl.append(el('dt', '', label), el('dd', '', value))
-  }
-  put('species id', row.id)
-  put('collection', row.collectionName + (row.unknownCollection ? '  (not a collection the roster knows)' : ''))
-  put('built by', 'src/island/species/parts — assembled from lifted pack geometry')
-
-  if (row.unknownCollection) {
-    box.append(el('p', 'alarm',
-      `This build is filed under '${row.collection}', which is in no collection the roster has. `
-      + 'The animal still shows; what is wrong is where it says it belongs.'))
-  }
-
-  /* ---- the flag, second, and as a NOTE rather than an alarm */
-  if (row.flagged) {
-    const note = el('div', 'flagnote')
-    const head = el('div', 'row')
-    head.append(el('span', 'flagmark big', FLAG_GLYPH), el('h3', '', FLAG_HEADING))
-    note.append(head)
-    note.append(el('p', 'factText', flagNote(row)))
-    box.append(note)
-  }
-
-  /* ---- what is on the turntable, in the same words the labels over it use */
-  const card = pairCard(row, referenceOr($<HTMLSelectElement>('#besideSelect').value))
-  const pairing = el('div', 'judge')
-  pairing.append(el('h3', '', 'What you are looking at'))
-  pairing.append(el('p', 'factText meta', card.why))
-  box.append(pairing)
-
+  /* The per-asset notes, under the card rather than inside it: a remark about the
+   * MODEL has nowhere in `joe/names-audit.json` to live — see `drawNotes`. */
   drawNotes()
 }
 
@@ -1789,23 +1443,17 @@ function drawAssembled(): void {
  * pass is. Capped at the group, which is at most the 24 species.
  */
 async function showGrid(): Promise<void> {
-  /* For the built animals the group is the COLLECTION, which is the comparison
-   * that matters: roster §4 flags whole groups that "will read as duplicates
-   * unless size, palette and marking are deliberately separated", and that is
-   * not a question a one-at-a-time viewer can answer. */
-  /* And for the ASSEMBLED animals the group is the collection too, for a sharper
-   * version of the same reason: the pilot is a collection at a time, and "do
-   * these fourteen read as one set" is the question that follows "does this one
-   * sit beside the fox". Each cell is a PAIR, so the reference animal repeats
-   * down the grid — which is the point, not a waste: it is the constant every
-   * one of them is being judged against. */
+  /* For the ASSEMBLED animals the group is the COLLECTION, which is the
+   * comparison that matters: roster §4 flags whole groups that "will read as
+   * duplicates unless size, palette and marking are deliberately separated", and
+   * the pilot works a collection at a time — so "do these fourteen read as one
+   * set" is the question that follows "does this one sit beside the fox". Each
+   * cell is a PAIR, so the reference animal repeats down the grid, which is the
+   * point rather than a waste: it is the constant every one is judged against. */
   const bucket: Array<{ id: string }> = gallery === 'assembled'
     ? assembledShown().filter(r => r.collection === assembled.find(x => x.id === picked)?.collection)
       .map(r => ({ id: r.id }))
-    : gallery === 'built'
-      ? benchShown().filter(c => c.collection === bench.find(x => x.speciesId === picked)?.collection)
-        .map(c => ({ id: c.speciesId }))
-      : (() => {
+    : (() => {
       const entry = shown().find(e => e.id === picked)
       return shown().filter(e => e.group === (entry?.group ?? '') && e.onDisk)
     })()
@@ -1863,46 +1511,25 @@ function setGallery(next: Gallery): void {
   if (next !== 'assembled') { pairTags.length = 0; pairSides = null }
   if (next !== 'anatomy' && next !== 'assembled') $('#labels').replaceChildren()
   /*
-   * The progress bar belongs to the two SIGN-OFF benches and would be a lie over
-   * the props, which have nothing to be finished with. Both fill the same three
-   * elements, from `drawProgress` and `drawPrimitiveProgress` respectively.
+   * The progress bar belongs to the APPROVER and would be a lie over the props,
+   * which have nothing to be finished with. It is filled by `drawProgress` from
+   * `progressOf(bench)` — the whole bench, never the filtered view.
    */
-  const signing = next === 'built' || next === 'primitives'
-  $('#bench').hidden = !signing
-  /* The asset-note box is per-FILE and there is no file behind either bench: a
-   * creature is built at runtime and a primitive is a decision. Both carry their
-   * own note field inside the card, which is where a note about one belongs. */
-  $('#noteForm').hidden = signing
-  $('#notes').hidden = signing
-  /* Nothing to grid: a primitive is already showing two models at once, and the
-   * "group" it belongs to is Face or Limbs, which is not a thing to lay out. */
-  /* Nothing to grid on the anatomy bench either: it is already showing one
-   * animal in a dozen pieces, and a grid of those would be unreadable. */
-  /* The assembled bench DOES grid, unlike the other pairing gallery: its group
-   * is a whole collection and "do these fourteen read as one set" is a real
-   * question the pilot has to answer. */
-  $('#grid').hidden = next === 'primitives' || next === 'anatomy'
+  $('#bench').hidden = next !== 'assembled'
+  /* The asset-note box stays on every gallery now, the approver included. The
+   * card's own note fields are about the NAME and the FACT and land beside the
+   * verdicts they qualify; a remark about the MODEL — "the spikes are too big" —
+   * has nowhere in `joe/names-audit.json` to live, so it goes here, keyed on the
+   * species id like every other asset note. */
+  /* Nothing to grid on the anatomy bench: it is already showing one animal in a
+   * dozen pieces, and a grid of those would be unreadable. The approver DOES
+   * grid, even though it pairs: its group is a whole collection and "do these
+   * fourteen read as one set" is a real question the pilot has to answer. */
+  $('#grid').hidden = next === 'anatomy'
   /*
-   * THE TURNTABLE STOPS HERE, and it is not a preference.
+   * THE TURNTABLE STOPS ON THE ANATOMY BENCH, and it is not a preference.
    *
-   * Every other gallery shows one object and spinning it is how you read a
-   * silhouette. This one shows two, side by side, and the card beside the canvas
-   * says in as many words that the LEFT is the pack and the RIGHT is the kit. A
-   * turntable makes that sentence false every few seconds — the pair swings
-   * right round — so he would be reading the pack's numbers against the kit's
-   * geometry without a thing on screen looking wrong. Caught by screenshotting
-   * the `leg-adopt` row four seconds after selecting it, by which point the
-   * stand had turned about 115°.
-   *
-   * Stopped rather than removed: the button and the space bar still work, and
-   * `clearStand()` puts the rotation back to zero on every selection, so a spin
-   * he starts himself is one he knows about.
-   */
-  if (next === 'primitives' && spinning) $('#spin').click()
-  /*
-   * AND IT STOPS HERE TOO, for a sharper version of the same reason.
-   *
-   * Every part on this gallery carries a label projected from its centroid. On
+   * Every part on that gallery carries a label projected from its centroid. On
    * a turntable those labels slide across each other twice a second and the
    * whole thing becomes unreadable within a few degrees — and worse, a label
    * that has drifted onto a neighbouring part is a wrong reading that looks
@@ -1911,15 +1538,15 @@ function setGallery(next: Gallery): void {
    */
   if (next === 'anatomy' && spinning) $('#spin').click()
   /*
-   * AND IT STOPS HERE, for exactly the primitives bench's reason.
+   * AND IT STOPS ON THE APPROVER, for a sharper version of the same reason.
    *
    * This gallery shows two animals side by side and both the card and the two
    * labels over the canvas say in as many words which is the pack's and which is
    * ours. A turntable swings the pair right round every few seconds and makes
-   * that sentence false with nothing on screen looking wrong — and on THIS
-   * gallery the sentence being false means he judges a scrapped-looking shape as
-   * Kenney's, or Kenney's as ours, which is the whole thing this surface exists
-   * to prevent. Drag to orbit still works and is how you look round it.
+   * that sentence false with nothing on screen looking wrong — and here the
+   * sentence being false means he judges Kenney's animal as ours, or ours as
+   * Kenney's, and then approves the result. Drag to orbit still works and is how
+   * you look round it; the button and the space bar still start it deliberately.
    */
   if (next === 'assembled' && spinning) $('#spin').click()
   drawList()
@@ -1929,9 +1556,9 @@ function setGallery(next: Gallery): void {
    * what "one example of an original animal" means. */
   const first = next === 'anatomy' && listed.includes(DEFAULT_SPECIES) ? DEFAULT_SPECIES : listed[0]
   if (first) void select(first)
-  /* Nothing to select is a real state on the assembled bench before the first
-   * species lands, and the card has to say so rather than keep the last
-   * gallery's detail pane on screen. */
+  /* Nothing to select is a real state on the approver before the first species
+   * lands, and the card has to say so rather than keep the last gallery's detail
+   * pane on screen. */
   else if (next === 'assembled') { picked = ''; clearStand(); pairSides = null; drawPairTags(); drawDetail() }
 }
 
@@ -1995,25 +1622,6 @@ async function boot(): Promise<void> {
   ])
   disk = assets
   notes = state.notes ?? []
-  /*
-   * The bench, joined here and nowhere else.
-   *
-   * `state.names` is Joe's judgement; `state.facts` is whatever the fact agent
-   * has written into `joe/species-facts.json`, passed through unexamined by the
-   * API (see `api.mjs`). Both may be empty — the facts file does not exist until
-   * that agent lands — and the page renders that state rather than waiting for
-   * it.
-   */
-  bench = builtBench(state.names ?? [], readFacts(state.facts))
-  /*
-   * The primitives bench, joined here and nowhere else.
-   *
-   * `state.primitives` is the whole of it — the measurements an agent wrote and
-   * the two fields Joe owns, in one file, seeded with its rows so this surface
-   * is resumable with nothing running but the workbench server. That was the
-   * requirement: a review hour needs no manager.
-   */
-  primitives = primitivesBench(state.primitives ?? [])
 
   const select$ = $<HTMLSelectElement>('#setSelect')
   for (const set of SETS) {
@@ -2048,27 +1656,35 @@ async function boot(): Promise<void> {
   }
 
   /*
-   * The new-method bench, read once and joined to the roster's collection names.
+   * THE BENCH, read once and joined here and nowhere else.
    *
-   * `assembledSpecies()` is the assembler's own list of what it can actually
-   * build — not a roster, not a plan — so an animal appears here the moment its
+   * The geometry comes first because it is what decides who is on the bench at
+   * all: `assembledSpecies()` is the assembler's own list of what it can actually
+   * build — not a roster, not a plan — so an animal appears the moment its
    * assembly lands and never before. That is the pilot's delivery rule made
-   * visible: one species at a time, each viewable as soon as it exists.
+   * visible: one species at a time, each approvable as soon as it exists.
+   *
+   * Then the join. `state.names` is Joe's judgement so far; `state.facts` is
+   * whatever the fact agent has written into `joe/species-facts.json`, passed
+   * through unexamined by the API (see `api.mjs`). Either may be empty, and an
+   * animal neither has heard of is still benched, marked and counted rather than
+   * skipped — see the exhaustiveness note at the top of `approver.ts`.
    */
   try {
     assembled = assembledRows(assembledSpecies())
   } catch (err) {
     assembledFault = (err as Error).message
   }
+  bench = approverBench(assembled, state.names ?? [], readFacts(state.facts))
 
   explode = Number($<HTMLInputElement>('#explodeRange').value)
   $('#explodeValue').textContent = explode.toFixed(2)
 
   catalogue = [...buildCatalogue(), ...tileEntries(Object.keys(models.geometry))]
   resize()
-  /* The bench opens first: it is the surface he asked for, and the one with
-   * work outstanding in it. */
-  setGallery('built')
+  /* The approver opens first: it is the surface he asked for, and the only one
+   * with work outstanding in it. */
+  setGallery('assembled')
 }
 
 void boot().catch((err: Error) => say(err.message, true))
