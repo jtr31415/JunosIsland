@@ -340,6 +340,20 @@
       "check": "",
       "note": "",
       "state": "open"
+    },
+    {
+      "id": "JT-027",
+      "type": "ruling",
+      "title": "NEEDS JOE: what is in the 25th egg, once she has met all 24 animals? (PB-036)",
+      "detail": "You reported on 29 Jul: \"a second animal of the same type has just spawned. that must not happen.\" That is fixed and shipped - she can no longer be given an animal she already owns. But fixing it creates a question that did not exist before, and it is about what a child sees, so it is not mine or Fable's to settle.\n\nThere are 24 species. A rule that forbids repeats runs out of animals at the 25th hatch, and your JT-018 is standing: \"i have an unlimited amount of tiles but a limited stash of animals as rewards. neither must ever run out.\" So the 25th egg must still contain something.\n\nWHAT IS BUILT (commit on branch main, src/island/collection.ts): a safe floor, not an answer. While there is anyone in the pack she has not met, she gets one of those - never a repeat. The moment she has met all 24, the dealer falls back to exactly the behaviour that shipped before today: a uniform draw that will not repeat the last 5. So the album completing changes nothing mechanically - eggs keep hatching friends, each with a new randomly generated name, and nothing hangs, throws or comes up empty. It is deliberately the least surprising thing that could happen, chosen so the live bug could ship today without waiting on you.\n\nTHE QUESTION IS WHAT IT SHOULD BE INSTEAD. Options, with consequences:\n(a) LEAVE IT. Duplicates resume at 24 pets, with different names. Costs nothing. But it re-introduces the exact thing you reported, just later - and at that point she will have noticed that duplicates stopped happening, so it may read as the game breaking.\n(b) A COMPLETION MOMENT, then duplicates. The 24th hatch gets a ceremony that says the album is full, and after that duplicates are honestly framed as \"another friend\" rather than a new species. Cheap - a stage beat and a line of speech - and it turns the ceiling into an achievement.\n(c) EGGS CHANGE INTO SOMETHING ELSE at 24. Reading keeps paying, but into a different reward. Needs you to say what that reward is; nothing in the backlog defines one.\n(d) SHIP THE NEXT COLLECTION BEFORE SHE GETS THERE. docs/pet-island-species-roster.md has 296 species across 20 sets ratified on 28 Jul. If Garden (14 species) lands before her 24th pet, the ceiling never arrives in play. This is the option that makes the question go away rather than answering it, and the dealer is already written to take a bigger pack with no change.\n\nHOW URGENT: it depends only on her pet count today. If she is nowhere near 24, (d) buys all the time in the world.\n\nIF YOU REVERSE OR CHOOSE: the fallback is one branch in one function - the `else` half of the draw in src/island/collection.ts, about eight lines, fully covered by tests/island/collection.test.ts. (b) is a stage beat in main.ts on top of it. (d) is a roster/asset job and touches this file not at all: the deck deals opaque keys and never looks inside them, so `species + set` drops in unchanged (roster §3).",
+      "blocks": [
+        "PB-036"
+      ],
+      "artefact": "src/island/collection.ts",
+      "doneRule": "manual",
+      "check": "",
+      "note": "",
+      "state": "open"
     }
   ],
   "archive": []
