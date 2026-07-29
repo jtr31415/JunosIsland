@@ -676,3 +676,38 @@ the stage the old one had reached. She sees her build move, not shrink.
 "a half-built plot resuming into a sum" as a live outcome. It is now impossible.
 They are historical narration of an older bug, left alone deliberately, but do
 not read them as documentation of what the code does today.
+
+**Two managers, one worktree: a concurrent `git add -A` swallows your staged
+work into someone else's commit — and it may be pushed before you notice.** The
+PB-052 run staged seven files deliberately, ran all five gates, and in the
+window before `git commit` the parallel PB-036 manager committed with a broad
+add and pushed. All seven files are in `0369387`, whose message is about taking
+an animal apart. Nothing was lost and history was **not** rewritten, because it
+was already on `origin/main` and the other manager was still running. Two
+consequences. **Look for PB-052's code by symbol, not by commit message** —
+`src/island/world/walk.ts`, `src/island/world/mountains.ts`, `sealsAPet` in
+`flow.ts`. And when you know another manager is live in the same tree, commit
+the moment your gates go green rather than staging and then doing anything else;
+staging is not a lock.
+
+**`hasOutwardCorridor` answers a question about BUILDING and is silent about
+WALKING, and the two are not the same invariant.** It walks `dryEmpty` cells of
+the tile map (`coast.ts:1056`), so it never sees what stands on a tile;
+`tileTypeFor` exempts rock from it outright (`flow.ts:524`) because rock cannot
+cut a corridor. Both true. But a rock hex grows a mountain whose keep-out circle
+is 1.027-1.062 against a hex spacing of exactly 2.0000, so two mountains on
+adjacent hexes **overlap**, and six of them ring a hex a pet can never leave.
+The second topology now exists as `src/island/world/walk.ts` — the free space
+*between* the keep-out circles, as the hex lattice's corner graph. If you add a
+prop whose keep-out radius exceeds ~1.73, the corner model's premise breaks and
+it silently under-reports; `tests/island/walk.test.ts` asserts the premise so
+that day is a red test, not a trapped animal.
+
+**A pet's `at` is its HATCH hex and is never written back** (`pets.ts:424-427`),
+so `firstFreeSpot` (`flow.ts`) is choosing from hatch *history*, not from where
+the animals actually are — and it checks no tile type, nothing standing on the
+hex, and no reachability. A reload re-sites every pet at that same hex
+(`pets.ts:661-662`). Once a tile is committed it can never be retyped
+(`askToRetype` only ever touches the half-built plot) and `grid.place` has no
+inverse, so **an island that is already sealed cannot be repaired by the child**.
+Any brief §19 argument about pets recovering on their own is false.

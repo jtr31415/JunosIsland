@@ -1,67 +1,72 @@
 # Manager handoff
 
-*Run 8, written 29 July 2026, ~11:50. Read `docs/MANAGER-ORDERS.md` for the job.*
+*Run 9, written 29 July 2026, ~16:20. Read `docs/MANAGER-ORDERS.md` for the job.*
 
 ## Queue position
 
-- Item 0 (**the live bug, an abandoned tile follows her around**): **DONE — this
-  run. Shipped, CI green, verified from the deployed bundle.**
-- Item 1 (PB-042): DONE (run 4).
-- Item 2 (PB-030, the addition/subtraction ladder): DONE (run 6).
-- Item 3 (hold the work, reconcile the backlog): DONE (run 7).
-- Item 4 (**PB-036, themed animal collections**): **NOT MINE, AND NOT THE NEXT
-  MANAGER'S EITHER.** Joe gave it a dedicated manager mid-run, running in
-  parallel with me from ~11:00. Do not pick it up without checking with the
-  drumbeat.
-- Item 5 (the reading progression curriculum, carded `PB-043`): NOT STARTED.
+- Items 0-3: DONE (runs 4-8). Do not re-do them.
+- Item 4 (**PB-036**): **NOT MINE.** Its own manager is live in this same tree
+  right now — see `docs/PB036-HANDOFF.md`. Read the first landmine below before
+  you commit anything while it is running.
+- **PB-052 (the sealing defect): the buildable half is DONE. The remedy is held
+  on `JT-033`, which is still `open` with an empty note.** Detection is built,
+  tested, shipped and called by nothing. Nothing here is waiting on me.
+- **PB-053: detection built (`bareRockHexes`), cause explained, not fixed.**
+- Item 5 (`PB-043`, the reading progression curriculum): NOT STARTED. Still a
+  survey-then-ask item, not a build-it item.
 
 ## What this run did
 
-One item, PB-048 (**now carded as `PB-050` — see Decisions, the id moved and it
-was not my choice**). Joe's report: *"if a tile has been started and then
-abandoned, then tapping any tile jumps back into the building of the same tile,
-frustrating for her if she tries to tap an animal."*
+Reproduced PB-052 and stopped cleanly at the seam Joe has not ruled on.
 
-The fact the fix turned on, and it is in `docs/HANDOFF.md` now: **a standing
-`flow.plot` in free play IS the abandoned state.** The sum overlay stays open
-across every sum of a tile (`main.ts:1577-1588` deals the next sum into the same
-panel), so she is only ever back on the island mid-build by having left one.
-`askForLand` resumed it, so every later tap re-entered that build — including a
-near-miss at an animal, because `picking.ts` answers with whatever is under the
-ray and that is the tile her friend stands on.
+**The reproduction, watched failing.** `tests/island/walk.test.ts` measures the
+real `props/mountain_*.gltf` geometry off disk, places grass at the origin and
+rock on all six neighbours, and asserts a pet of radius **zero** is in a walkable
+region that is not the island's. It was red before `walk.ts` existed. The
+revert-check is the honest one: making the pinch test ignore the radii turns 6 of
+19 red — including `walkableRegions` collapsing to a single region — while all 13
+negative controls stay green, so the test is driven by the geometry and not by
+bookkeeping.
 
-Three edits, all small: `askForLand` never resumes and always opens the bank
-(`flow.ts:236-261`); `placeTile` RELOCATES a standing plot instead of refusing to
-site over one (`flow.ts:599-623`); a tile tap starts nothing and resumes nothing,
-ever (`interactions.ts:225-241`). Progress carries for free because `sumProgress`
-lives on the Flow, not the plot.
+**The detection is topological, not a constant.** `src/island/world/walk.ts`
+models the free space *between* keep-out circles as the hex lattice's **corner
+graph**: every side of the lattice is flanked by exactly two adjacent hexes, and
+is passable iff the gap between their obstacles leaves `2 * petRadius`. Flood
+the corners; a pet is sealed when its component is not the island's. It rests on
+one premise — only *adjacent* hex obstacles can pinch, since non-adjacent centres
+are 3.4641 apart — and a test asserts that premise against every measured radius,
+so a fatter prop one day is a red test rather than a silently under-reporting
+model.
 
-**The abandoned scaffolding is deliberately LEFT STANDING.** That is the load-
-bearing choice. Nulling `flow.plot` is the obvious fix and it is wrong:
-`plot.ts:111-133` reads `state.plot === null` with a plot standing as COMPLETION
-and plays the farewell, so an abandoned tile would bow and fly away like a
-finished one. Leaving it standing means `flow.plot` goes straight from old plot
-to new in one transition and the host takes its ordinary rebuild path.
+**`src/island/world/mountains.ts`** is the pure half of `props.ts` lifted out
+(`hash`, `pick`, `MOUNTAIN_HEXES`, `mountainHexFor`, `mountainSpinFor`, all
+re-exported from `props.ts` so no importer changed) so that `flow.ts` can ask the
+question without importing THREE. It carries the root cause written down as two
+measured tables, both re-measured from the real glTF by the tests so neither can
+drift: placement uses `MOUNTAIN_FOOTPRINT` (0.938 for A/B, 1.011 for C), pets
+collide on `MOUNTAIN_KEEPOUT` (1.027-1.062), adjacent centres are 2.0000.
 
-Tests drive the real `createPlotHost` and the real `handleWorldTap` together
-(`tests/island/plot.test.ts:402-534`), written first and watched failing. Seven
-existing tests asserted the resumption and were rewritten rather than deleted;
-**two of them had been passing vacuously off fixtures that never had a plot at
-all**, and one more passed accidentally off a stale `challenge: 'sum'` in its
-fixture. The revert-check was watched by the subagent and reported: reverting the
-`interactions.ts` edit alone failed 5 tests across two files.
+**PB-053 is now explained rather than counted.** Only C-beside-C is wide enough
+to collide; the C models carry 8 of 21 weight; (8/21)² = 14.51%, against 14.40%
+measured over 19,182 pairs. And phase 4's warning is confirmed and worse: the
+revert-check shows that tightening placement to the walking metric makes
+**100%** of rock hexes with a rock neighbour bare, not 14%.
+
+**No remedy was picked.** `sealsAPet` and `sealedLand` are exported, tested, and
+called by nothing. The seam is one marked comment block in `tileTypeFor` with all
+three of Joe's options costed where each would go.
 
 ## Gate results
 
-Tree hash before the gate run and after: **`9c25bc9b...` both times, identical.**
-`golden.json`, `src/core/` and `v0/` untouched (`git status --porcelain` on those
-paths was empty). All five files verified LF.
+Tree hash before the gate run and after: **`e05f6106...` both times, identical.**
+`git status --porcelain` on `tools/golden/golden.json`, `src/core` and `v0` was
+empty at both ends. All five new/changed files are `eol: lf` per `.gitattributes`.
 
 ```
 $ npx vitest run
- Test Files  75 passed (75)
-      Tests  1525 passed (1525)
-   Duration  36.36s
+ Test Files  97 passed (97)
+      Tests  2046 passed (2046)
+   Duration  32.10s
 
 $ npx tsc --noEmit -p tsconfig.json
 TSC exit=0
@@ -71,9 +76,8 @@ PWA v1.3.0 · mode generateSW · precache 8 entries (773.57 KiB)
 files generated  ../../dist/island/sw.js
 
 $ npm run smoke
-ok    no runtime errors on boot
-ok    renders a growing reading round
-ok    every wiring path runs without throwing
+ok    builds the ambience layer
+ok    reading mode is active
 all boot checks passed          SMOKE exit=0
 
 $ npm run parity
@@ -82,95 +86,106 @@ self-check  score bar         : "🐚 6" / "🐚 6"
 every step renders identically  PARITY exit=0
 ```
 
-**Deploy: shipped and VERIFIED FROM THE BUNDLE, not from the tests.** Pushed
-`d6f99c6`; CI run `30444437020` completed **success**. Note the hosting layout,
-which cost me time: `https://jtr31415.github.io/JunosIsland/` is the newest `v*`
-TAG and `/preview/` is `main` — and the preview page's asset `src` is absolute
-(`/JunosIsland/assets/...`) while its bundle actually lives at
-`/JunosIsland/preview/assets/...`, so the obvious URL 404s with a 9,379-byte
-GitHub error page that looks like a tiny bundle. The real one is 129,638 bytes.
-In it, minified with backtick strings:
+Those counts (97 files / 2046 tests) include the PB-036 manager's concurrent
+uncommitted work, which was in the tree when I gated. It was green too.
 
-```
-function ai(e,t=null){return e.phase===`free`?{...e,phase:`placing`,chosen:null,pending:t}:e}
-case`pet`:{n.bouncePet(t.id);...}case`tile`:return n.focusOn(t.axial),e;default:return e}
-```
+**Revert-checks, mine reported separately from my agents'.** Mine: none — I wrote
+no test myself; I wrote the seam in `flow.ts` and its comment. My agents watched
+four, all reported with the failing messages: (1) `gapBetween` ignoring the radii,
+6 of 19 red; (2) `bareRockHexes` on the walking metric, which quantified the 100%
+figure above; (3) `sealsAPet` forced `false`, 4 red, two of which only went red
+after the agent strengthened two of its own tests it had found vacuous; (4)
+`sealedLand` forced `[]`, 3 red — needed because the two functions share no code
+path at the flow level. `flow.ts` was confirmed restored by `git hash-object`
+before and after each.
 
-That is `askForLand` with no resumption, and a tile tap that only moves the
-camera. Both halves of the fix are live.
+**`origin/main` is level.** Confirmed with `git rev-list --count origin/main..HEAD`.
+
+## What happens to an island that is ALREADY sealed
+
+**It cannot be repaired by the child, and this is the finding that should shape
+the ruling.** Once a rock tile is committed it can never be retyped
+(`askToRetype` only touches the half-built plot, never `island.tiles`) and no
+code path anywhere removes a tile — `grid.place` has no inverse. A pet is
+re-sited on load at its recorded *hatch* hex (`pets.ts:661-662`), which is the
+pocket, and nothing in the game ever moves a pet across a barrier. **A test
+round-trips a sealed island through the real save layer and confirms
+`sealedLand` still finds the trapped hex, so a rescue can find them.** But there
+is no rescue, because writing one *is* Joe's option (c).
+
+So Joe's options A (silent grass) and B (refuse the socket) are **preventive
+only** — they do nothing for a girl who has already built the ring. Only (c)
+reaches an island in the wild. That is in the JT-033 addendum in his own words'
+place, not decided here.
+
+**Worse, and needing no ruling: a new pet can be hatched INSIDE an existing
+sealed pocket.** `firstFreeSpot` takes the first tile key no other pet's
+*recorded hatch hex* occupies — no tile type check, no reachability check — and
+`tests/island/sealing.test.ts` demonstrates a real hatch landing on `0,0` while
+`sealedLand` names it. One condition on one loop, about ten minutes. **Not
+applied**, because where an animal appears is something a child sees.
 
 ## Where the next manager starts
 
-**Not on PB-036** — it has its own manager. Ask the drumbeat for the next item;
-the honest candidates are item 5 (`PB-043`, the reading progression curriculum,
-which is a survey-then-ask item, not a build-it item) and Joe's two brand-new
-cards, `PB-048` *asset loading optimisation* and `PB-049` *revisit the
-"addictiveness"* — the second says explicitly *"discuss with fable 5 in a quick
-back and forth to decide on a strategy"*, so it is a conversation before it is
-any code.
+**If `JT-033` has a note, the whole job is at `src/island/flow.ts`, in the
+comment block beginning `>>> REMEDY SEAM` immediately above the `if (chosen ===
+'rock')` return in `tileTypeFor`.** It names each of Joe's three options and
+where each goes; (a) is one line there, (b) additionally needs
+`buildableSockets` to drop the hex or she taps a dead socket, and (c) changes
+nothing there at all and lives at the pet layer. `sealsAPet(f, a, t)` and
+`sealedLand(f)` are ready and tested. Whichever he picks, `tests/island/
+sealing.test.ts` has an assertion that `tileTypeFor` still says `'rock'` today —
+**update it, do not delete it.**
 
-**If you touch the plot/flow/tap seam at all, read `docs/HANDOFF.md`'s new
-"Landmines added 29 July" section first.** The single most useful line in it:
-a standing plot means she ABANDONED one, and nulling `flow.plot` makes an
-abandoned tile play the completion farewell.
-
-**Nothing about how a tile TYPE is chosen or stored has changed in shape**, which
-matters because the PB-036 manager is introducing sets and a `species + set` key.
-`flow.plot` is still exactly `{ at: Axial; type: TileType } | null`
-(`flow.ts:141`), still persisted whole (`save.ts:179`), still sanitised by
-`readPlot` against `grass|water|rock` (`save.ts:186-192`). `TileType` is TERRAIN
-and has no relationship to species or sets. What changed is only WHEN the type is
-chosen: it is now re-asked on entry at each new socket instead of surviving an
-abandonment. **No collision with the roster work.**
+If `JT-033` is still open, **do not start it**, and do not start a kit either
+(`JT-032` gates all kit work and is also open). PB-053 is the honest next piece
+of ground: `bareRockHexes` in `mountains.ts` already detects it, and the trap is
+written into the code — do not fix it by making placement use the walking metric.
 
 ## What I learned that is not in the code
 
-All three are now written into `docs/HANDOFF.md` under "Landmines added 29 July",
-so this is the short form:
+All three are now in `docs/HANDOFF.md` under "Landmines added 29 July"; short
+form here:
 
-- **`joe/backlog.json` races Joe exactly like `joe/tasks.json` does, and it cost
-  three collisions in one run.** His page was loaded before the drumbeat
-  committed `PB-048`, so his stale `nextId` dealt his own new cards an id that was
-  already taken and the whole-file save overwrote the live-bug card outright —
-  twice on the same id. Verify after writing, not just before: card count up,
-  no duplicate ids, everything in `HEAD` still present, still LF.
-- **Do not fight him for an id.** His cards keep the ids he gave them; your
-  record moves and says in its own text which id the orders and commits call it.
-- **A near-miss at a pet is a `kind:'tile'` hit**, not "nothing" — `picking.ts`
-  has no nothing answer. Any behaviour you attach to a tile tap is behaviour you
-  have attached to missing an animal.
-- **`git commit -m @'...'@` in the Bash tool is PowerShell syntax and bash takes
-  it literally**, so the `@` becomes part of the subject line. Caught before
-  pushing and amended with `-F`; use a message file.
+- **Staging is not a lock.** I staged seven files deliberately, gated them, and
+  in the window before `git commit` the parallel PB-036 manager committed with a
+  broad add **and pushed**. All my work is in `0369387`, whose message is about
+  taking an animal apart. I did **not** rewrite history — it was already on
+  `origin/main` and the other manager was still live; rebasing under a running
+  agent is a worse fault than an untidy log. **Find PB-052's code by symbol, not
+  by commit message.** When another manager is live, commit the instant the
+  gates go green.
+- **The two "she cannot wall herself in" invariants are different theorems.** The
+  corridor one is about building and is true; the walking one had never been
+  stated. Neither implies the other, and `flow.ts:524`'s rock exemption is exactly
+  where they diverge.
+- **The pet radius is provably not a dial.** Every gap on the island is either
+  mountain-beside-mountain (already shut at −0.054 to −0.125) or has a mountain
+  on one side only (0.937 wide), and the fattest animal needs 0.38. The band a
+  radius could act in is empty. I had written the opposite into a comment on the
+  strength of it "reading true" and an agent's measurement corrected me; the
+  comment now says so.
 
 ## Decisions
 
-**Raised this run:** `JT-028` — *Fred's crowding invite now stays quiet for a
-build she starts AFTER abandoning one (PB-048 × PB-042)*. Nothing was changed at
-`interactions.ts:159`; what changed is what a standing plot MEANS underneath it.
-I built nothing on a guess and did not ask Fable — the governors are Joe's, tuned
-across eight rulings, and a live bug should not drag a balance change along with
-it. Reversal is one condition on one line, about twenty minutes.
+**RAISED this run:** none — no new `JT` id was minted.
 
-**Picked up this run (his nod):** none. `JT-026` (B3's lean) and `JT-027` (the
-25th egg) are both still `open` with empty notes — I checked `joe/tasks.json`
-first thing. **So nothing was reverted, and B3's lean stands exactly as shipped**;
-the reversal remains costed at about an hour with the dials at
-`harness.ts:199-268`.
+**AMENDED this run:** `JT-033`'s `detail` (the agent-owned field;
+`note` and `state` are Joe's, per `tools/workbench/merge.mjs:79-81`). His note
+was empty and stayed empty; all 33 notes and states were re-parsed from disk and
+confirmed intact, LF preserved, one line of the file changed, committed alone as
+`data(workbench)`. The addendum tells him the four measured things, the two that
+bear on his choice, and explicitly that **nothing has to be reverted whichever he
+picks**.
 
-**Decided rather than asked, and reversible:** that the abandoned scaffolding
-stays visible on the island rather than being cleared. It follows from Joe's
-ruling and it is what makes the fix safe, but it is a thing a child sees, so it
-is worth his eye on the tablet — as the original card asked. It does **not**
-read as a loss: `sumsForTile` depends only on `tilesEarned`, so the plot at the
-new socket appears already grown to the stage the old one had reached. She sees
-her build move, not shrink.
+**PICKED UP this run (his nod):** none. `JT-030`, `JT-032` and `JT-033` are all
+still `open` with empty notes — checked at the start of the run. Nothing was
+reverted.
 
-**The id, stated plainly so nobody re-derives it:** the live bug is `PB-050` in
-`joe/backlog.json`. `docs/MANAGER-ORDERS.md` item 0 and commit `d6f99c6` both
-call the same work `PB-048`, and `PB-048` in the backlog is now Joe's own asset-
-loading card. The closed card's full text is also at
-`git show 5574cf7:joe/backlog.json` under the old id.
+**Decided rather than asked:** that detection defaults to `petRadius = 0`, the
+strongest form of the claim. It is not a product choice today because the radius
+cannot change any answer (above), and the reasoning is in the doc comment on
+`sealsAPet`.
 
 **Still open in the workbench:** `JT-001`, `JT-004`, `JT-005`, `JT-006`,
-`JT-007`, `JT-023`, `JT-026`, `JT-027`, `JT-028`.
+`JT-007`, `JT-023`, `JT-030`, `JT-032`, `JT-033`.
