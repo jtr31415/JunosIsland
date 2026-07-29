@@ -43,7 +43,7 @@ import { TILE_URL } from '../../../src/island/world/tiles'
  * allowed to build out of, benched in `primitives.ts`, and the models it puts on
  * the turntable are borrowed from the other galleries rather than owned.
  */
-export const GALLERIES = ['built', 'primitives', 'species', 'tiles', 'props'] as const
+export const GALLERIES = ['built', 'primitives', 'anatomy', 'species', 'tiles', 'props'] as const
 export type Gallery = typeof GALLERIES[number]
 export type Pack = 'pets' | 'props' | 'forest' | 'tiles'
 
@@ -96,6 +96,15 @@ export const packOf = (id: string): Pack => (/^[A-Z]/.test(id) ? 'forest' : 'pro
  * has no file anywhere, so there is no directory listing it could be measured
  * against; its only source is the bench in `built.ts`.
  *
+ * `anatomy` gets an empty list too, and it is the case that tests the rule
+ * hardest: it puts REAL pack GLBs on the turntable, `pets/animal-fox.glb` and
+ * the other 23, so claiming `pets` would look reasonable. It is still wrong.
+ * The species gallery owns that pack and is where a missing or unused pet file
+ * should be reported; a second gallery claiming it would report every one of
+ * them twice and would trip the cross-gallery guard in
+ * `built-gallery-source.test.ts`. Anatomy borrows those files to take apart —
+ * it is a view OF the pets, not a listing of them.
+ *
  * `primitives` gets an empty list for a stronger version of the same reason. A
  * primitive is not a thing at all — it is a decision about the shapes a kit may
  * build out of, benched in `primitives.ts`. It puts real models on the
@@ -115,6 +124,7 @@ export const packsFor = (gallery: Gallery): readonly Pack[] => {
     case 'props': return ['props', 'forest']
     case 'built': return []
     case 'primitives': return []
+    case 'anatomy': return []
   }
 }
 

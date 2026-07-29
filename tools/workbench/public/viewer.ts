@@ -74,6 +74,11 @@ import {
   primitivesBench, primitivesProgress, signedOff, struck,
   type Comparison, type Primitive,
 } from './primitives'
+import {
+  weldedComponents, componentFacts, orderComponents, namesFor, explodeOffset, sizeLabel,
+  ANATOMY_SPECIES, DEFAULT_SPECIES, SPLIT_NODE, petIdOf,
+  type ComponentFacts, type PartName,
+} from './anatomy'
 
 const $ = <T extends HTMLElement>(s: string): T => document.querySelector(s) as T
 const say = (t: string, bad = false) => {
@@ -151,6 +156,8 @@ renderer.setAnimationLoop(() => {
   if (spinning) stand.rotation.y += dt * 0.5
   controls.update()
   renderer.render(scene, camera)
+  /* After the render, so a label sits on where the part was actually drawn. */
+  moveTags()
 })
 
 function clearStand(): void {
@@ -351,6 +358,329 @@ async function loadComparison(compare: Comparison): Promise<THREE.Object3D> {
   return pair
 }
 
+/* --------------------------------------------------------------- anatomy */
+
+/**
+ * One animal, in pieces, each piece knowing what it is called and by whom.
+ *
+ * Joe: *"i need one example of an original animal, ripped apart in the viewer
+ * with a label against each part."* He has been reasoning about the art from
+ * screenshots of finished animals, and two of the things he has said about it —
+ * head = body, and all eyes are flat — are claims about ANATOMY that a
+ * screenshot cannot settle either way. This gallery settles them by taking the
+ * real GLB apart in front of him, live, every time.
+ *
+ * NOTHING IS BAKED, for the reason argued at the top of this file about the
+ * built animals and for one more that is specific here: a pre-exported
+ * decomposition would be a claim about the pack rather than a reading of it, and
+ * the entire value of the surface is that what he is looking at came out of
+ * `animal-fox.glb` a second ago.
+ */
+interface Part {
+  /** Kenney's node name, or ours for a shell inside `body`. */
+  label: PartName
+  /** The node this came out of — `body`, `tail`, `leg-front-left`, `Group`. */
+  node: string
+  facts: ComponentFacts
+  /** Moved by the explode slider. Holds the mesh at its own baked world matrix. */
+  holder: THREE.Group
+  /** Centroid in the anatomy group's space, before any explode. */
+  base: THREE.Vector3
+}
+
+let parts: Part[] = []
+let explode = 0.55
+/** The distance a part travels between assembled and fully apart. Set per model. */
+let reach = 0
+let anatomyRoot: THREE.Group | null = null
+
+/**
+ * A sub-mesh of `source` holding only `triangles`, at the same place in the world.
+ *
+ * The attributes are cloned rather than shared because five components of one
+ * body means five geometries, and a body is under 500 vertices — the copy is
+ * free and a shared attribute that someone later disposes is not.
+ */
+function subMesh(source: THREE.Mesh, triangles: readonly number[]): THREE.Mesh {
+  const geometry = source.geometry.clone()
+  const index = source.geometry.index
+  const picked: number[] = []
+  for (const t of triangles) {
+    for (let k = 0; k < 3; k++) picked.push(index ? (index.array[t * 3 + k] as number) : t * 3 + k)
+  }
+  geometry.setIndex(picked)
+  geometry.computeBoundingBox()
+  const mesh = new THREE.Mesh(geometry, source.material)
+  /* The source's world matrix, baked. The holder above it is what moves. */
+  mesh.matrixAutoUpdate = false
+  mesh.matrix.copy(source.matrixWorld)
+  return mesh
+}
+
+/**
+ * Take one loaded pet apart into labelled parts.
+ *
+ * Two levels, and they are different kinds of knowledge. Every mesh node is a
+ * part and carries KENNEY'S name. The `body` node is then split again into
+ * position-welded connected components — shells that touch nothing else — and
+ * those have no name in the file at all, so `namesFor` supplies OURS and marks
+ * them as ours. The measurements are taken in the mesh's own local space,
+ * which is where the census took them and therefore where the name table's
+ * numbers live.
+ */
+function dissect(root: THREE.Object3D, species: string): Part[] {
+  root.updateMatrixWorld(true)
+  const found: Part[] = []
+  const bodies: Array<{ mesh: THREE.Mesh; facts: ComponentFacts; triangles: number[] }> = []
+
+  root.traverse(node => {
+    const mesh = node as THREE.Mesh
+    if (!mesh.isMesh || !mesh.geometry) return
+    const position = mesh.geometry.getAttribute('position')
+    if (!position) return
+    const positions = position.array as ArrayLike<number>
+    const index = mesh.geometry.index ? (mesh.geometry.index.array as ArrayLike<number>) : null
+
+    if (mesh.name === SPLIT_NODE) {
+      for (const triangles of weldedComponents(positions, index)) {
+        bodies.push({ mesh, triangles, facts: componentFacts(positions, index, triangles) })
+      }
+      return
+    }
+
+    const all = [...Array(Math.floor((index ? index.length : positions.length / 3) / 3)).keys()]
+    const facts = componentFacts(positions, index, all)
+    found.push({
+      label: { name: mesh.name || '(unnamed node)', ours: false },
+      node: mesh.name || '(unnamed node)', facts,
+      holder: new THREE.Group(), base: new THREE.Vector3(),
+    })
+    found[found.length - 1]!.holder.add(subMesh(mesh, all))
+  })
+
+  /* The shells inside `body`, in the order the name table is written in. */
+  const ordered = orderComponents(bodies)
+  const ours = namesFor(species, ordered.map(o => o.facts))
+  ordered.forEach((component, i) => {
+    const part: Part = {
+      label: ours[i]!, node: SPLIT_NODE, facts: component.facts,
+      holder: new THREE.Group(), base: new THREE.Vector3(),
+    }
+    part.holder.add(subMesh(component.mesh, component.triangles))
+    found.push(part)
+  })
+
+  /* Centroids into the anatomy group's space, once, so the explode and the
+   * labels both read the same number and neither recomputes it per frame. */
+  for (const part of found) {
+    const source = part.holder.children[0] as THREE.Mesh
+    part.base.set(part.facts.centroid[0], part.facts.centroid[1], part.facts.centroid[2])
+      .applyMatrix4(source.matrix)
+  }
+
+  /* Kenney's names first, then ours, each by size. The file's own vocabulary is
+   * the thing to read first; our interpretation of the nameless part is second. */
+  return found.sort((a, b) =>
+    Number(a.label.ours) - Number(b.label.ours) || b.facts.tris - a.facts.tris)
+}
+
+/** Push every part out from the middle, by the slider. Cheap enough per frame. */
+function applyExplode(): void {
+  if (!anatomyRoot) return
+  const centre = new THREE.Vector3()
+  for (const part of parts) centre.add(part.base)
+  if (parts.length) centre.divideScalar(parts.length)
+  for (const part of parts) {
+    const [x, y, z] = explodeOffset(
+      [part.base.x, part.base.y, part.base.z], [centre.x, centre.y, centre.z], reach, explode)
+    part.holder.position.set(x, y, z)
+  }
+}
+
+async function loadAnatomy(species: string): Promise<THREE.Object3D> {
+  const pet = await loadPet(petIdOf(species), '')
+  parts = dissect(pet, species)
+  const group = new THREE.Group()
+  for (const part of parts) group.add(part.holder)
+  anatomyRoot = group
+
+  /* How far apart "fully apart" is: a little under the model's own radius, so a
+   * fox comes to pieces without the pieces ending up a screen away from it. */
+  const assembled = new THREE.Box3().setFromObject(group)
+  reach = assembled.getBoundingSphere(new THREE.Sphere()).radius * 0.9
+
+  /*
+   * THE CAMERA IS FRAMED ON THE FULLY EXPLODED ANIMAL, ALWAYS.
+   *
+   * `frame()` fits whatever it is given, and what it would be given is the model
+   * at whatever the slider happens to say — so dragging towards 1 walked the
+   * legs off the bottom of the canvas and their labels with them, and dragging
+   * back left the fox a speck in the middle. An invisible box spanning the t=1
+   * bounds rides along in the group, so the framing is the same at every slider
+   * position and the only thing that moves is the animal.
+   */
+  const was = explode
+  explode = 1
+  applyExplode()
+  const full = new THREE.Box3().setFromObject(group)
+  explode = was
+  applyExplode()
+
+  /* A sixth over the true span, which is headroom for the labels: a tag hung on
+   * the topmost part is drawn ABOVE it and would otherwise sit off the canvas. */
+  const span = full.getSize(new THREE.Vector3()).multiplyScalar(1.18)
+  const bounds = new THREE.Mesh(new THREE.BoxGeometry(span.x, span.y, span.z))
+  bounds.visible = false
+  bounds.position.copy(full.getCenter(new THREE.Vector3()))
+  group.add(bounds)
+  return group
+}
+
+/** The labels, projected from the parts' centroids. Rebuilt on load, moved per frame. */
+const tags: Array<{ part: Part; el: HTMLElement }> = []
+
+function drawTags(): void {
+  const layer = $('#labels')
+  layer.replaceChildren()
+  tags.length = 0
+  if (gallery !== 'anatomy') return
+
+  for (const part of parts) {
+    const el = document.createElement('div')
+    el.className = 'tag ' + (part.label.ours ? 'ours' : 'kenney')
+    const name = document.createElement('span')
+    name.className = 'name'
+    if (part.label.ours) {
+      const whose = document.createElement('span')
+      whose.className = 'whose'
+      whose.textContent = 'our name: '
+      name.append(whose)
+    }
+    name.append(part.label.name)
+    const facts = document.createElement('span')
+    facts.className = 'facts'
+    facts.textContent = `${sizeLabel(part.facts.size)} · ${part.facts.tris} tris`
+    el.append(name, facts)
+    layer.append(el)
+    tags.push({ part, el })
+  }
+}
+
+const projected = new THREE.Vector3()
+
+/**
+ * Move every label onto its part, and stop them sitting on top of each other.
+ *
+ * The projection is the easy half. The second pass is the half that decides
+ * whether the picture is any use: a fox's nose and nose-tip are 0.11 units
+ * apart, so at low explode their two tags land within a few pixels and the
+ * lower one is hidden completely — and a label you cannot see is indistinguishable
+ * from a label that is not there. Placed nearest-first (so the part you are
+ * looking at keeps the spot it earned) and each later one is pushed straight
+ * down until it clears everything already placed.
+ *
+ * Cheap because it is ten labels: the comparison is O(n²) on n ≤ 13.
+ */
+function moveTags(): void {
+  if (!tags.length || !anatomyRoot) return
+  const width = canvas.clientWidth, height = canvas.clientHeight
+
+  const placed: Array<{ x: number; y: number; w: number; h: number }> = []
+  const laid = tags.map(({ part, el }) => {
+    projected.copy(part.base).add(part.holder.position)
+    anatomyRoot!.localToWorld(projected)
+    projected.project(camera)
+    return { el, depth: projected.z, x: (projected.x * 0.5 + 0.5) * width, y: (-projected.y * 0.5 + 0.5) * height }
+  })
+  laid.sort((a, b) => a.depth - b.depth)
+
+  /* Which way each label steps off its part: away from the middle of the
+   * picture, so a tag never covers the animal it is describing. */
+  const middle = laid.reduce((n, t) => n + t.x, 0) / Math.max(1, laid.length)
+
+  for (const tag of laid) {
+    const behind = tag.depth > 1
+    tag.el.style.display = behind ? 'none' : ''
+    if (behind) continue
+    const w = tag.el.offsetWidth, h = tag.el.offsetHeight
+    tag.x += (tag.x < middle ? -1 : 1) * (w / 2 + 18)
+    /* Kept inside the canvas: the layer clips, and half a name is worse than a
+     * name in the wrong place — `torso+head fused hull (torso, neck, head, ...`
+     * read as a complete label on the deer until this line existed. */
+    tag.x = Math.min(Math.max(tag.x, w / 2 + 4), Math.max(w / 2 + 4, width - w / 2 - 4))
+    let y = tag.y
+    /* Straight down until nothing overlaps. Bounded, so a pathological stack
+     * cannot spin here. */
+    for (let guard = 0; guard < 40; guard++) {
+      const clash = placed.find(p =>
+        Math.abs(p.x - tag.x) < (p.w + w) / 2 && Math.abs(p.y - y) < (p.h + h) / 2)
+      if (!clash) break
+      y = clash.y + (clash.h + h) / 2 + 2
+    }
+    placed.push({ x: tag.x, y, w, h })
+    tag.el.style.left = `${tag.x}px`
+    tag.el.style.top = `${y}px`
+    /* Nearer labels over further ones, so a leg's tag is not hidden by the far
+     * side of the animal. */
+    tag.el.style.zIndex = String(Math.round((1 - tag.depth) * 1000))
+  }
+}
+
+/** The same parts, read down the side: name, whose name it is, size, triangles. */
+function drawAnatomy(): void {
+  $('#creature').hidden = true
+  $('#primitive').hidden = true
+  $('#anatomy').hidden = false
+  $('#assetId').textContent = picked || '—'
+  $('#facts').replaceChildren()
+  $('#notes').replaceChildren()
+
+  const box = $('#anatomy')
+  box.replaceChildren()
+
+  const key = document.createElement('p')
+  key.className = 'key'
+  key.append('Plain names are ')
+  const strong = document.createElement('strong')
+  strong.textContent = "Kenney's"
+  key.append(strong, ' — the node names in the .glb. Amber ones are ')
+  const mine = document.createElement('b')
+  mine.textContent = 'ours'
+  key.append(mine, ': the ')
+  const em = document.createElement('em')
+  em.textContent = 'body'
+  key.append(em, ' mesh has ONE name in the file and comes apart into shells the '
+    + 'file never names, so every name against a shell is our interpretation. '
+    + 'Sizes are in model units; a 0.000 means the part is flat.')
+  box.append(key)
+
+  let heading = ''
+  for (const part of parts) {
+    const want = part.label.ours ? `inside ${SPLIT_NODE} · our names` : 'nodes in the file · Kenney'
+    if (want !== heading) {
+      heading = want
+      const h = document.createElement('p')
+      h.className = 'head'
+      h.textContent = heading
+      box.append(h)
+    }
+    const row = document.createElement('div')
+    row.className = 'part' + (part.label.ours ? ' ours' : '')
+    const name = document.createElement('span')
+    name.className = 'name'
+    name.textContent = (part.label.ours ? 'our name: ' : '') + part.label.name
+    const facts = document.createElement('span')
+    facts.className = 'facts'
+    facts.textContent = ` — ${sizeLabel(part.facts.size)} · ${part.facts.tris} tris · ${part.facts.verts} verts`
+    row.append(name, facts)
+    box.append(row)
+  }
+
+  const flat = parts.filter(p => Math.min(...p.facts.size) === 0).length
+  $('#count').textContent = `${parts.length} parts`
+    + (flat ? ` · ${flat} of them flat (zero thickness)` : '')
+}
+
 /* ------------------------------------------------------------ the catalogue */
 
 interface Shown extends Entry { onDisk: boolean; notes: number }
@@ -463,7 +793,34 @@ function primitivesShown(): Primitive[] {
 const listedIds = (): string[] => {
   if (gallery === 'built') return benchShown().map(c => c.speciesId)
   if (gallery === 'primitives') return primitivesShown().map(p => p.id)
+  if (gallery === 'anatomy') return anatomyShown()
   return shown().map(e => e.id)
+}
+
+/** The pack animals on screen, filtered by the search box and nothing else. */
+function anatomyShown(): string[] {
+  const q = $<HTMLInputElement>('#search').value.trim().toLowerCase()
+  return ANATOMY_SPECIES.filter(s => !q || s.includes(q))
+}
+
+function drawAnatomyList(): void {
+  const list = $('#list')
+  list.replaceChildren()
+  const items = anatomyShown()
+
+  const head = document.createElement('li')
+  head.className = 'group'
+  head.textContent = `pack animals · ${items.length}`
+  list.append(head)
+
+  for (const id of items) {
+    const li = document.createElement('li')
+    li.className = 'item' + (id === picked ? ' on' : '')
+    li.textContent = id
+    li.title = `pets/${petIdOf(id)}.glb`
+    li.onclick = () => void select(id)
+    list.append(li)
+  }
 }
 
 function drawBenchList(): void {
@@ -607,6 +964,7 @@ function drawPrimitiveProgress(): void {
 function drawList(): void {
   if (gallery === 'built') { drawBenchList(); drawProgress(); return }
   if (gallery === 'primitives') { drawPrimitiveList(); drawPrimitiveProgress(); return }
+  if (gallery === 'anatomy') { drawAnatomyList(); return }
   const items = shown()
   const list = $('#list')
   list.replaceChildren()
@@ -656,6 +1014,13 @@ async function select(id: string): Promise<void> {
     clearStand()
     stand.add(object)
     frame(object)
+    /* The parts only exist once the GLB has been taken apart, so the labels and
+     * the list beside the canvas are built HERE and not in `drawDetail` above. */
+    if (gallery === 'anatomy') {
+      $<HTMLSelectElement>('#speciesSelect').value = id
+      drawTags()
+      drawAnatomy()
+    }
     say('')
   } catch (err) {
     if (mine !== token) return
@@ -676,6 +1041,7 @@ function build(id: string): Promise<THREE.Object3D> {
     }
     return loadComparison(row.compare)
   }
+  if (gallery === 'anatomy') return loadAnatomy(id)
   if (gallery === 'species') return loadPet(id, $<HTMLSelectElement>('#setSelect').value)
   if (gallery === 'tiles') return loadTile(id, $<HTMLSelectElement>('#seasonSelect').value as Season)
   return loadProp(id, $<HTMLInputElement>('#greyToggle').checked)
@@ -684,8 +1050,10 @@ function build(id: string): Promise<THREE.Object3D> {
 function drawDetail(): void {
   if (gallery === 'built') return drawCreature()
   if (gallery === 'primitives') return drawPrimitive()
+  if (gallery === 'anatomy') return drawAnatomy()
   $('#creature').hidden = true
   $('#primitive').hidden = true
+  $('#anatomy').hidden = true
   const entry = shown().find(e => e.id === picked)
   $('#assetId').textContent = picked || '—'
   const facts = $('#facts')
@@ -787,6 +1155,7 @@ function drawCreature(): void {
   box.hidden = false
   box.replaceChildren()
   $('#primitive').hidden = true
+  $('#anatomy').hidden = true
 
   $('#assetId').textContent = c ? c.given : '—'
   const dl = $('#facts')
@@ -948,6 +1317,7 @@ function drawPrimitive(): void {
   box.hidden = false
   box.replaceChildren()
   $('#creature').hidden = true
+  $('#anatomy').hidden = true
 
   $('#assetId').textContent = p ? (p.title || p.id) : '—'
   const dl = $('#facts')
@@ -1097,6 +1467,11 @@ function setGallery(next: Gallery): void {
   $('#setPick').hidden = next !== 'species'
   $('#seasonPick').hidden = next !== 'tiles'
   $('#greyPick').hidden = next !== 'props'
+  $('#anatomyPick').hidden = next !== 'anatomy'
+  $('#explodePick').hidden = next !== 'anatomy'
+  /* Leaving the gallery takes its labels with it, or they hang over the next
+   * model pointing at parts of an animal that is no longer on the stand. */
+  if (next !== 'anatomy') { $('#labels').replaceChildren(); tags.length = 0; parts = [] }
   /*
    * The progress bar belongs to the two SIGN-OFF benches and would be a lie over
    * the props, which have nothing to be finished with. Both fill the same three
@@ -1111,7 +1486,9 @@ function setGallery(next: Gallery): void {
   $('#notes').hidden = signing
   /* Nothing to grid: a primitive is already showing two models at once, and the
    * "group" it belongs to is Face or Limbs, which is not a thing to lay out. */
-  $('#grid').hidden = next === 'primitives'
+  /* Nothing to grid on the anatomy bench either: it is already showing one
+   * animal in a dozen pieces, and a grid of those would be unreadable. */
+  $('#grid').hidden = next === 'primitives' || next === 'anatomy'
   /*
    * THE TURNTABLE STOPS HERE, and it is not a preference.
    *
@@ -1129,8 +1506,23 @@ function setGallery(next: Gallery): void {
    * he starts himself is one he knows about.
    */
   if (next === 'primitives' && spinning) $('#spin').click()
+  /*
+   * AND IT STOPS HERE TOO, for a sharper version of the same reason.
+   *
+   * Every part on this gallery carries a label projected from its centroid. On
+   * a turntable those labels slide across each other twice a second and the
+   * whole thing becomes unreadable within a few degrees — and worse, a label
+   * that has drifted onto a neighbouring part is a wrong reading that looks
+   * like a right one. That has already cost this project once, on the
+   * `leg-adopt` row. Drag to orbit still works and is how you look round it.
+   */
+  if (next === 'anatomy' && spinning) $('#spin').click()
   drawList()
-  const first = listedIds()[0]
+  const listed = listedIds()
+  /* The fox opens, not the beaver. It is the roster's reference animal and the
+   * one every measurement in the primitives bench is quoted against, so it is
+   * what "one example of an original animal" means. */
+  const first = next === 'anatomy' && listed.includes(DEFAULT_SPECIES) ? DEFAULT_SPECIES : listed[0]
   if (first) void select(first)
 }
 
@@ -1142,6 +1534,19 @@ $('#search').oninput = () => drawList()
 $('#spin').onclick = () => { spinning = !spinning; $('#spin').textContent = spinning ? 'pause spin' : 'resume spin' }
 $('#reset').onclick = () => { const o = stand.children[0]; if (o) frame(o) }
 $('#grid').onclick = () => void showGrid()
+$('#speciesSelect').onchange = () => void select($<HTMLSelectElement>('#speciesSelect').value)
+/*
+ * The slider, and the whole of the interaction it belongs to.
+ *
+ * `applyExplode` only writes a position onto each holder — no geometry is
+ * rebuilt, nothing reloads — so dragging it is as cheap as moving the camera
+ * and it can be dragged continuously without stuttering on a twelve-part hog.
+ */
+$('#explodeRange').oninput = () => {
+  explode = Number($<HTMLInputElement>('#explodeRange').value)
+  $('#explodeValue').textContent = explode.toFixed(2)
+  applyExplode()
+}
 $('#setSelect').onchange = () => void select(picked)
 $('#seasonSelect').onchange = () => void select(picked)
 $('#greyToggle').onchange = () => void select(picked)
@@ -1204,6 +1609,19 @@ async function boot(): Promise<void> {
     option.textContent = set.name
     select$.append(option)
   }
+
+  /* The 24 pack animals, off `ANATOMY_SPECIES` rather than typed into the HTML,
+   * so the dropdown cannot fall behind what is on disk. */
+  const animals = $<HTMLSelectElement>('#speciesSelect')
+  for (const species of ANATOMY_SPECIES) {
+    const option = document.createElement('option')
+    option.value = species
+    option.textContent = species
+    option.selected = species === DEFAULT_SPECIES
+    animals.append(option)
+  }
+  explode = Number($<HTMLInputElement>('#explodeRange').value)
+  $('#explodeValue').textContent = explode.toFixed(2)
 
   catalogue = [...buildCatalogue(), ...tileEntries(Object.keys(models.geometry))]
   resize()

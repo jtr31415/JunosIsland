@@ -21,6 +21,13 @@ import type { Axial } from './hex'
 import type { Island } from './grid'
 import { isLand } from './grid'
 import type { Surface, Ground } from './tiles'
+/*
+ * The pure half of the mountain question. `hash` and `pick` went with the
+ * chooser because the chooser is built out of them and a second copy here would
+ * be one edit away from disagreeing about which peak a hex grows — which is
+ * precisely the failure `mountainHexFor`'s own comment warns about.
+ */
+import { hash, pick, mountainHexFor, mountainSpinFor } from './mountains'
 
 /**
  * WHAT KIND OF PLACE a tile is.
@@ -161,42 +168,28 @@ export const FEATURES: Record<Character, Array<{ name: string; weight: number; b
  * instruction is explicit and a mountain range wants some bare peaks in it.
  */
 /*
- * Typed with the optional `big` that `FEATURES` entries carry, so the two can
- * share the one placement path — and left UNSET on every entry, because `big` is
- * what routes a piece into the fit-and-offset branch these must avoid. A test
- * pins that it stays unset.
- */
-export const MOUNTAIN_HEXES: Array<{ name: string; weight: number; big?: boolean }> = [
-  { name: 'mountain_A', weight: 2 },
-  { name: 'mountain_B', weight: 2 },
-  { name: 'mountain_C', weight: 2 },
-  { name: 'mountain_A_grass', weight: 3 },
-  { name: 'mountain_B_grass', weight: 3 },
-  { name: 'mountain_C_grass', weight: 3 },
-  { name: 'mountain_A_grass_trees', weight: 3 },
-  { name: 'mountain_C_grass_trees', weight: 3 },
-]
-
-/**
- * Which mountain a given rock hex grows, and which way it faces.
+ * MOVED TO `./mountains`, AND RE-EXPORTED SO NOTHING HAD TO CHANGE.
  *
- * EXPORTED BECAUSE THE PLOT NEEDS THE SAME ANSWER. Joe: *"when selecting a
- * mountain tile, the incremental build goes back to a gras tile with props on.
- * we need to make sure the proper rock/mountain tile is already set up there so
- * it gets placed on completion."*
+ * The chooser is a pure function of a coordinate, but it lived in a file that
+ * imports Three — so `walk.ts`, which asks "how wide is the thing on that hex?"
+ * and must stay renderer-free, could not reach it, and neither could anything
+ * in `flow.ts`'s pure half. It now lives in `mountains.ts` alongside the
+ * MEASURED radii of the eight models, which is the other half of the same
+ * question and could never have lived here at all.
  *
- * The growing plot and the finished hex are two different placement paths
- * (increments.ts and this file — HANDOFF §6), and for a mountain they must agree
- * EXACTLY: she watches a particular peak rise, and that is the peak she must
- * get. A second `pick` over the same table would be one edit away from
- * disagreeing, so there is one function and both callers use it.
+ * Every caller — `plot.ts`, `assets.test.ts`, `rock.test.ts`, `walk.test.ts` —
+ * still imports these three from `props`, and should keep doing so: this file
+ * remains the place that DRESSES a hex, and the re-export says the chooser
+ * belongs to that story even though the code sits next door.
  */
-export const mountainHexFor = (a: Axial): string =>
-  pick(MOUNTAIN_HEXES, hash(a)).name
-
-/** ...and the facing, snapped to a hex edge. Same reasoning: one answer. */
-export const mountainSpinFor = (a: Axial): number =>
-  ((hash(a) >>> 5) % 6) * (Math.PI / 3)
+export { MOUNTAIN_HEXES, mountainHexFor, mountainSpinFor } from './mountains'
+/*
+ * `hash` went too, being the thing the chooser is built on. `scenery.test.ts`
+ * imports it from here to drive `coverPiece` with the numbers the island really
+ * produces, and that is still the right place to ask for it: it is the scenery
+ * layer's hash, and it happens to be defined next door.
+ */
+export { hash } from './mountains'
 
 /**
  * Ground cover from the Forest Nature pack — the small stuff that makes a tile
@@ -671,30 +664,6 @@ export function shadowUnder(
   holder.add(createBlobShadow(reach, height))
   into.add(holder)
   return holder
-}
-
-/**
- * Stable per-coordinate hash, so a tile's scenery never changes.
- *
- * Exported so tests can drive `coverPiece` with the numbers the island really
- * produces. UNSIGNED, which is the whole point of the `>>> 0` — and the reason
- * every consumer of it must use `>>>` rather than `>>` when it shifts.
- */
-export function hash(a: Axial): number {
-  let h = (a.q * 73856093) ^ (a.r * 19349663)
-  h = (h ^ (h >>> 13)) >>> 0
-  return h
-}
-
-/** Weighted choice from a list, driven by a hash rather than by chance. */
-function pick<T extends { weight: number }>(list: readonly T[], h: number): T {
-  const total = list.reduce((n, x) => n + x.weight, 0)
-  let r = h % total
-  for (const x of list) {
-    r -= x.weight
-    if (r < 0) return x
-  }
-  return list[0] as T
 }
 
 /**

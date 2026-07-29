@@ -18,6 +18,14 @@
         primitive it rides on has been ticked here.
       -->
       <button data-gallery="primitives">Primitives</button>
+      <!--
+        One pack animal taken apart, with a label against every piece. Joe:
+        "i need one example of an original animal, ripped apart in the viewer
+        with a label against each part." It sits beside Primitives because it is
+        the evidence those rows are argued from — head = body, and all eyes are
+        flat, measured off the file rather than read off a screenshot.
+      -->
+      <button data-gallery="anatomy">Anatomy</button>
       <button data-gallery="species">Species</button>
       <button data-gallery="tiles">Tiles</button>
       <button data-gallery="props">Props</button>
@@ -46,12 +54,32 @@
 
     <main>
       <canvas id="stage"></canvas>
+      <!--
+        The labels, drawn as HTML over the canvas rather than as 3D text.
+
+        Projected from each part's world centroid every frame. HTML because a
+        label has to stay readable — upright, one size, selectable — and 3D text
+        does none of those things while the camera is anywhere but head-on.
+        Filled by `viewer.ts`; empty and inert for every other gallery.
+      -->
+      <div id="labels" aria-hidden="true"></div>
       <div id="controls" class="row">
         <label id="setPick" hidden>Set <select id="setSelect"></select></label>
         <label id="seasonPick" hidden>Season <select id="seasonSelect">
           <option>base</option><option selected>Summer</option><option>Fall</option><option>Winter</option>
         </select></label>
         <label id="greyPick" hidden><input type="checkbox" id="greyToggle"> grey atlas</label>
+        <!--
+          The anatomy pair, and they are the whole interaction. A species, and
+          one slider from assembled to fully apart — nothing else, because
+          anything else would be a second thing to read while trying to read the
+          animal. The 24 are filled in from `ANATOMY_SPECIES` by `viewer.ts`.
+        -->
+        <label id="anatomyPick" hidden>Animal <select id="speciesSelect"></select></label>
+        <label id="explodePick" hidden>
+          Explode <input type="range" id="explodeRange" min="0" max="1" step="0.01" value="0.55">
+          <span id="explodeValue" class="meta">0.55</span>
+        </label>
         <button id="spin">pause spin</button>
         <button id="reset">reset view</button>
         <button id="grid">grid this group</button>
@@ -92,6 +120,15 @@
         control on it has to know which row it is patching.
       -->
       <section id="primitive" hidden></section>
+
+      <!--
+        The same parts as the labels on the canvas, as a list you can read down.
+
+        The canvas answers "where is it"; this answers "how big is it, and who
+        named it". Both are built from one array in `viewer.ts`, so they cannot
+        disagree about a part.
+      -->
+      <section id="anatomy" hidden></section>
 
       <form id="noteForm">
         <textarea name="note" rows="3" placeholder="what is wrong with it" required></textarea>

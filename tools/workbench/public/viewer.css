@@ -124,3 +124,48 @@ button.refuse.on { background: var(--warn); color: var(--bg); border-color: var(
 #list .item.struckrow { color: var(--warn); }
 #list .item.struckrow .tick { color: var(--warn); }
 #list .item.on.struckrow, #list .item.on.struckrow .tick { color: inherit; }
+
+/* ------------------------------------------------------------- the anatomy */
+
+/*
+ * The labels, floating over the canvas.
+ *
+ * `pointer-events: none` on the layer and on every label: the orbit drag has to
+ * go straight through to the canvas or the model becomes impossible to turn
+ * once twelve labels are covering it.
+ */
+#labels { position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+  pointer-events: none; overflow: hidden; }
+#labels .tag { position: absolute; transform: translate(-50%, -50%);
+  background: rgba(10, 9, 6, .82); border: 1px solid var(--line); border-radius: 4px;
+  padding: .18rem .38rem; font-size: .72rem; line-height: 1.35; white-space: nowrap;
+  font-family: ui-monospace, monospace; }
+#labels .tag .name { display: block; font-weight: 600; }
+
+/*
+ * KENNEY'S NAME vs OURS, and the difference is the point of the gallery.
+ *
+ * A node name is in the file — Kenney typed `leg-front-left` — and is printed
+ * plain, in the same ink as everything else measured. A component name is a
+ * GUESS we made about a nameless shell, so it is amber and says `our name:`
+ * before it. Joe must be able to tell measured fact from our interpretation
+ * without reading carefully, because he will not be reading carefully; he will
+ * be looking at a fox.
+ */
+#labels .tag.kenney .name { color: var(--ink); }
+#labels .tag.ours { border-color: #6a5427; }
+#labels .tag.ours .name { color: var(--warn); }
+#labels .tag .whose { color: var(--warn); font-weight: 400; }
+#labels .tag .facts { display: block; color: var(--dim); }
+
+/* The parts list beside the canvas, same two colours, same rule. */
+#anatomy .part { padding: .3rem 0; border-bottom: 1px solid var(--line); font-size: .78rem;
+  font-family: ui-monospace, monospace; }
+#anatomy .part .name { font-weight: 600; }
+#anatomy .part.ours .name { color: var(--warn); }
+#anatomy .part .facts { color: var(--dim); }
+#anatomy .head { margin: .6rem 0 .2rem; color: var(--dim); font-size: .72rem;
+  text-transform: uppercase; letter-spacing: .06em; }
+#anatomy .key { margin: .2rem 0 .6rem; font-size: .76rem; line-height: 1.5; }
+#anatomy .key b { color: var(--warn); font-weight: 600; }
+#explodeRange { width: 9rem; vertical-align: middle; }

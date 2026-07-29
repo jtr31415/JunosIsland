@@ -14,6 +14,8 @@ import type { Island, TileType } from './world/grid'
 import { key } from './world/hex'
 import type { Axial } from './world/hex'
 import { buildableSockets, landedType, landOffer, canBeRock } from './world/coast'
+import { wouldSeal, sealedHexes } from './world/walk'
+import { keepOutFor, NATIVE_HEX_SIZE } from './world/mountains'
 
 /**
  * How much work each reward costs — from the curve, never a constant.
@@ -521,8 +523,70 @@ export function tileTypeFor(f: Flow, a: Axial, chosen: TileType): TileType {
    * Where the rules refuse it, grass — never water. She asked for land, and the
    * gentler of the two readings of "land" is the one that keeps her fields.
    */
+  /*
+   * >>> REMEDY SEAM — PB-052, held on JT-033. DETECTION ONLY; nothing below is
+   * >>> called yet, and that is deliberate.
+   *
+   * The paragraph above is true about BUILDING and false about WALKING, and that
+   * asymmetry is the defect. A rock hex never cuts the corridor because the
+   * corridor walks empty cells; but a rock hex grows a mountain whose keep-out
+   * circle is ~1.03-1.06 wide against a hex spacing of exactly 2.0000, so two
+   * mountains on adjacent hexes OVERLAP. Six rock hexes around one grass hex are
+   * all accepted here, and a pet of radius zero standing in the middle can never
+   * leave. It survives a reload. `sealsAPet` below is the question this function
+   * cannot ask today.
+   *
+   * Three remedies were put to Joe as JT-033 and he has not ruled. Each is one
+   * line, and each goes HERE, immediately above the return:
+   *
+   *   a) the tap silently becomes grass —
+   *        if (chosen === 'rock' && sealsAPet(f, a, 'rock')) return 'grass'
+   *   b) the socket is refused — needs `buildableSockets` to drop it too, so it
+   *      never glows; this line alone would leave her tapping a dead socket.
+   *   c) the pet is rescued — nothing changes here at all; the remedy lives at
+   *      the pet layer, and it is the ONLY one of the three that repairs an
+   *      island that is ALREADY sealed (see the handoff).
+   *
+   * Do not pick one. Pick up his note on JT-033 first.
+   */
   if (chosen === 'rock') return canBeRock(f.island, a) ? 'rock' : 'grass'
   return landedType(f.island, a, chosen)
+}
+
+/**
+ * Would putting `t` at `a` wall a pet in?
+ *
+ * The walkability question `hasOutwardCorridor` cannot answer. That one is
+ * topology over the TILE MAP — can an empty cell chain reach open sea — and it
+ * never sees what stands on a tile. This one is topology over the FREE SPACE
+ * between the keep-out circles of what stands on the tiles: see
+ * `world/walk.ts` for the corner-graph model and the premise it rests on.
+ *
+ * `petRadius` defaults to zero, which is the strongest form of the claim: true
+ * here means not even a dimensionless pet could get out.
+ *
+ * Measured, and worth knowing before anyone reaches for it as a dial: on
+ * today's geometry the radius CANNOT change any answer. Every side of the
+ * corner graph is either mountain|mountain, already shut at −0.054 to −0.125,
+ * or has a mountain on one side only and is 0.937 wide — and the widest animal
+ * in the pack needs 0.38. The band the radius could act in is empty. It becomes
+ * a live dial only if some future prop's keep-out lands between 1.0 and 1.81,
+ * or if pets get much fatter; `tests/island/sealing.test.ts` is the tripwire
+ * that will say so.
+ */
+export function sealsAPet(f: Flow, a: Axial, t: TileType, petRadius = 0): boolean {
+  return wouldSeal(f.island, a, t, NATIVE_HEX_SIZE, keepOutFor, petRadius)
+}
+
+/**
+ * Land she already owns that a pet standing on it could never walk off.
+ *
+ * For a save loaded from disk: saves made before any remedy exists can already
+ * be sealed, and brief §19 says nothing she owns is lost. This is how a rescue
+ * finds them. It is a query and it changes nothing.
+ */
+export function sealedLand(f: Flow, petRadius = 0): readonly Axial[] {
+  return sealedHexes(f.island, NATIVE_HEX_SIZE, keepOutFor, petRadius)
 }
 
 /**
@@ -720,7 +784,18 @@ function commitPlot(f: Flow, honeymoon = false): Flow {
   }
 }
 
-/** Somewhere on the island for a new pet to stand. */
+/**
+ * Somewhere on the island for a new pet to stand.
+ *
+ * PB-052, measured and left alone on purpose: "free" here means only that no
+ * other pet's RECORDED hatch hex is that key — and `pet.at` is never written
+ * back as a pet wanders (`pets.ts:424-427`), so this set is hatch history, not
+ * where the animals are. It checks no tile type, nothing standing on the hex,
+ * and no reachability. **A new pet can therefore be hatched INSIDE a pocket
+ * that is already sealed.** `sealedLand(f)` is the query that would exclude
+ * them; it is one condition on the loop below. It is not applied here because
+ * where an animal appears is something a child sees, and JT-033 is open.
+ */
 function firstFreeSpot(f: Flow): Axial {
   const taken = new Set(f.pets.map(p => key(p.at)))
   for (const k of f.island.tiles.keys()) {
