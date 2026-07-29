@@ -25,6 +25,21 @@
  * so the same line that publishes the name is what puts the species on the
  * register that `ASSEMBLED_BUILDS` and `assemblyFor` read. See `register.ts`.
  *
+ * ## THE LINE MUST NEVER PRECEDE THE FILE
+ *
+ * Step 1 then step 2, always, and never the other way round. On 29 July a
+ * manager fanning out eleven species in parallel wrote all thirteen lines here
+ * UP FRONT, so the subagents would not have to touch a shared file. Five of the
+ * files did not exist yet, the module graph failed to resolve, and the viewer
+ * went blank — for Joe, live, because the workbench dev server reads this
+ * working tree directly. There is no "it is fine once I commit".
+ *
+ * So with concurrent subagents the rule is: **each appends its own line only
+ * after its file is written and type-checks, or the manager appends centrally
+ * as each subagent REPORTS.** A subagent is finished when it has reported, not
+ * when it was dispatched. If a batch genuinely cannot keep the tree loadable at
+ * every instant, do it in a worktree and merge it in complete.
+ *
  * **APPEND, do not sort.** The list order is the order `assembledSpecies()`
  * reports and the order the approver bench shows. §6 of
  * `docs/building-animals-from-parts.md` is one species at a time, in the order
@@ -36,6 +51,13 @@
 export { HEDGEHOG_ASSEMBLY } from './animal-hedgehog'
 export { SQUIRREL_ASSEMBLY } from './animal-squirrel'
 export { MOUSE_ASSEMBLY } from './animal-mouse'
+export { SHREW_ASSEMBLY } from './animal-shrew'
+export { DORMOUSE_ASSEMBLY } from './animal-dormouse'
+export { VOLE_ASSEMBLY } from './animal-vole'
+export { FROG_ASSEMBLY } from './animal-frog'
+export { TOAD_ASSEMBLY } from './animal-toad'
+export { TORTOISE_ASSEMBLY } from './animal-tortoise'
+export { SALAMANDER_ASSEMBLY } from './animal-salamander'
 /* -- append the next species' line directly above this one -- */
 
 import { assembledBuilds } from './register'
