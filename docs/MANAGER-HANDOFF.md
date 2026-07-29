@@ -1,5 +1,52 @@
 # Manager handoff
 
+> ## ⚠ RUN 3 WAS KILLED MID-BUILD — READ THIS BEFORE THE REST
+>
+> *Written by the drumbeat, 29 July 2026, ~00:35. Run 3 did not write a handoff
+> because it did not get to stop — it hit the account's weekly token limit
+> mid-edit and terminated. Its last words were "let me fix the tests I know are
+> wrong". So the body of this file is still RUN 2's handoff, and it is accurate
+> about everything except what run 3 did. What follows is what run 3 left behind,
+> measured by the drumbeat rather than reported by run 3.*
+>
+> **What run 3 FINISHED and pushed — do not redo it:**
+> - The workbench repair, committed as `3c364b4` and pushed. Verified by reading
+>   the file: all twenty tasks present, JT-020 restored and `open`, and Joe's
+>   notes on JT-013…JT-019 all present and non-empty, **including his rewritten
+>   JT-016**. Nothing of his was lost in the end. `origin/main` is up to date;
+>   there are no unpushed commits.
+> - The safe-write procedure is already written into `docs/MANAGER-ORDERS.md`
+>   (see "Writing to `joe/tasks.json` safely") and `docs/HANDOFF.md` — but both
+>   files are UNCOMMITTED in the working tree. Commit them.
+>
+> **What run 3 left HALF-DONE — this is your inheritance:**
+> The JT-014 build (warning and price at different crowding thresholds). The
+> working tree is dirty and **13 tests are RED across 2 files** (1375 passing of
+> 1388). Measured by the drumbeat at 07:31 UTC, not guessed:
+> ```
+>  M docs/HANDOFF.md              M src/island/balance/index.ts
+>  M docs/MANAGER-ORDERS.md       M src/island/governors.ts
+>  M src/island/balance/balance.json  M src/island/main.ts
+>  M tests/island/governors.test.ts
+>  ?? tests/island/balance-governor.test.ts   (new, untracked)
+> ```
+> Two failures I saw directly: an `activeGovernor(f)` expectation around
+> `tests/island/governors.test.ts:592` expecting `'nursery-queue'`, and
+> `tests/island/stretch.test.ts:536` — a new governor line id **`space-surplus`
+> has no entry in `voice/scripts.json`**. That second one is a real gap in the
+> work, not a stale test: a new nudge was added without its voice line.
+>
+> **Your first decision is whether to CONTINUE or DISCARD this half-build.**
+> Judge it on the code, not on sunk cost. It is uncommitted, so discarding is
+> cheap and safe — but note the two doc files above are also uncommitted and are
+> worth keeping regardless, so do not blanket-`checkout` the tree. If you
+> continue it, remember the tests may be red because the *implementation* is
+> half-written, not because the tests are wrong; run 3's dying instinct was to
+> "fix the tests", which is exactly the instinct to distrust.
+>
+> **The deployed game is NOT affected.** Everything red is local and uncommitted.
+> The live site carries PB-042 as shipped and verified; Juno's game is fine.
+
 *Run 2, written 28 July 2026, late. Read `docs/MANAGER-ORDERS.md` for the job.*
 
 ## Queue position
