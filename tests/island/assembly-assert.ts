@@ -24,6 +24,12 @@
  *      the hull; NO feature wears a shape the pack used as a hull (which is what
  *      a second body actually is, and is exact rather than a threshold); and the
  *      hull is the largest thing on the animal by a stated margin.
+ *   1b. **The hull is the STANDARD SIZE.** Its built bounding box equals its bank
+ *      shell's own size, on all three axes. Joe raised body size twice — "body
+ *      cubic, its currently too wide", then "the body/cube should always be the
+ *      standard size, its often bigger" — and the first fix was per species,
+ *      which is why there was a second. A bigger body is a different real shell
+ *      (`OTHER_HULLS`), never a scaled one, and this is where that generalises.
  *   2. **Lineage.** Every mesh's VERTICES are matched back to a bank record —
  *      found, not trusted — and it is the shape the builder says it is. A mesh
  *      that matches nothing is only allowed if it is `bespoke-*`, in which case
@@ -407,6 +413,52 @@ export function assertAssembly(claims: AssemblyClaims): void {
       expect(vols[0]!.name, 'something is bigger than the hull').toBe('hull')
       expect(vols[0]!.vol / vols[1]!.vol, `${vols[1]!.name} is close to hull-sized`)
         .toBeGreaterThan(claims.massRatio ?? 3)
+    })
+
+    /* --------------------------------- 1b. the hull is the STANDARD SIZE --- */
+
+    it('wears its hull shell at the shell\'s OWN standard size — never scaled', () => {
+      /* Joe, twice. "body cubic, its currently too wide" on the hedgehog, and then
+       * over the whole built set: "general criticism is size. the body/cube should
+       * always be the standard size, its often bigger." The first was answered in
+       * the species, which is exactly why there was a second — so this is the
+       * assertion that answers it for all of them at once.
+       *
+       * Measured off the BUILT geometry and compared to the bank's record, not
+       * read off the spec: `Hull.stretch` being `never` says nobody asked for a
+       * bigger hull, and this says nobody got one.
+       *
+       * Said TWICE, at two tolerances, because the bank rounds two ways. Its
+       * `positions` are 4dp and its `size` is 6dp, so a shell whose recorded width
+       * is 1.539484 builds from vertices at +/-0.7697 and measures 1.5394 — off by
+       * 8.4e-5, which is the pack's own rounding and not a scale. That is the
+       * badger's `box-12` and it is why the comparison against `size` is at 3dp,
+       * the same thousandth `snap` works to throughout this file. The EXACT claim
+       * is the second one, against the shell's own referenced vertices: the hull's
+       * built box is the donor's box to 4dp, no allowance at all.
+       *
+       * Either way it bites long before it matters: the smallest hull stretch
+       * anybody has reached for was 1.08x, which is 0.1 of a unit.
+       */
+      const g = build()
+      const shell = partById(spec!.hull.part) ?? authoredById(spec!.hull.part)
+      expect(shell, `the hull claims "${spec!.hull.part}", which no record accounts for`)
+        .toBeTruthy()
+      const hull = g.getObjectByName('hull') as THREE.Mesh
+      const size = worldBox(hull).getSize(new THREE.Vector3())
+      const got = [size.x, size.y, size.z]
+      const own = bbox(referenced(shell!)).size
+      for (let i = 0; i < 3; i++) {
+        const why = `the hull measures ${got[i]!.toFixed(4)} on ${'xyz'[i]} where ${shell!.id} `
+          + `itself is ${shell!.size[i]!.toFixed(4)} — a bigger body is one of the pack's ten `
+          + 'real shells (OTHER_HULLS in hulls.ts), never a scaled one'
+        expect(got[i]!, why).toBeCloseTo(shell!.size[i]!, 3)
+        expect(got[i]!, why).toBeCloseTo(own[i]!, 4)
+      }
+      // Both halves of the builder's guard, from the data side: nothing declared a
+      // stretch, and the mesh records the identity the builder now always uses.
+      expect(spec!.hull.stretch, 'the hull declares a stretch').toBeUndefined()
+      expect(hull.userData['stretch']).toEqual([1, 1, 1])
     })
 
     /* --------------------------------------------------------- 2. lineage --- */

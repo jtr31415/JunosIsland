@@ -159,26 +159,28 @@ export const HEIGHT_FLOOR = 1.43125
 /** How much `HEIGHT_FLOOR` clears `PACK_HEIGHT_MIN` by. One part in a thousand. */
 export const HEIGHT_FLOOR_MARGIN = 0.00125
 
-/* ------------------------------------- a different hull is not a stretch --- */
+/* --------------------------- a bigger body is a different real shell --- */
 
 /**
- * **Choosing a different authored hull is NOT a stretch and needs no
- * `stretchWhy`.**
+ * **The ONLY way to change a body's proportions, because the hull is never
+ * scaled.**
  *
- * This is the one every builder gets wrong, and the type will block them when
- * they do. Joe's ruling was *"body cubic, its currently too wide"* — he rejected
- * a STRETCHED cube, a shape 14 of the 24 share, silently departed from. He did
- * not rule that every animal is `box-03`. The pack drew ten hulls and using one
- * of them is adaptation of the purest kind rule 1 asks for: authored geometry,
- * unmodified, at the proportions Kenney gave it.
+ * Joe has raised body size twice. First on the hedgehog — *"body cubic, its
+ * currently too wide"* — and then, reviewing the built animals, *"general
+ * criticism is size. the body/cube should always be the standard size, its often
+ * bigger."* The first time it was fixed in the species; the second time it was
+ * fixed in the builder, and `Hull.stretch` is now `never` on both the kit's type
+ * and `HullDef`'s. There is no dial and no sentence that buys one.
  *
- * So if a species needs to be wider, taller or shallower than the cube, take a
- * hull that IS. Reaching for `Hull.stretch` to get there is the wrong move twice
- * over — it needs a `stretchWhy` it cannot honestly give, and it re-does badly
- * something the pack already did well.
+ * What he did NOT rule is that every animal is `box-03`. The pack drew ten hulls
+ * and using one of them is adaptation of the purest kind rule 1 asks for:
+ * authored geometry, unmodified, at the proportions Kenney gave it. So a species
+ * that needs to be wider, taller, shallower or bigger than the cube takes a shell
+ * that IS — and the four below are the whole of that vocabulary.
  *
  * Every one of these sits at `HULL_BOTTOM_Y` like the cube, so the leg row is
- * unchanged whichever is picked. `HULL_FRONT_Z` is not — check it.
+ * unchanged whichever is picked. `HULL_FRONT_Z` is not — check it. Every one
+ * carries the pack's own `hull` role, which is what `creatureSpec` demands.
  */
 export const OTHER_HULLS = {
   /** 1.5395 x 1.250 x 1.250 — the cow's and the deer's. WIDER, and nothing else. */

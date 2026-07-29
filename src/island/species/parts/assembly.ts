@@ -7,6 +7,8 @@
  *
  *   1. **Adapt before authoring** — `stretch` on a part copy. It is a property
  *      of the COPY's vertices, baked into the geometry, never a node transform.
+ *      Never on the HULL, though: the one mass is always its shell's own size,
+ *      and a different body proportion is a different real shell. See `Hull`.
  *   3. **One mass** — `AssemblyBuild.hull` is singular and there is no way to
  *      say "and another hull". A `Feature` is a detail bolted to the mass. This
  *      is the fault that scrapped the 72 and the type is the guard against it.
@@ -70,6 +72,7 @@ import * as THREE from 'three'
 import { partById, type BakedPart } from './bank.generated'
 import { authoredById } from './authored'
 import { assemblyTexture, slotUv, patchUv, type SlotSplit } from './texture'
+import type { ResolvedMotion } from './motion'
 
 export type Vec3 = readonly [number, number, number]
 export type Axis = 'x' | 'y' | 'z'
@@ -194,29 +197,43 @@ export interface Feature {
 }
 
 /**
- * The one mass. Singular, and there is no second one.
+ * The one mass. Singular, there is no second one, and it is NEVER SCALED.
  *
- * ## Why a hull stretch has to say why
+ * ## The hull is always the standard size. That is Joe's, and it is his twice
  *
- * The hedgehog shipped with the shared 1.250 cube stretched to 1.350 x 1.150 and
- * Joe's first note back was *"body cubic, its currently too wide"*. The stretch
- * itself was argued for at length in a comment — but a comment is not where he
- * reviews, and `stretch?: Vec3` sat in the type as an ordinary optional number
- * that any species could reach for. Ten more Garden species would each have
- * inherited the same silent dial.
+ * Reviewing the built animals: *"the new animals look genuinely really good.
+ * general criticism is size. the body/cube should always be the standard size,
+ * its often bigger."* And before that, on the hedgehog: *"body cubic, its
+ * currently too wide"*. The first time it was fixed in the species, which is
+ * exactly why there was a second time.
  *
- * So a hull stretch is now a PAIR. `stretch` without `stretchWhy` does not
- * compile, `buildAssembly` throws on it at runtime for callers that are not
- * TypeScript, and the reason travels out on the group's `userData` and on
- * `assembledSpecies()` so it reaches the surface Joe judges from. A hull that
- * departs from its authored proportions is now something he can see, which is
- * the only kind of departure worth allowing.
+ * So the hull's built extent IS its bank shell's own extent, on all three axes,
+ * and a stretch is not a dial that needs a good reason — it is not a dial. It
+ * used to be: `stretch` paired with a mandatory `stretchWhy`, on the theory that
+ * a sentence Joe could read made a departure honest. `stretch: [4, 4, 4]` with a
+ * sentence beside it compiled and built, because there was no bound anywhere,
+ * and a reason is not a bound.
+ *
+ * The two fields survive as `never` rather than vanishing, and that is the
+ * stronger form of the guard: a stretch is a type error at the point somebody
+ * writes one — including through a spread, `{ ...hull, stretch: [1.08, 1, 1] }` —
+ * and reading `hull.stretch` still compiles everywhere it already did, so every
+ * species test that pins it undefined keeps saying so. `buildAssembly` throws as
+ * well, for a caller that is not TypeScript.
+ *
+ * **The alternative to a bigger hull is a different REAL shell.** The pack drew
+ * ten of them and `OTHER_HULLS` in `hulls.ts` names the four that differ from the
+ * cube — wider `box-12`, taller `box-21`, shallower `box-31`, bigger `box-41`.
+ * Picking one is authored geometry at the proportions Kenney gave it, which is
+ * rule 1 at its purest; re-proportioning the cube is the same want, answered
+ * badly, and it is the answer this type no longer has.
  *
  * Deliberately NOT applied to `Feature.stretch`: §3 measured ears at 2.97x and
  * snouts at 2.90x natural variation and says in as many words that stretching a
- * copy is safe *for those two kinds and only those two*. The hull is the one
- * shape 14 of the 24 share unmodified, and it is the one that reads as the
- * animal's proportions at tablet distance.
+ * copy is safe *for those two kinds and only those two* — the tortoise's rim and
+ * the slow-worm's coil are built on it. The hull is the one shape 14 of the 24
+ * share unmodified, and it is the one that reads as the animal's proportions at
+ * tablet distance.
  */
 export type Hull = {
   /** A bank id. `box-03` is the 1.250 cube that 14 of the 24 share. */
@@ -224,11 +241,14 @@ export type Hull = {
   paint: Paint
   /** Its bounding-box centre, in model units. */
   at: Vec3
-} & (
-  | { stretch?: never; stretchWhy?: never }
-  /** Rule 1. The only way this kit expresses a body proportion — and it must say why. */
-  | { stretch: Vec3; stretchWhy: string }
-)
+  /**
+   * There is no hull stretch. `never`, so writing one does not compile — a bigger
+   * body is one of the ten real shells (`OTHER_HULLS`), never a scaled cube.
+   */
+  stretch?: never
+  /** Nor a reason for one: a sentence never bought a bigger body, it only excused it. */
+  stretchWhy?: never
+}
 
 /**
  * A whole animal, as data.
@@ -256,6 +276,17 @@ export interface AssemblyBuild {
    * sentence. `undefined` means nothing strained.
    */
   flag?: string
+  /**
+   * How this species MOVES, resolved and checked — see `motion.ts`.
+   *
+   * Absent, or empty, means it stands still, which is what every species built
+   * before this field existed does. `buildAssembly` deliberately does not read
+   * it: motion moves no vertex, so the geometry builder has nothing to do with
+   * it and the built group is byte-identical either way. It rides here because
+   * this is the record a species IS, and because a viewer that wants to move a
+   * creature should not have to find its definition again to learn how.
+   */
+  motion?: readonly ResolvedMotion[]
 }
 
 /* ------------------------------------------------------------- geometry --- */
@@ -498,25 +529,26 @@ export function buildAssembly(spec: AssemblyBuild): THREE.Group {
 
   /* The one mass, placed by its centre. Rule 3: there is exactly one of these. */
   const hullPart = lookup(spec.hull.part)
-  const hullStretch = spec.hull.stretch ?? ([1, 1, 1] as Vec3)
-  /* A hull that leaves its authored proportions has to say why, out loud, where
-   * Joe reads it. See the `Hull` doc comment — this is the runtime half of a
-   * guard the type already makes a compile error. */
-  const stretched = hullStretch.some(v => v !== 1)
-  const why = spec.hull.stretchWhy?.trim() ?? ''
-  if (stretched && why === '') {
+  /* THE HULL IS ALWAYS THE STANDARD SIZE — Joe's, twice; see the `Hull` doc. The
+   * type makes a stretch unwritable, and this is the half that still holds for a
+   * caller that is not TypeScript: a definition that arrived as JSON, or an `as`
+   * cast in a tool. Identity passes, because [1, 1, 1] is not a stretch. */
+  const given = (spec.hull as { stretch?: readonly number[] }).stretch
+  if (given !== undefined && given.some(v => v !== 1)) {
     throw new Error(
-      `assembly: hull "${hullPart.id}" is stretched to [${hullStretch.join(', ')}] with no `
-      + '`stretchWhy`. A hull stretch is a deliberate, visible act — say why, in one sentence, '
-      + 'in Joe\'s direction (docs/building-animals-from-parts.md rule 1).',
+      `assembly: hull "${hullPart.id}" arrived stretched to [${given.join(', ')}]. THE HULL IS `
+      + 'ALWAYS ITS SHELL\'S OWN SIZE and is never scaled — Joe\'s ruling, twice: "the body/cube '
+      + 'should always be the standard size, its often bigger". A body that needs other '
+      + 'proportions takes one of the pack\'s ten real hull shells instead — see OTHER_HULLS in '
+      + 'hulls.ts: wider box-12, taller box-21, shallower box-31, bigger box-41. No `stretchWhy` '
+      + 'buys this; the reason was removed with the dial.',
     )
   }
-  const hull = new THREE.Mesh(geom(hullPart, hullStretch, [], false, spec.hull.paint), material)
+  const hull = new THREE.Mesh(geom(hullPart, [1, 1, 1], [], false, spec.hull.paint), material)
   hull.name = 'hull'
   hull.position.set(spec.hull.at[0], spec.hull.at[1], spec.hull.at[2])
   hull.userData = {
-    part: hullPart.id, stretch: hullStretch, mirror: false, role: 'hull',
-    stretched, stretchWhy: stretched ? why : undefined,
+    part: hullPart.id, stretch: [1, 1, 1], mirror: false, role: 'hull',
   }
   group.add(hull)
 
@@ -565,9 +597,9 @@ export function buildAssembly(spec: AssemblyBuild): THREE.Group {
   const box = new THREE.Box3().setFromObject(group)
   group.position.y = -box.min.y
 
-  group.userData = {
-    kit: 'assembly', slots, flag: spec.flag, texture: texture.name,
-    hullStretch, hullStretchWhy: stretched ? why : undefined,
-  }
+  /* No `hullStretch` and no `hullStretchWhy` ride out of here any more: a hull is
+   * its shell's own size on every animal, so a channel for reporting a departure
+   * is a channel for a departure that cannot happen. */
+  group.userData = { kit: 'assembly', slots, flag: spec.flag, texture: texture.name }
   return group
 }

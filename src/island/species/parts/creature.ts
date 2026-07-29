@@ -56,6 +56,10 @@
  *   - **Rule 6, paired parts mirrored from one mesh** — ears and eyes are `pair`
  *     placements and there is no way to place a left one and a right one
  *     independently. A ridge row mirrors as a whole.
+ *   - **The hull is the standard size** — `HullDef` has no `stretch` to reach for,
+ *     so the only way to change a body's proportions is to name a different real
+ *     shell. Joe raised body size twice; the second time is why it is unsayable
+ *     rather than discouraged. See `Hull` in `assembly.ts` and `OTHER_HULLS`.
  *   - **Rule 4, no placed node carries a transform** — inherited from
  *     `assembly.ts`, where a `Placement` is positions and nothing else. A spin is
  *     baked into the copy's vertices.
@@ -91,6 +95,7 @@ import { authoredById } from './authored'
 import { PACK_PUPIL, SLOT_PX } from './texture'
 import { LEG_ROW, EYE_CARD_Z, MODEL_TRIS_MAX } from './hulls'
 import { defineAssembly } from './assembled/register'
+import { resolveMotion, type MotionDef } from './motion'
 import { spinVec } from './assembly'
 import type {
   AssemblyBuild, Axis, Feature, Paint, Placement, Spin, Vec3,
@@ -199,10 +204,16 @@ export interface HullDef {
   at?: Vec3
   /** Paint. Defaults to the coat slot, plus the belly patch when `belly` is set. */
   paint?: PaintLike
-  /** Rule 1, and it must say why — see `Hull` in `assembly.ts`. */
-  stretch?: Vec3
-  /** Required beside `stretch`. */
-  stretchWhy?: string
+  /**
+   * There is no hull stretch — see `Hull` in `assembly.ts` for Joe's ruling.
+   *
+   * `never`, so a species cannot write one; `creatureSpec` throws as well, for a
+   * definition that arrived as data. A body that wants other proportions takes a
+   * different REAL shell: `hull: OTHER_HULLS.wider` and the rest.
+   */
+  stretch?: never
+  /** Nor a reason for one. The dial is gone, so the excuse for it is too. */
+  stretchWhy?: never
 }
 
 /**
@@ -258,6 +269,23 @@ export interface CreatureDef {
 
   /** Anything the roles above do not name. Each needs its own `name`. */
   extras?: readonly (PartDef & { name: string })[]
+
+  /**
+   * How this species MOVES. Joe, 29 July: *"the wings are currently animated.
+   * can that be done deterministically as well, or specified in the editor."*
+   *
+   * A short list of named motions — `flap`, `wag`, `bob`, `twitch` — each naming
+   * the FEATURES it moves and, if the kind's measured default is wrong for this
+   * animal, an amplitude or a period. `motion: [{ kind: 'flap', parts: ['wing']
+   * }]` is the whole of a bee's wingbeat.
+   *
+   * Omit it and the species stands still, which is what every species built
+   * before this field existed does — so this changes no animal that does not ask
+   * for it. Every name is checked against the features this species actually has
+   * AT DEFINITION TIME; see `motion.ts`, which is also where the measurement of
+   * where the wing motion currently comes from is written down.
+   */
+  motion?: readonly MotionDef[]
 
   /** §2's escape clause, in Joe's direction, one sentence. */
   flag?: string
@@ -329,7 +357,7 @@ function inset(pts: readonly P3[], face: 0 | 1 | 2, along: 0 | 1 | 2): number {
 export interface HullFrame {
   part: BakedPart
   at: Vec3
-  /** Half-extents, after any stretch. */
+  /** Half-extents of the shell itself. A hull is never scaled, so these are its own. */
   half: P3
   /** World y of the top face, world z of the front and rear, world x of the side. */
   top: number; bottom: number; front: number; rear: number; side: number
@@ -340,8 +368,10 @@ export interface HullFrame {
   topFlatZ: number
 }
 
-function hullFrame(part: BakedPart, at: Vec3, stretch: Vec3): HullFrame {
-  const pts = builtPoints(part, stretch, [])
+function hullFrame(part: BakedPart, at: Vec3): HullFrame {
+  /* No stretch argument, because there is no hull stretch: every face, chamfer and
+   * inset below is the shell's own, measured off the bank's own vertices. */
+  const pts = builtPoints(part, [1, 1, 1], [])
   const hx = half(pts, 0), hy = half(pts, 1), hz = half(pts, 2)
   return {
     part,
@@ -439,13 +469,29 @@ export function creatureSpec(id: string, def: CreatureDef): AssemblyBuild {
   const hullId = hullDef.part ?? 'box-03'
   const hullPart = partById(hullId)
   if (!hullPart) fail(id, 'RULE 3', `the hull "${hullId}" is not in the parts bank`, 'See hullShapes().')
+  /* The bank AND the role, both, and the role is the half that bites: `partById`
+   * only refuses an id the pack never drew, and plenty of shapes it did draw are
+   * not bodies. The message names every shape that IS one, so a refusal is a
+   * shortlist rather than a rule number. */
   if (!hullPart.roles.includes('hull')) {
     fail(id, 'RULE 3', `"${hullId}" is not one of the pack's ten hull shapes`,
-      'A hull is a shape the pack itself used as a body. See OTHER_HULLS in hulls.ts.')
+      `A hull is a shape the pack itself used as a body: ${HULL_SHAPE_IDS.join(', ')}. `
+      + 'And it is the ONLY way to change a body proportion, since the hull is never scaled — '
+      + 'see OTHER_HULLS in hulls.ts for the wider, taller, shallower and bigger four.')
   }
-  const hullStretch: Vec3 = hullDef.stretch ?? [1, 1, 1]
+  /* THE HULL IS ALWAYS THE STANDARD SIZE. Unwritable above; this catches the
+   * definition that came in as data, at module load, naming the species. */
+  const smuggled = (hullDef as { stretch?: readonly number[] }).stretch
+  if (smuggled !== undefined && smuggled.some(v => v !== 1)) {
+    fail(id, 'THE HULL IS THE STANDARD SIZE',
+      `the hull "${hullId}" is stretched to [${smuggled.join(', ')}]`,
+      'Joe\'s ruling, twice: "the body/cube should always be the standard size, its often '
+      + 'bigger". Take one of the pack\'s ten real shells instead — OTHER_HULLS in hulls.ts '
+      + 'names the wider, taller, shallower and bigger — and note that no `stretchWhy` buys '
+      + 'this any more, because the dial went with the reason.')
+  }
   const hullAt: Vec3 = hullDef.at ?? [hullPart.offset[0]!, hullPart.offset[1]!, hullPart.offset[2]!]
-  const frame = hullFrame(hullPart, hullAt, hullStretch)
+  const frame = hullFrame(hullPart, hullAt)
 
   if (def.belly !== undefined) {
     const row = def.belly * SLOT_PX
@@ -717,15 +763,25 @@ export function creatureSpec(id: string, def: CreatureDef): AssemblyBuild {
     + 'rather than nobody seeing it at all.')
   }
 
-  const hull = hullDef.stretch !== undefined
-    ? { part: hullId, at: hullAt, paint: paintedHull, stretch: hullDef.stretch, stretchWhy: hullDef.stretchWhy! }
-    : { part: hullId, at: hullAt, paint: paintedHull }
+  /* Three fields, and there is no fourth to forward: the shell, where it sits and
+   * how it is painted. Its SIZE is the shell's own. */
+  const hull = { part: hullId, at: hullAt, paint: paintedHull }
+
+  /* ---- how it moves, checked against what it HAS ---- */
+  /* Last, and it has to be last: a motion is only checkable once every feature
+   * this species has is placed, and the check it exists for — a `flap` naming a
+   * part that is not there — is the one whose symptom is nothing moving, which
+   * is indistinguishable on a screen from a species with no motion at all. */
+  const motion = resolveMotion(
+    id, def.motion, new Set(['hull', ...features.map(f => f.name)]),
+  )
 
   return {
     kit: 'assembly',
     palette,
     hull,
     features,
+    ...(motion.length > 0 ? { motion } : {}),
     ...(def.flag !== undefined ? { flag: def.flag } : {}),
   } as AssemblyBuild
 }

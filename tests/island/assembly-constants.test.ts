@@ -127,14 +127,15 @@ describe('1.43 is a floor and not a range, so height is decided first', () => {
   })
 })
 
-/* -------------------------------- a different hull is not a stretch --- */
+/* ------------------------ a bigger body is a different real shell --- */
 
-describe('choosing a different authored hull is not a stretch', () => {
-  it('is wider, taller or shallower than the cube WITHOUT one', () => {
-    // Joe rejected a STRETCHED cube — a shape 14 of the 24 share, silently
-    // departed from. He did not rule that every animal is box-03. These are
-    // authored geometry at the proportions Kenney gave it, so `Hull.stretch` and
-    // its mandatory `stretchWhy` do not come into it at all.
+describe('a different authored hull is the ONLY way to change a body proportion', () => {
+  it('is wider, taller or shallower than the cube WITHOUT a stretch', () => {
+    // Joe rejected a STRETCHED cube, twice — the second time over the whole built
+    // set ("the body/cube should always be the standard size, its often bigger"),
+    // and `Hull.stretch` is now `never`. He did not rule that every animal is
+    // box-03: these are authored geometry at the proportions Kenney gave it, so
+    // they are the whole vocabulary of body size and they need no reason at all.
     expect(partById(OTHER_HULLS.wider)!.size[0]).toBeCloseTo(1.5395, 4)
     expect(partById(OTHER_HULLS.taller)!.size[1]).toBeCloseTo(1.5051, 4)
     expect(partById(OTHER_HULLS.shallower)!.size[2]).toBeCloseTo(1.125, 4)
@@ -150,6 +151,15 @@ describe('choosing a different authored hull is not a stretch', () => {
       const h = hullFacts().find(q => q.id === id)!
       expect(h.bottom, id).toBeCloseTo(HULL_BOTTOM_Y, 5)
       expect(h.donors.length, id).toBeGreaterThan(0)
+    }
+  })
+
+  it('is a route `creatureSpec` will actually take — each one carries the hull role', () => {
+    // The builder refuses a hull that is in the bank but was never a BODY, which
+    // is the half of that check that bites. So the four ids it points a refused
+    // species at have to pass it themselves, or the message sends them nowhere.
+    for (const id of Object.values(OTHER_HULLS)) {
+      expect(partById(id)!.roles, id).toContain('hull')
     }
   })
 })

@@ -18,8 +18,10 @@
  * The five that would catch a real regression here, in the order they matter:
  *
  *   1. IT IS THE AUTHORED CUBE, UNSTRETCHED. After Joe's "body cubic, its
- *      currently too wide", a hull that leaves its authored proportions is a
- *      compile error unless it says why — pinned from both directions.
+ *      currently too wide" — and then his second note, that the body should
+ *      always be the standard size — a hull stretch is a compile error and a
+ *      build-time throw, with no sentence that excuses it. Pinned from both
+ *      directions, and the way OUT is pinned too: a different real shell.
  *   2. REPEAT-AND-SINK, FIVE ROWS OF FOUR. Joe's revised layout, each buried
  *      inside the range the pack itself demonstrated for that shape, and the
  *      five facings stepping 45 degrees through a half turn — which is the
@@ -44,13 +46,14 @@ import { weldedComponents, componentFacts, orderComponents, namesFor }
   from '../../tools/workbench/public/anatomy'
 import {
   assembledSpecies, buildAssembled, findShapes, SPIKE_QUERY, HEDGEHOG_ASSEMBLY,
-  buildAssembly, PACK_PUPIL, SLOT_PX, SLOT_W, EYE_CARD_Z, HULL_FRONT_Z_USUAL,
+  buildAssembly, PACK_PUPIL, SLOT_PX, SLOT_W, EYE_CARD_Z, HULL_FRONT_Z_USUAL, OTHER_HULLS,
   type AssemblyBuild, type Hull,
 } from '../../src/island/species/parts'
 import { AUTHORED_PARTS, authoredById } from '../../src/island/species/parts/authored'
 import { PARTS_BANK, partById, type BakedPart }
   from '../../src/island/species/parts/bank.generated'
 import { GARDEN_SPECIES } from '../../src/island/species/collections/garden'
+import { speciesRecord } from '../../src/island/species/registry'
 import { SPECIES_NAMES } from '../../src/island/species/roster'
 import { assertAssembly } from './assembly-assert'
 
@@ -202,45 +205,91 @@ describe('the assembled hedgehog is CUBIC, on the pack\'s own solve', () => {
   })
 })
 
-/* -------------------------------------------- the hull stretch is guarded --- */
+/* ------------------------------------------- the hull cannot be scaled --- */
 
-describe('a hull cannot leave its authored proportions quietly', () => {
-  it('will not COMPILE a stretched hull that does not say why', () => {
-    // @ts-expect-error `stretch` without `stretchWhy` is not a `Hull`. If this
-    // line ever stops erroring, the type guard has been lost and `tsc` fails
-    // HERE rather than in some future species nobody looks at.
-    const unsaid: Hull = {
+/**
+ * These three used to pin the OPPOSITE contract: a hull stretch was legal if it
+ * carried a sentence saying why, and one of them asserted that a stretched cube
+ * built and measured 1.350 wide. Joe reversed it reviewing the built set —
+ * *"general criticism is size. the body/cube should always be the standard size,
+ * its often bigger"* — so the coverage is inverted rather than deleted. The 1.350
+ * measurement survives too, and it is the interesting half of the reversal: it is
+ * still reachable, because 1.350 is the TIGER'S OWN HULL and the pack drew it.
+ */
+describe('a hull is the standard size, and there is no dial that says otherwise', () => {
+  it('will not COMPILE a hull stretch at all — with or without a reason', () => {
+    const scaled: Hull = {
       part: 'box-03',
       paint: { base: 'coat' },
       at: [0, 0.80625, 0],
+      // @ts-expect-error `Hull.stretch` is `never`. If this directive ever goes
+      // unused, the dial is back and `tsc` fails HERE rather than in some future
+      // species nobody looks at.
       stretch: [1.08, 0.92, 1] as [number, number, number],
     }
-    expect(unsaid.part).toBe('box-03')
+    expect(scaled.part).toBe('box-03')
+
+    // And a sentence buys nothing, which is the whole of the reversal: what used
+    // to be the sanctioned pair is now two type errors rather than none.
+    const excused: Hull = {
+      part: 'box-03',
+      paint: { base: 'coat' },
+      at: [0, 0.80625, 0],
+      // @ts-expect-error — the dial.
+      stretch: [1.08, 0.92, 1] as [number, number, number],
+      // @ts-expect-error — and the excuse for it, which no longer excuses anything.
+      stretchWhy: 'the tiger\'s hull width, the widest the pack goes',
+    }
+    expect(excused.at[1]).toBeCloseTo(0.80625, 5)
   })
 
-  it('refuses to BUILD one either, for callers that are not TypeScript', () => {
+  it('refuses to BUILD one either, reason or no reason', () => {
     const sneaky = {
       ...HEDGEHOG_ASSEMBLY,
       hull: { ...HEDGEHOG_ASSEMBLY.hull, stretch: [1.08, 0.92, 1] },
     } as unknown as AssemblyBuild
-    expect(() => buildAssembly(sneaky)).toThrow(/stretchWhy/)
-  })
+    expect(() => buildAssembly(sneaky)).toThrow(/never scaled/)
+    // The message has to point at the way OUT, not just at the wall.
+    expect(() => buildAssembly(sneaky)).toThrow(/OTHER_HULLS/)
 
-  it('builds one that does, and carries the reason out to the viewer', () => {
-    const said: AssemblyBuild = {
+    const excused = {
       ...HEDGEHOG_ASSEMBLY,
       hull: {
         ...HEDGEHOG_ASSEMBLY.hull,
         stretch: [1.08, 0.92, 1],
         stretchWhy: 'the tiger\'s hull width, the widest the pack goes',
       },
+    } as unknown as AssemblyBuild
+    expect(() => buildAssembly(excused)).toThrow(/never scaled/)
+
+    // A stretch of exactly one is not a stretch, and is not worth a throw.
+    const identity = {
+      ...HEDGEHOG_ASSEMBLY,
+      hull: { ...HEDGEHOG_ASSEMBLY.hull, stretch: [1, 1, 1] },
+    } as unknown as AssemblyBuild
+    expect(() => buildAssembly(identity)).not.toThrow()
+  })
+
+  it('gets to 1.350 wide the sanctioned way — a different REAL shell', () => {
+    // The old test stretched the cube 1.08x to reach 1.350 and called it "the
+    // tiger's hull width". It is: `box-41` IS the tiger's hull, 1.350 x 1.300 x
+    // 1.350, drawn by Kenney. So the want was always answerable without a dial,
+    // and this is what answering it looks like.
+    expect(partById(OTHER_HULLS.bigger)!.size).toEqual([1.35, 1.3, 1.35])
+    const bigger: AssemblyBuild = {
+      ...HEDGEHOG_ASSEMBLY,
+      hull: { ...HEDGEHOG_ASSEMBLY.hull, part: OTHER_HULLS.bigger },
     }
-    const g = buildAssembly(said)
-    expect(worldBox(g.getObjectByName('hull')!).getSize(new THREE.Vector3()).x)
-      .toBeCloseTo(1.35, 3)
-    expect(g.userData['hullStretchWhy']).toMatch(/tiger/)
-    // And the shipped hedgehog says nothing, because it stretches nothing.
+    const s = worldBox(buildAssembly(bigger).getObjectByName('hull')!)
+      .getSize(new THREE.Vector3())
+    expect(s.x).toBeCloseTo(1.35, 3)
+    expect(s.y).toBeCloseTo(1.3, 3)
+    expect(s.z).toBeCloseTo(1.35, 3)
+
+    // And nothing anywhere reports a hull departure any more, because a hull
+    // cannot depart: the channel went with the dial.
     expect(build().userData['hullStretchWhy']).toBeUndefined()
+    expect(build().userData['hullStretch']).toBeUndefined()
     expect(assembledSpecies()[0]!.hullStretchWhy).toBeUndefined()
   })
 })
@@ -916,12 +965,22 @@ describe('the roster stays the authority on names and facts', () => {
   })
 
   it('refuses a species it has no build for, by name', () => {
-    // `animal-slow-worm` and not a Garden quadruped: it is a roster member this
-    // collection deliberately omits — a legless lizard the quadruped kit cannot
-    // express and the assembly kit will not be asked to either (see garden.ts) —
-    // so it stays buildless while the other twelve are filled in around it. The
-    // point is unchanged: an id with no build throws by NAME rather than
-    // returning null (§9.3).
-    expect(() => buildAssembled('animal-slow-worm')).toThrow(/animal-slow-worm/)
+    /*
+     * `animal-otter` now, and it USED to be `animal-slow-worm` — a roster member
+     * Garden deliberately omitted, "a legless lizard the quadruped kit cannot
+     * express and the assembly kit will not be asked to either". It was asked to,
+     * and it built it, so the slow worm is on the register and can no longer
+     * stand for an id with no build. Garden is complete and every one of its
+     * fourteen is assembled, so the example has to come from another collection.
+     *
+     * The otter is the better example anyway: it is a SHIPPED species with a
+     * quadruped `build` and no `assembly`, which is §9.2's trap from the other
+     * side — the marker is the presence of `assembly` and never the absence of
+     * `build`. The point is unchanged: an id with no assembly throws by NAME
+     * rather than returning null (§9.3).
+     */
+    expect(speciesRecord('animal-otter')?.build).toBeDefined()
+    expect(speciesRecord('animal-otter')?.assembly).toBeUndefined()
+    expect(() => buildAssembled('animal-otter')).toThrow(/animal-otter/)
   })
 })
