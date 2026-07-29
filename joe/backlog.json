@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "nextId": 47,
+  "nextId": 49,
   "cards": [
     {
       "id": "PB-001",
@@ -324,6 +324,20 @@
       "detail": "CARDED 29 Jul PURELY TO CLOSE IT - docs/BACKLOG.md only, marked 'IN FLIGHT', no card until now. BUILT (b1f7656, later touched by ad848e4 and 58425b6): MASH_PAGES = 3 with a cross-page counter (mashedPages, streak()) at governors.ts:417, 462-475, delivered by offerAStretch() at main.ts:1896 and called from main.ts:476, :1392 and :1570. The guardrail is explicitly tested rather than assumed: tests/island/stretch.test.ts:316, 'the suggestion locks nothing and expires nothing (19)' - it is a suggestion, not a timer, and nothing is withheld if she ignores it.",
       "state": "done",
       "run": "A"
+    },
+    {
+      "id": "PB-047",
+      "title": "Wiping the island - wiping academic progress?",
+      "detail": "it should be at least a question to the adult. reset to essentially start of y1 level, or maintain the academic progress set. wipe should offer 3 options with tick boxes: 1. wipe island and animals, 2 wipe academic progress - once available this will reset the intro assessment stage that we have not built yet, 3 wipe kids name.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-048",
+      "title": "An abandoned tile follows her around, and hijacks every later tap",
+      "detail": "LIVE BUG, reported by Joe on 29 July from Juno playing the deployed build: \"if a tile has been started and then abandoned, then tapping any tile jumps back into the building of the same tile, frustrating for her if she tries to tap an animal.\" The symptom that matters is the last clause - she taps an ANIMAL and gets dropped back into building a tile she had walked away from. THE RULING IS JOE'S AND IS SETTLED, so it is not to be redesigned: \"if she abandons a tile, the progress towards reward is saved, the location and type is not. so when she then taps another glowing tile to build one, progress picks up but location and type is rechosen by her on entry.\" Three parts. (1) Abandoning KEEPS her progress toward the reward - she earned it and brief 19 makes that non-negotiable. (2) Abandoning DISCARDS the location and the type - neither was ever a commitment. (3) Her next tap on any glowing socket starts a build THERE, in a type she chooses ON ENTRY, carrying the saved progress. WHERE IT LIVES: askForLand today RESUMES a standing plot, and that resumption is the reported behaviour. The machinery is src/island/plot.ts (lifecycle behind ports), flow.plot, and props.adopt. READ docs/HANDOFF.md FIRST - three separate faults have already been in this exact seam (the dead-on-arrival plot, the plot stranded on a closed panel, and the plot that showed her last week's answer) and none was visible to the unit tests on either side, because the plot builds whatever it is told and the flow records whatever is chosen. Only a test driving the plot AND the flow together catches this class; tests/island/plot.test.ts is the precedent. Verify against the real tap path in interactions.ts rather than the flow alone, and check what a socket tap does when there is no standing plot at all, because that path changes too. ONE DETAIL NOBODY HAS RULED ON, and it is what she will actually see: whatever had already GROWN on the abandoned plot is discarded visually when she rechooses the type, while the sums count carries over. That follows from Joe's rule, but it is the visible half, so it is worth his eye on the tablet once it ships.",
+      "state": "open",
+      "run": ""
     }
   ]
 }
