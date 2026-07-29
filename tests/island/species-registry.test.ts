@@ -38,18 +38,40 @@ describe('the species registry', () => {
     expect(() => defineSpecies('animal-wumpus', 'quadruped')).toThrow(/not in the roster/)
   })
 
-  it('has shipped exactly the base collection and nothing else yet', () => {
+  it('has shipped the base 24 plus PB-036 phase 2\'s four collections', () => {
     // If this number moves, a collection shipped. That should be a deliberate,
     // reviewed act with a kit behind it — not a side effect of someone tidying.
-    expect(REGISTRY.size).toBe(24)
+    //
+    // Phase 2 built four collections against the one finished kit (quadruped).
+    // Every one of them is PARTIAL, and the shortfall is not sloppiness: each
+    // missing member needs a kit that does not exist. The per-collection tests
+    // name those members and assert their absence, so each becomes a tripwire
+    // the day its kit lands.
+    expect(REGISTRY.size).toBe(74)
     expect(shippedIn('base')).toHaveLength(24)
-    expect(shippedIn('garden')).toHaveLength(0)
+    expect(shippedIn('garden')).toHaveLength(13)      // 14 rostered, slow-worm needs bespoke
+    expect(shippedIn('home-pets')).toHaveLength(10)   // 16 rostered, 4 songbird + 1 bespoke + 1 swim
+    expect(shippedIn('woodland')).toHaveLength(14)    // 16 rostered, 2 game birds
+    expect(shippedIn('africa')).toHaveLength(13)      // 16 rostered, 2 bespoke + 1 raptor
   })
 
-  it('leaves 296 species rostered but unshipped, on purpose', () => {
+  it('leaves 246 species rostered but unshipped, on purpose', () => {
+    // The gap is the point. Nobody should "finish" the registry — a species
+    // without a built kit renders as nothing, which is worse than absent.
     const rostered = COLLECTIONS.flatMap(c => c.members)
     expect(rostered).toHaveLength(320)
-    expect(rostered.filter(id => !speciesRecord(id))).toHaveLength(296)
+    expect(rostered.filter(id => !speciesRecord(id))).toHaveLength(246)
+  })
+
+  it('still has no collection that is 100% shipped except the frozen base', () => {
+    // Measured across all 20 collections in phase 2: not one has every member
+    // buildable by the quadruped kit alone. That fact is what JT-030 asks Joe
+    // about — whether a collection may unlock with a hole in it. If this test
+    // ever goes red, a second kit landed and that question became live.
+    const complete = COLLECTIONS
+      .filter(c => c.id !== 'base')
+      .filter(c => c.members.every(id => speciesRecord(id)))
+    expect(complete).toHaveLength(0)
   })
 
   it('names the seven base animals roster §5 gives a threat badge', () => {

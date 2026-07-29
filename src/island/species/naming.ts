@@ -67,8 +67,37 @@ export const NAME_PINS: Readonly<Record<string, string>> =
   (pinFile as { pins?: Record<string, string> }).pins ?? {}
 
 /**
+ * The one set every creature is named in. JT-029.
+ *
+ * Joe ruled on 29 July: *"we drop the colours, only the sets in their natural
+ * color. we may add silver and gold later if we run low and we can just add
+ * something like 'the great' to their original name."* So a given name is keyed
+ * on SPECIES ALONE — 320 names at the full roster, not the 8,000 that
+ * `species + set` implied, and every one of those 320 is a name he has to audit
+ * by hand and bake in Olivia's voice. That factor of twenty-five was the whole
+ * reason JT-029 was raised.
+ *
+ * WHY THE `natural/` PREFIX SURVIVES IN THE HASHED KEY. Two reasons, and
+ * neither is inertia:
+ *   1. Removing it changes every seed, which renames the fourteen creatures
+ *      already sitting in `joe/names-audit.json` waiting for Joe's eyes. They
+ *      have no verdicts on them yet so nothing would be *lost* — but renaming
+ *      them buys precisely nothing, and the habit of not renaming creatures is
+ *      the habit this module exists to keep.
+ *   2. He explicitly left the door open to a silver and gold tier. Should that
+ *      land, its name is the ORIGINAL name decorated ("the great"), not a fresh
+ *      draw — so the key shape stays able to carry a set without the naming
+ *      path ever again multiplying species by sets.
+ *
+ * The set is therefore a CONSTANT here, not a parameter. It used to be an
+ * argument, and an argument is an invitation to pass a real set id and quietly
+ * recreate the 8,000 names Joe just ruled out.
+ */
+export const NATURAL_SET = 'natural'
+
+/**
  * The stable 32-bit seed for one creature's name. FNV-1a over
- * `` `${setId}/${speciesId}` ``.
+ * `` `${NATURAL_SET}/${speciesId}` ``.
  *
  * The hashed string is deliberately the SAME shape as `variantKey`
  * (`variants/sets.ts:168`) and the same shape `collection.ts:43-50` says the
@@ -84,8 +113,8 @@ export const NAME_PINS: Readonly<Record<string, string>> =
  * the record survived. If a better hash is ever wanted, the answer is not to
  * edit this — it is to pin the old names first.
  */
-export function nameSeed(speciesId: string, setId: string): number {
-  const key = `${setId}/${speciesId}`
+export function nameSeed(speciesId: string): number {
+  const key = `${NATURAL_SET}/${speciesId}`
   let h = 0x811c9dc5
   for (let i = 0; i < key.length; i++) {
     h ^= key.charCodeAt(i)
@@ -117,21 +146,21 @@ export function nameBandOf(speciesId: string): NameBand {
  * The resolution order, with an injectable pin table so tests need not touch
  * the JSON. `givenName` is this, called with `NAME_PINS`.
  *
- *   1. A pin for `${setId}/${speciesId}` wins outright — including over the
- *      band, because a pin is a name a child already says out loud and no
+ *   1. A pin for `${NATURAL_SET}/${speciesId}` wins outright — including over
+ *      the band, because a pin is a name a child already says out loud and no
  *      length rule outranks that.
  *   2. Otherwise draw from `petName` on a `mulberry32` seeded by
- *      `nameSeed(speciesId, setId)`, redrawing off the SAME stream until the
- *      length lands inside the band.
+ *      `nameSeed(speciesId)`, redrawing off the SAME stream until the length
+ *      lands inside the band.
  */
 export function _resolve(
-  pins: Readonly<Record<string, string>>, speciesId: string, setId: string,
+  pins: Readonly<Record<string, string>>, speciesId: string,
 ): string {
-  const pinned = pins[`${setId}/${speciesId}`]
+  const pinned = pins[`${NATURAL_SET}/${speciesId}`]
   if (pinned !== undefined) return pinned
 
   const band = NAME_BANDS[nameBandOf(speciesId)]
-  const rng = mulberry32(nameSeed(speciesId, setId))
+  const rng = mulberry32(nameSeed(speciesId))
   let first = ''
   for (let i = 0; i < MAX_REDRAWS; i++) {
     const w = petName(rng)
@@ -142,13 +171,19 @@ export function _resolve(
 }
 
 /**
- * The frozen given name for one `species + set`.
+ * The frozen given name for one species. JT-029: one name per species, not one
+ * per species and set.
  *
  * An unknown species — one from a build newer than this roster — still gets a
  * name, off the `medium` band. `script.ts:132 speciesName()` sets that
  * precedent: a save from a future build must never leave a blank where a
  * child's friend's name goes.
+ *
+ * NOTE FOR WHOEVER WIRES THE HATCH. The phase 1 handoff told you to call this
+ * as `givenName(species, setId)` and to take the set id from wherever the
+ * variant engine picks it. That instruction is now WRONG — JT-029 removed the
+ * second argument. Call `givenName(species)` and pass no set at all.
  */
-export function givenName(speciesId: string, setId: string): string {
-  return _resolve(NAME_PINS, speciesId, setId)
+export function givenName(speciesId: string): string {
+  return _resolve(NAME_PINS, speciesId)
 }

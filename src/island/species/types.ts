@@ -199,7 +199,16 @@ export interface Species {
  * One collection — a shipping unit, not a category.
  *
  * Roster's header is emphatic that the 20-row table is "not a build order":
- * collections ship ONE AT A TIME on the 85% unlock cadence. So a collection
+ * collections ship ONE AT A TIME on the unlock cadence. So a collection
+ *
+ * (That cadence was quoted as "the existing 85%" in the brief and in phase 1's
+ * comments. PB-036 phase 2 went looking for it and it DID NOT EXIST — the only
+ * 0.85 in the island layer is `PROMOTE_EWMA` in `harness.ts`, an unrelated
+ * maths dial. Joe then set it himself in JT-027: **80%**, with a cap of four
+ * active collections. It is implemented in `species/unlock.ts`. So 80 is not a
+ * correction of 85; it is the first real number there has ever been, and
+ * nobody should "restore" 85.)
+ *
  * carries its own ship order and its own name band, and the roster's row order
  * is not authority for either.
  */

@@ -22,32 +22,19 @@
  *      throws by name for the five kits that are declared but unbuilt
  *      (`kit.ts`), which is the loud failure HANDOFF §6 (line 565) asks for.
  */
-import { SPECIES_NAMES, SPECIES_COLLECTION } from './roster'
-import type { BuildSpec, KitId, Species, Threat } from './types'
+import { defineSpecies } from './define'
+import { GARDEN_SPECIES } from './collections/garden'
+import { HOME_PETS_SPECIES } from './collections/home-pets'
+import { WOODLAND_SPECIES } from './collections/woodland'
+import { AFRICA_SPECIES } from './collections/africa'
+import type { Species } from './types'
 
 /**
- * Build one species record, taking its printed name and its collection from the
- * roster rather than repeating them.
- *
- * Throws on an unknown id. That is the point: the roster is the transcription of
- * Joe's brief, so a record that names a species the brief never listed is either
- * a typo or an invention, and both must stop the build rather than reach a
- * child. Roster §2's species list is closed.
+ * The invention guard now lives in `./define` so `collections/*.ts` can import
+ * it without a cycle back through this file. Re-exported because callers and
+ * tests import it from here and there is no reason to move them.
  */
-export function defineSpecies(
-  id: string,
-  kit: KitId,
-  extra: { build?: BuildSpec; threat?: Threat } = {},
-): Species {
-  const name = SPECIES_NAMES[id]
-  const collection = SPECIES_COLLECTION[id]
-  if (!name || !collection) {
-    throw new Error(
-      `species "${id}" is not in the roster — see docs/pet-island-species-roster.md §2`,
-    )
-  }
-  return { id, name, kit, collection, ...extra }
-}
+export { defineSpecies } from './define'
 
 /**
  * THE LIVE 24, FROZEN.
@@ -96,9 +83,30 @@ export const BADGED_BASE_SPECIES: readonly string[] = [
   'animal-koala', 'animal-polar', 'animal-panda',
 ]
 
+/**
+ * The collections built in PB-036 phase 2, one file each.
+ *
+ * Each was written by its own agent against the finished quadruped kit and is
+ * DELIBERATELY PARTIAL — every one of them has members waiting on a kit that
+ * does not exist yet, and each collection's own test names those members and
+ * asserts they are absent, so the gap is a tripwire rather than an oversight.
+ * `SHIPPED_SPECIES` is the honest total; `roster.ts` is the ambition.
+ *
+ * Phase 2 measured that NO collection in the roster is 100% quadruped — the
+ * closest is Garden at 13 of 14 — which is why JT-030 asks Joe whether a
+ * collection may unlock with a hole in it. Until he rules, nothing here is
+ * wired to a child.
+ */
+export const PHASE2_SPECIES: readonly Species[] = [
+  ...GARDEN_SPECIES, ...HOME_PETS_SPECIES, ...WOODLAND_SPECIES, ...AFRICA_SPECIES,
+]
+
+/** Everything that has actually shipped: the frozen 24 plus the built collections. */
+export const SHIPPED_SPECIES: readonly Species[] = [...BASE_SPECIES, ...PHASE2_SPECIES]
+
 /** Every species that has actually shipped, by id. */
 export const REGISTRY: ReadonlyMap<string, Species> = new Map(
-  BASE_SPECIES.map(s => [s.id, s]),
+  SHIPPED_SPECIES.map(s => [s.id, s]),
 )
 
 /** The record, or undefined if the species is in the roster but has not shipped. */
@@ -115,5 +123,5 @@ export function speciesRecord(id: string): Species | undefined {
  * a child is dealt an egg containing a creature that cannot be built.
  */
 export function shippedIn(collectionId: string): readonly Species[] {
-  return BASE_SPECIES.filter(s => s.collection === collectionId)
+  return SHIPPED_SPECIES.filter(s => s.collection === collectionId)
 }

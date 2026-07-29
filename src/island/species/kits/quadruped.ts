@@ -109,6 +109,32 @@ const REF = {
  * that could not walk between two trees. A long low animal is expressed by
  * dropping `legs` and `height` instead, which costs nothing.
  *
+ * >>> THAT LAST SENTENCE IS WRONG, and PB-036 phase 2 proved it three times.
+ * It does not cost nothing — it can cost MORE than pushing `body` does.
+ *
+ * The fit is uniform and solves for `height`: the rig is scaled until it stands
+ * `height` tall. So dropping `legs` lowers the raw silhouette, which RAISES the
+ * fit scale, which stretches the body in world units. Length is charged for on
+ * the way out, not on the way in, and `legs` is a lever on it in the opposite
+ * direction to the one this comment used to claim.
+ *
+ * Measured by three collections independently, none of which had seen the
+ * others:
+ *   - a stoat at `body: 1.55, legs: 0.28` came out 3.56 deep — keep-out 1.78,
+ *     worse than the pack's widest (the fox, 1.16) and worse than this kit's own
+ *     worked "plausible stoat" at `kit-quadruped.test.ts:93`, which is 1.59;
+ *   - a ferret at `legs: 0.46` gave 1.45, and the same animal at `legs: 0.58`
+ *     gave 1.28 while looking identical;
+ *   - separately, `ears: 'long'` inflates the pre-fit height, so a long-eared
+ *     species silently measures SLIM — an antelope at `legs: 1.75` read W/H
+ *     0.59 and only reached 0.61 at 1.62.
+ *
+ * WHAT TO DO INSTEAD: measure. `tests/island/species-silhouette.test.ts` holds
+ * every shipped species to the keep-out envelope, so a species that is too wide
+ * fails on the number rather than on somebody's intuition about legs. Tune
+ * against that test, not against this paragraph.
+ * <<<
+ *
  * `height` is clamped to the range `types.ts:110-111` states outright: outside
  * roughly 1.2-2.6 a species "will not sit beside `animal-fox` without looking
  * like a guest", which roster §1 forbids. The measured pack is narrower still
