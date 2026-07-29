@@ -106,6 +106,20 @@ const spun = (
 ): [number, number, number] => spins.reduce(rotate, v as [number, number, number])
 
 /**
+ * Turn a vector by a spin list, exactly as a part COPY's vertices and facing are
+ * turned here.
+ *
+ * Exported for `creature.ts`, and exported rather than re-implemented on purpose:
+ * a definition builder that solves for a join point has to agree with the baker
+ * about where the part will end up, to the last bit. Two implementations of the
+ * same rotation is exactly the drift a fingerprint would then have to catch.
+ * (The TEST harness re-implements it deliberately, for the opposite reason.)
+ */
+export const spinVec = (
+  v: readonly [number, number, number], spins: readonly Spin[],
+): [number, number, number] => spun(v, spins)
+
+/**
  * Which palette slot each of a part's triangles is painted from.
  *
  * `base` covers the part. `byBand` overrides by the part's OWN measured atlas

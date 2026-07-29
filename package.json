@@ -25,6 +25,7 @@
     "workbench:seed": "node tools/workbench/seed.mjs",
     "pets:atlas": "node tools/pets/atlas.mjs",
     "pets:parts": "node --experimental-strip-types tools/pets/parts-bank.ts",
+    "pets:creature": "node --experimental-strip-types --import ./tools/pets/resolve-src.mjs tools/pets/creature.ts",
     "pets:reserve": "node tools/pets/reserve.mjs",
     "pets:reserve:check": "node tools/pets/reserve.mjs --check"
   },

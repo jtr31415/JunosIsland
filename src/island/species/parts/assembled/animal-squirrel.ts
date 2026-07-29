@@ -1,5 +1,6 @@
 /**
- * The squirrel's assembly, as data. Garden's second animal built the new way.
+ * The squirrel's assembly, as a DEFINITION. Garden's second animal built the new
+ * way, and the second converted to the declarative builder.
  *
  * ONE SPECIES, ONE FILE. No three.js is reachable from a collection through this
  * file beyond the palette constant, and — the reason for the split — every
@@ -8,17 +9,27 @@
  * so no two species share a file. Adding a species is a new file beside this one
  * and one line in `index.ts`; `register.ts` says why that one line is enough.
  *
- * The record itself is unchanged from the day Joe reviewed it, to the character.
- */
-import { defineAssembly } from './register'
-import { PACK_PUPIL } from '../texture'
-
-/**
- * The squirrel. Garden's second, and it carries the half of the risk the
- * hedgehog did not (§6): **a real lifted tail** and **a boundary painted into
- * the texture**. It is also the hardest version of "does it look like a guest",
- * because the animal it stands next to is `animal-fox` and the tail it wears is
- * the fox's own.
+ * ## Converted to `defineCreature`, 29 July — and it is the same animal
+ *
+ * This was 80 lines of hand-typed `AssemblyBuild` and it is now nine lines of
+ * definition. **The built geometry is byte-identical**: same meshes, same
+ * vertices, same normals, same UVs, same indices, same node translations, same
+ * fingerprint — pinned in `tests/island/assembly-fingerprint.test.ts`. The one
+ * difference is that the tuft is now the LAST node in the group rather than the
+ * fourth, because the builder emits its roles in a fixed order and `extras` come
+ * last. Nothing anybody can see moved.
+ *
+ * **What the builder now supplies, that used to be typed here:** the hull, the
+ * four legs, the eye pair entire (part, x, y, z, sink, sclera and pupil), the
+ * snout's join point, the ear's join point, the rear chamfer's midpoint and the
+ * 45-degree turn onto its normal, and every default sink — each of which was a
+ * measured number this file used to carry a copy of. The derivations stay,
+ * because they are the evidence the numbers are the pack's and not ours.
+ *
+ * This species carries the half of the risk the hedgehog did not (§6): **a real
+ * lifted tail** and **a boundary painted into the texture**. It is also the
+ * hardest version of "does it look like a guest", because the animal it stands
+ * next to is `animal-fox` and the tail it wears is the fox's own.
  *
  * ## 1. The tail, found by measurement
  *
@@ -51,11 +62,12 @@ import { PACK_PUPIL } from '../texture'
  * returns a whip, which is a cat. See `query.ts` for why this is the SIZE axis
  * §3.2 kept and not the `aspect` axis it deleted.
  *
- * ## 2. Where the tail goes — §8's chamfer idiom, on a new edge
+ * ## 2. Where the tail goes — §8's chamfer idiom, on a new edge, in one word
  *
  * A squirrel's tail is carried UP, and that is the single thing separating this
  * animal from the fox it borrows the shape from. The placement is the hedgehog's
- * chamfer idiom (§8) turned to the back of the same cube:
+ * chamfer idiom (§8) turned to the back of the same cube, and it is now
+ * `chamfer: true`, which solves the point and the turn together:
  *
  *   - `box-23`'s measured facing is **`z -1`**, so an unspun copy trails
  *     backwards, which is exactly how the fox wears it.
@@ -63,12 +75,16 @@ import { PACK_PUPIL } from '../texture'
  *     (y 0.625, z -0.3125) to (y 0.3125, z -0.625). Midpoint
  *     **(0.46875, -0.46875)** off the hull centre — the same 0.46875 the
  *     hedgehog's rows sit on, because it is the same cube — and its outward
- *     normal is (0, 0.7071, -0.7071).
- *   - `spin: [{ axis: 'x', deg: 45 }]` takes `z -1` to exactly that normal. So
- *     the tail leaves the rump at 45 degrees, up and back, and `sink` still
- *     measures along the way it actually points.
+ *     normal is (0, 0.7071, -0.7071). The builder measures both off the hull's
+ *     own vertices rather than assuming a 1.000-wide face, which is the mistake
+ *     §8 says costs a whole row.
+ *   - `{ axis: 'x', deg: 45 }` takes `z -1` to exactly that normal, and
+ *     `chamfer: true` is what emits it. **Giving the point without the turn is
+ *     how a tail floats**, so the builder refuses `chamfer` beside a hand-written
+ *     `spin` or `at` rather than letting the two disagree.
  *   - **Sunk 0.177404 — the fox's own measured burial, the only number the pack
- *     ever gave this shape.** That is 0.1615 of it inside the hull, comfortably
+ *     ever gave this shape** — and it is now the builder's default for it, not a
+ *     number this file carries. That is 0.1615 of it inside the hull, comfortably
  *     past §3's "nothing floats" floor of 0.125.
  *
  * Nothing there is chosen. The result stands 1.976 tall with its plume topping
@@ -80,7 +96,8 @@ import { PACK_PUPIL } from '../texture'
  *
  * ## 3. The belly boundary is PAINTED, and the line is the pack's own
  *
- * §4 gives two ways to two-tone and this is the second, which nothing had used:
+ * §4 gives two ways to two-tone and this is the second, which nothing had used.
+ * It is now the single word `belly: 0.5`, which the builder turns into
  * `paint: { base: 'coat', patch: { below: 'belly', at: 0.5 } }` on the HULL.
  * No second shape, no split triangle, no geometry at all. `texture.ts` draws the
  * `coat` cell as two colours and the hull's vertices read across that cell by
@@ -100,19 +117,22 @@ import { PACK_PUPIL } from '../texture'
  * That is the whole argument for painting rather than splitting, in one
  * measurement: same boundary, no wander, no triangles. `SLOT_PX` is 16 for the
  * same reason — the pack is authored on a 1/16 grid, so every boundary a builder
- * can ask for lands on one of Kenney's own lines.
+ * can ask for lands on one of Kenney's own lines, and `defineCreature` throws on
+ * a `belly` that falls between two.
  *
  * ## 4. Everything else is a donor's own placement, transferred
  *
  * Every one of these lands on a number the pack already had, which is the only
- * reason to trust them:
+ * reason to trust them — and every one is now the BUILDER's donor transfer (§8)
+ * rather than a number typed into this file:
  *
- *   - **Hull `box-03` at [0, 0.80625, 0]**, unstretched. No `stretchWhy`,
- *     because there is nothing to say: Joe's "body cubic" is the whole ruling
- *     and a squirrel is not an exception to it. The centre is the hedgehog's
- *     solve — leg 0.30625 tall, sunk 0.408163, feet on zero — and it is also
- *     `box-03`'s own recorded offset, which is the BEAVER's hull centre, because
- *     the beaver is this shape's first donor. That matters below.
+ *   - **Hull `box-03` at [0, 0.80625, 0]**, unstretched, and not mentioned at
+ *     all below because it is the default. No `stretchWhy`, because there is
+ *     nothing to say: Joe's "body cubic" is the whole ruling and a squirrel is
+ *     not an exception to it. The centre is the hedgehog's solve — leg 0.30625
+ *     tall, sunk 0.408163, feet on zero — and it is also `box-03`'s own recorded
+ *     offset, which is the BEAVER's hull centre, because the beaver is this
+ *     shape's first donor. That matters below.
  *
  *   - **The snout is `tube-01`, the beaver's, and the beaver is the pack's
  *     rodent.** A squirrel and a beaver are both Rodentia and the pack has
@@ -122,7 +142,8 @@ import { PACK_PUPIL } from '../texture'
  *     **0.000**, so joined at the cube's front face z = 0.625 its centre lands at
  *     z = 0.710803: the beaver's own recorded offset, to six decimals. And
  *     because `box-03`'s recorded offset IS the beaver's hull centre, the height
- *     y = 0.815078 transfers with certainty rather than by argument.
+ *     y = 0.815078 transfers with certainty rather than by argument. All of that
+ *     is what `snout: 'tube-01'` now means.
  *
  *   - **The ears are `wedge-06`, the cat's, and the arithmetic proves the
  *     transfer.** The cat is the only donor of this shape, so its recorded
@@ -146,14 +167,26 @@ import { PACK_PUPIL } from '../texture'
  *     own measured burial, the same number the hedgehog uses. They cost nothing
  *     in height: at 1.861 they stand 0.115 BELOW the tail.
  *
- *   - **Eyes are `plate-01`, at the card's own recorded offset.** x 0.2625,
- *     **y 0.933646**, z 0.6350, sink 0. The hedgehog chose 0.95 for the height;
- *     this does not choose, because the bank records the eye card at one point
- *     across the sixteen species that donate it and that point is on this cube.
- *     No `stretch`, ever (rule 5). Pupil `PACK_PUPIL`, per `texture.ts`.
+ *     **The `at` is written out and the builder's `on: 'ear'` is not used, on
+ *     purpose.** `on` would put the tuft on the ear's real apex, at 1.5857011 —
+ *     2e-6 lower, because the builder solves the ear's centre from the join
+ *     rather than reading the bank's six-decimal rounding of it. That is arguably
+ *     the more correct number and it is not worth spending the proof that this
+ *     conversion changed nothing. New species use `on`; this one keeps its
+ *     history.
  *
- *   - **Four legs, `box-01`**, the hedgehog's line exactly: two along z,
- *     mirrored in x, sunk 0.408163 into the belly.
+ *   - **Eyes are `plate-01`, at the card's own recorded offset**, and the
+ *     definition below does not mention them at all, because that IS the
+ *     builder's default: x 0.2625, **y 0.933646**, z 0.6350, sink 0, sclera from
+ *     the pale slot, pupil `PACK_PUPIL`. The hedgehog chose 0.95 for the height
+ *     and had to say so; this does not choose, because the bank records the eye
+ *     card at one point across the sixteen species that donate it and that point
+ *     is on this cube. No `stretch`, ever — rule 5 is now unsayable rather than
+ *     merely unsaid.
+ *
+ *   - **Four legs, `box-01`**, also unmentioned: the hedgehog's line exactly, two
+ *     along z, mirrored in x, sunk 0.408163 into the belly, on the row at
+ *     y = 0.18125 that never moves.
  *
  * ## 5. The palette is the record's own, and no colour is new
  *
@@ -162,12 +195,13 @@ import { PACK_PUPIL } from '../texture'
  * of them, plus the measured pupil. `belly` does three jobs: the painted patch,
  * the eye card's light region and the cat ear's inner. Nothing here is invented.
  *
- * Result: **1.976 tall, 1.250 wide, feet on zero**; 460 verts (332 outside the
- * legs) and 597 triangles, inside every one of rule 9's measured bands.
+ * Result: **1.976 tall, 1.250 wide, feet on zero**; 452 verts and 597 triangles,
+ * inside every one of rule 9's measured bands.
  */
-export const SQUIRREL_ASSEMBLY = defineAssembly('animal-squirrel', {
-  kit: 'assembly',
+import { defineCreature } from '../creature'
+import { PACK_PUPIL } from '../texture'
 
+export const SQUIRREL_ASSEMBLY = defineCreature('animal-squirrel', {
   palette: {
     coat: 0xc4692f,    // signed-off coat: ginger
     belly: 0xfbf1e2,   // signed-off belly: the painted patch, the sclera, the inner ear
@@ -176,76 +210,29 @@ export const SQUIRREL_ASSEMBLY = defineAssembly('animal-squirrel', {
     pupil: PACK_PUPIL, // measured off 544 real eye texels; see texture.ts
   },
 
-  /* The authored 1.250 cube, unstretched (Joe: "body cubic"), wearing §4's
-   * second kind of two-tone: the belly boundary is drawn INTO the coat's cell at
-   * half the hull's height and no triangle is cut to make it. */
-  hull: {
-    part: 'box-03',
-    at: [0, 0.80625, 0],
-    paint: { base: 'coat', patch: { below: 'belly', at: 0.5 } },
-  },
+  /* §4's second kind of two-tone: the belly boundary drawn INTO the coat's cell
+   * at half the hull's height. The tiger's own line, made exact. No geometry. */
+  belly: 0.5,
 
-  features: [
-    /* Four legs, from one shape and one line: two along z, mirrored in x. */
-    {
-      name: 'leg',
-      part: 'box-01',
-      paint: { base: 'limb' },
-      sink: 0.408163,
-      placement: {
-        kind: 'row',
-        from: [0.27, 0.18125, 0.25],
-        to: [0.27, 0.18125, -0.25],
-        count: 2,
-        mirror: true,
-      },
-    },
+  /* THE ANIMAL. The fox's brush, carried up the rear chamfer at 45 degrees
+   * instead of trailing — which is the whole difference between a squirrel and
+   * the fox it stands next to. */
+  tail: { part: 'box-23', chamfer: true },
 
-    /* THE ANIMAL. The fox's brush, carried up the rear chamfer at 45 degrees
-     * instead of trailing — which is the whole difference between a squirrel and
-     * the fox it stands next to. */
-    {
-      name: 'tail',
-      part: 'box-23',
-      paint: { base: 'coat' },
-      sink: 0.177404,
-      spin: [{ axis: 'x', deg: 45 }],
-      placement: { kind: 'single', at: [0, 1.275, -0.46875] },
-    },
+  /* The cat's ear on the cat's own numbers, with the cat's own inner ear. */
+  ears: { part: 'wedge-06', paint: { base: 'coat', byBand: { 1: 'belly' } } },
 
-    /* The cat's ear on the cat's own numbers, with the cat's own inner ear. */
-    {
-      name: 'ear',
-      part: 'wedge-06',
-      paint: { base: 'coat', byBand: { 1: 'belly' } },
-      sink: 0.573575,
-      placement: { kind: 'pair', at: [0.336, 1.43125, 0.320549] },
-    },
+  /* The beaver's muzzle — the pack's one rodent's — at the beaver's own height. */
+  snout: 'tube-01',
 
+  extras: [
     /* Ear tufts: the hedgehog's spike, on the ear's own apex. §3.1. */
     {
       name: 'tuft',
       part: 'cone-01',
-      paint: { base: 'tuft' },
-      sink: 0.312222,
-      placement: { kind: 'pair', at: [0.336, 1.585699, 0.320549] },
-    },
-
-    /* The face. Absolute, unstretched, sitting ON the front plane. */
-    {
-      name: 'eye',
-      part: 'plate-01',
-      paint: { base: 'belly', byBand: { 15: 'pupil' } },
-      sink: 0,
-      placement: { kind: 'pair', at: [0.2625, 0.933646, 0.635] },
-    },
-
-    {
-      name: 'snout',
-      part: 'tube-01',
-      paint: { base: 'limb' },
-      sink: 0,
-      placement: { kind: 'single', at: [0, 0.815078, 0.625] },
+      paint: 'tuft',
+      kind: 'pair',
+      at: [0.336, 1.585699, 0.320549],
     },
   ],
 

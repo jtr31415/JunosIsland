@@ -35,6 +35,7 @@
  */
 export { HEDGEHOG_ASSEMBLY } from './animal-hedgehog'
 export { SQUIRREL_ASSEMBLY } from './animal-squirrel'
+export { MOUSE_ASSEMBLY } from './animal-mouse'
 /* -- append the next species' line directly above this one -- */
 
 import { assembledBuilds } from './register'

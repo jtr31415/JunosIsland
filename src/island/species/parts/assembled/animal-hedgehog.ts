@@ -1,5 +1,6 @@
 /**
- * The hedgehog's assembly, as data. Garden's first animal built the new way.
+ * The hedgehog's assembly, as a DEFINITION. Garden's first animal built the new
+ * way, and the first converted to the declarative builder.
  *
  * ONE SPECIES, ONE FILE. No three.js is reachable from a collection through this
  * file beyond the palette constant, and — the reason for the split — every
@@ -8,15 +9,27 @@
  * so no two species share a file. Adding a species is a new file beside this one
  * and one line in `index.ts`; `register.ts` says why that one line is enough.
  *
- * The record itself is unchanged from the day Joe reviewed it, to the character.
- */
-import { defineAssembly } from './register'
-import { PACK_PUPIL } from '../texture'
-
-/**
- * The hedgehog. Garden's first, because it is the only member that exercises
- * repeat-and-sink — the newest and least-proven mechanism in the whole method,
- * and Joe's own idea (§3.1).
+ * ## Converted to `defineCreature`, 29 July — and it is the same animal
+ *
+ * This was 130 lines of hand-typed `AssemblyBuild` and it is now the definition
+ * below. **The built geometry is byte-identical**: same meshes, same vertices,
+ * same normals, same UVs, same indices, same node translations, same fingerprint
+ * — pinned in `tests/island/assembly-fingerprint.test.ts`. Nothing was tuned to
+ * make that true; the builder derives the numbers the hand-written record had
+ * written out.
+ *
+ * **What the builder now supplies, that used to be typed here:**
+ *
+ *   - the hull (`box-03` at its own recorded offset `[0, 0.80625, 0]`),
+ *   - the four legs (`box-01`, sunk 0.408163, on the row at y = 0.18125 that
+ *     never moves whatever hull a species picks),
+ *   - the eye pair's x and z, and the pupil,
+ *   - the snout's join point, by the donor transfer,
+ *   - and **all five spike rows, from `ridge` and `count: 4`** — the positions,
+ *     the two extra spins, the mirroring and the span.
+ *
+ * Everything below is therefore what makes a hedgehog a hedgehog, and the
+ * derivations are kept because they are the evidence the numbers are the pack's.
  *
  * ## Revised 29 July against Joe's review of the first build
  *
@@ -31,43 +44,46 @@ import { PACK_PUPIL } from '../texture'
  *      sustained."*
  *   3. 16:57 — *"add a pink pointy element to the nose. small sphere will do"*
  *
- * ## Every number below, and where it came from
+ * ## Every number, and where it came from
  *
  * The pack is the source of all of them. Nothing is eyeballed.
  *
- *   - **The hull is `box-03`, and it is now the authored cube.** No `stretch`.
- *     It shipped stretched to 1.350 x 1.150 x 1.250 and Joe's note is the whole
- *     argument against it: the shape 14 of the 24 share, changed. The stretch was
- *     defended at length in a comment, which is not where he reviews. The general
- *     fault behind it is fixed at source rather than here — `Hull.stretch` now
- *     requires a `stretchWhy` beside it, so the next species cannot depart from
- *     an authored proportion quietly. See `assembly.ts`.
+ *   - **The hull is `box-03`, and it is now the authored cube.** No `stretch`,
+ *     and the definition does not even mention it, because the cube is the
+ *     builder's default. It shipped stretched to 1.350 x 1.150 x 1.250 and Joe's
+ *     note is the whole argument against it: the shape 14 of the 24 share,
+ *     changed. The stretch was defended at length in a comment, which is not
+ *     where he reviews. The general fault behind it is fixed at source rather
+ *     than here — `Hull.stretch` requires a `stretchWhy` beside it, so the next
+ *     species cannot depart from an authored proportion quietly.
  *
- *   - **The hull centre is y = 0.80625**, re-solved rather than nudged. The
- *     pack's leg (`box-01`) is 0.30625 tall and its measured `sunkFractionMax` is
- *     0.408163, so a leg joined at a hull bottom `B` has its foot at
+ *   - **The hull centre is y = 0.80625**, and it is now DERIVED rather than
+ *     typed: the builder puts a hull at the bank's own recorded offset for its
+ *     shape. The solve behind that number is still worth keeping. The pack's leg
+ *     (`box-01`) is 0.30625 tall and its measured `sunkFractionMax` is 0.408163,
+ *     so a leg joined at a hull bottom `B` has its foot at
  *     `B - 0.30625 x (1 - 0.408163)` = `B - 0.18125`. Feet on zero therefore
  *     wants `B = 0.18125`, and a 1.250 cube sitting on that has its centre at
- *     0.80625. That is **exactly where the pack itself puts `box-03`** — the
- *     bank's own recorded offset for the shape is `[0, 0.80625, 0]`. The legs
- *     then arrive at y = 0.153125, to six decimal places the pack's own leg
- *     offset, without that having been aimed at. The previous 0.7563 was the same
- *     solve run against the stretched 1.150 hull.
+ *     0.80625 — **exactly where the pack itself puts `box-03`**. The legs then
+ *     arrive at y = 0.153125, to six decimal places the pack's own leg offset,
+ *     without that having been aimed at.
  *
- *   - **Twenty spikes, five rows of four.** Joe's second note. `cone-01`, sunk
- *     0.312222 — the part's own measured burial, the only value the pack ever
- *     gave it — which buries exactly 0.125 of it on every row and leaves 0.275
- *     standing. 0.125 is also §3's floor: "every eared species embeds its ear
- *     into the hull by at least 0.125".
+ *   - **Twenty spikes, five rows of four, and now two lines.** Joe's second note.
+ *     `cone-01`, sunk 0.312222 — the part's own measured burial, the only value
+ *     the pack ever gave it, and now the builder's default for the shape — which
+ *     buries exactly 0.125 of it on every row and leaves 0.275 standing. 0.125 is
+ *     also §3's floor: "every eared species embeds its ear into the hull by at
+ *     least 0.125".
  *
- *     The five rows are the three face middles and the two chamfers between
- *     them, so their facings are **0, +/-45 and +/-90 degrees around the body**
- *     — five equal 45-degree steps through a half turn. That is not arithmetic
- *     dressed up; it is why the chamfer rows do what Joe says they should. His
- *     stated intent is that the back read as CURVED rather than as three flat
- *     faces, and evenly stepping the facing is the thing that delivers it.
+ *     The five rows are the three face middles and the two chamfers between them,
+ *     so their facings are **0, +/-45 and +/-90 degrees around the body** — five
+ *     equal 45-degree steps through a half turn. That is not arithmetic dressed
+ *     up; it is why the chamfer rows do what Joe says they should. His stated
+ *     intent is that the back read as CURVED rather than as three flat faces, and
+ *     evenly stepping the facing is the thing that delivers it. `ridge` in
+ *     `creature.ts` is that idiom, and the three rows it emits sit at:
  *
- *       * top     x = 0,         y = 1.43125 (the cube's top face)
+ *       * top     x = 0,          y = 1.43125 (the cube's top face)
  *       * chamfer x = +/-0.46875, y = 1.27500 (the edge chamfer's midpoint)
  *       * side    x = +/-0.625,   y = 0.80625 (the side face, at its middle)
  *
@@ -79,27 +95,33 @@ import { PACK_PUPIL } from '../texture'
  *     (0.3125, 0.625). Its midpoint is **(0.46875, 0.46875)** — not the
  *     (0.5625, 0.5625) you get by assuming a 1.000-wide face — and its outward
  *     normal is (0.7071, 0.7071, 0), which is precisely the facing a 45-degree
- *     spin produces.
+ *     spin produces. The builder measures this off the hull's own vertices, so a
+ *     species on a different hull gets that hull's chamfer without transcribing
+ *     it.
  *
- *   - **Four to a row, and z = +/-0.375, +/-0.125 is the widest they can go.**
- *     Each flat face runs z in [-0.3125, +0.3125] and then falls away 1:1 along
- *     the edge chamfer. A spike joined at the nominal plane and buried 0.125 has
- *     its base 0.125 below that plane, so it stays embedded while its station
- *     satisfies |z| <= 0.3125 + 0.125 = 0.4375. **0.375 and 0.125 are the widest
- *     stations on the pack's own 1/16 grid inside that bound**, and §3's "nothing
- *     floats" is what sets the bound. Spacing is then 0.250 against the spike's
- *     own 0.329 depth, so neighbours overlap by a quarter and a row reads as one
- *     serrated ridge. The same four z stations on all five rows is what makes the
- *     twenty read as one shell rather than five separate rows.
+ *   - **Four to a row, and z = +/-0.375, +/-0.125 is the widest they can go —
+ *     now solved rather than stated.** Each flat face runs z in [-0.3125,
+ *     +0.3125] and then falls away 1:1 along the edge chamfer. A spike joined at
+ *     the nominal plane and buried 0.125 has its base 0.125 below that plane, so
+ *     it stays embedded while its station satisfies |z| <= 0.3125 + 0.125 =
+ *     0.4375, and §3's "nothing floats" is what sets that bound. Inside it the
+ *     builder snaps the SPACING down to the pack's own 1/16 grid — 4/16 — which
+ *     puts the four stations at +/-0.375 and +/-0.125, exactly the hand-built
+ *     animal's. Spacing 0.250 against the spike's own 0.329 depth means
+ *     neighbours overlap by a quarter and a row reads as one serrated ridge. The
+ *     same four z stations on all five rows is what makes the twenty read as one
+ *     shell rather than five separate rows. A `span` that left the hull is now a
+ *     throw naming the bound, not a thing to notice in a screenshot.
  *
  *   - **Turned 180 degrees backwards** (`spin: [{ axis: 'y', deg: 180 }]`, first
- *     in every row's list). `cone-01` leans FORWARD: measured, its tip sits at
- *     z = +0.0628 and its base at z = -0.0086, and its mass runs from z = +0.164
- *     high to z = -0.164 low. A half turn about y sends that lean back over the
- *     rump, which is which way a hedgehog's spines go and what Joe asked for.
- *     The rotation is baked into the copy's vertices and normals — **no placed
- *     node carries it** — exactly as mirroring already was. Rule 4 has been
- *     amended to say so, because as written it forbade what he asked for.
+ *     in every row's list, which is what `ridge.spin` means). `cone-01` leans
+ *     FORWARD: measured, its tip sits at z = +0.0628 and its base at z = -0.0086,
+ *     and its mass runs from z = +0.164 high to z = -0.164 low. A half turn about
+ *     y sends that lean back over the rump, which is which way a hedgehog's
+ *     spines go and what Joe asked for. The rotation is baked into the copy's
+ *     vertices and normals — **no placed node carries it** — exactly as mirroring
+ *     already was. Rule 4 has been amended to say so, because as written it
+ *     forbade what he asked for.
  *
  *   - **The top row lands on the pack's own number.** Join at the cube's top
  *     y = 1.43125, plus 0.200178 - 0.125, puts the spike's centre at y = 1.506428
@@ -118,21 +140,25 @@ import { PACK_PUPIL } from '../texture'
  *     disappears from the front. It is also the BEE's antenna and the
  *     caterpillar's: filed as an ear, used as a spine.
  *
- *   - **Eyes are `plate-01`, placed as a `pair`.** One mesh, mirrored (rule 6) —
- *     and the mirror IS `plate-02`, so the bank's two eye records collapse to
- *     one authored shape. z = 0.6350 and sink 0, the measured constants across
- *     all 48 eye cards in the pack. No `stretch`, ever: rule 5. Untouched by this
- *     revision except for the pupil colour, because the eyes are the face.
+ *   - **Eyes are `plate-01`, placed as a `pair`,** and the definition gives only
+ *     the height and the sclera slot, because everything else about an eye is
+ *     rule 5 and the builder will not let a species say it: z is `EYE_CARD_Z`
+ *     always, sink is 0, and there is no `stretch` field to reach for. The
+ *     mirror IS `plate-02`, so the bank's two eye records collapse to one
+ *     authored shape (rule 6). **y = 0.95 is this animal's own** — the card's own
+ *     recorded 0.933646 is the builder's default and the hedgehog sits its eyes
+ *     0.016 higher, above a snout that comes to a point.
  *
- *   - **The nose is higher, and the height is the parrot's own.** The snout is
- *     `cone-06`, the parrot's beak, and **the parrot's hull is `box-03` at the
- *     same centre** — so the part arrives with a placement that transfers
- *     exactly. Measured off the file, the parrot joins its beak at
- *     (x 0, y 0.718036, z 0.625), where 0.625 is that same cube's front face.
- *     The snout was at y = 0.58; it is now at 0.718036, up 0.138. §8 gives the
+ *   - **The nose is higher, and the height is the parrot's own — and now it is
+ *     not typed at all.** The snout is `cone-06`, the parrot's beak, and **the
+ *     parrot's hull is `box-03` at the same centre**, so the part arrives with a
+ *     placement that transfers exactly. §8's donor transfer is the builder's
+ *     default: join at THIS hull's front face, z = 0.625, and take the height the
+ *     join does not move from the bank's recorded offset — y = 0.718036, which is
+ *     measured off the file as where the parrot joins its own beak. §8 gives the
  *     nose's z as 1.080 +/- 0.074 of the hull bbox and this sits at 1.032, inside
- *     it, unchanged. §8 gives no derivable y — so the y comes from the one donor
- *     that wears this exact part on this exact hull.
+ *     it. §8 gives no derivable y, which is exactly why it comes from the one
+ *     donor that wears this exact part on this exact hull.
  *
  *   - **The nose tip is AUTHORED, and it is the first thing this method has ever
  *     authored.** Joe first asked for "a pink pointy element to the nose. small
@@ -155,15 +181,21 @@ import { PACK_PUPIL } from '../texture'
  *     So the tip is `bespoke-sphere-01`: a 0.125 sphere, 48 triangles over 26
  *     vertices, GENERATED in `authored.ts` rather than typed, and deliberately
  *     NOT in `PARTS_BANK` — nothing can find it by search and no other species
- *     can reach it by accident. The diameter is 2/16 on the pack's own authoring
- *     grid and sits just under the pack's own small nose-tip family (the bunny's
- *     and cat's 0.1368, the dog's and fox's 0.1505). The pink is unchanged and
- *     still measured, still a texture slot and never a material tint (rule 8).
+ *     can reach it by accident. **`defineCreature` now refuses a `bespoke-*` part
+ *     outright unless the species' own `flag` names RULE 1**, so the escape
+ *     clause cannot be used quietly. The diameter is 2/16 on the pack's own
+ *     authoring grid and sits just under the pack's own small nose-tip family
+ *     (the bunny's and cat's 0.1368, the dog's and fox's 0.1505). The pink is
+ *     unchanged and still measured, still a texture slot and never a material
+ *     tint (rule 8).
  *
  *     It sits with its **centre on the snout's own apex** — `cone-06`'s
  *     front-most point, local (0, +0.1122, +0.1434), world (0, 0.830236,
  *     0.808311) — at `sink: 0.5`, which for a sphere is the one placement that
- *     needs no number: exactly half of it stands proud.
+ *     needs no number: exactly half of it stands proud. The `at` is written out
+ *     because it is the snout's true APEX, a single vertex; `on: 'snout'` would
+ *     anchor on the snout's front PLANE, which is 0.00002 nearer and not the same
+ *     point.
  *
  *     **The lesson is bigger than the hedgehog.** The search matched on SHAPE and
  *     returned a part whose IDENTITY was wrong, with size, taper, symmetry,
@@ -174,9 +206,10 @@ import { PACK_PUPIL } from '../texture'
  *   - **The pupil is `PACK_PUPIL`, and it is the fault Joe caught.** It was
  *     `0x000000`, a number nobody measured. It is now `#4c4f5e`, the area-
  *     weighted mean of 544 real eye-card texels across all 24 species. The full
- *     working, and the answer to "did we paint it or carry it", is in
- *     `texture.ts` beside the constant — because it corrects every animal built
- *     by this method, not this one.
+ *     working is in `texture.ts` beside the constant — because it corrects every
+ *     animal built by this method, not this one. **`defineCreature` now supplies
+ *     it when a definition does not, and throws when a definition contradicts
+ *     it**, which is the shape that fix should have had the first time.
  *
  *   - **The rest of the palette is the four colours already on the hedgehog's
  *     record** in `collections/garden.ts` — "Buff face, dark spines" — plus the
@@ -184,9 +217,10 @@ import { PACK_PUPIL } from '../texture'
  *
  * Result: 1.707 tall, feet on zero, inside the pack's measured 1.43-2.02.
  */
-export const HEDGEHOG_ASSEMBLY = defineAssembly('animal-hedgehog', {
-  kit: 'assembly',
+import { defineCreature } from '../creature'
+import { PACK_PUPIL } from '../texture'
 
+export const HEDGEHOG_ASSEMBLY = defineCreature('animal-hedgehog', {
   palette: {
     coat: 0xb2946c,   // buff face
     spine: 0x53412c,  // dark spines
@@ -196,102 +230,41 @@ export const HEDGEHOG_ASSEMBLY = defineAssembly('animal-hedgehog', {
     nose: 0xe792bd,   // the dog and monkey nose-tip's own pink, area-weighted
   },
 
-  /* The authored 1.250 cube, unstretched. Joe: "body cubic". */
-  hull: {
-    part: 'box-03',
-    at: [0, 0.80625, 0],
-    paint: { base: 'coat' },
+  /* No `hull` line: the builder's default IS the authored 1.250 cube at the
+   * pack's own centre for it. Joe: "body cubic." */
+
+  /* Joe's twenty spikes, in two lines. Five rows of four — the top face, both
+   * side faces, and the two chamfers between them — same shape, same depth, same
+   * four z stations, facings stepping 45 degrees a row so the back reads round.
+   * The 180-degree turn sweeps every quill back over the rump. */
+  ridge: {
+    part: 'cone-01',
+    paint: 'spine',
+    count: 4,
+    spin: [{ axis: 'y', deg: 180 }],
   },
 
-  features: [
-    /* Four legs, from one shape and one line: two along z, mirrored in x. */
-    {
-      name: 'leg',
-      part: 'box-01',
-      paint: { base: 'limb' },
-      sink: 0.408163,
-      placement: {
-        kind: 'row',
-        from: [0.27, 0.18125, 0.25],
-        to: [0.27, 0.18125, -0.25],
-        count: 2,
-        mirror: true,
-      },
-    },
+  /* 0.95, not the card's own 0.933646: this face carries its eyes a little high
+   * over a pointed snout. z, size and sink are not sayable — rule 5. */
+  eyes: { y: 0.95, paint: 'eye' },
 
-    /* Repeat-and-sink, five rows of four. The mechanism this species exists to
-     * prove, now carrying the chamfer idiom as well (spec §8). Every row is the
-     * same shape, the same depth and the same four z stations; only the facing
-     * differs, by 45 degrees a row. */
-    {
-      name: 'spike-top',
-      part: 'cone-01',
-      paint: { base: 'spine' },
-      sink: 0.312222,
-      spin: [{ axis: 'y', deg: 180 }],
-      placement: {
-        kind: 'row',
-        from: [0, 1.43125, 0.375],
-        to: [0, 1.43125, -0.375],
-        count: 4,
-      },
-    },
-    {
-      name: 'spike-chamfer',
-      part: 'cone-01',
-      paint: { base: 'spine' },
-      sink: 0.312222,
-      spin: [{ axis: 'y', deg: 180 }, { axis: 'z', deg: -45 }],
-      placement: {
-        kind: 'row',
-        from: [0.46875, 1.275, 0.375],
-        to: [0.46875, 1.275, -0.375],
-        count: 4,
-        mirror: true,
-      },
-    },
-    {
-      name: 'spike-side',
-      part: 'cone-01',
-      paint: { base: 'spine' },
-      sink: 0.312222,
-      spin: [{ axis: 'y', deg: 180 }, { axis: 'z', deg: -90 }],
-      placement: {
-        kind: 'row',
-        from: [0.625, 0.80625, 0.375],
-        to: [0.625, 0.80625, -0.375],
-        count: 4,
-        mirror: true,
-      },
-    },
+  /* The parrot's beak, on the parrot's own numbers, by the donor transfer. Its
+   * upper mandible (band 15) is painted with the spines so the snout reads as
+   * one dark point rather than as a bill. */
+  snout: { part: 'cone-06', paint: { base: 'limb', byBand: { 15: 'spine' } } },
 
-    /* The face. Absolute, unstretched, sitting ON the front plane. */
-    {
-      name: 'eye',
-      part: 'plate-01',
-      paint: { base: 'eye', byBand: { 15: 'pupil' } },
-      sink: 0,
-      placement: { kind: 'pair', at: [0.2625, 0.95, 0.635] },
-    },
-
-    {
-      name: 'snout',
-      part: 'cone-06',
-      paint: { base: 'limb', byBand: { 15: 'spine' } },
-      sink: 0.360878,
-      placement: { kind: 'single', at: [0, 0.718036, 0.625] },
-    },
-
-    /* Joe's pink element, on the snout's own measured apex. AUTHORED — the one
+  extras: [
+    /* Joe's pink element, on the snout's own measured APEX. AUTHORED — the one
      * piece of geometry in this method the pack did not give us, and it is here
      * because he looked at the lifted alternative and rejected it by name. See
-     * `authored.ts`; the `flag` below says so where he reads. */
+     * `authored.ts`; the `flag` below says so where he reads, and the builder
+     * refuses a bespoke part without it. */
     {
       name: 'nose-tip',
       part: 'bespoke-sphere-01',
-      paint: { base: 'nose' },
+      paint: 'nose',
       sink: 0.5,
-      placement: { kind: 'single', at: [0, 0.830236, 0.808311] },
+      at: [0, 0.830236, 0.808311],
     },
   ],
 
