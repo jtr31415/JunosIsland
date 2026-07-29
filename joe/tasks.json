@@ -452,6 +452,21 @@
       "check": "",
       "note": "",
       "state": "open"
+    },
+    {
+      "id": "JT-035",
+      "type": "ruling",
+      "title": "How do the new nouns reach her — a new list, or a deliberate golden re-capture? (JT-004)",
+      "detail": "joe/noun-candidates.json now exists (88 clean 3- and 4-letter nouns, 23 flagged, 35 rejected). It was never written before, which is why JT-004 has sat open: your red pen had nothing to red-pen. Strike what you do not want by setting each verdict to \"no\"; empty means unreviewed.\n\nThe blocker is structural, not editorial. The live list is GREEN in src/core/wordlists.ts:17, and it cannot be appended to. Three things break at once: makeDeck deals straight from the array so its order is load-bearing (wordlists.ts:4); tools/golden/capture.mjs:37 pins the v0 word arrays as literals; and src/core/alien.ts:25 spreads GREEN into REAL_BLOCK, so one extra word shifts the rng stream feeding read, readL2 AND build. Adding a single noun to GREEN reddens the frozen golden.\n\nOption (a): ship the approved nouns as a NEW list dealt by a new reading rung of its own. golden.json is untouched and stays a true regression gate. It matches the note already in harness.ts:53 — a future reading rung is a new generator, not a new number. More code, and reading gets a real second rung, which is the thing JT-024 says the honeymoon offer is currently lying about.\n\nOption (b): append to GREEN and deliberately re-capture golden (npm run golden:capture), stating it in the commit. Much less code. The cost is that the frozen baseline for reading, word-building and the alien blocklist is re-cut, so any generator drift that existed before this run becomes invisible — the gate can no longer tell us the old behaviour survived.\n\nNothing has been built on either option. No noun is live and no child sees any of this today; only the candidate file and the maths rung shipped this run (521b744, 1a8fef5). Choosing (a) costs nothing already written. Choosing (b) would mean a separate, stated re-capture commit — never as a side effect of a feature.\n\nRelated: JT-005 (pairs audit) promises joe/pairs-audit.json, which also does not exist yet. Same shape of question when it lands, so a ruling here likely settles that one too.",
+      "blocks": [
+        "JT-004",
+        "D.rungs"
+      ],
+      "artefact": "joe/noun-candidates.json",
+      "doneRule": "manual",
+      "check": "",
+      "note": "",
+      "state": "open"
     }
   ],
   "archive": []
