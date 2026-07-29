@@ -396,6 +396,20 @@
       "check": "",
       "note": "",
       "state": "open"
+    },
+    {
+      "id": "JT-031",
+      "type": "ruling",
+      "title": "ANSWERED: where does each animal’s short info text come from? (PB-036)",
+      "detail": "RAISED AND ANSWERED IN THE SAME BREATH, and recorded here for the trail rather than for your time — nothing is waiting on you.\n\nTHE QUESTION. Joe asked for the workbench viewer to show each built animal with its collection, its given name and \"the short info text about each\", then to sign them off one by one. The collection and the name already exist as code (species/roster.ts, species/naming.ts). THE INFO TEXT DID NOT EXIST AT ALL, and it is factual content about real animals — a sentence about a pangolin that a language model invented is exactly the sort of thing that ends up printed in front of a child as fact. So it was never going to be generated and presented as done.\n\nYOUR ANSWER, relayed through the manager on 29 July and transcribed verbatim into the note below — TRANSCRIBED, NOT TYPED BY YOU, so read it and correct it if it is not what you said: \"have an agent create the facts and fact check them. they then become part of my final sign off for each animal along with its name.\"\n\nWHAT WAS BUILT ON IT, and what changes if you reverse it:\n\n1. ONE GATE PER ANIMAL, not two. Your sign-off covers the model, the collection, the name and the fact together, because your sign-off was always the real check. joe/names-audit.json grew a `signoff` field for it. It is deliberately NOT the existing `verdict` field: `verdict` is the name-only judgement made by reading a word aloud in the Pet names panel, and folding them together would let a name you ticked in a list count as an animal you had actually looked at.\n\n2. STRIKING ONE PART. `factVerdict` and `factNote` were added beside the existing `verdict`/`replacement`/`note`, so you can keep the name and strike the fact, or the reverse, without writing a paragraph about it. Neither is a second gate; both are per-field, the same shape the name audit already had.\n\n3. THE FACTS LIVE IN THEIR OWN FILE. A drafting-and-checking agent writes joe/species-facts.json; the workbench only ever READS it (it is absent from the API’s writable allowlist and from the seeder), so the drafting side and the judging side can never overwrite each other. The viewer shows the sentence, whether it was verified, and its source — and says plainly when there is none rather than showing a blank.\n\n4. NOTHING IS INVENTED. Not one sentence was written by this agent. Until the fact agent lands, all fifty cards say \"not drafted yet\" and the progress bar counts how many were signed off before a fact existed to cover them, so an early tick is visible rather than buried.\n\nWHERE TO SEE IT: `npm run workbench`, then http://127.0.0.1:4173/viewer.html — the \"Built animals\" tab, which is now the one the page opens on.\n\nIF YOU REVERSE IT: the merge spec in tools/workbench/merge.mjs (the `names` block) and the sign-off card in tools/workbench/public/viewer.ts are the two places to change; joe/names-audit.json keeps every field you have already filled either way, because an absent field can never walk over one you set.",
+      "blocks": [
+        "PB-036"
+      ],
+      "artefact": "joe/species-facts.json",
+      "doneRule": "manual",
+      "check": "",
+      "note": "have an agent create the facts and fact check them. they then become part of my final sign off for each animal along with its name.",
+      "state": "done"
     }
   ],
   "archive": []
