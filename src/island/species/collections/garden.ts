@@ -47,10 +47,19 @@
  * the collection is separated rather than trusting these comments.
  */
 import { defineSpecies } from '../define'
+import { HEDGEHOG_ASSEMBLY } from '../parts/assembled'
 import type { Species } from '../types'
 
 export const GARDEN_SPECIES: readonly Species[] = [
   /*
+   * THE HEDGEHOG IS THE FIRST ANIMAL BUILT THE NEW WAY, and it carries BOTH
+   * builds. `docs/building-animals-from-parts.md` §0 scrapped the 72 kit builds
+   * and §6 says the scrapped build stays on the record beside the assembled one
+   * "so ... nothing he can see today disappears" until Joe rules on JT-034. So
+   * the `build` below is untouched — every number in it is as it shipped — and
+   * `assembly` is added alongside. `parts/assembled.ts` holds the new one and
+   * explains every measurement in it.
+   *
    * The hedgehog. `spines` is what this animal IS — the kit's ridge of
    * 45-degree boxes down the back — and `snout` gives it the long face that
    * stops it reading as a spiky mouse. Legs at 0.40 because a hedgehog is a
@@ -71,6 +80,7 @@ export const GARDEN_SPECIES: readonly Species[] = [
       // has to be the darkest thing on the animal or the ridge disappears.
       palette: { coat: 0xb2946c, belly: 0xf4e6cc, detail: 0x6b533a, accent: 0x53412c },
     },
+    assembly: HEDGEHOG_ASSEMBLY,
   }),
 
   /*

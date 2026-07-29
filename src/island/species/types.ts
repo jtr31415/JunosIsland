@@ -17,7 +17,11 @@
  * "there is an authored GLB for this, do not build it" — `pets.ts` keeps loading
  * them exactly as it does today. Every NEW species carries a real kit and a
  * `build`, and is constructed from primitives in the Fred style.
+ *
+ * The one import below is TYPE-ONLY and erases under `verbatimModuleSyntax`, so
+ * the claim that nothing here knows three.js still holds at runtime.
  */
+import type { AssemblyBuild } from './parts/assembly'
 
 /**
  * Which kit builds a species.
@@ -389,6 +393,20 @@ export interface Species {
   /** The collection it belongs to, by `Collection.id`. */
   collection: string
   build?: BuildSpec
+  /**
+   * The assembly-kit build, when one exists. ADDITIVE, never a replacement.
+   *
+   * `docs/building-animals-from-parts.md` §6: "Assembled species carry an
+   * `assembly` build spec, kept alongside the old `build` field rather than
+   * replacing it, so the scrapped 72 stay visible for comparison until Joe rules
+   * on JT-034 and nothing he can see today disappears." So `build` above is
+   * untouched on a species that gains one of these, and both render.
+   *
+   * The import is type-only and erases, so this file still knows no three.js —
+   * `AssemblyBuild` is data all the way down and `parts/assembly.ts` is where
+   * the renderer lives.
+   */
+  assembly?: AssemblyBuild
   /** Absent means "not recorded yet", which is not the same as least-concern. */
   threat?: Threat
 }

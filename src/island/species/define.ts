@@ -13,6 +13,7 @@
  * anything, and `registry.ts` re-exports it so every existing caller is unchanged.
  */
 import { SPECIES_NAMES, SPECIES_COLLECTION } from './roster'
+import type { AssemblyBuild } from './parts/assembly'
 import type { BuildSpec, KitId, Species, Threat } from './types'
 
 /**
@@ -27,7 +28,7 @@ import type { BuildSpec, KitId, Species, Threat } from './types'
 export function defineSpecies(
   id: string,
   kit: KitId,
-  extra: { build?: BuildSpec; threat?: Threat } = {},
+  extra: { build?: BuildSpec; assembly?: AssemblyBuild; threat?: Threat } = {},
 ): Species {
   const name = SPECIES_NAMES[id]
   const collection = SPECIES_COLLECTION[id]
