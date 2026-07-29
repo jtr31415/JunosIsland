@@ -59,6 +59,43 @@ written down.
 In order. The drumbeat set this; do not reorder it without saying why in the
 handoff.
 
+0. **LIVE BUG — an abandoned tile follows her around.** Reported by Joe, 29 July,
+   from Juno playing the deployed build. This jumps the queue.
+
+   His report, verbatim: *"if a tile has been started and then abandoned, then
+   tapping any tile jumps back into the building of the same tile, frustrating
+   for her if she tries to tap an animal. lets adjust the behaviour for abandoned
+   tiles. i'd say if she abandons a tile, the progress towards reward is saved,
+   the location and type is not. so when she then taps another glowing tile to
+   build one, progress picks up but location and type is rechosen by her on
+   entry."*
+
+   **The ruling, which is his and is settled** — do not redesign it:
+   - Abandoning a tile **keeps her progress toward the reward**. It is earned and
+     it is hers; brief §19 makes that non-negotiable.
+   - Abandoning **discards the location and the type**. Neither was ever a
+     commitment.
+   - Her next tap on any glowing socket starts a build **there**, in a type she
+     chooses **on entry**, carrying the saved progress.
+
+   **Read `docs/HANDOFF.md` before touching this.** Three separate faults have
+   already been in this exact seam — the dead-on-arrival plot, the plot stranded
+   on a closed panel, and the plot that showed her last week's answer — and none
+   was visible to the unit tests on either side, because the plot builds whatever
+   it is told and the flow records whatever is chosen. The relevant machinery is
+   `src/island/plot.ts` (lifecycle behind ports), `askForLand` (which today
+   RESUMES a standing plot — that resumption is the reported bug), `flow.plot`,
+   and `props.adopt`. **Only a test driving the plot and the flow together
+   catches this class**; `tests/island/plot.test.ts` is the precedent.
+
+   Note the symptom Joe actually described: she taps an ANIMAL and gets a tile
+   build. So verify the fix against the real tap path in `interactions.ts`, not
+   only against the flow — and check what a socket tap does when there is no
+   standing plot at all, since that path changes too.
+
+   Ships when green, like any live bug: push, confirm CI, verify from the
+   deployed bundle.
+
 1. **PB-042 — the governors' hard stop becomes a PRICE.** Joe answered this as
    JT-012; the answer is in `joe/backlog.json` under `PB-042` and in
    `joe/tasks.json`. Build is explicitly held until this card is picked up —
