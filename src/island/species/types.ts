@@ -211,25 +211,156 @@ export type SongbirdExtra =
   | 'wing-bar' | 'speckles' | 'ruff' | 'tail-streamer' | 'webbed-feet' | 'wattle'
 
 /**
- * The other four kits are DECLARED, not yet built.
+ * The raptor kit's data. Every bird of prey, and the owls with them.
  *
- * PB-036 phase 1 built the quadruped kit, which covers ~150 of the 296, and
- * phase 2 built the songbird. The remaining four are named here so a species
- * record can honestly say which kit it wants before that kit exists, and so
- * `speciesKit()` can refuse to build it rather than guessing. Each becomes a
- * real interface the way `QuadrupedBuild` is one, when its kit is built.
+ * Same discipline as the two kits above: every number is a MULTIPLIER off the
+ * kit's reference silhouette — a BUZZARD, which is the honest middle of this
+ * collection in every axis — except `height`, which is absolute in Kenney units
+ * and holds to the same 1.2–2.6 family range for the same reason.
+ *
+ * THIS KIT IS NOT A SONGBIRD WITH A HOOK BOLTED ON, and the two places it
+ * departs are the two that carry the whole collection:
+ *
+ *   - There is no `neck`. The songbird grew one because a swan, a stork and a
+ *     heron are separated by nothing else; not one bird of prey in the roster
+ *     has a neck worth a mesh, and a field that every species would set to 0 is
+ *     a field that will eventually be set to 1 by accident.
+ *   - `talons` is a NUMBER where a lesser design would have put a flag in the
+ *     extras list. Every raptor has talons — that is what the word means — so a
+ *     boolean would be true sixteen times out of sixteen and would give an
+ *     osprey and a kestrel the same feet. What actually differs is how much
+ *     foot the bird is: an osprey is a pair of grappling hooks with a bird
+ *     attached, a kestrel is a bird with claws. That is a dial.
+ */
+export interface RaptorBuild {
+  kit: 'raptor'
+  /** Absolute standing height in Kenney units, as quadruped and songbird. */
+  height: number
+  /** Body length against height. A merlin is a compact fist; an eagle is a barrel. */
+  body: number
+  /** Head size against body. A sparrowhawk's head is small; an owl's is most of it. */
+  head: number
+  /** Leg length. A goshawk is long in the leg; an owl sits down over its feet. */
+  legs: number
+  /**
+   * Which hooked beak it wears. THE HOOK LIVES HERE AND ONLY HERE.
+   *
+   * `SongbirdBuild.beak` (line 172 above) deliberately has no `'hooked'`, so an
+   * owl cannot be smuggled in as a songbird. This is the other end of that
+   * decision, and it is three values rather than one because the hook is this
+   * kit's strongest read and a single shape would make an eagle, a falcon and a
+   * barn owl the same bird from the front:
+   *
+   *   - `'deep-hook'` — an eagle's, a buzzard's, an osprey's, a kite's. Heavy
+   *     and deep, the whole front of the face.
+   *   - `'notched-hook'` — a falcon's: finer, with the tomial notch, the tooth
+   *     on the cutting edge that a peregrine kills with and no hawk has.
+   *   - `'small-hook'` — an owl's, a sparrowhawk's. Short and neat, mostly
+   *     buried in feather, which is why an owl reads as a face and not a beak.
+   *
+   * And no more. A fourth shape would be a species wearing a costume.
+   */
+  beak: 'deep-hook' | 'notched-hook' | 'small-hook'
+  /**
+   * The wing plan. The strongest read after the beak, and a PROPORTION rather
+   * than a part: broad soaring wings (eagle, buzzard), long pointed ones
+   * (peregrine, hobby) and short rounded ones (sparrowhawk, goshawk) are three
+   * shapes of the same two meshes, not three new meshes.
+   */
+  wings: 'broad' | 'pointed' | 'rounded'
+  /**
+   * Which tail it wears. Five, because a raptor's tail does real work: the red
+   * kite's fork IS the red kite, the harrier's is long, the goshawk's is square
+   * and the golden eagle's is a wedge.
+   */
+  tail: 'fan' | 'square' | 'long' | 'wedge' | 'forked'
+  /**
+   * How much foot the bird is. 1 is the buzzard; ~0.6 a kestrel, ~1.7 an osprey.
+   *
+   * A size dial and not a boolean — see the interface header. It is also the
+   * cheapest axis in the kit: talons are small and low, so a big-footed bird
+   * costs almost nothing in keep-out radius.
+   */
+  talons: number
+  /** Up to three extra parts, kit-defined. Roster §1's "two or three detail parts". */
+  extras?: readonly RaptorExtra[]
+  palette: KitPalette
+}
+
+/**
+ * The detail parts a raptor may wear.
+ *
+ * Closed, for the reason the two lists above are closed, and this collection is
+ * where that discipline is tested hardest after the corvids. Sixteen birds,
+ * three confusable groups inside them, and every one of the three has an
+ * obvious wrong answer that is a new part:
+ *
+ *   - sparrowhawk against goshawk. Same wings, same tail, same barred front.
+ *     They are separated by SIZE and head-to-body proportion, because that is
+ *     genuinely what separates them in a hedge.
+ *   - kestrel against merlin against hobby. All three are small falcons. The
+ *     kestrel is spotted above with a long barred tail, the merlin is plain and
+ *     square-tailed and compact, the hobby is all wing with rufous trousers.
+ *     Every one of those is a proportion or a marking already in this list.
+ *   - tawny owl against eagle owl. Ear tufts and half again the height.
+ *
+ * Thirty species later, a list that grew a part per bird is a sculpting
+ * workshop with a data file bolted to it, which roster §1 rules out in its
+ * first three words. So the list stays shut and the birds are separated by
+ * PROPORTION and PALETTE.
+ *
+ * The owls are the one genuine exception and they are IN the list rather than
+ * an argument against it: a facial disc and ear tufts are not a re-labelled
+ * hawk face, they are a different face — round, flat, forward, with the beak
+ * lost in it. Everything else here is a MARKING that a group of birds share,
+ * not a shape one bird needs.
+ *
+ *   - `facial-disc` — the owl's dish, and the harrier's, which has one for the
+ *     same reason: it hunts by ear.
+ *   - `ear-tufts`  — eagle owl, long-eared owl. The one thing that separates an
+ *     eagle owl from a tawny at silhouette.
+ *   - `brow`       — the supraorbital scowl. Every diurnal raptor has it and no
+ *     owl does, so it is what says "hawk, not owl" once the disc is off.
+ *   - `crest`      — harpy eagle and the crested hawk-eagles. The same three
+ *     blades the other two kits wear, because a shared shape is a family look.
+ *   - `hood`       — a contrasting crown and nape: the bald eagle's white head,
+ *     the osprey's crown, the male hen harrier's grey. The skull is built in
+ *     `coat`, so without this a two-tone head is not expressible at all.
+ *   - `moustache`  — the falcon's malar stripe. Peregrine, hobby, merlin,
+ *     kestrel — the group above that needs the most help.
+ *   - `barred-breast` — the barred underparts of the accipiters, the buzzard
+ *     and the kestrel, against a falcon's plainer front.
+ *   - `tail-bands` — the barred tail. Sparrowhawk, kestrel, harrier, goshawk.
+ *   - `speckles`   — a spotted mantle: kestrel, eagle owl, most juveniles. It
+ *     is what a kestrel has and a merlin has not.
+ *   - `trousers`   — feathered tarsi. Golden eagle against bald eagle, eagle
+ *     owl against tawny, and the hobby's rufous leggings.
+ */
+export type RaptorExtra =
+  | 'facial-disc' | 'ear-tufts' | 'brow' | 'crest' | 'hood'
+  | 'moustache' | 'barred-breast' | 'tail-bands' | 'speckles' | 'trousers'
+
+/**
+ * The other three kits are DECLARED, not yet built.
+ *
+ * PB-036 phase 1 built the quadruped kit, which covers ~150 of the 296, phase 2
+ * built the songbird and phase 4 built the raptor. The remaining three are
+ * named here so a species record can honestly say which kit it wants before
+ * that kit exists, and so `speciesKit()` can refuse to build it rather than
+ * guessing. Each becomes a real interface the way `QuadrupedBuild` is one, when
+ * its kit is built.
  *
  * Do NOT widen this into a permissive record to unblock a collection. HANDOFF
  * §6 (line 565): widening a value union is invisible to the compiler, and the
  * failure surfaces as a creature that renders as nothing.
  */
 export interface PendingBuild {
-  kit: Exclude<KitId, 'kenney' | 'quadruped' | 'songbird'>
+  kit: Exclude<KitId, 'kenney' | 'quadruped' | 'songbird' | 'raptor'>
   height: number
   palette: KitPalette
 }
 
-export type BuildSpec = QuadrupedBuild | SongbirdBuild | PendingBuild
+export type BuildSpec = QuadrupedBuild | SongbirdBuild | RaptorBuild | PendingBuild
 
 /**
  * One species.

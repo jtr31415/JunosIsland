@@ -617,8 +617,10 @@ describe('the kit is deterministic and reachable', () => {
     expect(dims(built)[1]).toBeCloseTo(1.7, 6)
   })
 
-  it('still refuses the four kits that really are unbuilt', () => {
-    for (const kit of ['raptor', 'swim', 'minibeast', 'bespoke'] as const) {
+  it('still refuses the three kits that really are unbuilt', () => {
+    // `raptor` left this list when PB-036 phase 4 built it. The assertion that
+    // it no longer throws lives at `kit-raptor.test.ts`.
+    for (const kit of ['swim', 'minibeast', 'bespoke'] as const) {
       const pending = { kit, height: 1.6, palette: PALETTE } as BuildSpec
       expect(() => buildSpecies(pending)).toThrow(UnbuiltKitError)
       expect(() => buildSpecies(pending)).toThrow(new RegExp(kit))
