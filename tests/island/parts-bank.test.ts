@@ -206,7 +206,21 @@ const bakedPositions = (b: BakedPart): number[] => b.positions as number[]
 
 /* ---------------------------------------------------------------- tests --- */
 
-describe('the parts bank is made of the pack, not of itself', () => {
+/*
+ * These tests decode the 24 real `.glb` files and re-run the position weld over
+ * them, which is the whole point — a test that reads only `bank.generated.ts`
+ * proves the bank agrees with itself and nothing more.
+ *
+ * That honesty costs seconds. The suite passed in 1.9s run alone and TIMED OUT
+ * at vitest's default 5s under full-suite load, which is the worst kind of gate:
+ * green when you check it, red in CI, and it looks like a logic bug. The budget
+ * is therefore explicit and generous rather than default and lucky. If these
+ * ever approach it, memoise the weld per (species, node) — do not trim what is
+ * asserted.
+ */
+const REAL_FILE_BUDGET_MS = 60_000
+
+describe('the parts bank is made of the pack, not of itself', { timeout: REAL_FILE_BUDGET_MS }, () => {
   it('the baked leg IS the leg in animal-fox.glb', () => {
     const legs = partsUsedAs('leg')
     expect(legs).toHaveLength(1)
