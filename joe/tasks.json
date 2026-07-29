@@ -326,6 +326,20 @@
       "check": "",
       "note": "we need to catch up here with the reading progression curriculum. 1. adding nouns 2. finding word challenge with only similar words. 3. 5-letter longer non-noun words, etc etc.",
       "state": "done"
+    },
+    {
+      "id": "JT-026",
+      "type": "ruling",
+      "title": "Is \"bounded 65/35\" a limit on the LEAN, or a clamp on the SHARE? (PB-030 B3)",
+      "detail": "Run A specs the last piece of Run B as \"weakness-lean between paths bounded 65/35 on persistent estimates only\" (runA.md:236). Your JT-010(1) says \"share of maths stays by tick\" and your worked example is \"one easy sum, one easy sub and one medium sum, is 2/3 sum 1/3 sub\".\n\nThose two collide: 2/3 is 0.667, which already exceeds the 65/35 the spec names. So the lean had to be read one of three ways.\n\n(a) CLAMP THE SHARE. Always force the split into 35-65. Literal, but it rewrites your worked example to 0.65/0.35 even for a child with no weakness at all - i.e. it changes behaviour when the lean is doing nothing, which quietly reverses JT-010.\n(b) LEAN UP TO 0.65. Zero lean leaves today alone, but at full lean a path with one tick out of three could be pushed from 0.333 to 0.65 - the estimate then overrules the tick structure you set.\n(c) BOUND THE LEAN ITSELF. Multiply the weaker path weight by at most 65/35 and renormalise. Zero lean is today exactly; at the 1:1 tick shape the ladder drives toward, full lean lands on exactly 65/35 (the spec number); at your 2:1 example it lands on .519/.481 - noticeably more of the weak path, but it can never invert which path leads.\n\nFABLE CHOSE (c), on the grounds that the spec sentence is about the \"weakness-lean\", not about the share, so read that way the spec and your ruling stop disagreeing - and that (c) is the only option where a tick a parent made always leads.\n\nBUILT ON IT (commit 9138176). The lean is one multiplier. Both paths must have at least 8 answered attempts or there is no lean at all, so a freshly opened taking-away path is dealt at its tick share rather than force-fed. A dead zone of .05 stops session noise flapping the mix, and the full lean arrives at a gap of .30.\n\nIF YOU REVERSE IT: cheap. Option (a) wraps option (c) without unwinding it - it is a clamp applied after, roughly an hour plus tests. Option (b) is a different formula in the same one function. The dials all sit in one block marked PROVISIONAL in src/island/harness.ts, in the style you asked for on JT-021, so the numbers can be tuned from play testing without touching the mechanism.",
+      "blocks": [
+        "PB-030"
+      ],
+      "artefact": "src/island/harness.ts",
+      "doneRule": "manual",
+      "check": "",
+      "note": "",
+      "state": "open"
     }
   ],
   "archive": []
