@@ -294,11 +294,18 @@ describe('the card beside the canvas says which side is which', () => {
   })
 
   /* The claim that makes the whole surface worth looking at, and the one the
-   * viewer header argues at length: a baked preview is a copy, and a copy drifts. */
+   * viewer header argues at length: a baked preview is a copy, and a copy drifts.
+   *
+   * The scale claim is asserted here because it is the sentence that went FALSE
+   * once `viewer.ts` stopped normalising: the card said both halves were scaled to
+   * one unit tall long after both halves were being drawn at `SHARED_SCALE`, which
+   * is the worst kind of stale — a page that looks right and reads wrong. So the
+   * card must promise the shared scale and must NOT promise matched height. */
   it('promises nothing is baked, and says what the match actually is', () => {
     const card = pairCard(row!, DEFAULT_REFERENCE)
     expect(card.why).toMatch(/NOTHING IS BAKED/)
-    expect(card.why).toMatch(/one unit tall/)
+    expect(card.why).toMatch(/ONE shared scale/)
+    expect(card.why).not.toMatch(/one unit tall/)
     expect(card.why).toMatch(/without looking like a guest/)
   })
 

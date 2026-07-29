@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "about": "One child-facing fact per BUILT species, for Joe's sign-off alongside the model, the collection and the name. Drafted, then independently fact-checked. Covers the 96 species in SHIPPED_SPECIES on 29 Jul 2026: the frozen base 24, plus garden (13), home-pets (14), woodland (16), africa (13) and farm (16). The species manager shipped farm, four cage birds and two woodland game birds while this file was being written, and those 22 were drafted and checked in a second pass. Species in a collection not listed in coveredCollections have no fact yet — see that field.",
+  "about": "One child-facing fact per BUILT species, for Joe's sign-off alongside the model, the collection and the name. Drafted, then independently fact-checked. Covers the 97 species in SHIPPED_SPECIES on 30 Jul 2026: the frozen base 24, plus garden (14), home-pets (14), woodland (16), africa (13) and farm (16). The species manager shipped farm, four cage birds and two woodland game birds while this file was being written, and those 22 were drafted and checked in a second pass. animal-slow-worm completed Garden later still and was drafted and checked in a third pass. Species in a collection not listed in coveredCollections have no fact yet — see that field.",
   "coveredCollections": ["base", "garden", "home-pets", "woodland", "africa", "farm"],
   "notCovered": "Every other collection in the roster is unbuilt, so there is nothing to sign off. When the manager ships one, its members need adding here or they reach Joe's bench factless. The test asserts full coverage WITHIN coveredCollections only, so a newly shipped collection will not break anyone else's gate — which also means nothing shouts. Adding the collection id above turns the tripwire back on.",
   "method": "Each fact was drafted first, then handed to a separate checker told to REFUTE it rather than confirm it, using web search against zoos, museums, universities, wildlife trusts and government agencies. 'flagged' means the checker refuted the wording, found it contested, or could only reach a weak source. A flagged fact has NOT been quietly reworded to sound safe: the drafted wording is preserved in 'fact', and any defensible alternative the checker could source sits in 'proposedRewrite' for Joe to accept or ignore.",
@@ -478,6 +478,19 @@
       "check": "verified",
       "source": "https://www.wildlifetrusts.org/wildlife-explorer/mammals/field-vole",
       "sourceNote": "Wildlife Trusts: voles have blunter, rounder faces, smaller ears and eyes, and shorter tails than mice.",
+      "proposedRewrite": "",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
+    },
+    {
+      "speciesId": "animal-slow-worm",
+      "species": "Slow-Worm",
+      "collection": "garden",
+      "fact": "A slow-worm looks like a little snake, but it is really a lizard with no legs.",
+      "check": "verified",
+      "source": "https://www.wildlifetrusts.org/wildlife-explorer/reptiles/slow-worm",
+      "sourceNote": "Wildlife Trusts, in as many words: 'The slow worm is neither a worm nor a snake, but is, in fact, a legless lizard', and it has eyelids and a sheddable tail that snakes do not. The independent checker, which never saw this draft, could not refute it and reached three authorities that support it as worded: Wildlife Trusts, Froglife ('a type of legless lizard and are often mistaken for snakes') and Woodland Trust ('While slow worms may look like snakes, they are actually legless lizards.'). It offered blinking as an alternative delight — four authorities back it — but found nothing wrong with this wording, so the wording stands.",
       "proposedRewrite": "",
       "verdict": "",
       "replacement": "",

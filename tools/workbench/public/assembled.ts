@@ -26,9 +26,11 @@
  * whether a new animal *sits next to the fox without looking like a guest*. That
  * is not a question about an animal, it is a question about a PAIR, so this
  * gallery has no single-model mode to fall out of. Every selection puts a real
- * Kenney GLB on the left and our assembly on the right, at matched height, and
- * `DEFAULT_REFERENCE` is `animal-fox` because the fox is the animal the sentence
- * names. He can stand it beside any of the other 23 instead.
+ * Kenney GLB on the left and our assembly on the right, both drawn at ONE shared
+ * scale rather than at matched height — matching the heights deletes the size
+ * difference that is half of what he is judging — and `DEFAULT_REFERENCE` is
+ * `animal-fox` because the fox is the animal the sentence names. He can stand it
+ * beside any of the other 23 instead.
  *
  * ## The labelling is a requirement, not a decoration
  *
@@ -315,9 +317,12 @@ export function pairCard(row: AssembledRow, reference: string): PairCard {
       + `RIGHT is OURS — ${row.name} (${row.id}), ${NEW_METHOD_MARK}: every vertex in it was lifted out `
       + 'of the 24 original files and assembled by src/island/species/parts. NOTHING IS BAKED — the '
       + 'right half is rebuilt in this browser on every reload, so it cannot drift from what ships. '
-      + 'Both are scaled to exactly one unit tall, so what you are judging is proportion, silhouette '
-      + 'and colour rather than absolute model units. The question is whether the right one sits '
-      + 'beside the left one without looking like a guest.',
+      + 'Both halves are drawn at ONE shared scale — one model unit is the same length on each — so '
+      + 'absolute size survives onto the screen and a size difference you can see is a real size '
+      + "difference; each tag prints its half's true height in model units when you want the number. "
+      + 'The body hull is a fixed standard size on every assembled animal, so a cube that looks bigger '
+      + "than another animal's cube is a bug in the geometry now and not the viewer inventing it. "
+      + 'The question is whether the right one sits beside the left one without looking like a guest.',
   }
 }
 
