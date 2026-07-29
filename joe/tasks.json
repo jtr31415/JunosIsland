@@ -467,6 +467,20 @@
       "check": "",
       "note": "",
       "state": "open"
+    },
+    {
+      "id": "JT-036",
+      "type": "ruling",
+      "title": "NEEDS JOE: our animals carry almost nothing above the body cube — do four of them get ears? (PB-036)",
+      "detail": "Your size note is fixed, but measuring it turned up a second, separate thing that is yours to call.\n\nYOUR NOTE: \"the new animals look genuinely really good. general criticism is size. the body/cube should always be the standard size, its often bigger.\"\n\nWHAT WAS ACTUALLY WRONG, measured over all 14 Garden species and all 24 originals:\n1. The geometry was already right. Every built hull is exactly 1.250 on x and y (1.125 on z for the three that use a different real shell). No node carries a scale. No species stretched its hull. The badger’s 1.539 is the box-12 shell’s own ear lugs with the torso still exactly 1.250.\n2. The BUILDER let it happen anyway — hull.stretch multiplied the cube by any number at all, guarded only by a prose sentence. That is now a type error and a build-time throw (b5afc00), and the harness asserts every species’ hull against its shell’s own size. This is the second time you raised it; the first fix was for the hedgehog alone, which is why it came back.\n3. The thing you were actually LOOKING at was the viewer. It divided every animal by its OWN height, so an identical 1.250 cube drew at 0.87 of the frame for the 1.431-tall mouse and 0.63 for the 1.976-tall squirrel — a 1.38x swing in apparent body size, invented by the review tool, and applied to the pack animal beside it too. Both halves now share one scale (60666d2), so the cube is the same size on screen for all fourteen. Nothing about the animals changed.\n\nTHE QUESTION THIS LEFT. Kenney gets an animal’s height from what sits ON TOP of the cube — ears in 9 of 24, horns or antlers in 3, a crest or tuft in 3, a raised tail in 4. Mean clearance above the hull top: 0.236. Ours is 0.134, and four species have exactly 0.000 — the MOUSE, SHREW, MOLE and BADGER, whose cube IS the top of the animal. All four therefore sit on the height floor (1.43125, the height of a bare cube on standard legs) and give the cube 87.3% of their silhouette, against the pack’s median 77.6%. Our legs are the pack’s own 0.18125 to the digit, so it is not the legs.\n\nSo even at honest scale those four read blockier than a Kenney animal. Three options:\nA) Give each of the four something honest above the hull — real ears for the mouse, shrew and badger, and for the mole either a low crest or nothing, since a mole genuinely has almost no ear. Cost: four species rebuilt, four fingerprints repinned, no budget risk (adding parts only adds vertices, and it lifts all four off the height floor).\nB) Let those four swap to the pack’s own taller shell, box-21 (1.250 x 1.5051 x 1.250). The fox does exactly this and is the most cube-dominant original at 0.893. Cost: one line each, but it makes the body taller rather than adding an animal feature, and none of our fourteen uses box-21 today.\nC) Leave them. A mole and a shrew genuinely are blunt little animals, and the elephant is a real Kenney model with 0.000 above its hull too.\n\nNOTHING HAS BEEN BUILT ON ANY OF THESE. I did not choose, because ear-or-no-ear on four animals is a look, not a measurement, and looks are yours. Fable was not asked for the same reason. Nothing needs reverting whichever way you go; the harness invariant added this run is about hull SIZE and is unaffected.\n\nIf you pick A, say for each of the four whether it gets ears — the mole is the one I would expect you to answer differently.",
+      "blocks": [
+        "PB-036"
+      ],
+      "artefact": "src/island/species/parts/assembled/animal-{mouse,shrew,mole,badger}.ts",
+      "doneRule": "manual",
+      "check": "",
+      "note": "",
+      "state": "open"
     }
   ],
   "archive": []
