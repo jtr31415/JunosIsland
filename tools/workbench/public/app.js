@@ -34,6 +34,20 @@ async function refresh() {
 
 const save = (what, value) => api('/api/save', { body: { what, value } }).then(r => { say(`saved ${r.saved}`); return refresh() })
 
+/**
+ * One record, one field, said out loud.
+ *
+ * Sending the whole file for a one-field edit is what lost JT-020 and Joe's
+ * answer to JT-016: the server could not tell an edit from an echo of a stale
+ * copy, so the last save won and the other author's work went. A patch names
+ * what actually changed, so the server can apply it to the file as it is on
+ * disk this instant and leave everything else — including tasks this page has
+ * never heard of — exactly where it found them.
+ */
+const patchRecord = (what, id, fields) =>
+  api('/api/save', { body: { what, patch: { id, ...fields } } })
+    .then(r => { say(`saved ${r.saved}`); return refresh() })
+
 /* ------------------------------------------------------------------ tasks */
 
 function drawTasks() {
@@ -70,13 +84,12 @@ function drawTasks() {
   }
 }
 
-function writeTask(id, patch) {
-  const tasks = S.tasks.map(t => {
-    const { ok, warn, ...clean } = t                       // derived fields never persist
-    return t.id === id ? { ...clean, ...patch } : clean
-  })
-  return save('tasks', { schemaVersion: 1, tasks, archive: S.archive })
-}
+/*
+ * The derived fields (`ok`, `warn`) used to have to be stripped here so they
+ * never reached the file. They cannot reach it now: the server takes the named
+ * fields off the patch and nothing else.
+ */
+const writeTask = (id, fields) => patchRecord('tasks', id, fields)
 
 /* ------------------------------------------------------------------ backlog */
 
@@ -115,8 +128,7 @@ function drawBacklog() {
   }
 }
 
-const writeCard = (id, patch) =>
-  save('backlog', { ...S.backlog, cards: S.backlog.cards.map(c => c.id === id ? { ...c, ...patch } : c) })
+const writeCard = (id, fields) => patchRecord('backlog', id, fields)
 
 /* ------------------------------------------------------------------ lessons */
 

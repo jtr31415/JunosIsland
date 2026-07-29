@@ -202,6 +202,185 @@ describe('the workbench serves Joe his own files', () => {
   })
 })
 
+/**
+ * Both real losses, reproduced against the real handler.
+ *
+ * `joe/tasks.json` has two authors — Joe in the page, agents appending from the
+ * other side — and both used to POST the whole file, so the last save silently
+ * overwrote the other. It cost real work twice: an agent appended JT-020 and a
+ * save from a page loaded before it wiped it out (recovered later from a commit
+ * blob, 3c364b4), and the same collision the other way round destroyed his
+ * answer to JT-016.
+ *
+ * The agent's half is written to disk with `writeFileSync`, because that is
+ * literally how it happens — an agent edits the file, it does not use the API.
+ * The page's half goes over HTTP carrying the copy it loaded BEFORE that write,
+ * which is the whole mechanism.
+ */
+describe('two writers, one file', () => {
+  const path = () => join(root, 'joe/tasks.json')
+  const onDisk = (rel = 'joe/tasks.json') => JSON.parse(readFileSync(join(root, rel), 'utf8'))
+  const task = (f: any, id: string) => f.tasks.find((t: any) => t.id === id)
+
+  /** Exactly what the page holds: the state it loaded, less the derived fields. */
+  const pageCopy = async () => {
+    const s = await api('/api/state')
+    return {
+      schemaVersion: 1,
+      tasks: s.tasks.map(({ ok, warn, ...t }: any) => t),
+      archive: s.archive,
+    }
+  }
+
+  /** An agent, editing the file directly, after the page loaded. */
+  const agentWrites = (edit: (f: any) => void, rel = 'joe/tasks.json') => {
+    const f = onDisk(rel)
+    edit(f)
+    writeFileSync(join(root, rel), JSON.stringify(f, null, 2) + '\n')
+  }
+
+  const status = async (body: unknown) => {
+    const res = await fetch(base + '/api/save', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+    })
+    return { code: res.status, body: (await res.json()) as any }
+  }
+
+  it('the JT-020 loss: a task appended after the page loaded survives the page saving', async () => {
+    const stale = await pageCopy()
+    agentWrites(f => f.tasks.push({
+      id: 'JT-099', type: 'decision', title: 'appended while the page was open',
+      detail: 'the ruling an agent added after Joe opened the workbench',
+      doneRule: 'manual', note: '', state: 'open',
+    }))
+
+    const r = await status({ what: 'tasks', value: stale })
+    expect(r.code).toBe(200)
+
+    /* The save had never heard of JT-099. It is still there. */
+    expect(onDisk().tasks.map((t: any) => t.id)).toContain('JT-099')
+    expect(task(onDisk(), 'JT-099').title).toBe('appended while the page was open')
+  })
+
+  it("a note the page carries lands on a task whose disk copy has none — and so does the agent's", async () => {
+    /* Both halves at once, because only the pair is a real test. A payload note
+     * landing on an empty field passes with no merge at all — the old code wrote
+     * the payload verbatim. What it could not do is land Joe's note WITHOUT
+     * destroying the note an agent wrote to a different task meanwhile. */
+    const page = await pageCopy()
+    page.tasks.find((t: any) => t.id === 'JT-004').note = 'ask her teacher which word they use'
+    agentWrites(f => { task(f, 'JT-003').note = 'recast the owl, Joe said so on the phone' })
+
+    expect((await status({ what: 'tasks', value: page })).code).toBe(200)
+    expect(task(onDisk(), 'JT-004').note).toBe('ask her teacher which word they use')
+    expect(task(onDisk(), 'JT-003').note).toBe('recast the owl, Joe said so on the phone')
+  })
+
+  it('the JT-016 loss, reversed: a stale empty note never blanks the one on disk', async () => {
+    const stale = await pageCopy()                      // JT-005's note is '' here
+    agentWrites(f => { task(f, 'JT-005').note = "Joe's answer, recorded by an agent" })
+
+    const r = await status({ what: 'tasks', value: stale })
+    expect(r.code).toBe(200)
+    /* An empty note in a stale payload is an echo of an absence, not an
+     * instruction to blank something. */
+    expect(task(onDisk(), 'JT-005').note).toBe("Joe's answer, recorded by an agent")
+  })
+
+  it('two different notes for one task is a 409 that writes nothing', async () => {
+    const stale = await pageCopy()
+    stale.tasks.find((t: any) => t.id === 'JT-007').note = 'what Joe typed'
+    agentWrites(f => { task(f, 'JT-007').note = 'what the agent recorded' })
+
+    const r = await status({ what: 'tasks', value: stale })
+    expect(r.code).toBe(409)
+    expect(r.body.error).toContain('JT-007')
+    expect(r.body.clashes[0]).toMatchObject({ id: 'JT-007', field: 'note' })
+    /* Refused, not half-applied: the disk is exactly as the agent left it. */
+    expect(task(onDisk(), 'JT-007').note).toBe('what the agent recorded')
+  })
+
+  it("a patch is Joe's note winning outright — and it is the only way to clear one", async () => {
+    /* The 409 above is resolvable, and his rule is that his notes win. The page
+     * sends a patch, which says which field he changed, so there is nothing to
+     * guess about. */
+    expect((await status({ what: 'tasks', patch: { id: 'JT-007', note: 'what Joe typed' } })).code).toBe(200)
+    expect(task(onDisk(), 'JT-007').note).toBe('what Joe typed')
+
+    expect((await status({ what: 'tasks', patch: { id: 'JT-007', note: '' } })).code).toBe(200)
+    expect(task(onDisk(), 'JT-007').note).toBe('')
+  })
+
+  it('a stale tick cannot un-tick what an agent marked done', async () => {
+    const stale = await pageCopy()                      // JT-004 is 'open' in this copy
+    agentWrites(f => { task(f, 'JT-004').state = 'done' })
+
+    expect((await status({ what: 'tasks', value: stale })).code).toBe(200)
+    /* 'open' is what a task is born as — an absence of a decision, and an
+     * absence never unticks. Re-opening it is a patch, said out loud. */
+    expect(task(onDisk(), 'JT-004').state).toBe('done')
+    expect((await status({ what: 'tasks', patch: { id: 'JT-004', state: 'open' } })).code).toBe(200)
+    expect(task(onDisk(), 'JT-004').state).toBe('open')
+  })
+
+  it('never takes a field off the payload that the page does not own', async () => {
+    const stale = await pageCopy()
+    const forged = stale.tasks.find((t: any) => t.id === 'JT-001')
+    forged.title = 'rewritten by a stale page'
+    forged.blocks = []
+    agentWrites(f => { task(f, 'JT-001').detail = 'the agent sharpened the wording' })
+
+    expect((await status({ what: 'tasks', value: stale })).code).toBe(200)
+    const after = task(onDisk(), 'JT-001')
+    expect(after.title).toBe('Vet the lesson scripts')
+    expect(after.blocks).toContain('A8.bake')
+    expect(after.detail).toBe('the agent sharpened the wording')
+
+    /* And a patch may not smuggle one in either. */
+    const r = await status({ what: 'tasks', patch: { id: 'JT-001', title: 'nope' } })
+    expect(r.code).toBe(400)
+    expect(r.body.error).toContain('title')
+    expect(task(onDisk(), 'JT-001').title).toBe('Vet the lesson scripts')
+  })
+
+  it('adds a backlog card without reverting the cards it loaded stale', async () => {
+    const before = await api('/api/state')
+    const stale = JSON.parse(JSON.stringify(before.backlog))
+    agentWrites(f => { f.cards[0].state = 'done' }, 'joe/backlog.json')
+
+    const id = 'PB-' + String(stale.nextId).padStart(3, '0')
+    stale.cards.push({ id, title: 'a card Joe added', detail: '', state: 'open', run: '' })
+    stale.nextId += 1
+    expect((await status({ what: 'backlog', value: stale })).code).toBe(200)
+
+    const after = onDisk('joe/backlog.json')
+    expect(after.cards.map((c: any) => c.id)).toContain(id)      // his add landed
+    expect(after.cards[0].state).toBe('done')                     // the agent's change survived it
+    expect(after.nextId).toBe(stale.nextId)
+  })
+
+  it('keeps the file in ITS order and ITS formatting — two spaces, LF, trailing newline', async () => {
+    /* Inserted in the middle, not appended, so "kept" and "kept where it was"
+     * are different assertions and both get made. */
+    const stale = await pageCopy()
+    agentWrites(f => f.tasks.splice(2, 0, {
+      id: 'JT-098', type: 'decision', title: 'slotted in beside the one it belongs with',
+      detail: 'an agent files a ruling next to its neighbour, not at the end',
+      doneRule: 'manual', note: '', state: 'open',
+    }))
+    expect((await status({ what: 'tasks', value: stale })).code).toBe(200)
+
+    const after = onDisk()
+    expect(after.tasks.map((t: any) => t.id).slice(0, 4)).toEqual(['JT-001', 'JT-002', 'JT-098', 'JT-003'])
+    expect(after.schemaVersion).toBe(1)
+
+    const raw = readFileSync(path(), 'utf8')
+    expect(raw).not.toContain('\r')          // LF, on Windows, always
+    expect(raw.endsWith('\n')).toBe(true)
+    expect(raw).toContain('\n  "tasks": [')  // two spaces, as `writeJson` has always written it
+  })
+})
+
 describe('the workbench cannot be talked out of the repo', () => {
   it('refuses a write to a file that is not on the list', async () => {
     const r = await post('/api/save', { what: 'package', value: { hacked: true } })

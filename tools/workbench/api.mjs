@@ -18,6 +18,7 @@ import { inside, readJson, writeJson, writeText, readText, readEnv, OutsideRepo 
 import { allLessons, loadLesson, saveLesson, exportPlan, STATUSES } from './lessons.mjs'
 import { bakeOne, bakeState, loadManifest, BakeError } from './bake.mjs'
 import { checkTask, blocking } from './checks.mjs'
+import { mergeWhole, applyPatch, mergeable, Conflict, Refused } from './merge.mjs'
 import { REPO } from './seed.mjs'
 
 /** The only files the API may write, by name. An allowlist, not a path parameter. */
@@ -175,12 +176,44 @@ export function createApi(root) {
         return json(res, 200, { saved: `joe/lessons/${next2.id}.md` })
       }
 
+      /*
+       * Save, by merging onto what is on disk RIGHT NOW.
+       *
+       * The re-read has to happen here, inside the handler, and not a moment
+       * earlier: the whole point is that the file may have changed since the
+       * page loaded it, which is how JT-020 was lost and how Joe's answer to
+       * JT-016 was lost the other way round. See `merge.mjs` for the rules.
+       *
+       * Two shapes. `patch` names one record and the fields it changed, which
+       * is what the page sends for an edit and the only shape that carries
+       * intent. `value` is a whole file, which the page still sends for an
+       * append (Add card) and which any page loaded before this change sends
+       * for everything — merged conservatively, never applied as written.
+       */
       if (path === '/api/save' && req.method === 'POST') {
         const body = await readBody(req)
         const rel = WRITABLE[body.what]
         if (!rel) return json(res, 400, { error: `not a writable file: ${body.what}` })
-        writeJson(root, rel, body.value)
-        return json(res, 200, { saved: rel })
+        try {
+          /* Null only when the file is genuinely not there yet, or when this is
+           * one of the files that is not merged at all — see `merge.mjs`. */
+          const disk = mergeable(body.what) ? readJson(root, rel, null) : null
+          if (body.patch) {
+            if (!mergeable(body.what)) {
+              return json(res, 400, { error: `${body.what} is not patchable — send the whole file` })
+            }
+            if (!disk) return json(res, 404, { error: `${rel} is not there to patch` })
+            writeJson(root, rel, applyPatch(body.what, disk, body.patch))
+            return json(res, 200, { saved: rel, patched: body.patch.id })
+          }
+          if (body.value === undefined) return json(res, 400, { error: 'a save needs a value or a patch' })
+          writeJson(root, rel, disk ? mergeWhole(body.what, disk, body.value) : body.value)
+          return json(res, 200, { saved: rel })
+        } catch (err) {
+          if (err instanceof Conflict) return json(res, 409, { error: err.message, clashes: err.clashes })
+          if (err instanceof Refused) return json(res, 400, { error: err.message })
+          throw err
+        }
       }
 
       /*
