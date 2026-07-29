@@ -88,14 +88,50 @@ handoff.
    the acceptance test. The reward supply must not be exhaustible by a child who
    keeps playing.
 
-   **He is providing the list of animals himself, and it does not exist yet.**
-   So do not invent species, and do not let a subagent quietly generate a
-   plausible list — a guessed list is worse than no list, because it looks like
-   a decision that was made. Build everything that does not depend on knowing
-   the names: the collection data shape, the set/variant machinery, generation
-   and caching, the unlock ladder, the tests, and a small seeded sample so the
-   machinery can be exercised. Then say plainly in the handoff that the list is
-   the blocker and what shape it needs to arrive in.
+   **THE BRIEF HAS LANDED: `docs/pet-island-species-roster.md`** (29 July, 142
+   lines). It is the spec — build to it, not to a summary of it, and read it in
+   full before designing anything. It is ratified, not a draft. Highlights that
+   change how you must approach this:
+
+   - **~296 new builds across 20 collections**, on top of the live base 24. It
+     says explicitly this is *not a build order* — collections ship ONE AT A
+     TIME on the existing 85% unlock cadence. Do not attempt the roster in one
+     run, and do not let the scale tempt anyone into generating species in bulk
+     without review.
+   - **Kits before species.** Six kits (quadruped, songbird, raptor, swim,
+     minibeast, bespoke); build the kit once and species become DATA —
+     proportions, palette, two or three detail parts. That is the whole
+     architecture and it is where the leverage is.
+   - **The live 24 are frozen.** Never rebuilt, never restyled. Their geometry
+     is fair game as a starting point for new builds.
+   - §6 carries Joe's own open questions (ship order, whether Prehistoric ships
+     at all, IUCN wording). Those are HIS. Raise them in the workbench when they
+     block you; do not settle them with Fable.
+
+   **The naming change, and the trap inside it.** §3 replaces today's behaviour:
+   the given name becomes the alien-word generator **seeded deterministically
+   from `species + set`**, so every child's blue-set hedgehog is the same Bimo
+   forever, plus a real fixed species name as "playground currency". Names are
+   generated once, audited, and frozen as DATA — never regenerated, or the
+   shared bond breaks.
+
+   Today, `petName(defaultRng)` at `src/island/main.ts:1167` draws from unseeded
+   `Math.random` (`src/core/rng.ts:5`) and the result is persisted per pet in the
+   save (`flow.ts:311`, and the pet's `id` EMBEDS the name). **So Juno already
+   owns pets whose names were drawn randomly, and a naive switch to deterministic
+   naming renames the creatures she has already hatched.** That is a brief §19
+   violation — nothing she owns is ever lost, and a pet's name is the most
+   personal thing she owns. Existing pets keep their names; determinism applies
+   to newly hatched ones. Because the id embeds the name, check what an id
+   migration would touch before assuming either is safe. Treat this as the first
+   thing to get right, and write a test that hatches under the old scheme, moves
+   to the new, and asserts the old pet is untouched.
+
+   **The audit is Joe's manual work and it is large** — every generated name
+   needs checking for pronunciation and for real-word or rude-word collisions,
+   and name audio is baked in Olivia's voice. This is exactly the review he said
+   he may do in a separate session, so the audit surface is a first-class
+   deliverable, not a byproduct.
 
    **His review of this will likely happen OUTSIDE this drumbeat**, in a session
    of his own: *"lots of manual review work that i may do in a separate
