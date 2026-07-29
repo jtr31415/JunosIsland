@@ -161,8 +161,13 @@ export function handleWorldTap(flow: Flow, hit: Hit | null, p: InteractionPorts)
         }
         const asked = askForLand(flow, hit.axial)
         if (asked === flow) return flow
-        if (asked.phase === 'challenge') p.openSum(asked)
-        else p.say(TILE_QUESTION)
+        /*
+         * Always the question, never a sum. `askForLand` opened the next sum
+         * instead when a plot was standing; since PB-048 it always opens the
+         * bank, so the branch that read `asked.phase === 'challenge'` was dead
+         * and told a reader this tap might hand her a round. It cannot.
+         */
+        p.say(TILE_QUESTION)
         return asked
       }
       const next = placeTile(flow, hit.axial)
@@ -220,15 +225,19 @@ export function handleWorldTap(flow: Flow, hit: Hit | null, p: InteractionPorts)
        * Nothing is lost or spent, so a mis-aimed tap costs her only a tap
        * somewhere better (brief section 19).
        *
-       * A plot already under construction is the exception: tapping while one
-       * stands carries on building it, because that is unambiguously what she
-       * is doing — and a tap must never both move the camera and open a round.
+       * THERE IS NO EXCEPTION FOR A STANDING PLOT, and that is PB-048. Tapping
+       * her land while one stood used to carry on building it. Joe found what
+       * that does in the wild: Juno taps an ANIMAL, misses — `picking.ts` answers
+       * with whatever IS under the ray, so a near-miss falls through to this very
+       * case — and she is dropped into building a tile she had walked away from.
+       *
+       * So a tile tap starts nothing and resumes nothing, ever. Sockets are the
+       * only way to ask for land, which is what the `socket` case above already
+       * says the design intends, and a build she left is picked back up by
+       * tapping a glowing socket and choosing again (`askForLand`).
        */
-      if (!flow.plot) { p.focusOn(hit.axial); return flow }
-      const next = askForLand(flow)
-      if (next === flow) return flow
-      if (next.phase === 'challenge') p.openSum(next)
-      return next
+      p.focusOn(hit.axial)
+      return flow
     }
 
     default:

@@ -121,18 +121,35 @@ describe('flow — the earn loop', () => {
     expect(tileOffer(f).length).toBeGreaterThan(1)
   })
 
-  it('asking again once a plot is under construction opens the sum', () => {
-    let f = askForLand(createFlow())
-    f = placeTile(chooseTile(f, 'grass'), { q: 1, r: 0 })
-    // The intro tile costs one sum and is finished on siting, so build a
-    // second plot, which the curve prices above one.
+  it('asking again once a plot is under construction re-opens the bank — PB-048', () => {
+    /*
+     * It used to open the next sum instead, and that resumption IS the bug Joe
+     * reported. A standing plot in free play is one she has walked away from —
+     * the sum overlay stays up across every sum of a tile, so there is no other
+     * way to be back on the island mid-build — and resuming it dropped her into
+     * a build she had left, off a tap she had aimed at an animal.
+     *
+     * His ruling: *"the progress towards reward is saved, the location and type
+     * is not."* So asking again asks WHERE and WHAT afresh, and every sum she has
+     * answered comes along untouched.
+     */
+    // The intro tile is one sum, so it is paid off and out of the way; the
+    // SECOND is priced above one sum, which is what leaves a plot standing with
+    // real work in it after a single correct answer.
+    let f = buildTile(createFlow())
     f = askForLand({ ...f, phase: 'free' })
     f = placeTile(chooseTile(f, 'grass'), { q: 0, r: 1 })
-    expect(f.plot).not.toBeNull()
+    expect(sumsInItems(f)).toBeGreaterThan(1)
+    f = challengePassed(tapSum({ ...f, phase: 'free' }))
+    expect(f.plot, 'the fixture must still be mid-build').not.toBeNull()
+    expect(f.sumProgress).toBeGreaterThan(0)
 
-    const g = askForLand({ ...f, phase: 'free' })
-    expect(g.phase).toBe('challenge')
-    expect(g.challenge).toBe('sum')
+    const g = askForLand({ ...f, phase: 'free' }, { q: 1, r: -1 })
+    expect(g.phase).toBe('placing')
+    expect(g.challenge).toBeNull()
+    expect(g.chosen).toBeNull()
+    expect(g.pending).toEqual({ q: 1, r: -1 })
+    expect(g.sumProgress, 'nothing she has answered is spent').toBe(f.sumProgress)
   })
 
   it('refuses a sum when there is no plot to advance', () => {
@@ -448,12 +465,24 @@ describe('asking for land AT a socket', () => {
     expect(out.plot).toBeNull()
   })
 
-  it('never replaces a plot already under construction', () => {
-    // Siting over one would throw away both the spot she chose and every sum
-    // she has already spent on it.
+  it('RELOCATES a plot already under construction — PB-048', () => {
+    /*
+     * It used to refuse, on the ground that siting over a plot threw away both
+     * the spot she chose and every sum she had spent on it. Only half of that was
+     * ever true: `sumProgress` lives on the Flow, so the sums were never at risk
+     * and the spot was the only thing in the balance — and the spot is hers to
+     * change. Joe: *"the progress towards reward is saved, the location and type
+     * is not."*
+     */
     const first = chooseTile(askForLand(createFlow(), socket), 'grass')
-    const again = chooseTile({ ...first, phase: 'placing', pending: { q: 0, r: 1 } }, 'water')
-    expect(again.plot).toEqual(first.plot)
+    // One sum short of paying for it, so there is real work to carry across and
+    // the re-siting cannot quietly complete the tile instead.
+    const paid = { ...first, sumProgress: 1 }
+    expect(sumsForTile(paid)).toBeGreaterThan(1)
+    const again = chooseTile({ ...paid, phase: 'placing', pending: { q: 0, r: 1 } }, 'grass')
+    expect(again.plot).toEqual({ at: { q: 0, r: 1 }, type: 'grass' })
+    expect(again.plot).not.toEqual(first.plot)
+    expect(again.sumProgress, 'the work follows her to the new socket').toBe(1)
   })
 })
 

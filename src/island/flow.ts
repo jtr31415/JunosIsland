@@ -234,13 +234,29 @@ export function tapSum(f: Flow): Flow {
 /**
  * "I would like some land."
  *
- * With a plot already under construction this just opens the next sum. With
- * none, it opens the bank: phase 'placing', which shows the three-type offer
- * and lights up every socket.
+ * ALWAYS opens the bank — phase 'placing', which shows the offer and lights up
+ * every socket — whether a plot is standing or not. It never resumes one.
+ *
+ * PB-048, and the WHY is Joe's ruling: *"if she abandons a tile, the progress
+ * towards reward is saved, the location and type is not. so when she then taps
+ * another glowing tile to build one, progress picks up but location and type is
+ * rechosen by her on entry."*
+ *
+ * This used to `return tapSum(f)` when a plot stood, and that resumption is what
+ * shipped the bug. The sum overlay stays open across every sum of a tile, so the
+ * only way she is ever back on the island with a plot standing is by LEAVING one
+ * — a standing plot in free play IS the abandoned state. Resuming it meant any
+ * tap that reached this function dropped her back into a build she had walked
+ * away from, and a missed tap at an animal reaches it (`picking.ts` answers with
+ * whatever is under the ray, so a near-miss is the tile beneath her friend).
+ *
+ * Nothing is lost by re-asking: `sumProgress` lives on the Flow, not on the plot,
+ * so every sum she has answered carries into whatever she chooses next. What is
+ * discarded is the site and the kind — which is exactly what the ruling says, and
+ * `placeTile` is where that discarding actually happens.
  */
 export function askForLand(f: Flow, at: Axial | null = null): Flow {
   if (f.phase !== 'free') return f
-  if (f.plot) return tapSum(f)
   return { ...f, phase: 'placing', chosen: null, pending: at }
 }
 
@@ -531,9 +547,11 @@ export function chooseTile(f: Flow, t: TileType): Flow {
    * to restrict it to a plot she has not started — a girl who has done nine sums
    * toward the wrong tile is exactly the girl who most needs this.
    *
-   * It cannot be routed through `placeTile`, which refuses outright when a plot
-   * stands (and must: a restored save can arrive mid-build, and siting over it
-   * would throw away the site and the work both).
+   * It is answered HERE rather than routed through `placeTile`, which since
+   * PB-048 relocates a standing plot to whatever socket it is handed. Re-siting
+   * on the same hex would come out identical, but this is a retype and not a
+   * placement: it must not be able to fail the socket legality check for a hex
+   * she is already building on, and it says what it means.
    */
   if (f.plot && f.pending && key(f.pending) === key(f.plot.at)) {
     return {
@@ -581,11 +599,28 @@ export function askToRetype(f: Flow): Flow {
 export function placeTile(f: Flow, a: Axial): Flow {
   if (f.phase !== 'placing' || !f.chosen) return f
   /*
-   * Never replace a plot already under construction. A restored save can put
-   * the flow in 'placing' WITH a standing plot, and siting over it would
-   * throw away both the site she chose and every sum she has spent on it.
+   * SITING RELOCATES A STANDING PLOT. It used to refuse outright, on the ground
+   * that a site was a commitment and siting over one would throw away both the
+   * hex she chose and the sums she had spent on it.
+   *
+   * Half of that was never true and the other half is now the ruling. PB-048,
+   * Joe: *"if she abandons a tile, the progress towards reward is saved, the
+   * location and type is not."* The site was never a commitment — abandoning a
+   * plot and asking for land at another socket is her rechoosing where, and the
+   * old location is meant to go.
+   *
+   * THE SUMS ARE SAFE, which is the only thing that made the refusal load-bearing:
+   * `sumProgress` lives on the Flow and not on the plot, so it is untouched on
+   * every path through here. Nothing a child owns can be lost (brief §19) — what
+   * is discarded is a site and a kind, neither of which cost her anything.
+   *
+   * Re-siting on the SAME hex is therefore not a special case, only worth saying
+   * out loud: the object built below is the one already standing, rebuilt from
+   * the same site with the type re-judged exactly as it was the first time. (The
+   * ordinary change-your-mind never arrives here at all — `chooseTile` answers
+   * the same-hex case itself, so it does not go through the legality check for a
+   * hex whose plot is already standing on it.)
    */
-  if (f.plot) return f
   /*
    * Buildable, not merely adjacent. A handful of sockets admit neither kind — see
    * `buildableSockets` — and siting on one of those is what used to force the

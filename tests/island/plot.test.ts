@@ -30,10 +30,16 @@ import { createPlotHost } from '../../src/island/plot'
 import type { PlotPorts } from '../../src/island/plot'
 import {
   createFlow, askForLand, chooseTile, askToRetype, tileOffer, tapSum, challengePassed,
-  sumsForTile,
+  challengeFailed, sumsForTile,
 } from '../../src/island/flow'
 import type { Flow } from '../../src/island/flow'
-import { place } from '../../src/island/world/grid'
+import { handleWorldTap } from '../../src/island/interactions'
+import type { InteractionPorts } from '../../src/island/interactions'
+import { TILE_QUESTION } from '../../src/island/script'
+import { place, sockets } from '../../src/island/world/grid'
+import { buildableSockets } from '../../src/island/world/coast'
+import { key } from '../../src/island/world/hex'
+import type { Axial } from '../../src/island/world/hex'
 import { mountainHexFor } from '../../src/island/world/props'
 import { PALETTE } from '../../src/island/world/increments'
 import { readFileSync } from 'node:fs'
@@ -309,5 +315,215 @@ describe('the plot the ceremony needs is still there when the flow lets go', () 
     } finally {
       vi.useRealTimers()
     }
+  })
+})
+
+/**
+ * PB-048 — SHE WALKED AWAY FROM A TILE, AND CAME BACK TO SOMETHING ELSE.
+ *
+ * Joe, reporting it live: Juno taps an ANIMAL on her island, misses — `pickFrom`
+ * answers with whatever IS under the ray, so a near-miss falls through to
+ * `kind: 'tile'` — and is dropped straight back into building a tile she had
+ * walked away from. `askForLand` RESUMED a standing plot, so any tap on her own
+ * land carried on a build she had left.
+ *
+ * His ruling: *"if she abandons a tile, the progress towards reward is saved, the
+ * location and type is not. so when she then taps another glowing tile to build
+ * one, progress picks up but location and type is rechosen by her on entry."*
+ *
+ * A standing `flow.plot` while `phase === 'free'` IS the abandoned state: the sum
+ * overlay stays open across every sum of a tile, so the only way she lands back on
+ * the island mid-build is by leaving. So:
+ *
+ *   - a tap on an animal or any tile is a CAMERA MOVE and nothing else;
+ *   - a tap on the standing plot is unchanged (askToRetype, change-your-mind);
+ *   - a tap on a DIFFERENT glowing socket discards the old plot's LOCATION and
+ *     TYPE, asks the type question on entry, and carries `sumProgress` — which
+ *     lives on the Flow, not on the plot — across untouched.
+ *
+ * Driven through the REAL `handleWorldTap` and the REAL `createPlotHost`, because
+ * every fault in this seam has lived in the glue between two units that each
+ * behaved correctly.
+ */
+function askOnce() {
+  let asked: string | null = null
+  return vi.fn((which: 'space-surplus' | 'nursery-queue'): 'asked' | 'again' => {
+    if (asked === which) { asked = null; return 'again' }
+    asked = which
+    return 'asked'
+  })
+}
+
+/** The interaction ports, copied from `interactions.test.ts` rather than invented. */
+function ports(over: Partial<InteractionPorts> = {}): InteractionPorts {
+  return {
+    challengeOpen: () => false,
+    eggsPaused: () => false,
+    landPaused: () => false,
+    invite: askOnce(),
+    storyPlaying: () => false,
+    openRead: vi.fn(),
+    openSum: vi.fn(),
+    greetFred: vi.fn(),
+    bouncePet: vi.fn(),
+    focusOn: vi.fn(),
+    say: vi.fn(),
+    clearSay: vi.fn(),
+    speak: vi.fn(),
+    win: vi.fn(),
+    ...over,
+  }
+}
+
+/** The grass plot at (1,0), with one sum genuinely answered toward it. */
+function partBuilt(): Flow {
+  const f = challengePassed(tapSum({ ...sitedGrass(), phase: 'free' }))
+  expect(f.plot, 'the fixture must still be mid-build').not.toBeNull()
+  expect(f.sumProgress, 'the fixture must have real work in it').toBeGreaterThan(0)
+  return f
+}
+
+/**
+ * Another glowing socket, somewhere else, that really does take water.
+ *
+ * Found rather than typed: the assertion below is that the new type is HER new
+ * choice, so the socket has to be one where water is genuinely on offer —
+ * otherwise `tileTypeFor` would answer grass and the test would pass on a plot
+ * that had not changed kind at all.
+ */
+function elsewhere(f: Flow): Axial {
+  const open = buildableSockets(f.island, sockets(f.island))
+  const b = open.find(s => key(s) !== key(f.plot!.at)
+    && tileOffer({ ...f, phase: 'placing', pending: s, plot: null }).includes('water'))
+  expect(b, 'the fixture needs a second socket that really takes water').toBeDefined()
+  return b as Axial
+}
+
+describe('abandoning a tile', () => {
+  it('a tap on her own land never resumes the build — the reported bug', () => {
+    /*
+     * The miss, exactly as it reaches this layer. She aimed at an animal, the ray
+     * answered with the tile it was standing on, and she was handed a sum toward
+     * a tile she had walked away from.
+     */
+    const p = ports()
+    const f = partBuilt()
+    const next = handleWorldTap(f, { kind: 'tile', axial: { q: 5, r: 0 } }, p)
+    expect(next, 'a tile tap changes nothing at all').toBe(f)
+    expect(p.openSum).not.toHaveBeenCalled()
+    // It is a camera move, and only a camera move.
+    expect(p.focusOn).toHaveBeenCalledWith({ q: 5, r: 0 })
+  })
+
+  it('a tap on a different socket rechooses where and what, and keeps the sums', () => {
+    const p = ports()
+    const f = partBuilt()
+    const B = elsewhere(f)
+    const banked = f.sumProgress
+
+    const asked = handleWorldTap(f, { kind: 'socket', axial: B }, p)
+    expect(asked.phase).toBe('placing')
+    expect(asked.pending, 'the new socket is the one she tapped').toEqual(B)
+    expect(asked.chosen, 'the type is asked again on entry').toBeNull()
+    expect(asked.sumProgress, 'nothing she has answered is spent').toBe(banked)
+    expect(p.say).toHaveBeenCalledWith(TILE_QUESTION)
+    expect(p.openSum, 'a socket tap never opens a sum straight off').not.toHaveBeenCalled()
+    // The offer really contains the button she is about to press, so the
+    // assertion below cannot pass against an empty offer.
+    expect(tileOffer(asked)).toContain('water')
+
+    const built = chooseTile(asked, 'water')
+    expect(built.plot?.at, 'the old location is discarded').toEqual(B)
+    expect(built.plot?.type, 'and so is the old type').toBe('water')
+    expect(built.sumProgress, 'the progress is hers — brief §19').toBe(banked)
+    expect(built.phase).toBe('free')
+  })
+
+  it('moves the scaffolding, and never plays the completion bow', async () => {
+    /*
+     * `flow.plot` must go straight from the old plot to the new one. If it were
+     * ever transiently null, `plot.ts` would take the farewell branch — pin the
+     * scaffolding to full progress and bow — and an ABANDONED tile would look
+     * exactly like a finished one.
+     */
+    const r = rig()
+    const host = createPlotHost(r.ports)
+    const f = partBuilt()
+    const B = elsewhere(f)
+
+    host.show(f)
+    await settle()
+    const first = host.current()
+    expect(first).not.toBeNull()
+
+    /** Every progress the old scaffolding is ever put to. A bow is (n, n). */
+    const shown: Array<[number, number]> = []
+    const real = first!.setProgress.bind(first)
+    first!.setProgress = (done: number, cost: number): void => {
+      shown.push([done, cost]); real(done, cost)
+    }
+
+    const asked = handleWorldTap(f, { kind: 'socket', axial: B }, ports())
+    expect(asked.plot, 'the plot is never transiently null').not.toBeNull()
+    host.show(asked)
+    const built = chooseTile(asked, 'water')
+    expect(built.plot, 'nor here').not.toBeNull()
+    host.show(built)
+    await settle()
+
+    expect(shown.filter(([d, c]) => d >= c), 'no completion bow was played')
+      .toEqual([])
+    expect(host.current(), 'a live plot, rebuilt').not.toBe(first)
+    expect(host.current()).not.toBeNull()
+    expect(r.unstaged, 'the old one was handed back off the stage').toContain(first?.group)
+    expect(first?.group.parent, 'and taken off the island').toBeNull()
+    // Exactly one scaffolding in the scene, standing at the NEW socket.
+    const plots = r.scene.children.filter(o => o.name === 'growing-plot')
+    expect(plots).toEqual([host.current()?.group])
+    expect(host.current()?.group.position.toArray())
+      .toEqual(new THREE.Vector3(B.q, 0, B.r).toArray())
+    expect(host.sitedAt()).toEqual(B)
+  })
+
+  it('still opens the bank at a socket when nothing is standing', () => {
+    // The ordinary first build, pinned so the fix cannot silently break it.
+    const p = ports()
+    const f = createFlow()
+    const next = handleWorldTap(f, { kind: 'socket', axial: { q: 1, r: 0 } }, p)
+    expect(next.phase).toBe('placing')
+    expect(next.pending).toEqual({ q: 1, r: 0 })
+    expect(next.chosen).toBeNull()
+    expect(next.plot).toBeNull()
+    expect(p.say).toHaveBeenCalledWith(TILE_QUESTION)
+    expect(p.openSum).not.toHaveBeenCalled()
+  })
+
+  it('loses nothing at all when she walks out of a sum and starts again elsewhere', () => {
+    /*
+     * Brief §19, over the whole of what she owns. The walk-away is the REAL
+     * `challengeFailed` — the card is held, so she comes back to the same sum —
+     * and the restart is the real socket tap.
+     */
+    const f = partBuilt()
+    const left = challengeFailed(tapSum({ ...f, phase: 'free' }))
+    expect(left.phase).toBe('free')
+    expect(left.sumHeld, 'the card she left is held for her').toBe(true)
+
+    const B = elsewhere(left)
+    const back = chooseTile(handleWorldTap(left, { kind: 'socket', axial: B }, ports()), 'water')
+
+    // She really did restart, at the new socket and on a new kind...
+    expect(back.plot?.at).toEqual(B)
+    expect(back.plot?.type).toBe('water')
+    expect(back.phase).toBe('free')
+    // ...and not one thing she owns moved while she did it.
+    expect(back.sumProgress).toBe(left.sumProgress)
+    expect(back.island.tiles.size).toBe(left.island.tiles.size)
+    expect(back.tilesEarned).toBe(left.tilesEarned)
+    expect(back.bankedTiles).toBe(left.bankedTiles)
+    expect(back.pets).toEqual(left.pets)
+    expect(back.readProgress).toBe(left.readProgress)
+    expect(back.eggPresent).toBe(true)
+    expect(back.sumHeld, 'and still held after she restarts').toBe(true)
   })
 })

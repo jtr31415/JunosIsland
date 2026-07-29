@@ -197,27 +197,38 @@ describe('tapping her own land', () => {
     expect(p.focusOn).not.toHaveBeenCalled()
   })
 
-  it('still carries on a plot she is already building', () => {
-    // Unambiguously what she is doing, so it is not a surprise.
-    const p = ports()
-    const sited = readyToPlace()
-    handleWorldTap(sited, { kind: 'tile', axial: { q: 0, r: 0 } }, p)
-    // No plot on this state either, so still nothing — the guard is the plot,
-    // not the phase.
-    expect(p.openSum).not.toHaveBeenCalled()
-  })
-
-  it('carrying on a plot NEVER also moves the camera', () => {
+  it('does NOT carry on a plot she walked away from — PB-048', () => {
     /*
-     * A tap that both opened a round and swung the view would be the worst of
-     * both: she loses the place she was looking at AND is handed a sum she did
-     * not ask for. One tap, one thing.
+     * It used to, and Joe reported what that costs: Juno taps an ANIMAL, misses
+     * — `picking.ts` answers with whatever IS under the ray, so a near-miss is
+     * the tile her friend is standing on — and she is dropped into building a
+     * tile she had left. Her plot is still hers; she picks it back up by tapping
+     * a glowing socket, which asks her where and what afresh.
      */
     const p = ports()
     const f = midBuild()
-    const next = handleWorldTap({ ...f, phase: 'free' }, { kind: 'tile', axial: { q: 0, r: 0 } }, p)
-    expect(next.challenge).toBe('sum')
-    expect(p.focusOn).not.toHaveBeenCalled()
+    const free = { ...f, phase: 'free' as const }
+    const next = handleWorldTap(free, { kind: 'tile', axial: { q: 0, r: 0 } }, p)
+    expect(next).toBe(free)                      // a camera move changes nothing
+    expect(next.plot).toEqual(f.plot)            // and the plot is still standing
+    expect(p.openSum).not.toHaveBeenCalled()
+  })
+
+  it('one tap, one thing: it moves the camera and opens nothing', () => {
+    /*
+     * A tap that both opened a round and swung the view would be the worst of
+     * both: she loses the place she was looking at AND is handed a sum she did
+     * not ask for. That rule is why the tile tap could not do two things at
+     * once — and since PB-048 the one thing it does is LOOK, whether a plot is
+     * standing or not.
+     */
+    const p = ports()
+    const f = midBuild()
+    const free = { ...f, phase: 'free' as const }
+    const next = handleWorldTap(free, { kind: 'tile', axial: { q: 0, r: 0 } }, p)
+    expect(next.challenge).toBeNull()
+    expect(p.openSum).not.toHaveBeenCalled()
+    expect(p.focusOn).toHaveBeenCalledWith({ q: 0, r: 0 })
   })
 
   it('leaves a socket tap alone — asking for land is not looking at land', () => {
@@ -333,12 +344,18 @@ describe('tapping the island', () => {
     expect(p.say).not.toHaveBeenCalled()
   })
 
-  it('opens a sum once a plot is under construction', () => {
+  it('does NOT open a sum once a plot is under construction either — PB-048', () => {
+    /*
+     * The last route by which looking at her own island could hand her a maths
+     * round. A plot standing in free play is one she has walked away from, and
+     * the way back into it is a glowing socket.
+     */
     const p = ports()
     const f = midBuild()
-    const next = handleWorldTap({ ...f, phase: 'free' }, { kind: 'tile', axial: { q: 0, r: 0 } }, p)
-    expect(next.challenge).toBe('sum')
-    expect(p.openSum).toHaveBeenCalledWith(next)
+    const free = { ...f, phase: 'free' as const }
+    const next = handleWorldTap(free, { kind: 'tile', axial: { q: 0, r: 0 } }, p)
+    expect(next).toBe(free)
+    expect(p.openSum).not.toHaveBeenCalled()
   })
 
   it('does NOT open a sum while placing', () => {
@@ -413,10 +430,13 @@ describe('a completed round is never discarded', () => {
     const plot = f.plot
     expect(plot).not.toBeNull()
 
-    // Asking for land again advances this plot rather than starting another.
-    const again = handleWorldTap({ ...f, phase: 'free' }, { kind: 'tile', axial: { q: 0, r: 0 } }, p)
+    // ...and looking at her own land neither starts a second one nor resumes
+    // this one (PB-048). The plot she is building is untouched by the tap.
+    const seen = ports()
+    const again = handleWorldTap({ ...f, phase: 'free' }, { kind: 'tile', axial: { q: 0, r: 0 } }, seen)
     expect(again.plot).toEqual(plot)
-    expect(again.challenge).toBe('sum')
+    expect(seen.openSum).not.toHaveBeenCalled()
+    expect(seen.focusOn).toHaveBeenCalledWith({ q: 0, r: 0 })
   })
 })
 
@@ -482,12 +502,29 @@ describe('what the ports are actually handed', () => {
     expect(next).toEqual(handed)
   })
 
-  it('asking for land with a plot hands openSum an openable state', () => {
+  it('a tap on her land with a plot standing hands the ports no round at all', () => {
+    /*
+     * This used to assert that the RESUMED state handed to openSum would really
+     * open. PB-048 deleted the resumption, so the contract that matters is the
+     * negative one: nothing is opened, and there is no state for the real port
+     * to drop on the floor.
+     */
     const p = ports()
     const f = midBuild()
     handleWorldTap({ ...f, phase: 'free' }, { kind: 'tile', axial: { q: 0, r: 0 } }, p)
-    const handed = (p.openSum as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as Flow
-    expect(opensAs('sum')(handed)).toBe(true)
+    expect(p.openSum).not.toHaveBeenCalled()
+    expect(p.openRead).not.toHaveBeenCalled()
+  })
+
+  it('a socket tap with a plot standing hands say the question, not a sum', () => {
+    // The path that replaced it: she rechooses where and what, on entry.
+    const p = ports()
+    const f = midBuild()
+    const next = handleWorldTap({ ...f, phase: 'free' }, { kind: 'socket', axial: { q: 1, r: -1 } }, p)
+    expect(next.phase).toBe('placing')
+    expect(opensAs('sum')(next)).toBe(false)
+    expect(p.openSum).not.toHaveBeenCalled()
+    expect(p.say).toHaveBeenCalled()
   })
 
   it('tapping the egg hands openRead an openable state', () => {
@@ -622,11 +659,17 @@ describe('she can ignore Fred and go ahead anyway', () => {
 describe('a governor diverts a tap, it never strands one (continued)', () => {
 
   it('never pauses a plot that is already under construction', () => {
-    // §5: work in progress always finishes. The pause is on STARTING land.
+    /*
+     * §5: work in progress always finishes. The pause is on STARTING land.
+     *
+     * Asserted at the SOCKET since PB-048, because that is where carrying on now
+     * happens — a tile tap opens nothing to be paused. The governor's own rule
+     * (`!flow.plot && landPaused`) is PB-042's and is unchanged.
+     */
     const p = ports({ landPaused: () => true })
     const f = midBuild()
-    const next = handleWorldTap({ ...f, phase: 'free' }, { kind: 'tile', axial: { q: 0, r: 0 } }, p)
-    expect(next.challenge).toBe('sum')
+    const next = handleWorldTap({ ...f, phase: 'free' }, { kind: 'socket', axial: { q: 1, r: -1 } }, p)
+    expect(next.phase).toBe('placing')
     expect(p.invite).not.toHaveBeenCalled()
   })
 })
