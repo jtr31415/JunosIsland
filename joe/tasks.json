@@ -256,6 +256,48 @@
       "check": "",
       "note": "",
       "state": "open"
+    },
+    {
+      "id": "JT-021",
+      "type": "ruling",
+      "title": "The price starts at 1.2 and 4.0 tiles per pet, Fred still speaks at 1.5 and 3.0 (PB-042)",
+      "detail": "BUILT AND LIVE ALREADY - nod or retune. You asked us to pick both numbers, so this is the answer rather than the question, but one consequence cuts across JT-018 and you should see it. THE SHAPE: Fred speaks at the corridor you ratified, 1.5 tiles per pet crowded and 3.0 empty. Nothing costs more there. The surcharge starts further out, at 1.2 and 4.0. Between the two she has been told and is not being charged, which is the daylight you asked for. HOW THE TWO NUMBERS WERE FIXED - measured over every island from 1 to 40 animals, not chosen by eye. CROWDED: standing exactly on the warning wall leaves ZERO spare animals at every pet count 1..40, so before this change the first egg after Fred spoke was always already a charged egg - the warning had no room to act in. Widening the divisor buys about one spare animal per six tiles. 1.2 is the tightest divisor that buys at least one spare animal at every size out of grace: 1.4 fails at 6, 7, 8, 10 and 12 animals, 1.3 still fails at 6 animals on 9 tiles. EMPTY: the old wall charged a step at the VERY FIRST tile past it, at every pet count 1..12. 3.5 does not fix it and nor does 3.75 - at one animal the first overshoot is 4 tiles. 4.0 is the smallest multiplier that absorbs the first overshoot at every size, and it buys exactly one spare tile per animal. THE CONSEQUENCE TO WEIGH, and it is the JT-018 one. The crowded wall prices EGGS, so moving it out from 1.5 to 1.2 makes reading CHEAPER past the wall, and you said reading should in general be more expensive because the animal stash is finite and must not run out. The size of it, measured: at eight animals on six tiles an egg falls from 44 pages to 39; at ten on eight, from 54 to 48; at ten on five, from 66 to 60. Roughly ten to fifteen per cent off, only in the band past the wall, and list price is untouched. We judged that acceptable because the escalation and the treble cap are unchanged and the empty side was left far more generous than the crowded side precisely on your reasoning - tiles are unlimited, animals are not. IF YOU WANT READING DEARER AGAIN: raise price.crowded back toward 1.5, or raise escalation.slope from 0.25. Both are single numbers in the governor block of src/island/balance/balance.json and no code moves.",
+      "blocks": [
+        "PB-042"
+      ],
+      "artefact": "src/island/balance/balance.json",
+      "doneRule": "manual",
+      "check": "",
+      "note": "",
+      "state": "open"
+    },
+    {
+      "id": "JT-022",
+      "type": "ruling",
+      "title": "Your grace period means Fred can never mention crowding below six animals (PB-042)",
+      "detail": "BUILT AND LIVE ALREADY - nod or retune. Not a question about what you meant; a consequence of what you said that you may not have wanted. You ruled JT-016 as 'grace period up to 5 animals and 10 tiles', built as an AND: grace holds while she has at most 5 animals AND at most 10 tiles, and ends the moment either one grows. THE CONSEQUENCE. With 5 animals or fewer she can only leave grace by passing 10 tiles - and 10 tiles for 5 animals is 2.0 tiles per animal, which is exactly your target. So there is no island with 5 or fewer animals that is both out of grace and past the crowded wall. Fred's 'they need homes' line is unreachable until she has a sixth animal. The empty side is unaffected: an eleventh tile with two animals leaves grace and is genuinely bare, and Fred says so. WHETHER THAT IS RIGHT. We think it is, and built on it: the first five animals are the tutorial, a beginner should never be told she has too many friends, and the empty-side nudge still teaches her the loop. But it does mean one of the two governors is silent for the whole opening, which is more than 'up to 5 animals' obviously implies. IF YOU WANT IT OTHERWISE: making grace an OR - it ends when either number is still small - would let Fred speak to a child with 6 animals on 2 tiles sooner, but would also end grace for a child with 1 animal on 11 tiles who is plainly still learning. Dropping grace.pets to 3 would open the crowded side at 4 animals. Both are one number or one operator in src/island/balance/balance.json and src/island/balance/index.ts (graceHolds).",
+      "blocks": [
+        "PB-042"
+      ],
+      "artefact": "src/island/balance/index.ts",
+      "doneRule": "manual",
+      "check": "",
+      "note": "",
+      "state": "open"
+    },
+    {
+      "id": "JT-023",
+      "type": "external",
+      "title": "Fred now has to count out loud - twenty numerals to record (JT-019)",
+      "detail": "A new recording obligation, flagged before the character pass rather than after it, because docs/pet-island-voice.md 5.0 says the premium bake happens exactly once. YOUR JT-019 RULING - 'we get fred to tell her how many she needs to restore balance' - means two of Fred's lines now have a number spliced into them: 'They need homes! 3 more tiles will do it.' The splice law (voice.md 3) forbids crossing voices inside one sentence, so the numerals must be FRED's, not the teacher's - the teacher counting inside Fred's mouth is exactly the uncanny join the law exists to stop. WHAT THAT COSTS YOU: one clip per number, registered in voice/scripts.json as the 'count.' family. WE CHOSE 1-20, and it is a judgement rather than a derived bound. Measured over every island up to sixty tiles and twenty animals, the number Fred actually asks for is 1 to 4 in ordinary play; it only passes 20 on islands a child would have to work very hard to reach, and any number with no clip falls back to the robot voice like any other missing line (voice.md 6), so overshooting is safe and undershooting is survivable. Say if you would rather record fewer - ten covers everything realistic - or more. NOTHING IS BLOCKED ON THIS: the lines are live and speaking now through Web Speech.",
+      "blocks": [
+        "PB-042"
+      ],
+      "artefact": "voice/scripts.json",
+      "doneRule": "manual",
+      "check": "",
+      "note": "",
+      "state": "open"
     }
   ],
   "archive": []
