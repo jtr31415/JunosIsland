@@ -438,6 +438,20 @@
       "check": "",
       "note": "",
       "state": "open"
+    },
+    {
+      "id": "JT-034",
+      "type": "ruling",
+      "title": "The kits build head and body as two shapes; every original is ONE. Do we rebuild the 72? (PB-036)",
+      "detail": "YOUR AXIOM IS CONFIRMED, AND IT IS STRUCTURAL.\n\nYou said \"head = body\". Measured over all 24 originals: in 0 of 24 does a head separate\nfrom a torso. Every pack animal is one continuous shell running nose to tail. There is no\nseam at the neck because there is no neck.\n\nAll three kits do the opposite. Each emits a head box and a body box as siblings, never\nmerged: quadruped.ts:229 and :269, raptor.ts:289 and :372, songbird.ts:205 and :268. The\nhead is unconditional and clamped away from zero, so it cannot even be turned off.\nALL 72 BUILT SPECIES are two shapes where every original is one.\n\nTwo more of your axioms land the same way. All 48 eyes in the pack have EXACTLY zero\nthickness (48 of 48); the kits build eyes as protruding balls with a second ball in front\nfor the pupil. All 86 legs sit at one of six positions under the body; the kits\napproximate a leg the pack already ships as a reusable buffer.\n\nAND THE PACK IS ALREADY BUILT THE WAY YOU DESCRIBED.\nThe body shell is the IDENTICAL 1.250 cube in 13 of the 24 - same 60 triangles, same 120\npoints. Only 10 distinct body shells exist in the whole pack. Kenney made 24 animals by\nassembling and adjusting a small parts vocabulary. Your instruction is not a new method,\nit is his method.\n\nWHAT IT WOULD BUY. 206 separable shells across the 24 bodies; 182 feature parts across ~25\nkinds - 48 eye cards, 42 ears, 25 noses and snouts, 22 antlers/horns/ossicones/crests,\nplus tails, wings and the one leg. Honest variety: ~2,100 creatures a five-year-old could\ntell apart, of which ~300-600 read as a different animal. My earlier answer to you - that\n24 faces was the ceiling - WAS WRONG. It assumed the head was atomic. It is atomic, but\nthe face is not part of it.\n\nREACH: 186 of the 296 can be built from real parts. 64 cannot be built at all - Ocean,\nCritters, Dinosaurs and Raptors, for want of a fin, an insect wing, a frill and a hooked\nbeak. 46 are partial (Birds, Outback, Legendary). We have invented nothing and will not.\n\nTHE COST, PLAINLY. Building your way means the 72 existing species are REBUILT, not tuned.\nThe species records - proportions, palette, which ears - largely survive; the kit machinery\nunderneath them is replaced. Nothing has been rebuilt or deleted yet.\n\nTHE OPTIONS.\nA) Rebuild the kits to assemble lifted pack parts onto one fused shell. Matches the pack\n   exactly. Costs a rewrite of three kits and a re-check of all 72. Caps us at 186 of 296\n   until parts are found or drawn for the other four collections.\nB) Keep the kits and fix only the eye (flat card, absolute size). Cheapest, closes most of\n   \"the eye design is inconsistent\", leaves head-as-separate-box - so they still will not\n   read as Kenney animals.\nC) Hybrid: fuse head into body and adopt the real leg, tail and wing, but keep the shell\n   procedural so all 296 stay reachable. Middle cost, and the only option that does not\n   cap the roster.\n\nFABLE WAS NOT ASKED. This changes what a child sees, so it is yours alone.\n\nGO AND LOOK FIRST: npm run workbench, Anatomy tab (3rd). The fox comes apart into 10\nlabelled parts; the deer into 15 with its antlers as real separable objects. Kenney’s own\nnames are plain, ours are amber and say so. Full write-up in\ndocs/how-the-animals-are-made.md, part two.",
+      "blocks": [
+        "PB-036"
+      ],
+      "artefact": "docs/how-the-animals-are-made.md",
+      "doneRule": "manual",
+      "check": "",
+      "note": "",
+      "state": "open"
     }
   ],
   "archive": []
