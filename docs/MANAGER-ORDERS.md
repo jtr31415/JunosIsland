@@ -59,6 +59,16 @@ written down.
 In order. The drumbeat set this; do not reorder it without saying why in the
 handoff.
 
+**STATUS, 29 July — items 0 to 3 are DONE and are kept only for their reasoning.
+Do not re-do them.** Item 0 (PB-050, the abandoned tile) shipped and is live.
+Item 1 (PB-042) shipped, both halves, live. Item 2 (the maths ladder, PB-030)
+shipped as slices B1, B2 and B3, live. Item 3 (the backlog reconciliation) is
+done — `joe/backlog.json` is authoritative for state and `docs/BACKLOG.md` is
+the prose annex. **The live work starts at item 4.** Item 4 (PB-036) currently
+has its OWN dedicated manager running in parallel, so unless you were spawned as
+that manager, your item is 5 or later — check `docs/PB036-HANDOFF.md` to see
+where it has got to before assuming anything about the species layer.
+
 0. **PB-050 — LIVE BUG, an abandoned tile follows her around.** Reported by Joe,
    29 July, from Juno playing the deployed build. This jumps the queue.
 
