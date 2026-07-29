@@ -23,7 +23,7 @@ import { buildableSockets, landedType, landOffer, canBeRock } from './world/coas
  * itself, and later ones should be real work. The curve does both and
  * flattens rather than running away (slice-1 spec §4).
  */
-import { eggCostPast, tileCostPast, itemPay, balance } from './balance'
+import { eggCostPast, tileCostPast, itemPay, honeymoonPay, balance } from './balance'
 import { tileSteps, eggSteps } from './governors'
 
 /**
@@ -59,9 +59,43 @@ import { tileSteps, eggSteps } from './governors'
 /** Pages this egg costs. Eggs are counted by how many have already hatched. */
 export const pagesForEgg = (f: Flow): number =>
   eggCostPast(f.pets.length + 1, eggSteps(f))
-/** Sums this tile costs. Tiles counted by how many have been placed. */
+/**
+ * Sums this tile costs. Tiles counted by how many have been placed — LESS the
+ * ones bought during a honeymoon, which is the *"cost-index frozen"* half of
+ * runA.md:233.
+ *
+ * A PERMANENT OFFSET, NOT A SUSPEND-AND-RESUME, and that is the whole design
+ * decision. The obvious reading of "frozen" is a clock that stops and starts
+ * again: hold the index at whatever it was, then release it when the two
+ * sessions are up. That reading is unshippable HERE, because of the
+ * no-stranding proof written out directly above. An index that resumes SNAPS
+ * the price up at the instant it resumes — and if a plot is standing part-paid
+ * when it does, her `sumProgress` is suddenly short of a price that rose under
+ * her, which is the one thing those three paragraphs promise cannot happen.
+ * The proof holds for the governor because mid-round the step count can only
+ * fall; a resuming freeze would be a rise the proof does not cover.
+ *
+ * So the honeymoon does not stop the index — it makes the tiles bought under it
+ * NOT COUNT, for ever. Two tiles earned during a honeymoon leave her paying the
+ * price of tile n rather than tile n+2 from then on, and no price ever rises
+ * except in the ordinary way. It is strictly more generous than a resuming
+ * freeze and it can never strand a part-paid plot.
+ *
+ * GENEROUS ON PURPOSE, and only here. JT-018: *"i have an unlimited amount of
+ * tiles but a limited stash of animals as rewards."* Tiles cost the island
+ * nothing, so a permanent discount on them is affordable. `pagesForEgg` above
+ * has no such offset and must not grow one — animals are the scarce thing.
+ *
+ * Guarded at 1 because the index is a subtraction: a hand-edited save carrying
+ * more honeymoon tiles than earned ones would otherwise ask the curve for its
+ * zeroth or minus-first tile. BELT AND BRACES, stated honestly — `exactCost`
+ * clamps its own `n` the same way, so removing this line alone changes no
+ * behaviour today. It is here because the subtraction is introduced HERE and a
+ * reader of this line should not have to go and check; the clamp downstream is
+ * a property of the curve, not a promise to this caller.
+ */
 export const sumsForTile = (f: Flow): number =>
-  tileCostPast(f.tilesEarned + 1, tileSteps(f))
+  tileCostPast(Math.max(1, f.tilesEarned + 1 - f.honeymoonTiles), tileSteps(f))
 
 export type Phase = 'opening' | 'free' | 'challenge' | 'placing'
 export type ChallengeKind = 'read' | 'sum' | null
@@ -114,6 +148,16 @@ export interface Flow {
   /** How many tiles have been earned in total — drives the cost curve. */
   tilesEarned: number
   /**
+   * How many of those were committed while a maths honeymoon was running.
+   *
+   * An INDEX COUNT, not units of work: `sumsForTile` subtracts it from
+   * `tilesEarned` so a honeymoon tile leaves the price of the next one exactly
+   * where it was. See `sumsForTile` for why it is an offset rather than a
+   * paused clock, and `save.ts` for why it must not go through the unit
+   * rescale on load. Only ever rises, and only in `commitPlot`.
+   */
+  honeymoonTiles: number
+  /**
    * A dealt card left unfinished: the SAME one comes back next time.
    *
    * Joe, playtesting: *"there should be an x button to get back to the island
@@ -155,6 +199,7 @@ export function createFlow(): Flow {
     readProgress: 0,
     sumProgress: 0,
     tilesEarned: 0,
+    honeymoonTiles: 0,
     readHeld: false,
     sumHeld: false,
   }
@@ -226,11 +271,35 @@ export interface HatchDetails { name: string; species: string }
  *
  * Reading hatches the egg into a named pet; maths banks one tile and moves
  * straight into placing, because choosing where it goes is the reward.
+ *
+ * `honeymoon` is Run B's *"pay 3, 2 sessions, cost-index frozen"* (runA.md:233),
+ * and it is the caller's fact to supply: the harness owns WHEN — see
+ * `harness.honeymoonActive(path)`, which is documented as a marker only — and
+ * this file owns WHAT IT IS WORTH. Optional and defaulting to false so every
+ * existing call site is unchanged and an island with no harness behind it (the
+ * opening script, every test that predates Run B) is priced exactly as before.
  */
-export function challengePassed(f: Flow, hatch?: HatchDetails): Flow {
+export function challengePassed(
+  f: Flow, hatch?: HatchDetails, honeymoon = false,
+): Flow {
   if (f.phase !== 'challenge') return f
 
   if (f.challenge === 'read' && hatch) {
+    /*
+     * A READING PAGE PAYS THE ORDINARY RATE, IN A HONEYMOON OR OUT OF ONE, and
+     * that is the ruling rather than an oversight in threading the flag.
+     *
+     * Option A, maths only, on JT-018: *"i have an unlimited amount of tiles
+     * but a limited stash of animals as rewards."* Pages buy EGGS, and eggs
+     * come out of that limited stash — a pay-3 here would hand out scarce
+     * animals a third faster for two sessions, and the stash cannot be topped
+     * up. The honeymoon is generous with the thing there is an endless supply
+     * of. `honeymoon` is deliberately not read on this branch.
+     *
+     * It is also what keeps `pagesRead` honest: the page index is
+     * `readProgress / itemPay()`, so a page that paid 3 would step the
+     * find/build mix at the wrong stride (PB-038, JT-010(2)).
+     */
     const readProgress = f.readProgress + itemPay()
     // The card was ANSWERED, so it is spent: the next page is a fresh draw.
     if (readProgress < pagesForEgg(f)) {
@@ -257,14 +326,15 @@ export function challengePassed(f: Flow, hatch?: HatchDetails): Flow {
   }
 
   if (f.challenge === 'sum') {
-    const sumProgress = f.sumProgress + itemPay()
+    // The maths half of the honeymoon, and the only half there is.
+    const sumProgress = f.sumProgress + (honeymoon ? honeymoonPay() : itemPay())
     const next = {
       ...f, phase: 'free' as Phase, challenge: null, sumProgress, sumHeld: false,
     }
     // Not paid for yet: the plot simply stands a little further on, which the
     // increment sequence shows. Nothing is banked and nothing is invisible.
     if (sumProgress < sumsForTile(f)) return next
-    return commitPlot(next)
+    return commitPlot(next, honeymoon)
   }
 
   return { ...f, phase: 'free', challenge: null }
@@ -552,8 +622,15 @@ export function placeTile(f: Flow, a: Axial): Flow {
  *
  * The one place a tile is ever added to the island, so "earned" and "on the
  * map" cannot drift apart.
+ *
+ * `honeymoon` says the sum that finished this tile was answered under one, and
+ * it is the only thing that ever raises `honeymoonTiles`. Optional and false by
+ * default, which settles the other way in: a plot that completes WITHOUT a sum
+ * being answered — sited onto a banked credit, or onto a remainder carried over
+ * from the last tile (see `placeTile`) — was not bought with a honeymoon sum and
+ * does not take the freeze. The discount is granted where the work was done.
  */
-function commitPlot(f: Flow): Flow {
+function commitPlot(f: Flow, honeymoon = false): Flow {
   if (!f.plot) return f
   /*
    * Refuse to commit somewhere the tile cannot legally go.
@@ -576,7 +653,33 @@ function commitPlot(f: Flow): Flow {
     phase: 'free',
     challenge: null,
     tilesEarned: f.tilesEarned + 1,
-    sumProgress: 0,
+    /*
+     * This tile does not count toward the price of the next one — the frozen
+     * cost index, as the permanent offset `sumsForTile` explains.
+     */
+    honeymoonTiles: honeymoon ? f.honeymoonTiles + 1 : f.honeymoonTiles,
+    /*
+     * THE CHANGE IS CARRIED, NOT SWEPT UP. This used to be a flat 0, which was
+     * exactly right while every item paid 2: costs are quantised to whole
+     * `pay.item` units (`balance/index.ts`, `cost()`), so a run of pay-2 sums
+     * lands ON the price and never over it, and zeroing destroyed nothing.
+     *
+     * A pay-3 sum breaks that. A tile costing 8 with 6 already answered goes to
+     * 9, and the ninth unit is a third of a sum she genuinely did. Zeroing it
+     * would be taking work back off a child, which §19 does not allow — so the
+     * remainder starts the next tile instead.
+     *
+     * `max(0, …)` because this is also the path a BANKED CREDIT takes, where
+     * the tile was paid for in a previous flow and `sumProgress` is short of
+     * the price; there the subtraction is negative and the old behaviour —
+     * nothing carried — is the right one and the one this preserves.
+     *
+     * THE READING SIDE HAS NO SUCH REMAINDER and is deliberately left alone: a
+     * page always pays `itemPay()`, egg prices are whole multiples of it, so
+     * `readProgress` steps onto the price rather than over it. If pages are ever
+     * paid at another rate, that branch needs this treatment too.
+     */
+    sumProgress: Math.max(0, f.sumProgress - sumsForTile(f)),
     // Spend the carried-over credit, if this tile was paid for by one.
     bankedTiles: Math.max(0, f.bankedTiles - 1),
   }

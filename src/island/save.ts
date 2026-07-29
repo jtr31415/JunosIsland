@@ -43,6 +43,21 @@ interface IslandSave {
   pay?: number
   tilesEarned?: number
   /**
+   * How many of those tiles were bought during a maths honeymoon (Run B).
+   *
+   * AN INDEX COUNT, NOT UNITS OF WORK, and that distinction is the reason it
+   * is written out here rather than folded in beside the two progress numbers.
+   * `readProgress` and `sumProgress` are in units and must be re-denominated
+   * through `pay` when the unit changes; this is a count of TILES, which no
+   * re-base can ever rescale. Putting it through `inUnits` would multiply a
+   * child's honeymoon by whatever the unit did and hand her a discount — or
+   * take one away — that nobody granted.
+   *
+   * Absent means 0, exactly as it does for a save written before Run B: an
+   * island with no honeymoon behind it prices every tile the way it always did.
+   */
+  honeymoonTiles?: number
+  /**
    * The plot under construction.
    *
    * Saved because it is the only record of WHERE the sums already answered
@@ -160,6 +175,7 @@ export function toSave(
     sumProgress: flow.sumProgress,
     pay: itemPay(),
     tilesEarned: flow.tilesEarned,
+    honeymoonTiles: flow.honeymoonTiles,
     plot: flow.plot,
     childName,
     persistGranted,
@@ -217,6 +233,17 @@ export function fromSave(save: IslandSave | null): Loaded {
        */
       tilesEarned: typeof save.tilesEarned === 'number'
         ? save.tilesEarned : Math.max(0, save.tiles.length - 1),
+      /*
+       * NOT through `inUnits`. It is a count of tiles, not a quantity of work,
+       * so no re-denomination can apply to it — see the field's note above.
+       * Absent is 0, which is a pre-Run-B island and prices exactly as it did.
+       *
+       * Floored at 0 because a hand-edited negative would run `sumsForTile`'s
+       * index PAST `tilesEarned` and charge her more than list for every tile
+       * she has left — a save file that made the game harder.
+       */
+      honeymoonTiles: typeof save.honeymoonTiles === 'number'
+        ? Math.max(0, save.honeymoonTiles) : 0,
       plot: readPlot(save.plot),
       /*
        * Never mid-challenge, so a reload cannot strand the child in a round

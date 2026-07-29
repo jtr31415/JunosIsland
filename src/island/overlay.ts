@@ -99,7 +99,18 @@ export interface Overlay {
   openWordFind(picks: ReadPick[], staged?: boolean): void
   /** A build page: assemble one word from grapheme tiles (slice-1 spec §3). */
   openBuild(item: BuildItem, staged?: boolean): void
-  openSum(item: SumItem, staged?: boolean): void
+  /**
+   * A number-pad round.
+   *
+   * `debut` is runA.md:236 — *"dealt MIXED with the minus sign popping on
+   * debut"*. It is the host's to decide and not this module's: whether a
+   * subtraction is the FIRST one a child has ever been dealt is a fact about
+   * the attainment record, which the overlay has never seen and should not
+   * start seeing. Passed in beside `staged` for the same reason `staged` is an
+   * argument — a flag raised as a separate call would be wiped by the mount's
+   * own teardown microseconds later.
+   */
+  openSum(item: SumItem, staged?: boolean, debut?: boolean): void
   close(): void
   /**
    * Raise or drop the split layout outside of a mount.
@@ -152,6 +163,23 @@ export interface Overlay {
    * between a child and the game.
    */
   askName(): Promise<string>
+  /**
+   * Run B's offer, put to the child in her own words. Resolves yes or no.
+   *
+   * `text` is passed in rather than chosen here because the WORDING belongs to
+   * the spec (runA.md:230-236) and the CHOICE belongs to the harness — this is
+   * only the surface that shows one and collects the answer. It carries its own
+   * copy: `body:has(.overlay:not(.hide)) .say` blanks Fred's card for exactly
+   * as long as a panel is up, so a question asked through `say()` would be
+   * invisible while its own buttons were on screen.
+   *
+   * NOTHING HERE EXPIRES AND NOTHING DEFAULTS (brief §19). There is no timer,
+   * no auto-dismiss, and — unlike `askName` — no backdrop dismissal: a decline
+   * is a real answer that buys two sessions of silence, and a stray palm on a
+   * five-year-old's tablet must not be allowed to spend it. Only the two
+   * buttons resolve this promise.
+   */
+  offer(text: string): Promise<boolean>
   toast(msg: string): void
   isOpen(): boolean
   /**
@@ -573,7 +601,7 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
       handle = mountBuild(item, deps())
     },
 
-    openSum(item, staged = false) {
+    openSum(item, staged = false, debut = false) {
       teardown()
       startPage('sum')
       earned = false
@@ -583,7 +611,7 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
       // a button that does nothing is worse than no button.
       again.classList.add('hide')
       layer.classList.remove('hide')
-      handle = mountSum(item, deps())
+      handle = mountSum(item, deps(), debut)
     },
 
     /**
@@ -667,6 +695,74 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
         field.addEventListener('keydown', e => {
           if ((e as KeyboardEvent).key === 'Enter') done(field.value)
         })
+      })
+    },
+
+    offer(text) {
+      return new Promise<boolean>(resolve => {
+        const box = document.createElement('div')
+        box.className = 'chunk overlay-panel ask-offer'
+
+        /*
+         * THE QUESTION LIVES IN THE PANEL, not in a `.say` card.
+         *
+         * `tokens.css` hides `.say` for as long as any overlay is open, and
+         * this IS an overlay — so a question asked through `say()` would be
+         * invisible for precisely as long as the buttons answering it were on
+         * screen. That exact fault cost the tile offer a day; it is not being
+         * re-made here.
+         */
+        const ask = document.createElement('div')
+        ask.className = 'ask-offer-text'
+        ask.textContent = text
+
+        /*
+         * TWO EQUAL CHOICES.
+         *
+         * Deliberately NOT `overlay-again`/`overlay-back`, which are a bright
+         * primary and a faded secondary at 75% opacity. "No" here is not a
+         * lesser answer and must not be dressed as one: a decline costs her
+         * nothing (runA.md:231), so a child who does not fancy harder sums
+         * today has to be able to say so without the screen implying she has
+         * picked the sad button. Same size, same weight, same shape; only the
+         * fill differs, and it differs so the two are TELLABLE APART, which a
+         * five-year-old reading two similar words needs more than she needs a
+         * hierarchy.
+         */
+        const yes = document.createElement('button')
+        yes.className = 'chunk chunk-button ask-offer-choice ask-offer-yes'
+        yes.textContent = 'Yes please!'
+
+        const no = document.createElement('button')
+        no.className = 'chunk chunk-button ask-offer-choice ask-offer-no'
+        no.textContent = 'Not now'
+
+        const row = document.createElement('div')
+        row.className = 'ask-offer-choices'
+        row.append(yes, no)
+        box.append(ask, row)
+
+        const wrap = document.createElement('div')
+        wrap.className = 'overlay'
+        wrap.append(box)
+        root.append(wrap)
+
+        /*
+         * NO BACKDROP DISMISSAL, and this is a deliberate divergence from
+         * `askName` above — the one place these two panels are allowed to
+         * differ. Skipping a name prompt costs nothing and can be re-offered;
+         * declining an offer buys two sessions of silence on that path. A palm
+         * landing on the dim area beside the panel, or a stray tap left over
+         * from the ceremony that just finished, must not be able to spend an
+         * answer she never gave. There is also no timer and no default (brief
+         * §19: nothing expires) — the panel simply waits.
+         */
+        const done = (accepted: boolean): void => {
+          wrap.remove()
+          resolve(accepted)
+        }
+        yes.onclick = () => done(true)
+        no.onclick = () => done(false)
       })
     },
 

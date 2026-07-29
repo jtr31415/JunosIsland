@@ -17,8 +17,9 @@ import { describe, it, expect } from 'vitest'
 import {
   stageReport, autoWouldDo, TIER_WORDS,
 } from '../../src/island/report'
-import { LIVE_PATHS } from '../../src/island/harness'
+import { LIVE_PATHS, createAttainment, createHarness } from '../../src/island/harness'
 import type { StageStats } from '../../src/island/harness'
+import type { AttemptEvent } from '../../src/island/attempts'
 import { dayKey } from '../../src/platform/clock'
 
 /** A stage with nothing on it, so a test states only what it varies. */
@@ -272,10 +273,190 @@ describe('the plain facts beside the tiers', () => {
   })
 })
 
-describe('what Auto would do — Run A inertness', () => {
-  it('reads "watching" for every live path', () => {
-    // A6: the gate logic ships in B; the line's plumbing ships now. Inert by
-    // construction rather than behind a flag, so nothing can half-fire.
-    for (const path of LIVE_PATHS) expect(autoWouldDo(path)).toBe('watching')
+/* ------------------------------------------------- B2: what Auto would do */
+
+/**
+ * A REAL harness on a clock a test can walk.
+ *
+ * Not a stub, and the difference matters more here than anywhere else in this
+ * file: every branch of the line is an assertion that the island IS about to do
+ * something, and a mocked `pendingOffer` would only prove that the sentence
+ * quotes whatever it was handed. What is worth pinning is that the sentence and
+ * the gate cannot come apart — so the states below are reached the way the game
+ * reaches them, by answering questions and by accepting an offer.
+ *
+ * The clock is walkable because every Run B rule is a rule about DAYS: two
+ * distinct ones for mastery, one offer a session, a honeymoon of two. Noon-ish
+ * UTC on each, the convention `harness.test.ts` uses.
+ */
+const island = () => {
+  const a = createAttainment()
+  let today = '2026-07-01'
+  const h = createHarness(a, () => Date.parse(`${today}T09:00:00Z`))
+  return { a, h, on: (d: string) => { today = d } }
+}
+
+type Island = ReturnType<typeof island>
+
+const rightAnswer = (): AttemptEvent => ({
+  kind: 'sum', index: 0, correct: true, latencyMs: 1000,
+  helped: false, rescued: false, at: 0,
+})
+
+/** Twenty right answers on sums 1, across the days given. The mastery half. */
+const masterSums1 = (
+  { h, on }: Island, days = ['2026-07-01', '2026-07-02'],
+): void => {
+  h.dealt('sums', 1)
+  for (const d of days) {
+    on(d)
+    for (let i = 0; i < 10; i++) h.recordAttempt(rightAnswer())
+  }
+}
+
+/** Eight probes on sums 2, seven right: past *"≥ .70 over ≥ 8"*. */
+const probeSums2 = ({ h }: Island): void => {
+  h.dealt('sums', 2, true)
+  for (let i = 0; i < 8; i++) h.recordAttempt({ ...rightAnswer(), correct: i < 7 })
+  h.dealt('sums', 1)
+}
+
+describe('what Auto would do', () => {
+  it('reads "watching" for every live path on a fresh island', () => {
+    // The commonest state there is, and the A6 word kept exactly as it was:
+    // nothing about B landing may change what an island says on day one.
+    const it = island()
+    for (const path of LIVE_PATHS) expect(autoWouldDo(path, it.h, 'auto')).toBe('watching')
+  })
+
+  it('names the rung when a trickier offer is standing', () => {
+    /*
+     * takingAway 1 is ticked up front because its INTRODUCTION outranks a
+     * trickier offer, and this test is about the other one.
+     */
+    const it = island()
+    it.a.takingAway.stages[1]!.ticked = true
+    masterSums1(it)
+    probeSums2(it)
+    it.on('2026-07-03')
+
+    expect(it.h.pendingOffer()).toEqual({ path: 'sums', stage: 2, kind: 'trickier' })
+    expect(autoWouldDo('sums', it.h, 'auto')).toBe('offering the next step (stage 2)')
+  })
+
+  it('calls taking away by its own name, because it is a different event', () => {
+    // A whole new kind of maths is not "the next step", and a parent reading
+    // the line is deciding whether to be in the room for it.
+    const it = island()
+    masterSums1(it)
+    it.on('2026-07-03')
+
+    expect(it.h.pendingOffer()?.kind).toBe('takingAway')
+    expect(autoWouldDo('takingAway', it.h, 'auto')).toBe('offering taking away')
+  })
+
+  it('does not let one path claim another path’s offer', () => {
+    /*
+     * The gate answers ONE offer island-wide, so `pendingOffer` is not null for
+     * any of the four sections that ask it. Only the path it names may say so;
+     * sums here reports its own probing and nothing about subtraction.
+     */
+    const it = island()
+    masterSums1(it)
+    it.on('2026-07-03')
+
+    expect(it.h.pendingOffer()?.path).toBe('takingAway')
+    expect(autoWouldDo('sums', it.h, 'auto'))
+      .toBe('slipping in a harder question now and then')
+    expect(autoWouldDo('reading', it.h, 'auto')).toBe('watching')
+  })
+
+  it('says she is being gone easy on for the sessions after a yes', () => {
+    const it = island()
+    it.a.takingAway.stages[1]!.ticked = true
+    masterSums1(it)
+    probeSums2(it)
+    it.on('2026-07-03')
+    it.h.noteOffer('sums', true)
+
+    expect(it.a.sums.stages[2]!.ticked).toBe(true)
+    expect(it.h.honeymoonActive('sums')).toBe(true)
+    expect(autoWouldDo('sums', it.h, 'auto')).toBe('going easy after a yes')
+  })
+
+  it('keeps saying it after the path comes off Auto, because it is a promise made', () => {
+    // The honeymoon outranks the mode deliberately. A parent taking the ticks
+    // into his own hand does not un-say the two easy sessions she was given.
+    const it = island()
+    it.a.takingAway.stages[1]!.ticked = true
+    masterSums1(it)
+    probeSums2(it)
+    it.on('2026-07-03')
+    it.h.noteOffer('sums', true)
+
+    expect(autoWouldDo('sums', it.h, 'manual')).toBe('going easy after a yes')
+  })
+
+  it('says it is slipping in harder questions once the rung below is comfortable', () => {
+    // One day and ten answers: comfortable (ewma ≥ .75) and nowhere near the
+    // gate, which is exactly the window probes exist to fill.
+    const it = island()
+    masterSums1(it, ['2026-07-01'])
+
+    expect(it.h.pendingOffer()).toBeNull()
+    expect(autoWouldDo('sums', it.h, 'auto'))
+      .toBe('slipping in a harder question now and then')
+  })
+
+  it('says Auto is not driving a path a parent took over', () => {
+    const it = island()
+    expect(autoWouldDo('sums', it.h, 'manual'))
+      .toBe('standing back while this path is on manual')
+    expect(autoWouldDo('sums', it.h, 'hold'))
+      .toBe('standing back while this path is on hold')
+  })
+
+  it('stands back rather than describing work the gate has already refused', () => {
+    /*
+     * JT-011(a): *"Manual persists, and Run B must skip it."* The harness
+     * refuses probes and offers on a path off Auto, so a line that reported
+     * them would be describing something that cannot happen — and the parent it
+     * would mislead is the one who just said he was driving.
+     */
+    const it = island()
+    it.a.takingAway.stages[1]!.ticked = true
+    masterSums1(it)
+    probeSums2(it)
+    it.on('2026-07-03')
+    it.h.setMode('sums', 'hold')
+
+    expect(it.h.pendingOffer()).toBeNull()
+    expect(it.h.probeWanted('sums')).toBe(false)
+    expect(autoWouldDo('sums', it.h, 'hold'))
+      .toBe('standing back while this path is on hold')
+  })
+
+  it('is in the register of the tier words: lower case, and no shouting', () => {
+    /*
+     * The line sits an inch from "settling · steady · solid" on the same page,
+     * and it is read by someone deciding whether to trust the island with his
+     * daughter's next step. A tripwire, because register is the kind of thing a
+     * later edit breaks without noticing.
+     */
+    const it = island()
+    it.a.takingAway.stages[1]!.ticked = true
+    masterSums1(it)
+    probeSums2(it)
+    it.on('2026-07-03')
+
+    const lines = [
+      ...LIVE_PATHS.map(p => autoWouldDo(p, it.h, 'auto')),
+      autoWouldDo('sums', it.h, 'hold'),
+      autoWouldDo('reading', it.h, 'manual'),
+    ]
+    for (const line of lines) {
+      expect(line).toBe(line.toLowerCase())
+      expect(line).not.toContain('!')
+    }
   })
 })

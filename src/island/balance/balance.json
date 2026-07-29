@@ -1,11 +1,12 @@
 {
   "tile":     { "base": 2, "cap": 32, "tau": 6 },
   "egg":      { "base": 2, "cap": 28, "tau": 5 },
-  "pay":      { "item": 2 },
+  "pay":      { "item": 2, "honeymoon": 3 },
   "pages":    { "wordsPerFindPage": 3,
                 "mix": ["find", "build", "build", "build"] },
   "governor": { "grace":      { "pets": 5, "tiles": 10 },
                 "corridor":   { "crowded": 1.5, "empty": 3.0 },
+                "__jt021":    "PROVISIONAL — the two `price` walls below are ratified by Joe as JT-021 pending play-testing (\"very hard to predict and depends on play test\"). Retuning them is a DATA EDIT here; no code changes. See the tuning table above `emptySteps` in balance/index.ts.",
                 "price":      { "crowded": 1.2, "empty": 4.0 },
                 "escalation": { "slope": 0.25, "capMultiple": 3 } },
   "pets":     { "speciesMemory": 5 },

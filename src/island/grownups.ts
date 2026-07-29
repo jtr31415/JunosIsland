@@ -20,7 +20,7 @@
  * PIN, wears the same bones, and belongs to the same audience.
  */
 import { LIVE_PATHS, RESERVED_PATHS, STAGES } from './harness'
-import type { Attainment, Mode, Path, ReservedPath } from './harness'
+import type { Attainment, Harness, Mode, Path, ReservedPath } from './harness'
 import { TIER_WORDS, autoWouldDo, stageReport } from './report'
 import type { Measure } from './report'
 
@@ -284,6 +284,24 @@ const MODES: ReadonlyArray<{ mode: Mode; label: string; detail: string }> = [
  */
 export interface LearningDeps {
   attainment: Attainment
+  /**
+   * The island's own harness, for the one line that ASKS rather than writes.
+   *
+   * "What Auto would do" is a read of B's gate — the standing offer, the
+   * honeymoon, the probes — and the gate lives in one place on purpose.
+   *
+   * REQUIRED, and it was briefly optional, which was wrong twice over. The
+   * fallback built a SECOND harness inside `src/`, which is exactly what
+   * `tests/island/barrier.test.ts` — *"builds one, in main.ts, and nowhere
+   * else in src"* — exists to forbid: the harness holds `attainment` by
+   * reference, so two of them over one record is the silent-divergence shape
+   * this project has been bitten by four times. And the stand-in did not
+   * inherit the island's clock, so a game running on an offset clock had the
+   * panel reading B's day boundaries — today's offer, the cooldown, the
+   * honeymoon — off the real one. A required field costs one word at the only
+   * call site there is.
+   */
+  harness: Harness
   setTicked(path: Path, stage: number, ticked: boolean): boolean
   canUntick(path: Path, stage: number): boolean
   setMode(path: Path, mode: Mode): boolean
@@ -349,7 +367,7 @@ function stageMeta(attempts: number, lastActive: string | null): string {
 }
 
 /** One live path: its mode switch, its stages, and what Auto would do. */
-function livePathSection(path: Path, deps: LearningDeps): HTMLElement {
+function livePathSection(path: Path, deps: LearningDeps, h: Harness): HTMLElement {
   const section = document.createElement('div')
   section.className = 'grownups-path'
   section.dataset.path = path
@@ -415,7 +433,19 @@ function livePathSection(path: Path, deps: LearningDeps): HTMLElement {
 
   const auto = document.createElement('div')
   auto.className = 'grownups-auto'
-  auto.textContent = `What Auto would do: ${autoWouldDo(path)}`
+  /*
+   * REDRAWN WITH THE REST OF THE SECTION, and not written once.
+   *
+   * The line's fourth branch is the mode, and the mode switch is six inches
+   * above it. A line computed at open time would go on saying "watching" the
+   * instant a parent moved the path to Hold — which is the panel telling him
+   * his tap did nothing, about the one control here whose whole purpose is to
+   * stop Auto.
+   */
+  redraws.push(() => {
+    auto.textContent =
+      `What Auto would do: ${autoWouldDo(path, h, deps.attainment[path].mode)}`
+  })
   section.append(auto)
 
   redraw()
@@ -576,9 +606,17 @@ export function showLearning(root: HTMLElement, deps: LearningDeps): Promise<voi
       box.append(heading('What she is working on'))
       box.append(note('Only you see this. Nothing on this page is shown to her.'))
 
+      /*
+       * ONE harness for the whole panel, and it is the ISLAND'S. Four sections
+       * asking four different stand-ins about a gate that is *"one offer a
+       * session, island-wide"* would be four readings of the same question,
+       * and the cheapest way for them to disagree.
+       */
+      const h = deps.harness
+
       const list = document.createElement('div')
       list.className = 'grownups-paths'
-      for (const path of LIVE_PATHS) list.append(livePathSection(path, deps))
+      for (const path of LIVE_PATHS) list.append(livePathSection(path, deps, h))
       for (const path of RESERVED_PATHS) list.append(reservedSection(path))
       box.append(list)
 

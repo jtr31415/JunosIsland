@@ -31,7 +31,7 @@
  */
 import { reportRules } from './balance'
 import { dayKey } from '../platform/clock'
-import type { Path, SessionRecord, StageStats } from './harness'
+import type { Harness, Mode, Path, SessionRecord, StageStats } from './harness'
 
 /**
  * The three soft words. Deliberately not good/better/best: a parent reads a
@@ -204,16 +204,57 @@ export function stageReport(stats: StageStats): StageReport {
 }
 
 /**
- * The "what Auto would do" line, per path.
+ * The "what Auto would do" line, per path (B2).
  *
- * A6 is explicit that in Run A this reads *"watching"* — the gate logic that
- * would ever say anything else is Run B's, and only the line's plumbing ships
- * now. Inert by construction rather than behind a flag, exactly as the
- * harness's `probeWanted`/`offerDue` are: there is no policy in here to switch
- * off, so nothing can half-fire while the panel is being built against it. When
- * B lands, this function changes behaviour rather than shape, and no call site
- * moves.
+ * A6 shipped this inert — it read *"watching"* whatever the island was about
+ * to do — because the gate logic behind it was Run B's and only the line's
+ * plumbing belonged to A. B's gate is live and headless now, so this is the
+ * one place it becomes a sentence: the panel already draws the line, and what
+ * changes here is what it says rather than where it goes.
+ *
+ * IT ASKS, IT NEVER DECIDES. Every branch below is a READ of the harness, and
+ * the harness is the single choke point for all of this policy. A line that
+ * re-derived "is a probe wanted" from the stats would be a second copy of the
+ * gate, and the day the two disagreed the panel would be telling a parent
+ * something about his daughter that the island was not doing.
+ *
+ * MOST SPECIFIC FIRST, and the order is the point:
+ *
+ *   1. A standing offer, because it is the only branch that names something
+ *      that will happen to HER, today, and which rung it is about.
+ *   2. The honeymoon, which is above the mode check deliberately: it is a
+ *      promise already made, and it goes on being kept for its two sessions
+ *      even if a parent moves the path off Auto in the middle of it.
+ *   3. Probes, which are the quiet thing Auto does between offers.
+ *   4. Not on Auto at all — said last of the real answers, because a path on
+ *      Hold or Manual reaches none of the branches above it anyway (the gate
+ *      itself refuses a non-Auto path, JT-011(a)) and this is the plain-English
+ *      version of that refusal rather than a second rule.
+ *   5. `watching`, the A6 word, kept exactly as it was so that the commonest
+ *      state on a fresh island is the one nothing about B has changed.
+ *
+ * The wording is for a PARENT and in the register of `TIER_WORDS`: lower case,
+ * short, no exclamation. He is reading it to decide whether to leave the island
+ * to it, and a line that shouted would be a line he stopped believing.
+ *
+ * `mode` is passed rather than read, because `Harness` exposes `setMode` and no
+ * getter — the record is the panel's to read and the harness's to write.
  */
-export function autoWouldDo(_path: Path): string {
+export function autoWouldDo(path: Path, h: Harness, mode: Mode): string {
+  /*
+   * ONE CALL, and the offer itself rather than `offerDue(path)`. The line has
+   * to name the rung and tell B's two offers apart, which only the offer object
+   * can do — and `offerDue` would resolve the whole gate a second time to
+   * answer less.
+   */
+  const offer = h.pendingOffer()
+  if (offer && offer.path === path) {
+    return offer.kind === 'takingAway'
+      ? 'offering taking away'
+      : `offering the next step (stage ${offer.stage})`
+  }
+  if (h.honeymoonActive(path)) return 'going easy after a yes'
+  if (h.probeWanted(path)) return 'slipping in a harder question now and then'
+  if (mode !== 'auto') return `standing back while this path is on ${mode}`
   return 'watching'
 }

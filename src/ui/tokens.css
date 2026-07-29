@@ -99,6 +99,60 @@
 }
 
 /*
+ * Run B's offer: one question, two answers, nothing else on the panel.
+ *
+ * Narrow like `.ask-name` rather than the full challenge width, because it is
+ * a sentence and a pair of buttons and a 60rem card round that reads as a
+ * form. Nothing here dims, counts down or greys out — brief §19 — so there is
+ * no disabled state and no timer bar to style.
+ */
+.ask-offer {
+  display: grid;
+  gap: 1.4rem;
+  justify-items: center;
+  padding: 2rem 2.4rem;
+  width: min(92vw, 32rem);
+  animation: hatch-pop .32s var(--ease-pop) both;
+}
+
+.ask-offer-text {
+  font-size: clamp(1.15rem, 3.2vmin, 1.7rem);
+  font-weight: 800;
+  line-height: 1.35;
+  text-align: center;
+  color: var(--ink);
+}
+
+.ask-offer-choices {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+/*
+ * TWO EQUAL CHOICES, and this rule is the whole of that promise.
+ *
+ * A decline costs her nothing (runA.md:231), so "Not now" gets the same size,
+ * the same weight, the same radius and the same padding as "Yes please!" —
+ * `.overlay-back`'s 75% opacity would say, without a word, that she has picked
+ * the disappointing one. They differ in FILL only, which is what tells two
+ * short phrases apart for a child who is still learning to read them.
+ */
+.ask-offer-choice {
+  flex: 1 1 9rem;
+  min-height: 3.4rem;
+  border-radius: 999px;
+  padding: .7rem 1.4rem;
+  font-size: clamp(1rem, 2.8vmin, 1.3rem);
+  text-align: center;
+}
+
+.ask-offer-yes { background: var(--grass); color: #16340a; }
+.ask-offer-no { background: var(--sky); color: #10384d; }
+
+/*
  * While a challenge is open the say card would collide with it — and so would
  * the album, which is not an `.overlay` and so was not covered.
  *
@@ -211,6 +265,24 @@ body:has(.overlay:not(.hide)) .album-button { display: none; }
 @keyframes hatch-pop {
   from { transform: translate(-50%, -50%) scale(.4); opacity: 0 }
   to { transform: translate(-50%, -50%) scale(1); opacity: 1 }
+}
+
+/*
+ * The minus sign, the first time she is ever dealt one (runA.md:236).
+ *
+ * `hatch-pop`'s shape without `hatch-pop`'s transform: that one is written for
+ * a fixed, centred card and carries `translate(-50%, -50%)` in both keyframes,
+ * so borrowing it would fling the glyph out of the sum. One shot, `both`, and
+ * nothing to clear afterwards — the round is mounted fresh every time, so the
+ * class arrives with the element and leaves with it. It is decoration only:
+ * the pad is live throughout and she can answer straight through the pop.
+ */
+.op-debut { animation: op-debut-pop .55s var(--ease-pop) both; }
+
+@keyframes op-debut-pop {
+  from { transform: scale(0); opacity: 0 }
+  55% { transform: scale(1.45); opacity: 1 }
+  to { transform: scale(1); opacity: 1 }
 }
 
 .hide { display: none !important; }

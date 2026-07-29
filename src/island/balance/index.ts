@@ -25,8 +25,13 @@ export interface Balance {
    *
    * This is also the curve's rounding quantum — see `cost()`, which is where
    * the invisibility is actually enforced.
+   *
+   * `honeymoon` is the OTHER rate the paragraph above was written for: what one
+   * completed MATHS item pays while a Run B honeymoon is running (runA.md:233 —
+   * *"pay 3, 2 sessions, cost-index frozen"*). It is a second denomination, not
+   * a replacement — see `honeymoonPay`.
    */
-  pay: { item: number }
+  pay: { item: number; honeymoon: number }
   pages: { wordsPerFindPage: number; mix: PageKind[] }
   governor: {
     /**
@@ -269,6 +274,32 @@ function exactCost(curve: CostCurve, n: number): number {
 export const itemPay = (): number => Math.max(1, balance.pay.item)
 
 /**
+ * What one completed MATHS item pays while a honeymoon is running — runA.md:233,
+ * *"pay 3, 2 sessions, cost-index frozen"*.
+ *
+ * A SIBLING OF `itemPay`, NOT A PARAMETER ON IT, and the difference is not
+ * stylistic. `itemPay()` is read by three callers that must go on seeing 2
+ * whatever the harness has stamped:
+ *
+ *   - `itemsFor` (below), which converts a price in units into the number of
+ *     items a child answers — the pacing figure a month of tests pins.
+ *   - `pagesRead` (below), which turns `readProgress` into a PAGE INDEX. Reading
+ *     always pays one standard item, so a 3 here would read the find/build mix
+ *     at the wrong stride (PB-038, JT-010(2)).
+ *   - the save's re-denomination stamp (`save.ts:161`, read back at `:203`).
+ *     THIS IS THE DANGEROUS ONE. `fromSave` rescales banked progress by
+ *     `itemPay() / save.pay`, so a stamp of 3 written during a honeymoon would
+ *     make every later load multiply — or divide — every unit a child has
+ *     banked. A parameterised `itemPay(honeymoon)` invites exactly that call.
+ *
+ * `Math.max` rather than a bare read, so a dev overlay or a hand-tuned
+ * `balance.json` can never make the honeymoon pay LESS than an ordinary item:
+ * "going easy on her" that charged more would be a punishment for saying yes.
+ */
+export const honeymoonPay = (): number =>
+  Math.max(itemPay(), balance.pay.honeymoon)
+
+/**
  * How many ordinary items the nth thing actually costs — the number a child
  * experiences, and the one the pacing tests pin.
  */
@@ -334,6 +365,18 @@ export const tileCost = (n: number): number => cost(balance.tile, n)
  * something — and only outside 1.2 and 4.0 does anything cost more, a quarter
  * more for each whole step further out, never more than three times list. The
  * first five animals and first ten tiles are free of all of it.
+ *
+ * >>> PROVISIONAL, JT-021 — THE TWO PRICE WALLS ARE THE NUMBERS MOST LIKELY TO
+ * >>> MOVE, AND THIS IS THE MARK JOE ASKED FOR. He ratified them for now rather
+ * >>> than settled them: *"lets keep for now, its very hard to predict and
+ * >>> depends on play test. mark it in the code commentary so we find it easy if
+ * >>> we need to change."* So `price.crowded` (1.2) and `price.empty` (4.0)
+ * >>> stand AS SHIPPED and are expected to be retuned once a child has played
+ * >>> against them. RETUNING IS A DATA EDIT to the `governor.price` line in
+ * >>> `src/island/balance/balance.json` — no code change, no test rewrite,
+ * >>> nothing else in the tree to touch. The same marker is on that line. The
+ * >>> measurement below is an argument about HEADROOM, not about play: it says
+ * >>> what these two values buy, not that they will feel right to a five-year-old.
  *
  * WHY THE PRICE WALL IS NOT THE WARN WALL (PB-042). They used to be the same
  * wall, so the sentence "you have rather a lot of friends" and the higher price

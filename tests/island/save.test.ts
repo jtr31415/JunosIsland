@@ -566,3 +566,78 @@ describe('fixtures both directions (A5)', () => {
     expect(loaded.onceFlags).toContain('INTRO-TEN')
   })
 })
+
+/**
+ * The frozen cost index has to survive a reload — Run B, runA.md:233.
+ *
+ * `honeymoonTiles` is the count of tiles bought during a honeymoon, subtracted
+ * from `tilesEarned` when the next tile is priced. Losing it on load would snap
+ * every remaining price up by however many tiles she was given free, which is
+ * the stranding `flow.ts` refuses to allow; inventing it would hand out a
+ * discount nobody granted.
+ */
+describe('the honeymoon index survives a reload', () => {
+  /** A real island with a real honeymoon tile on it, built through the flow. */
+  function honeymoonFlow(): Flow {
+    let f = createFlow()
+    f = askForLand({ ...f, phase: 'free' })
+    f = placeTile(chooseTile(f, 'grass'), { q: 1, r: 0 })
+    while (f.plot) f = challengePassed(tapSum({ ...f, phase: 'free' }), undefined, true)
+    return f
+  }
+
+  it('round-trips through the real store', async () => {
+    const store = createLocalStore(mem)
+    const before = honeymoonFlow()
+    expect(before.honeymoonTiles).toBe(1)
+    await saveIsland(store, 'p1', before, true)
+
+    const { flow: after } = await loadIsland(store, 'p1')
+    expect(after.honeymoonTiles).toBe(before.honeymoonTiles)
+    expect(after.tilesEarned).toBe(before.tilesEarned)
+    // Stated where it is felt: the next tile costs what it cost before the save.
+    expect(sumsForTile(after)).toBe(sumsForTile(before))
+  })
+
+  it('writes it beside tilesEarned', () => {
+    expect(toSave(honeymoonFlow(), false).honeymoonTiles).toBe(1)
+  })
+
+  it('loads an old save without the field as 0, and prices it as it always was', () => {
+    const old = {
+      tiles: [['0,0', 'grass'], ['1,0', 'grass']] as Array<[string, 'grass']>,
+      pets: [], bankedTiles: 0, openingSeen: true, tilesEarned: 4, pay: 2,
+    }
+    const { flow } = fromSave(old)
+    expect(flow.honeymoonTiles).toBe(0)
+    expect(sumsForTile(flow)).toBe(tileCost(5))
+  })
+
+  it('is an INDEX COUNT and is never put through the unit rescale', () => {
+    /*
+     * The trap this exists for. `readProgress` and `sumProgress` are in units
+     * and a pre-A7 save doubles them on load. `honeymoonTiles` counts TILES, so
+     * the same doubling would silently hand a child two free tiles' worth of
+     * discount for every one she was actually given.
+     */
+    const preA7 = {
+      tiles: [['0,0', 'grass']] as Array<[string, 'grass']>,
+      pets: [], bankedTiles: 0, openingSeen: true,
+      sumProgress: 3, tilesEarned: 4, honeymoonTiles: 2,   // no `pay`: scale ×2
+    }
+    const { flow } = fromSave(preA7)
+    expect(flow.sumProgress).toBe(6)        // units DO rescale
+    expect(flow.honeymoonTiles).toBe(2)     // tiles do NOT
+  })
+
+  it('refuses a hand-edited negative, which would make the game harder', () => {
+    const meddled = {
+      tiles: [['0,0', 'grass']] as Array<[string, 'grass']>,
+      pets: [], bankedTiles: 0, openingSeen: true,
+      tilesEarned: 4, honeymoonTiles: -3, pay: 2,
+    }
+    const { flow } = fromSave(meddled)
+    expect(flow.honeymoonTiles).toBe(0)
+    expect(sumsForTile(flow)).toBe(tileCost(5))
+  })
+})

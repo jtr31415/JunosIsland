@@ -761,6 +761,14 @@ async function boot(): Promise<void> {
   async function learning(): Promise<void> {
     await showLearning(document.body, {
       attainment,
+      /*
+       * THE ISLAND'S OWN harness, not one the panel builds for itself. It
+       * reads B's gate for "what Auto would do", and that gate turns on the
+       * day — so a stand-in would answer off the wall clock while the game
+       * ran on `clock`, and would be a second harness over one record, which
+       * `tests/island/barrier.test.ts` forbids outright.
+       */
+      harness,
       setTicked: (path, stage, ticked) => harness.setTicked(path, stage, ticked),
       canUntick: (path, stage) => harness.canUntick(path, stage),
       setMode: (path, mode) => harness.setMode(path, mode),
@@ -1054,9 +1062,92 @@ async function boot(): Promise<void> {
 
     const item = dealSum(sumStore, defaultRng, dealtSum.stage,
       dealtSum.path === 'takingAway' ? 'sub' : 'add', state.sumHeld)
+    /*
+     * *"dealt MIXED with the minus sign popping on debut"* — runA.md:236.
+     *
+     * The debut is the first take-away she is EVER dealt, which is a question
+     * about the record and not about this round: `takingAway` 1 with no
+     * attempts on it yet. Read straight off `attainment` because that is where
+     * the answer already is — no new persisted flag, and nothing added to the
+     * harness, which would be a second thing to keep in step with the first.
+     *
+     * It reads `attempts` and not the tick, and that matters: the path is
+     * ticked the instant she says yes to the offer, so a tick would be spent
+     * before she had seen a single minus sign. `dealt()` above does not touch
+     * `attempts` — only an answered question does — so this stays true right
+     * up to the moment she answers it, held rounds included.
+     *
+     * REJECTED: popping on every subtraction. runA.md:236 says debut, and a
+     * glyph that jumps every time stops meaning "this one is new" by the
+     * third round and starts meaning nothing at all.
+     */
+    const debut = dealtSum.path === 'takingAway'
+      && (attainment.takingAway.stages[1]?.attempts ?? 0) === 0
     overlay.clearSay()
     const staged = stageFor('sum', state)
-    overlay.openSum(item, staged)
+    overlay.openSum(item, staged, debut)
+  }
+
+  /**
+   * Run B's offer, put to her at the completion high (runA.md:230-236).
+   *
+   * WHAT THIS FUNCTION DELIBERATELY DOES NOT DO is most of it. Whether there
+   * is an offer to make — priority between the two, the cadence, the
+   * two-session cooldown after a decline, one offer per session island-wide,
+   * and whether the path is even on Auto — is `pendingOffer()`, entire. So
+   * this asks once and renders whatever comes back, and re-derives NOTHING. A
+   * surface that second-guessed the gate would be a second copy of the rules
+   * that has to agree with the first, which is the shape HANDOFF §6 records as
+   * having produced three faults in two days on the plot/flow seam.
+   *
+   * AFTER THE CEREMONY, NEVER INSIDE IT. `ceremony()` holds the island's exits
+   * shut for the length of its body, and a question with no timer behind it
+   * inside that body would hold them shut until she answered — which is a lock
+   * on a child, and brief §19 does not allow one. It is also the moment the
+   * spec asks for: she has just watched a friend arrive or a piece of land
+   * land, and *"do you want harder ones?"* means something different there
+   * than it does after a page that merely ended.
+   *
+   * AND IT PERSISTS. An accepted offer ticks a stage and stamps the honeymoon,
+   * and both of those live in `attainment` — so without this write her yes is
+   * a thing that happened until she next closes the tab. Through `commit` on
+   * the attainment record, exactly as the grown-ups panel's ticks are, and not
+   * through `commitState()`: those receipts are counted one-for-one against
+   * ceremonies (barrier.test.ts), and this is not one.
+   */
+  async function putTheOffer(): Promise<void> {
+    const due = harness.pendingOffer()
+    if (due === null) return
+
+    /*
+     * VERBATIM from runA.md:230-236, both of them, down to the byte. These are
+     * the spec's own words — *"universal line"* — and the reason they are
+     * quoted rather than written afresh is that they were chosen: the trickier
+     * line names the REWARD ("eggs and tiles faster") because that is what a
+     * five-year-old is actually being asked to weigh, and the taking-away line
+     * is short and unadorned because the thing itself is the news.
+     */
+    const line = due.kind === 'takingAway'
+      ? 'Would you like to do some taking away?'
+      : 'You are doing really well! Would you like some trickier questions? They will get you eggs and tiles faster.'
+
+    /*
+     * Spoken AND shown. She is five: the trickier line is above her reading
+     * level, and a question she cannot read is not a choice. The panel carries
+     * its own copy because `body:has(.overlay:not(.hide)) .say` blanks Fred's
+     * card for exactly as long as the buttons are up.
+     */
+    speech.speak(line)
+    const accepted = await overlay.offer(line)
+
+    /*
+     * Answered by PATH, from the offer that was actually due — never a literal
+     * and never a remembered kind. `noteOffer` re-resolves against
+     * `pendingOffer()` itself, so a stale answer cannot tick anything; handing
+     * it `due.path` is what makes the two ends the same offer.
+     */
+    harness.noteOffer(due.path, accepted)
+    await commit(attainment, () => persist())
   }
 
   /**
@@ -1253,10 +1344,30 @@ async function boot(): Promise<void> {
           }, 900)
         })
 
+        /*
+         * THE OPENING STILL WINS, and the offer waits for another session.
+         *
+         * Fred is mid-story: he handed the child one page at beat six and is
+         * about to pick the thread back up. A panel asking whether she wants
+         * harder sums, opened over the top of that, is two voices at once and
+         * the first thing the island ever says to her being an upsell. The
+         * offer costs nothing to postpone — `pendingOffer()` will still be
+         * making it next time, because nothing here has been noted.
+         */
         if (openingResumeAt >= 0) {
           const at = openingResumeAt
           openingResumeAt = -1
           setTimeout(() => { void runOpening(at) }, 2200)
+        } else {
+          /*
+           * ONE QUESTION AT THIS MOMENT, NOT TWO. Note what does not follow
+           * this line: `offerAStretch()`. Both branches that reach an offer
+           * return immediately, and that is the point — "would you like harder
+           * questions?" chased by "shall we get up and run about?" is the sales
+           * pitch harness.ts:809-813 refuses to make, and the second question
+           * is the one a tired five-year-old answers just to make it stop.
+           */
+          await putTheOffer()
         }
         return
       }
@@ -1305,7 +1416,23 @@ async function boot(): Promise<void> {
        * tiles, which no longer exist.
        */
       const tilesBefore = flow.island.tiles.size
-      flow = challengePassed(flow)
+      /*
+       * THE HONEYMOON'S PAY-3, on the path the sum was actually dealt from.
+       *
+       * runA.md:232-233 — *"accept = tick + honeymoon (pay 3, 2 sessions)"*.
+       * The harness stamps WHEN and `flow.ts` owns what a round is worth, so
+       * this line is the whole of the join between them, and it asks about
+       * `dealtSum.path` rather than about maths in general: she accepted an
+       * offer on ONE path, and a honeymoon on `takingAway` must not quietly
+       * pay three for addition too. `'sums'` is the fallback for the paths
+       * into this branch that predate the harness (the opening script), and
+       * it is the conservative one — an island with nothing accepted is not
+       * in a honeymoon on either path.
+       *
+       * Reading pays 2 either way, by ruling (flow.ts:288-299), so the other
+       * branch deliberately does not thread this.
+       */
+      flow = challengePassed(flow, undefined, harness.honeymoonActive(dealtSum?.path ?? 'sums'))
       const earned = flow.island.tiles.size > tilesBefore
 
       if (earned) {
@@ -1407,6 +1534,13 @@ async function boot(): Promise<void> {
           world.lighting.celebrationBump()   // the move-in lift (lighting §4)
           refresh()
         })
+
+        /*
+         * The other completion high, and the same rules: after the ceremony so
+         * the exits are her own again, and nothing follows it — no stretch, no
+         * second ask. See `putTheOffer`.
+         */
+        await putTheOffer()
         return
       }
 

@@ -363,10 +363,20 @@ describe('flow — work in progress is never lost', () => {
      */
     let f = createFlow()
     f = { ...f, phase: 'placing', sumProgress: 999 }
+    const price = sumsForTile(f)
     f = placeTile(chooseTile(f, 'water'), { q: 1, r: 0 })
     expect(f.plot).toBeNull()
     expect(f.island.tiles.get('1,0')).toBe('water')
-    expect(f.sumProgress).toBe(0)
+    /*
+     * The tile's price is SPENT, and what is left over is left over. This used
+     * to assert a flat 0, which was indistinguishable from the truth while every
+     * sum paid 2 and every price was a multiple of 2 — progress landed exactly
+     * on the price and there was never a remainder to see. A pay-3 honeymoon sum
+     * can overshoot, and §19 does not let the overshoot be swept up, so commit
+     * now subtracts the price rather than zeroing. 999 is a synthetic
+     * overpayment; the change from it belongs to her.
+     */
+    expect(f.sumProgress).toBe(999 - price)
   })
 
   it('never lets a plot be chosen or sited mid-challenge', () => {
@@ -444,5 +454,182 @@ describe('asking for land AT a socket', () => {
     const first = chooseTile(askForLand(createFlow(), socket), 'grass')
     const again = chooseTile({ ...first, phase: 'placing', pending: { q: 0, r: 1 } }, 'water')
     expect(again.plot).toEqual(first.plot)
+  })
+})
+
+/**
+ * Run B's honeymoon — the economic half (runA.md:233, *"pay 3, 2 sessions,
+ * cost-index frozen"*), and Joe's Option A ruling on JT-018: MATHS ONLY.
+ *
+ * The harness decides WHEN (`honeymoonActive`, a marker only); every test here
+ * hands the flag straight in, which is exactly what main.ts does, so what is
+ * driven is the real transition and not a stand-in for it.
+ */
+describe('flow — the honeymoon', () => {
+  const pet = { name: 'Bimo', species: 'animal-fox' }
+
+  /** Site a plot and leave it standing, so sums have somewhere to land. */
+  function sited(f: Flow, at = { q: 1, r: 0 }): Flow {
+    f = askForLand({ ...f, phase: 'free' })
+    f = chooseTile(f, 'grass')
+    return placeTile(f, at)
+  }
+
+  /** A flow far enough up the curve that one sum cannot finish the tile. */
+  const dearTile = (): Flow => ({ ...createFlow(), tilesEarned: 3 })
+
+  it('pays 3 for a maths page in a honeymoon and 2 out of one', () => {
+    const standing = sited(dearTile())
+    expect(standing.plot).not.toBeNull()
+
+    const inside = challengePassed(tapSum({ ...standing, phase: 'free' }), undefined, true)
+    const outside = challengePassed(tapSum({ ...standing, phase: 'free' }))
+
+    expect(inside.sumProgress).toBe(3)
+    expect(outside.sumProgress).toBe(2)
+  })
+
+  it('pays 2 for a reading page IN a honeymoon — Option A, maths only', () => {
+    /*
+     * JT-018: *"i have an unlimited amount of tiles but a limited stash of
+     * animals as rewards."* Pages buy eggs and eggs come out of that stash, so
+     * the generous rate is not offered here. This is the ruling, not a gap in
+     * the threading — the flag IS passed and is deliberately not read.
+     */
+    let f = challengePassed(tapEgg(createFlow()), pet)
+    expect(f.pets).toHaveLength(1)
+    expect(pagesForEgg(f)).toBeGreaterThan(itemPay())   // an egg worth reading to
+
+    const inside = challengePassed(tapEgg({ ...f, phase: 'free' }), pet, true)
+    const outside = challengePassed(tapEgg({ ...f, phase: 'free' }), pet)
+
+    expect(inside.readProgress).toBe(2)
+    expect(inside.readProgress).toBe(outside.readProgress)
+  })
+
+  it('does not advance the tile index for a tile bought in a honeymoon', () => {
+    const before = createFlow()
+    const price = sumsForTile(before)
+
+    let f = sited(before)
+    while (f.plot) f = challengePassed(tapSum({ ...f, phase: 'free' }), undefined, true)
+
+    expect(f.tilesEarned).toBe(1)
+    expect(f.honeymoonTiles).toBe(1)
+    // The tile is REAL — she has the land — and the next one costs what this
+    // one did. That is the freeze, as a permanent offset.
+    expect(count(f.island)).toBe(count(before.island) + 1)
+    expect(sumsForTile(f)).toBe(price)
+  })
+
+  it('DOES advance it for an ordinary tile', () => {
+    const before = createFlow()
+    const price = sumsForTile(before)
+
+    let f = sited(before)
+    while (f.plot) f = challengePassed(tapSum({ ...f, phase: 'free' }))
+
+    expect(f.tilesEarned).toBe(1)
+    expect(f.honeymoonTiles).toBe(0)
+    expect(sumsForTile(f)).toBeGreaterThan(price)
+  })
+
+  it('resumes the climb from the offset once the honeymoon is over', () => {
+    // Not a pause that catches up later: the honeymoon tile never counts again.
+    let f = createFlow()
+    const first = sumsForTile(f)
+    f = sited(f)
+    while (f.plot) f = challengePassed(tapSum({ ...f, phase: 'free' }), undefined, true)
+    expect(sumsForTile(f)).toBe(first)
+
+    f = sited(f, { q: 0, r: 1 })
+    while (f.plot) f = challengePassed(tapSum({ ...f, phase: 'free' }))
+    expect(f.tilesEarned).toBe(2)
+    expect(f.honeymoonTiles).toBe(1)
+    // Two tiles on the island, priced as the second — not as the third.
+    expect(sumsForTile(f)).toBe(sumsForTile({ ...createFlow(), tilesEarned: 1 }))
+  })
+
+  it('carries a 1-unit overshoot into the next tile instead of eating it', () => {
+    /*
+     * Prices are quantised to whole `pay.item` units, so pay-2 sums land ON the
+     * price and commit had nothing to carry. A pay-3 sum can step over it, and
+     * the step-over is work she did. §19: nothing she owns is lost.
+     */
+    const before = dearTile()
+    const price = sumsForTile(before)
+    expect(price % 3).toBe(2)            // ...so the last sum overshoots by 1
+
+    let f = sited(before)
+    let sums = 0
+    while (f.plot) {
+      f = challengePassed(tapSum({ ...f, phase: 'free' }), undefined, true)
+      sums++
+    }
+    expect(sums * 3 - price).toBe(1)     // a 1-unit remainder existed to lose
+    expect(f.sumProgress).toBe(1)        // and it did not get lost
+  })
+
+  it('spends the carried remainder on the tile after it', () => {
+    // Carrying it is only half the promise; it has to BUY something.
+    let f = dearTile()
+    let paid = 0
+    let spent = 0
+    for (const at of [{ q: 1, r: 0 }, { q: 0, r: 1 }, { q: -1, r: 1 }]) {
+      spent += sumsForTile(f)
+      f = sited(f, at)
+      while (f.plot) {
+        f = challengePassed(tapSum({ ...f, phase: 'free' }), undefined, true)
+        paid += 3
+      }
+    }
+    // Every unit answered either bought a tile or is still standing to her name.
+    expect(f.sumProgress).toBe(paid - spent)
+    expect(f.tilesEarned).toBe(6)          // the three she built, on top of 3
+    expect(f.honeymoonTiles).toBe(3)
+    // ...and all three were free of the curve, so she is still paying tile 4's
+    // price after building three of them.
+    expect(sumsForTile(f)).toBe(sumsForTile(dearTile()))
+  })
+
+  it('never carries a NEGATIVE remainder when a banked credit pays', () => {
+    /*
+     * The other end of the same subtraction. A tile finished by a credit
+     * carried over from a previous flow (see `placeTile`) has no sums behind it
+     * at all, so `sumProgress - price` goes below zero — and progress that ran
+     * negative would make the NEXT tile quietly dearer than its list price,
+     * which is the same §19 harm from the opposite direction.
+     */
+    let f: Flow = { ...createFlow(), bankedTiles: 1, phase: 'placing' }
+    expect(sumsForTile(f)).toBeGreaterThan(0)
+    f = placeTile(chooseTile(f, 'grass'), { q: 1, r: 0 })
+    expect(f.plot).toBeNull()
+    expect(f.bankedTiles).toBe(0)
+    expect(f.sumProgress).toBe(0)
+  })
+
+  it('leaves an ordinary run with no remainder at all', () => {
+    // The carry must be invisible outside a honeymoon: pay-2 into a price that
+    // is a multiple of 2 lands exactly, and commit still reads 0.
+    let f = dearTile()
+    f = sited(f)
+    while (f.plot) f = challengePassed(tapSum({ ...f, phase: 'free' }))
+    expect(f.sumProgress).toBe(0)
+    expect(f.honeymoonTiles).toBe(0)
+  })
+
+  it('never asks the curve for a tile before the first one', () => {
+    /*
+     * A hand-edited save can claim more honeymoon tiles than tiles earned; the
+     * index is a subtraction and must not run off the bottom of the curve.
+     *
+     * TWO CLAMPS HOLD THIS, and the test is deliberately written against the
+     * behaviour rather than either line: `sumsForTile` floors the index at 1,
+     * and `exactCost` floors its own `n`. Removing just one of them leaves this
+     * green — measured, not assumed. Removing both turns it red.
+     */
+    const absurd = { ...createFlow(), tilesEarned: 2, honeymoonTiles: 99 }
+    expect(sumsForTile(absurd)).toBe(sumsForTile(createFlow()))
+    expect(sumsForTile(absurd)).toBeGreaterThan(0)
   })
 })

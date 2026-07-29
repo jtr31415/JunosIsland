@@ -10,7 +10,17 @@ import { defaultRng } from '../core/rng'
 import type { SumItem } from '../core/generators/sums'
 import type { ChallengeDeps, ChallengeHandle } from './mount'
 
-export function mountSum(p: SumItem, deps: ChallengeDeps): ChallengeHandle {
+/**
+ * @param debut The very first take-away this child has ever been dealt, so the
+ *   minus sign is a glyph she has not met — runA.md:236, *"dealt MIXED with the
+ *   minus sign popping on debut"*. It pops ONCE, on the sign only, and it is
+ *   the host that knows whether this is the debut (see `main.ts`'s deal site);
+ *   this module is only told. Ignored on an addition, because there is nothing
+ *   new about a plus.
+ */
+export function mountSum(
+  p: SumItem, deps: ChallengeDeps, debut = false,
+): ChallengeHandle {
   let roundTimer: ReturnType<typeof setTimeout> | null = null
   let torn = false
 
@@ -35,7 +45,18 @@ export function mountSum(p: SumItem, deps: ChallengeDeps): ChallengeHandle {
   }
 
   const A = pill(p.a, 'blue'), B = pill(p.b, 'blue'), ANS = pill('?', 'mystery')
-  box.append(A, op(p.op === 'add' ? '+' : '−'), B, op('='), ANS)
+  /*
+   * U+2212 MINUS SIGN, not a hyphen, and it pops the first time she meets it.
+   *
+   * The pop is one CSS animation on the glyph itself and nothing else: no
+   * toast, no held input, no beat she has to sit through. runA.md:236 asks for
+   * the sign to be INTRODUCED rather than explained, and a symbol that moves
+   * once is how a five-year-old is told "this one is new" without a sentence.
+   * The `=` never pops — she has seen that on every sum she has ever done.
+   */
+  const sign = op(p.op === 'add' ? '+' : '−')
+  if (debut && p.op === 'sub') sign.classList.add('op-debut')
+  box.append(A, sign, B, op('='), ANS)
 
   const answer = p.op === 'add' ? p.a + p.b : p.a - p.b
   let solved = false, wrongs = 0

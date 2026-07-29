@@ -15,7 +15,9 @@
  * hold it there.
  */
 import { describe, it, expect } from 'vitest'
-import { cost, itemsFor, itemPay, eggCost, tileCost, balance } from '../../src/island/balance'
+import {
+  cost, itemsFor, itemPay, honeymoonPay, pagesRead, eggCost, tileCost, balance,
+} from '../../src/island/balance'
 
 /**
  * The pre-A7 curves, verbatim: base 1 / cap 16 / tau 6 for tiles, base 1 /
@@ -128,6 +130,55 @@ describe('the month-walk', () => {
       const items = Math.ceil(tileCost(n) / itemPay())
       expect(items * itemPay()).toBe(tileCost(n))
     }
+  })
+})
+
+/**
+ * The other denomination A7 was built for — Run B's honeymoon (runA.md:233).
+ *
+ * The doubling exists so that "pay 3" is expressible at all. These pin the
+ * second rate as a SIBLING: it is 3, and nothing that reads `itemPay()` moved
+ * because of it. The dangerous one is the third assertion — `save.ts` stamps
+ * `itemPay()` into every save and `fromSave` rescales banked work by it, so a
+ * honeymoon that changed what `itemPay()` answers would corrupt the next load.
+ */
+describe('the honeymoon rate is a sibling, not a replacement', () => {
+  it('pays 3 for a honeymoon item', () => {
+    expect(honeymoonPay()).toBe(3)
+    expect(balance.pay.honeymoon).toBe(3)
+  })
+
+  it('leaves the ordinary rate at 2', () => {
+    expect(itemPay()).toBe(2)
+    expect(balance.pay.item).toBe(2)
+  })
+
+  it('never pays less than an ordinary item, however balance.json is tuned', () => {
+    // "Going easy on her" that charged MORE would be a punishment for saying
+    // yes, so the floor is part of the contract rather than a coincidence of
+    // the shipped numbers.
+    const saved = balance.pay.honeymoon
+    try {
+      balance.pay.honeymoon = 1
+      expect(honeymoonPay()).toBe(itemPay())
+    } finally {
+      balance.pay.honeymoon = saved
+    }
+  })
+
+  it('leaves itemsFor counting in ordinary items at every n', () => {
+    // The pacing figure. If it ever divided by 3 the whole month-walk above
+    // would be measuring a different game.
+    for (let n = 1; n <= 200; n++) {
+      expect(itemsFor(balance.tile, n)).toBe(tileCost(n) / itemPay())
+      expect(itemsFor(balance.egg, n)).toBe(eggCost(n) / itemPay())
+    }
+  })
+
+  it('leaves pagesRead striding the find/build mix in twos', () => {
+    // PB-038 / JT-010(2): the page index is units ÷ 2. At 3 it would read the
+    // four-long mix at the wrong stride and deal find pages one in two.
+    for (let units = 0; units <= 40; units += 2) expect(pagesRead(units)).toBe(units / 2)
   })
 })
 

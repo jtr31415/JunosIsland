@@ -16,18 +16,30 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { showLearning, stageLabel } from '../../src/island/grownups'
 import type { LearningDeps } from '../../src/island/grownups'
 import { createAttainment, createHarness } from '../../src/island/harness'
-import type { Mode, Path } from '../../src/island/harness'
+import type { Attainment, Harness, Mode, Path } from '../../src/island/harness'
+import type { AttemptEvent } from '../../src/island/attempts'
 
 afterEach(() => { document.body.innerHTML = '' })
 
-function makeDeps() {
-  const attainment = createAttainment()
-  const harness = createHarness(attainment)
+/**
+ * The panel's dependencies, over a real harness.
+ *
+ * `harness` is now ALWAYS handed in, because `LearningDeps` requires it: the
+ * panel used to build its own when the field was left out, which meant a
+ * second `createHarness` inside `src/` (forbidden by barrier.test.ts) reading
+ * B's day boundaries off the wall clock instead of the island's. The `wired`
+ * argument is now only about WHICH island — a fresh one, or one whose gate has
+ * already fired.
+ */
+function makeDeps(wired?: { attainment: Attainment; harness: Harness }) {
+  const attainment = wired?.attainment ?? createAttainment()
+  const harness = wired?.harness ?? createHarness(attainment)
   /** Which writer was called, in the order the panel called it. */
   const order: string[] = []
 
   const deps: LearningDeps = {
     attainment,
+    harness,
     setTicked: vi.fn((p: Path, s: number, t: boolean) => {
       order.push('setTicked')
       return harness.setTicked(p, s, t)
@@ -41,6 +53,31 @@ function makeDeps() {
     stageLabel,
   }
   return { deps, attainment, harness, order }
+}
+
+/**
+ * An island where B's gate has actually fired: twenty right answers on sums 1
+ * across two days, so subtraction's introduction is standing on the third.
+ *
+ * Reached by answering questions through the real harness rather than by
+ * writing the offer in by hand — the whole point of the line is that it and the
+ * gate cannot come apart.
+ */
+function offered() {
+  const attainment = createAttainment()
+  let today = '2026-07-01'
+  const harness = createHarness(attainment, () => Date.parse(`${today}T09:00:00Z`))
+  const right: AttemptEvent = {
+    kind: 'sum', index: 0, correct: true, latencyMs: 1000,
+    helped: false, rescued: false, at: 0,
+  }
+  harness.dealt('sums', 1)
+  for (const d of ['2026-07-01', '2026-07-02']) {
+    today = d
+    for (let i = 0; i < 10; i++) harness.recordAttempt({ ...right })
+  }
+  today = '2026-07-03'
+  return makeDeps({ attainment, harness })
 }
 
 function open(deps: LearningDeps): HTMLElement {
@@ -58,6 +95,10 @@ const rowOf = (section: HTMLElement, stage: number): HTMLElement =>
 
 const tickOf = (row: HTMLElement): HTMLElement =>
   row.querySelector('.grownups-tick') as HTMLElement
+
+/** The one line on a section that says what the island is about to do. */
+const autoLine = (root: HTMLElement, path: string): string =>
+  sectionOf(root, path).querySelector('.grownups-auto')?.textContent ?? ''
 
 /** grownups.ts binds `onclick`; jsdom has no PointerEvent constructor. */
 const tap = (el: HTMLElement): void => {
@@ -115,12 +156,44 @@ describe('what the panel puts on screen', () => {
     expect(deps.setTicked).not.toHaveBeenCalled()
   })
 
-  it('says what Auto would do, and in Run A that is watching', () => {
+  it('says what Auto would do, and on a fresh island that is watching', () => {
     const { deps } = makeDeps()
     const root = open(deps)
     const lines = [...root.querySelectorAll('.grownups-auto')]
     expect(lines).toHaveLength(4)
     for (const line of lines) expect(line.textContent).toContain('watching')
+  })
+
+  it('puts a standing offer on the path it is about, and nowhere else', () => {
+    /*
+     * B2: the line is a read of the real gate. One offer stands island-wide, so
+     * every section asks the same non-null question and only the path it names
+     * may answer it — sums reports the probing it is actually doing, and the
+     * reading paths report nothing at all.
+     */
+    const { deps } = offered()
+    const root = open(deps)
+    expect(autoLine(root, 'takingAway')).toBe('What Auto would do: offering taking away')
+    expect(autoLine(root, 'sums'))
+      .toBe('What Auto would do: slipping in a harder question now and then')
+    expect(autoLine(root, 'reading')).toBe('What Auto would do: watching')
+  })
+
+  it('changes the line the moment a parent takes the path off Auto', async () => {
+    // The mode switch is six inches above this line. A line written once at
+    // open time would tell him his tap did nothing.
+    const { deps } = makeDeps()
+    const root = open(deps)
+    expect(autoLine(root, 'sums')).toBe('What Auto would do: watching')
+
+    tap(sectionOf(root, 'sums')
+      .querySelector('.grownups-mode[data-mode="hold"]') as HTMLElement)
+    await settle()
+
+    expect(autoLine(root, 'sums'))
+      .toBe('What Auto would do: standing back while this path is on hold')
+    // And only that path: the switch is per-path and so is the line.
+    expect(autoLine(root, 'reading')).toBe('What Auto would do: watching')
   })
 
   it('never uses the class that the overlay rule hides', () => {
