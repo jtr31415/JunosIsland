@@ -40,6 +40,55 @@ import * as THREE from 'three'
 /** Pixels per swatch cell. Four, so the layout is a cell and not a texel. */
 export const SLOT_PX = 4
 
+/**
+ * The pupil of the pack's own eye, MEASURED. Every assembled species uses this.
+ *
+ * Joe, 29 July, on the first assembled animal: *"the original eyes have a
+ * somewhat grey pupil colour, the new ones have black ones, its a bit crass,
+ * soften to same shade as the original"*. He is right, and the cause is worth
+ * stating plainly because it is not what it looks like.
+ *
+ * **The black did not come from the lifted decal. We painted it.** The eye card
+ * is real geometry lifted out of the `.glb` files, but `assembly.ts` throws its
+ * original UVs away and writes `slotUv()` on every corner — so what a lifted
+ * part's triangles ARE is carried, and what colour they were is not. The eye
+ * card arrives already split into sclera and pupil (bands 3 and 15), and then
+ * `assembled.ts` said `pupil: 0x000000`, a number nobody measured. §4 says we
+ * own the texture; owning it means we are answerable for every colour in it.
+ *
+ * So this is measured off the real files rather than picked: 544 eye-card
+ * triangles across all 24 species, every band-15 triangle's UV sampled against
+ * `Textures/colormap.png` and averaged by TRIANGLE AREA (never by count — a
+ * pupil is a few large faces and its outline is many small ones, the same trap
+ * `tools/pets/atlas.mjs` documents).
+ *
+ * The answer is **#4c4f5e**: rgb(76, 79, 94), max channel 94, saturation 0.19. A
+ * dark blue-grey, not a black. `docs/HANDOFF.md` §6's "the pack's black is
+ * `#4d515f`" is confirmed and is the same swatch — the eye decal samples column
+ * u=496 rows 399–497, the identical run of the identical gradient that every leg
+ * mesh, hoof and outline in the pack draws from. Per-species the spread is one
+ * gradient step: 21 of 24 measure `#4c505e`, the rest `#4d505f`, the panda
+ * `#4b4e5c`, the cat `#474a57`.
+ *
+ * It lives here, once, rather than in each species' palette, because Joe's note
+ * is about every animal built by this method and not about the hedgehog.
+ * `tests/island/assembly-hedgehog.test.ts` asserts that no assembled species
+ * paints an eye card's pupil band any other colour.
+ */
+export const PACK_PUPIL = 0x4c4f5e
+
+/**
+ * The sclera the pack actually uses, measured the same way: **#ededf4**, a
+ * blue-white, over the eye card's band-3 triangles.
+ *
+ * NOT applied, deliberately. Joe's note is about the pupil; the eye card carries
+ * both halves and the eyes are the face, which brief §5 keeps constant per
+ * species. Recorded here so the next reader knows the number exists and that
+ * leaving the hedgehog's warmer `0xf4e6cc` alone was a decision rather than an
+ * oversight. If he ever asks for the whites too, this is the value.
+ */
+export const PACK_SCLERA = 0xededf4
+
 /** The centre of slot `i` of `n`, in UV. The whole layout, in one line. */
 export const slotUv = (i: number, n: number): readonly [number, number] =>
   [0.5, (i + 0.5) / n]

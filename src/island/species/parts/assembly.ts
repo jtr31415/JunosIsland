@@ -10,10 +10,13 @@
  *   3. **One mass** — `AssemblyBuild.hull` is singular and there is no way to
  *      say "and another hull". A `Feature` is a detail bolted to the mass. This
  *      is the fault that scrapped the 72 and the type is the guard against it.
- *   4. **Placement by translation only** — a placed node's `quaternion` is
- *      identity and its `scale` is (1,1,1), always. Mirroring is done by
- *      negating x on the copy's vertices and flipping its winding, not by
- *      `scale.x = -1`, which would be a transform.
+ *   4. **No placed node carries a transform** — a placed node's `quaternion` is
+ *      identity and its `scale` is (1,1,1), always. Mirroring negates x on the
+ *      COPY's vertices and flips its winding; rotation (`Feature.spin`) is baked
+ *      into the copy's vertices and normals the same way. Never `scale.x = -1`
+ *      and never `rotation.y`. See the spec's rule 4 as amended 29 July: Joe
+ *      asked for the hedgehog's spikes turned 180 degrees backwards and a set of
+ *      them turned 45 degrees onto the chamfer, and the rule now says how.
  *   5. **Absolute sizes for face features** — nothing forces `stretch`, and the
  *      hedgehog's eye cards simply do not carry one. The spec cannot express
  *      "scale this with the head" because there is no proportional mode.
@@ -47,6 +50,21 @@
  * sits entirely outside `at`, at `sink: 1` it is entirely buried. That is the
  * same quantity the bank measured off the pack (`attachment.sunkFraction*`), so
  * a spec's number can be checked against what Kenney actually did.
+ *
+ * ## Which way a lifted part faces, and how a builder turns it
+ *
+ * Every part in the bank carries a measured `attachment.axis` and
+ * `attachment.dir`, and together they are the part's FACING: the unit direction
+ * its mass runs in, away from the surface it joins. `cone-01` is `y +1`, so an
+ * unspun copy stands UP out of whatever it is placed on; `cone-06` is `z +1`, so
+ * a copy points FORWARD. That is the default and it is never guessed.
+ *
+ * `Feature.spin` turns it. A spin rotates the copy's vertices, its normals AND
+ * its facing together, about the part's own centre, so the sink still measures
+ * along the direction the part actually points. `[{ axis: 'z', deg: -90 }]`
+ * takes a `y +1` part and makes it point `x +1`; `-45` puts it halfway between,
+ * which is the chamfer idiom (spec §8). `{ axis: 'y', deg: 180 }` turns a part
+ * back to front without changing which way it stands.
  */
 import * as THREE from 'three'
 import { partById, type BakedPart } from './bank.generated'
@@ -56,6 +74,35 @@ export type Vec3 = readonly [number, number, number]
 export type Axis = 'x' | 'y' | 'z'
 
 const AXIS: Record<Axis, 0 | 1 | 2> = { x: 0, y: 1, z: 2 }
+
+/**
+ * One rotation, baked into a part COPY's vertices. Rule 4, as amended.
+ *
+ * Degrees, right-handed about the named axis, applied to the origin-centred part
+ * before it is placed. A list is applied in order. Nothing here ever reaches a
+ * node's `quaternion` — that is the whole point of baking it.
+ */
+export interface Spin { axis: Axis; deg: number }
+
+/** Quarter turns are exact, so a 90 or a 180 leaves no 1e-16 dust behind. */
+function cosSin(deg: number): readonly [number, number] {
+  const d = ((deg % 360) + 360) % 360
+  if (d % 90 === 0) return ([[1, 0], [0, 1], [-1, 0], [0, -1]] as const)[d / 90]!
+  const t = (d * Math.PI) / 180
+  return [Math.cos(t), Math.sin(t)]
+}
+
+function rotate(v: readonly [number, number, number], s: Spin): [number, number, number] {
+  const [c, n] = cosSin(s.deg)
+  const [x, y, z] = v
+  if (s.axis === 'x') return [x, y * c - z * n, y * n + z * c]
+  if (s.axis === 'y') return [x * c + z * n, y, -x * n + z * c]
+  return [x * c - y * n, x * n + y * c, z]
+}
+
+const spun = (
+  v: readonly [number, number, number], spins: readonly Spin[],
+): [number, number, number] => spins.reduce(rotate, v as [number, number, number])
 
 /**
  * Which palette slot each of a part's triangles is painted from.
@@ -106,19 +153,50 @@ export interface Feature {
   dir?: 1 | -1
   /** Rule 1: adapt the SHAPE of this copy. Baked into vertices, not a transform. */
   stretch?: Vec3
+  /**
+   * Rule 4, as amended: turn this copy. Baked into its vertices and normals, and
+   * applied to its facing too, so `sink` still measures along the way it points.
+   */
+  spin?: readonly Spin[]
   placement: Placement
 }
 
-/** The one mass. Singular, and there is no second one. */
-export interface Hull {
+/**
+ * The one mass. Singular, and there is no second one.
+ *
+ * ## Why a hull stretch has to say why
+ *
+ * The hedgehog shipped with the shared 1.250 cube stretched to 1.350 x 1.150 and
+ * Joe's first note back was *"body cubic, its currently too wide"*. The stretch
+ * itself was argued for at length in a comment — but a comment is not where he
+ * reviews, and `stretch?: Vec3` sat in the type as an ordinary optional number
+ * that any species could reach for. Ten more Garden species would each have
+ * inherited the same silent dial.
+ *
+ * So a hull stretch is now a PAIR. `stretch` without `stretchWhy` does not
+ * compile, `buildAssembly` throws on it at runtime for callers that are not
+ * TypeScript, and the reason travels out on the group's `userData` and on
+ * `assembledSpecies()` so it reaches the surface Joe judges from. A hull that
+ * departs from its authored proportions is now something he can see, which is
+ * the only kind of departure worth allowing.
+ *
+ * Deliberately NOT applied to `Feature.stretch`: §3 measured ears at 2.97x and
+ * snouts at 2.90x natural variation and says in as many words that stretching a
+ * copy is safe *for those two kinds and only those two*. The hull is the one
+ * shape 14 of the 24 share unmodified, and it is the one that reads as the
+ * animal's proportions at tablet distance.
+ */
+export type Hull = {
   /** A bank id. `box-03` is the 1.250 cube that 14 of the 24 share. */
   part: string
   paint: Paint
   /** Its bounding-box centre, in model units. */
   at: Vec3
-  /** Rule 1. The only way this kit expresses a body proportion. */
-  stretch?: Vec3
-}
+} & (
+  | { stretch?: never; stretchWhy?: never }
+  /** Rule 1. The only way this kit expresses a body proportion — and it must say why. */
+  | { stretch: Vec3; stretchWhy: string }
+)
 
 /**
  * A whole animal, as data.
@@ -154,24 +232,47 @@ export interface AssemblyBuild {
  * One part copy, as a `BufferGeometry`.
  *
  * The loop walks TRIANGLES rather than vertices because a triangle is what
- * carries a band, and therefore a slot. A vertex shared by two triangles in
- * different slots is the only vertex that gets duplicated — which for the eye
- * card is a handful, against the 3x a blanket de-index would have cost.
+ * carries a band, and therefore a slot. A vertex is duplicated only where it
+ * genuinely has to be.
+ *
+ * ## The weld, and why it is not a micro-optimisation
+ *
+ * The key is POSITION + NORMAL + slot, not the donor file's vertex index.
+ *
+ * The exporter splits a vertex wherever the UVs seam, so `box-03` arrives as 120
+ * vertices over 32 distinct positions and `cone-01` as 68 over 20. Those splits
+ * exist to carry Kenney's atlas coordinates — and §4 is that WE own the UVs, so
+ * every one of our vertices in one slot reads one point on the swatch column and
+ * the splits carry nothing at all. Keying on the index kept all 120.
+ *
+ * Position AND normal, never position alone: rule 7 is "smooth-shaded, WITH
+ * split corners where a hard edge is wanted", and a hard edge is exactly a
+ * position that appears twice with two different normals. Welding on position
+ * would round the pack's own chamfers off. Welding on both removes only what
+ * duplicates in every respect we care about, so the geometry that comes out is
+ * bit-for-bit the same surface.
+ *
+ * Measured: hull 120 -> 32, leg 80 -> 32, spike 68 -> 24, snout 48 -> 23, eye
+ * card 31 -> 22. It is what makes Joe's twenty spikes fit rule 9's vertex budget
+ * at all — 20 x 68 is 1,360 against a measured body ceiling of 1,114.
  */
 function bakeGeometry(
   part: BakedPart,
   stretch: Vec3,
+  spins: readonly Spin[],
   mirror: boolean,
   paint: Paint,
   slots: readonly string[],
 ): THREE.BufferGeometry {
-  const sx = stretch[0] * (mirror ? -1 : 1)
   const pos: number[] = []
   const nrm: number[] = []
   const uv: number[] = []
   const idx: number[] = []
   const seen = new Map<string, number>()
+  /* A mirror flips handedness and a rotation does not, so only x-negation needs
+   * the winding put back. */
   const order = mirror ? [0, 2, 1] : [0, 1, 2]
+  const flip = mirror ? -1 : 1
 
   for (let t = 0; t < part.tris; t++) {
     const band = part.bands[t] ?? -1
@@ -182,24 +283,24 @@ function bakeGeometry(
 
     for (const k of order) {
       const vi = part.indices[t * 3 + k]!
-      const key = `${vi}:${slot}`
+      const px = part.positions[vi * 3]!, py = part.positions[vi * 3 + 1]!, pz = part.positions[vi * 3 + 2]!
+      const nx = part.normals[vi * 3]!, ny = part.normals[vi * 3 + 1]!, nz = part.normals[vi * 3 + 2]!
+      /* Keyed on the BANK's own numbers, which are exact 4-dp values, so the key
+       * never depends on float arithmetic the transform happens to do. */
+      const key = `${px},${py},${pz}|${nx},${ny},${nz}|${slot}`
       let ni = seen.get(key)
       if (ni === undefined) {
         ni = pos.length / 3
         seen.set(key, ni)
-        pos.push(
-          part.positions[vi * 3]! * sx,
-          part.positions[vi * 3 + 1]! * stretch[1],
-          part.positions[vi * 3 + 2]! * stretch[2],
-        )
+        const p = spun([px * stretch[0], py * stretch[1], pz * stretch[2]], spins)
+        pos.push(p[0] * flip, p[1], p[2])
         // Rule 7: the file's own smooth normals, copied. Not recomputed, and no
         // inverse-transpose correction for `stretch` either — the spec says
         // verbatim, and the pack's own stretched shells are shaded the same way.
-        nrm.push(
-          part.normals[vi * 3]! * (mirror ? -1 : 1),
-          part.normals[vi * 3 + 1]!,
-          part.normals[vi * 3 + 2]!,
-        )
+        // A spin DOES turn them, because a rotation is its own inverse-transpose
+        // and a spun part lit by unspun normals is lit from the wrong side.
+        const n = spun([nx, ny, nz], spins)
+        nrm.push(n[0] * flip, n[1], n[2])
         uv.push(u, v)
       }
       idx.push(ni)
@@ -213,6 +314,27 @@ function bakeGeometry(
   g.setIndex(idx)
   g.name = mirror ? `${part.id}-mirror` : part.id
   return g
+}
+
+/**
+ * How far the built copy runs along `facing`, and where its near end sits.
+ *
+ * For an axis-aligned facing on an unspun part this is exactly the old
+ * `part.size[axis] * stretch[axis]` — the geometry is bbox-centred, so the span
+ * is symmetric about zero. It is written as a projection because a spun part's
+ * facing is a diagonal, and the chamfer idiom needs the sink measured along the
+ * direction the spike actually points rather than along x or y.
+ */
+function spanAlong(g: THREE.BufferGeometry, f: readonly [number, number, number]):
+{ lo: number; extent: number } {
+  const p = g.getAttribute('position')
+  let lo = Infinity, hi = -Infinity
+  for (let i = 0; i < p.count; i++) {
+    const d = p.getX(i) * f[0] + p.getY(i) * f[1] + p.getZ(i) * f[2]
+    if (d < lo) lo = d
+    if (d > hi) hi = d
+  }
+  return { lo, extent: hi - lo }
 }
 
 /* ------------------------------------------------------------ placement --- */
@@ -270,11 +392,14 @@ export function buildAssembly(spec: AssemblyBuild): THREE.Group {
   const group = new THREE.Group()
   group.name = 'assembly'
   const geoms = new Map<string, THREE.BufferGeometry>()
-  const geom = (part: BakedPart, stretch: Vec3, mirror: boolean, paint: Paint): THREE.BufferGeometry => {
-    const key = `${part.id}|${stretch.join(',')}|${mirror}|${paint.base}|${JSON.stringify(paint.byBand ?? {})}`
+  const geom = (
+    part: BakedPart, stretch: Vec3, spins: readonly Spin[], mirror: boolean, paint: Paint,
+  ): THREE.BufferGeometry => {
+    const key = `${part.id}|${stretch.join(',')}|${spins.map(s => s.axis + s.deg).join('/')}`
+      + `|${mirror}|${paint.base}|${JSON.stringify(paint.byBand ?? {})}`
     const hit = geoms.get(key)
     if (hit) return hit
-    const made = bakeGeometry(part, stretch, mirror, paint, slots)
+    const made = bakeGeometry(part, stretch, spins, mirror, paint, slots)
     geoms.set(key, made)
     return made
   }
@@ -282,33 +407,62 @@ export function buildAssembly(spec: AssemblyBuild): THREE.Group {
   /* The one mass, placed by its centre. Rule 3: there is exactly one of these. */
   const hullPart = lookup(spec.hull.part)
   const hullStretch = spec.hull.stretch ?? ([1, 1, 1] as Vec3)
-  const hull = new THREE.Mesh(geom(hullPart, hullStretch, false, spec.hull.paint), material)
+  /* A hull that leaves its authored proportions has to say why, out loud, where
+   * Joe reads it. See the `Hull` doc comment — this is the runtime half of a
+   * guard the type already makes a compile error. */
+  const stretched = hullStretch.some(v => v !== 1)
+  const why = spec.hull.stretchWhy?.trim() ?? ''
+  if (stretched && why === '') {
+    throw new Error(
+      `assembly: hull "${hullPart.id}" is stretched to [${hullStretch.join(', ')}] with no `
+      + '`stretchWhy`. A hull stretch is a deliberate, visible act — say why, in one sentence, '
+      + 'in Joe\'s direction (docs/building-animals-from-parts.md rule 1).',
+    )
+  }
+  const hull = new THREE.Mesh(geom(hullPart, hullStretch, [], false, spec.hull.paint), material)
   hull.name = 'hull'
   hull.position.set(spec.hull.at[0], spec.hull.at[1], spec.hull.at[2])
-  hull.userData = { part: hullPart.id, stretch: hullStretch, mirror: false, role: 'hull' }
+  hull.userData = {
+    part: hullPart.id, stretch: hullStretch, mirror: false, role: 'hull',
+    stretched, stretchWhy: stretched ? why : undefined,
+  }
   group.add(hull)
 
   for (const f of spec.features) {
     const part = lookup(f.part)
     const stretch = f.stretch ?? ([1, 1, 1] as Vec3)
+    const spins = f.spin ?? []
     const axis: Axis = f.axis ?? part.attachment?.axis ?? 'y'
     const baseDir = f.dir ?? part.attachment?.dir ?? 1
-    const ai = AXIS[axis]
-    const extent = part.size[ai]! * stretch[ai]!
     const sink = f.sink ?? 0
 
+    /* The part's FACING: its measured attachment direction, turned by the same
+     * spin its vertices were, and mirrored with them. Everything else follows
+     * from this one vector, which is what lets a spike sit on a 45-degree
+     * chamfer without the kit knowing what a chamfer is. */
+    const base: [number, number, number] = [0, 0, 0]
+    base[AXIS[axis]] = baseDir
+    const turned = spun(base, spins)
+
     for (const c of copiesOf(f.placement)) {
-      // A part joined along x has its direction mirrored with it; y and z do not.
-      const dir = (axis === 'x' && c.mirror ? -baseDir : baseDir) as 1 | -1
-      const shift = dir * (extent / 2 - sink * extent)
-      const at: [number, number, number] = [c.at[0], c.at[1], c.at[2]]
-      at[ai] += shift
-      const m = new THREE.Mesh(geom(part, stretch, c.mirror, f.paint), material)
+      const facing: [number, number, number] =
+        c.mirror ? [-turned[0], turned[1], turned[2]] : [turned[0], turned[1], turned[2]]
+      const g = geom(part, stretch, spins, c.mirror, f.paint)
+      const { lo, extent } = spanAlong(g, facing)
+      /* Put the copy's NEAR end `sink * extent` past the join point, so `sink: 0`
+       * is flush and `sink: 1` is buried. Reduces exactly to the old
+       * `dir * (extent / 2 - sink * extent)` whenever the facing is axis-aligned. */
+      const shift = -lo - sink * extent
+      const m = new THREE.Mesh(g, material)
       m.name = `${f.name}${c.tag}`
-      m.position.set(at[0], at[1], at[2])
+      m.position.set(
+        c.at[0] + facing[0] * shift,
+        c.at[1] + facing[1] * shift,
+        c.at[2] + facing[2] * shift,
+      )
       m.userData = {
-        part: part.id, stretch, mirror: c.mirror, role: f.name,
-        sink, axis, dir, joinedAt: c.at,
+        part: part.id, stretch, spin: spins, mirror: c.mirror, role: f.name,
+        sink, axis, dir: baseDir, facing, extent, joinedAt: c.at,
       }
       group.add(m)
     }
@@ -319,6 +473,9 @@ export function buildAssembly(spec: AssemblyBuild): THREE.Group {
   const box = new THREE.Box3().setFromObject(group)
   group.position.y = -box.min.y
 
-  group.userData = { kit: 'assembly', slots, flag: spec.flag, texture: texture.name }
+  group.userData = {
+    kit: 'assembly', slots, flag: spec.flag, texture: texture.name,
+    hullStretch, hullStretchWhy: stretched ? why : undefined,
+  }
   return group
 }

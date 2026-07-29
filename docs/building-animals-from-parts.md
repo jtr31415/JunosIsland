@@ -69,8 +69,10 @@ a better set. Every species built from here on is built under all ten.
 2. **Every edge has at least one chamfer cut.**
 3. **One mass** — head and body are a single form; features attach to it. Never a
    second big shape. This is the fault that scrapped the 72.
-4. **Placement by translation only** — 133 nodes carry three rotations and one
-   scale between them. Parts are origin-centred and moved, not resized in place.
+4. **No PLACED NODE carries a transform** — 133 nodes carry three rotations and
+   one scale between them. Parts are origin-centred and moved, not resized in
+   place. *(Amended 29 July — see below. It read "placement by translation only",
+   which forbade something Joe then asked for.)*
 5. **Absolute sizes for face features, not proportional** — the eye is the same
    size regardless of head size. Proportional eyes gave a 2.95× spread.
 6. **Paired parts are one mesh, mirrored** — legs, ears, wings, eyes: author
@@ -83,6 +85,73 @@ a better set. Every species built from here on is built under all ten.
 9. **Low vertex budget** — bodies 236–1114 verts, a leg is 24. A bespoke part
    needing hundreds is the wrong shape.
 10. **Readable in silhouette** at tablet distance.
+
+### Rule 4, amended 29 July: rotation is baked, never placed
+
+Joe reviewed the first assembled animal and asked for two rotations in one note:
+
+> ...and turn them backwards 180 degrees.
+
+> ...and one set each rotated 45 deg and placed on the chamfer between sides and
+> top, creating like a rounding effect.
+
+Rule 4 as originally written — "placement by translation only" — forbids both.
+That is the rule being wrong, not the request. The rule exists to stop a
+*placed node* carrying a transform, because that is what the 133 transformed
+nodes in the pack cost us and what makes a lifted part unpredictable to reuse.
+It was never an argument against a part being shaped before it is placed.
+
+**So the rule now reads: no placed node carries a transform. A rotation is baked
+into the part COPY's vertices, exactly as mirroring already was.**
+
+The two are the same mechanism and the same discipline:
+
+- **Mirroring** negates x on the copy's vertices and on its normals, and flips
+  the triangle winding, because a reflection reverses handedness. It is never
+  `scale.x = -1`.
+- **Rotation** (`Feature.spin` in `parts/assembly.ts`) turns the copy's vertices
+  AND its normals about the part's own centre. **Turn the normals too** — a
+  rotation is its own inverse-transpose, and a spun part lit by unspun normals is
+  lit from the wrong side, which no bounding box notices. **Do not touch the
+  winding**: a rotation preserves handedness, and re-flipping it turns the part
+  inside out.
+- `stretch` remains the one thing that is *not* corrected on the normals, because
+  the spec says the pack's own normals are copied verbatim (rule 7) and Kenney's
+  own stretched shells are shaded the same way.
+
+After every one of these, `mesh.quaternion` is still identity and `mesh.scale` is
+still (1,1,1). `tests/island/assembly-hedgehog.test.ts` asserts that over every
+mesh, and separately asserts that at least one feature *is* spun — otherwise the
+first assertion passes for the wrong reason.
+
+### Which way a lifted part faces, and how a builder turns it
+
+Every future use of a lifted shape hits this, so it is written down once.
+
+**A part's default facing is its measured `attachment.axis` and `attachment.dir`,
+and it means: the direction the part's mass runs, away from the surface it joins
+to.** `cone-01` is `y +1`, so an unspun copy stands UP out of whatever it is
+placed on. `cone-06` is `z +1`, so a copy points FORWARD. `box-01`, the leg, is
+`y -1`, so it hangs DOWN. None of that is guessed; it is measured off every donor
+in the pack and it is in the bank record.
+
+That single fact decided the hedgehog. A row of twelve `wedge-13` (the hog's
+tusk, `z +1`) lies flat pointing forwards; a row of twelve `cone-01` (`y +1`)
+stands up. Same taper, same size, opposite animal.
+
+**To turn one, spin it.** A spin rotates the copy's vertices, its normals and its
+facing together, so `sink` still measures along the direction the part actually
+points:
+
+| Spin | Takes a `y +1` part to | Reads as |
+|---|---|---|
+| none | up | standing on the top |
+| `{ axis: 'z', deg: -90 }` | `x +1` | sticking out of the right side |
+| `{ axis: 'z', deg: -45 }` | halfway between | the chamfer idiom, below |
+| `{ axis: 'y', deg: 180 }` | up, but back to front | a spine swept over the rump |
+
+Spins compose in list order. Mirroring negates the x of the facing along with the
+geometry, so the left side of a mirrored row is handled without a second spin.
 
 ### The escape clause, which matters as much as the rules
 
@@ -533,3 +602,157 @@ placement rather than a hack: the pack already buries a part completely.
 
 **The one placement that is never adjusted is the eye.** Absolute z, absolute
 size, zero sink. Rule 5 and the measurement agree, from opposite directions.
+
+### THE CHAMFER IDIOM — a named placement, and Joe's idea
+
+> spikes not 3 rows of 4 on each side, but one row of 4, on each the top and the
+> both sides (middle) and one set each rotated 45 deg and placed on the chamfer
+> between sides and top, creating like a rounding effect.
+>
+> — Joe, 29 July, on the hedgehog
+
+**The idiom: to make a cubic body read as ROUND, put a row of parts on each flat
+face and another row on the chamfer between them, turned to face along the
+chamfer's own normal.** The rows' facings then step evenly around the body, and
+the silhouette follows an arc instead of three flat planes.
+
+This is how you get a curved read out of a cubic pack **without authoring a
+curved shape**, which is rule 1 and the §0 ruling both. It costs nothing but
+placement.
+
+It generalises to anything spiny, ridged or frilled: hedgehog quills, dragon and
+crocodile back ridges, scutes, a fish's dorsal run, a lizard's crest. Any species
+whose whole silhouette question is "does the back read as a curve".
+
+**How to apply it, in four steps:**
+
+1. **Measure the hull's real chamfer. It is not where it looks.** `box-03` cuts
+   every edge AND every corner: its 32 welded points are the permutations of
+   (±0.625, ±0.3125, ±0.3125) and (±0.5, ±0.5, ±0.5). Each flat face is
+   therefore only **0.625 square**, and the edge chamfer between the +x and +y
+   faces runs from (0.625, 0.3125) to (0.3125, 0.625) — midpoint
+   **(0.46875, 0.46875)**, not the (0.5625, 0.5625) you get by assuming a
+   1.000-wide face. Assuming it once put a whole row 0.09 out.
+2. **Join on the chamfer plane's midpoint**, and spin the part so its facing is
+   that plane's outward normal — 45° for an edge chamfer, which is
+   `{ axis: 'z', deg: -45 }` for a `y +1` part on a +x/+y edge.
+3. **Use the same stations along the row on every row.** Same shape, same depth,
+   same positions — only the facing differs. That is what makes N rows read as
+   one shell rather than as N rows.
+4. **Check the outer stations are still embedded.** The flat face ends and the
+   chamfer falls away 1:1, so a part buried `d` below the nominal plane leaves
+   the hull once its station passes `halfFace + d`. On `box-03` with d = 0.125
+   that is |z| ≤ 0.4375, which is what caps the hedgehog's row at ±0.375. §3's
+   "nothing floats" is the binding constraint, not taste.
+
+**The acceptance test is Joe's stated intent, not the arithmetic:** the back must
+read as curved rather than as three flat faces. Expressed as a measurement, the
+distinct facings of the rows must step evenly through a half turn — the
+hedgehog's five are −90°, −45°, 0°, +45°, +90°, and `assembly-hedgehog.test.ts`
+asserts exactly that set.
+
+**Note, do not chase:** this is very close to the "frill" §3.1(3) says we were
+missing. A row of parts stepped around a chamfer at 45° is most of what a frill
+is, so the frill is probably a placement rather than a shape — one more of the
+four headline gaps closing. It is recorded here and left alone; §3.1 is explicit
+that the impossible list gets re-derived deliberately, not during a build.
+
+---
+
+## 9. How another surface enumerates new-method species
+
+*Written 29 July for the manager consolidating the workbench's four review
+surfaces into one. It is a contract for another team, not prose. Everything here
+describes what EXISTS today; nothing is a plan.*
+
+### 9.1 The enumeration API
+
+`src/island/species/parts/index.ts`. Two functions, and nothing else is needed.
+
+```ts
+interface AssembledSpecies {
+  id: string            // 'animal-hedgehog'
+  name: string          // from the roster. Never minted here.
+  collection: string    // from the roster. Never minted here.
+  flag?: string         // §2's escape clause, in Joe's direction, one sentence
+  hullStretchWhy?: string // present ONLY when this species' hull is stretched
+}
+
+function assembledSpecies(): AssembledSpecies[]
+function buildAssembled(id: string): THREE.Group
+```
+
+`name` and `collection` are **read off the existing roster** (`SPECIES_NAMES` and
+`SPECIES_COLLECTION` in `src/island/species/roster.ts`) and are never regenerated
+— §0 of this document. A review surface **displays** them; it does not mint them.
+The same goes for the fact rows in `joe/species-facts.json`.
+
+`buildAssembled` returns a grounded `THREE.Group` — feet on y = 0, model units,
+no fit-to-height. Its `userData` carries:
+
+```ts
+{ kit: 'assembly', slots: string[], flag?: string, texture: string,
+  hullStretch: [number, number, number], hullStretchWhy?: string }
+```
+
+Every mesh inside carries `userData.part` (the bank id it came from),
+`role`, `sink`, `facing`, `spin`, `mirror` and `joinedAt` — enough to label a
+part in an anatomy view without re-deriving anything.
+
+### 9.2 The marker, and the trap in it
+
+> **`assembly !== undefined` means new method. `build !== undefined` means a
+> scrapped kit build. A record may carry BOTH, and the hedgehog does right now,
+> deliberately.**
+
+`Species.build` was kept alongside `Species.assembly` on purpose (§6, and
+`src/island/species/types.ts:395-409`) so the old build stayed visible for
+comparison until Joe rules on JT-034.
+
+**So: a surface that filters "remove everything with a `build` field" will remove
+the hedgehog too.** It must key off the PRESENCE of `assembly`, never off the
+ABSENCE of `build`. This is the single mistake most likely to be made, and it
+unsurfaces exactly the animals the new method just produced.
+
+```ts
+const newMethod = SPECIES.filter(s => s.assembly !== undefined)   // correct
+const newMethod = SPECIES.filter(s => s.build === undefined)      // WRONG — empty
+```
+
+**Would an explicit `method` discriminant be cleaner now that the old builds are
+being unsurfaced anyway? Yes.** A single `method: 'assembly' | 'kit'` field would
+make the question unmissable and would survive `build` eventually being deleted.
+It is **not** being changed here, because another manager is building against
+what exists today and a field-shape change under a live consumer is how a review
+surface goes dark. Raise it as a card; do not do it in flight.
+
+### 9.3 What a fresh surface would otherwise reverse-engineer
+
+- **`assembledSpecies()` throws on a malformed record rather than skipping it** —
+  a species id that is not in the roster is a hard error, by design, the same
+  guard `define.ts` puts on an invented species. **A caller at boot should wrap
+  it**, or one bad animal takes the whole page down.
+- **`buildAssembled` throws by name** for an id with no build, rather than
+  returning `null`.
+- **Textures are cached and DETACHED, never disposed** (§4, brief §19). Do not
+  call `dispose()` on an assembled pet's material or map. `detachAssemblyTextures()`
+  drops the cache's references and is the only supported teardown. A three.js
+  `clone()` shares the material, so a preview that disposes breaks every other
+  copy on screen.
+- **One material and one texture per palette**, shared by every mesh in the
+  group. Two species with the same palette in the same order get the *same*
+  texture object — that is the cache key, deliberately.
+- **`flag` is meant to be shown, not logged.** It is §2's escape clause made
+  visible: it says which rule the build strained and why, in one sentence aimed
+  at Joe. An animal with a flag is one he is being asked to rule on. The
+  hedgehog's currently says its spines are `cone-01` rather than the hog's ear,
+  and that twenty spikes puts it over the pack's triangle envelope.
+- **`hullStretchWhy` is the same channel for one specific thing** — a hull that
+  has left its authored proportions. Show it beside the flag. It exists because
+  the hedgehog shipped with the shared 1.250 cube quietly stretched and Joe's
+  first note back was *"body cubic, its currently too wide"*.
+- **New-method animals must be labelled distinctly and unmistakably** from the
+  scrapped kit builds, in the list and on the model (§6). He has been burned by a
+  stale page once and by a gallery listing props once.
+- **Nothing here is async.** No `GLTFLoader`, no fetch, no await — the bank is a
+  module and the build is synchronous. That is the whole reason the bank exists.

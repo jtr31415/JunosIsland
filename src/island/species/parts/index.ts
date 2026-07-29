@@ -21,6 +21,14 @@ export interface AssembledSpecies {
    * be looking at it knowing that.
    */
   flag?: string
+  /**
+   * Present only when this species' HULL departs from its authored proportions,
+   * and then it says why (`Hull.stretchWhy`). The hedgehog shipped with the
+   * shared 1.250 cube quietly stretched to 1.350 x 1.150 and Joe's first note
+   * back was "body cubic, its currently too wide" — so a stretch is no longer
+   * something a species can do without saying so where he reads.
+   */
+  hullStretchWhy?: string
 }
 
 /**
@@ -37,8 +45,11 @@ export function assembledSpecies(): AssembledSpecies[] {
         `assembled species "${id}" is not in the roster — see docs/pet-island-species-roster.md §2`,
       )
     }
-    const flag = ASSEMBLED_BUILDS[id]?.flag
-    return flag === undefined ? { id, name, collection } : { id, name, collection, flag }
+    const spec = ASSEMBLED_BUILDS[id]
+    const row: AssembledSpecies = { id, name, collection }
+    if (spec?.flag !== undefined) row.flag = spec.flag
+    if (spec?.hull.stretchWhy !== undefined) row.hullStretchWhy = spec.hull.stretchWhy
+    return row
   })
 }
 
@@ -50,9 +61,11 @@ export function buildAssembled(id: string): THREE.Group {
 }
 
 export { buildAssembly } from './assembly'
-export type { AssemblyBuild, Feature, Hull, Paint, Placement } from './assembly'
+export type { AssemblyBuild, Feature, Hull, Paint, Placement, Spin } from './assembly'
 export { findShapes, hullShapes, SPIKE_QUERY } from './query'
 export type { ShapeQuery } from './query'
-export { assemblyTexture, assemblyTextureCount, detachAssemblyTextures, slotUv, paletteKey }
-  from './texture'
+export {
+  assemblyTexture, assemblyTextureCount, detachAssemblyTextures, slotUv, paletteKey,
+  PACK_PUPIL, PACK_SCLERA,
+} from './texture'
 export { ASSEMBLED_BUILDS, HEDGEHOG_ASSEMBLY } from './assembled'
