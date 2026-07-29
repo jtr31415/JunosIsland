@@ -1,4 +1,20 @@
 {
   "schemaVersion": 1,
-  "notes": []
+  "notes": [
+    {
+      "assetId": "animal-hedgehog",
+      "note": "nose higher, body cubic, its currently too wide. spikes 3 rows of 4 on each the top and the sides and turn them backwards 180 degrees.",
+      "at": "2026-07-29T16:53:44.055Z"
+    },
+    {
+      "assetId": "animal-hedgehog",
+      "note": "spikes not 3 rows of 4 on each side, but one row of 4, on each the top and the both sides (middle) and one set each rotated 45 deg and placed on the chamfer between sides and top, creating like a rounding effect. all else from previous comment sustained.",
+      "at": "2026-07-29T16:56:17.906Z"
+    },
+    {
+      "assetId": "animal-hedgehog",
+      "note": "add a pink pointy element to the nose. small sphere will do\n",
+      "at": "2026-07-29T16:57:05.777Z"
+    }
+  ]
 }
