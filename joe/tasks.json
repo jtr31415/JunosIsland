@@ -310,8 +310,8 @@
       "artefact": "src/island/flow.ts",
       "doneRule": "manual",
       "check": "",
-      "note": "",
-      "state": "open"
+      "note": "see answer to JT-025, we need the reading progression built for this.",
+      "state": "done"
     },
     {
       "id": "JT-025",
