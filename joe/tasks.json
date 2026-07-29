@@ -366,8 +366,8 @@
       "artefact": "src/island/interactions.ts:159",
       "doneRule": "manual",
       "check": "",
-      "note": "",
-      "state": "open"
+      "note": "lets stick with a)",
+      "state": "done"
     },
     {
       "id": "JT-029",
