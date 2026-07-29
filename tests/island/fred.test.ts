@@ -16,6 +16,8 @@ import { readFileSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createFred } from '../../src/island/fred'
+import { GOVERNOR_LINE, governorLine } from '../../src/island/governors'
+import type { Nudge } from '../../src/island/governors'
 import { footprintBelow, WALKING_HEIGHT } from '../../src/island/world/props'
 
 /** His body group — the frog itself, without the blob on the ground. */
@@ -140,5 +142,64 @@ describe('main.ts hands Fred to the pet field', () => {
   it('publishes the frog itself, asked afresh rather than a snapshot', () => {
     // `fred.obstacle()` inside the callback, not a value read once at boot.
     expect(code).toMatch(/pets\.setMovers\(\s*\(\)\s*=>[^\n]*fred\.obstacle\(\)/)
+  })
+})
+
+/*
+ * WHAT FRED ACTUALLY SAYS OUT LOUD, checked across the seam rather than on
+ * either side of it.
+ *
+ * JT-019 turned two of his nudges into TEMPLATES — `governors.ts` now stores
+ * "…{n} more {friend|friends}…" and `governorLine` fills the number in. That
+ * split the line into a thing that is stored and a thing that is spoken, and
+ * every unit test on either side is happy with the wrong answer: the governor
+ * tests assert the template is right, `main.ts`'s own tests assert a string was
+ * spoken, and neither notices if the string spoken is the template. A child
+ * would be read the braces.
+ *
+ * This is the third governor of HANDOFF §6's warning that only a test driving
+ * BOTH sides catches this class of fault, so it is written the way that section
+ * asks for: the real table, the real filler, and the real call site.
+ */
+describe('no child is ever read a placeholder — JT-019', () => {
+  const here = dirname(fileURLToPath(import.meta.url))
+  const source = readFileSync(resolve(here, '../../src/island/main.ts'), 'utf8')
+  const code = source
+    .split('\n')
+    .filter(l => !/^\s*(\/\/|\/\*|\*)/.test(l))
+    .join('\n')
+
+  it('speaks the FILLED line, never the raw table', () => {
+    /*
+     * The fault this exists for is a one-word revert: `GOVERNOR_LINE[which]` is
+     * still perfectly typed, still a string, and still gets spoken. So the
+     * absence is asserted as hard as the presence.
+     */
+    expect(code).toContain('governorLine(')
+    expect(code).not.toMatch(/GOVERNOR_LINE\s*\[/)
+  })
+
+  it('gives the filler the count, not a constant', () => {
+    // `restoreCount(flow, which)` read at the moment he opens his mouth — a
+    // number baked earlier can be stale by the time it is spoken.
+    expect(code).toMatch(/governorLine\(\s*which\s*,\s*restoreCount\(/)
+  })
+
+  it('leaves no brace behind, for every nudge at every count', () => {
+    for (const which of Object.keys(GOVERNOR_LINE) as Nudge[]) {
+      for (let n = 0; n <= 30; n++) {
+        const spoken = governorLine(which, n)
+        expect(spoken, `${which} at ${n}`).not.toMatch(/[{}|]/)
+      }
+    }
+  })
+
+  it('says "1 more friend", never "1 more friends"', () => {
+    // §19 is a reading game before it is anything else: a sentence Fred reads
+    // her must be a sentence, and the plural is the commonest way to break one.
+    expect(governorLine('space-surplus', 1)).toContain('1 more friend will')
+    expect(governorLine('space-surplus', 2)).toContain('2 more friends will')
+    expect(governorLine('nursery-queue', 1)).toContain('1 more tile will')
+    expect(governorLine('nursery-queue', 3)).toContain('3 more tiles will')
   })
 })

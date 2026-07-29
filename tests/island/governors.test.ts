@@ -2,12 +2,14 @@ import { describe, it, expect } from 'vitest'
 import {
   activeGovernor, inGracePeriod, landPaused, eggsPaused, GOVERNOR_LINE,
   fieldsWanted, petsHoused, habitableFields, tileSteps, eggSteps,
+  governorLine, restoreCount,
 } from '../../src/island/governors'
 import {
   createFlow, challengePassed, tapEgg, tapSum, chooseTile, placeTile,
   pagesForEgg, sumsForTile,
 } from '../../src/island/flow'
 import type { Flow } from '../../src/island/flow'
+import type { Nudge } from '../../src/island/governors'
 import { sockets } from '../../src/island/world/grid'
 import {
   balance, tileCost, eggCost, tileCostPast, eggCostPast,
@@ -50,10 +52,32 @@ function withPets(f: Flow, n: number): Flow {
  *
  * They walk the real `activeGovernor` over real flows on purpose. A helper that
  * recomputed the threshold from `balance` would agree with a broken governor.
+ *
+ * BOTH NOW REFUSE PET COUNTS INSIDE GRACE, and the guard is JT-016's doing
+ * rather than fussiness. They climb from a ONE-HEX island upward, and grace now
+ * covers everything up to five animals and ten tiles — so at five animals or
+ * fewer every island they meet on the way up is a sandbox in which
+ * `activeGovernor` answers 'none' by fiat, and the first island past it already
+ * has eleven fields in it. `floor(2)` said 3 before the ruling and says 1 after
+ * it, having measured the sandbox and not the corridor; `ceiling(2)` says 10,
+ * which is where grace ends rather than where the empty wall stands. Six animals
+ * is the first count at which no island is ever in grace, so it is the first
+ * count at which walking up from one hex measures a wall at all.
  * ------------------------------------------------------------------------- */
+
+/** Neither helper can see a wall through the sandbox — refuse rather than lie. */
+function pastGrace(pets: number): void {
+  if (pets <= balance.governor.grace.pets) {
+    throw new Error(
+      `ceiling/floor cannot measure a wall at ${pets} pets: grace (JT-016) hides ` +
+      `every island below ${balance.governor.grace.tiles + 1} tiles, so call them ` +
+      `with more than ${balance.governor.grace.pets} pets`)
+  }
+}
 
 /** The largest field count that does not pause new land, at `pets` pets. */
 function ceiling(pets: number): number {
+  pastGrace(pets)
   for (let n = 0; n < 400; n++) {
     const f = withPets(grow(createFlow(), n), pets)
     if (activeGovernor(f) === 'space-surplus') return n
@@ -63,6 +87,7 @@ function ceiling(pets: number): number {
 
 /** The fewest fields that do NOT pause eggs, at `pets` pets — the mirror. */
 function floor(pets: number): number {
+  pastGrace(pets)
   for (let n = 0; n < 400; n++) {
     const f = withPets(grow(createFlow(), n), pets)
     if (activeGovernor(f) !== 'nursery-queue') return n + 1
@@ -78,35 +103,93 @@ describe('the grace period', () => {
   })
 
   it('ends once there is a real island and real friends', () => {
-    const f = withPets(grow(createFlow(), 5), 2)
+    /*
+     * JT-016 widened the opening stretch to five animals and ten tiles, so a
+     * "real island" is now eleven fields and six friends rather than six and
+     * two. The boundary is checked in the same breath because `inGracePeriod`
+     * reads `island.tiles.size` and `pets.length` — the WIRING, which is the
+     * half `balance-governor.test.ts` cannot see when it calls `graceHolds` with
+     * two loose numbers.
+     */
+    const f = withPets(grow(createFlow(), 10), 6)
     expect(inGracePeriod(f)).toBe(false)
+
+    // Exactly on both of Joe's numbers is still the sandbox; either one growing
+    // up ends it, which is the AND said in flows rather than in integers.
+    expect(inGracePeriod(withPets(grow(createFlow(), 9), 5))).toBe(true)
+    expect(inGracePeriod(withPets(grow(createFlow(), 10), 5))).toBe(false)
+    expect(inGracePeriod(withPets(grow(createFlow(), 9), 6))).toBe(false)
   })
 
   it('suppresses BOTH governors while it lasts, not just the one she is near', () => {
     /*
      * §5, and it is asserted over the whole opening rather than at one point,
-     * because the two thresholds are DATA. With the shipped ratios no island
-     * small enough to be in grace can reach either wall — a ceiling needs four
-     * fields and grace ends at four tiles; a floor needs more pets than 1.5
-     * fields will house and grace ends at two pets. So today this guard is a
-     * floor under `balance.json` rather than under any reachable state, and if
-     * either ratio is ever retuned toward the middle this is what catches it.
+     * because the two thresholds are DATA.
+     *
+     * THIS USED TO BE A GUARD OVER NOTHING, and JT-016 gave it teeth. With grace
+     * at two pets and four tiles no island small enough to be inside it could
+     * reach either wall, so the suppression never actually suppressed anything
+     * and the test was a floor under `balance.json` rather than under any state
+     * a child could stand in. At five animals and ten tiles she can be a long
+     * way past the empty wall and still hear nothing — seven bare fields for two
+     * friends is four steps out — so the `witnesses` count below is not
+     * decoration: it fails if grace is ever narrowed back to where the
+     * suppression is vacuous, which is the only way this test could pass for the
+     * wrong reason.
      */
-    for (let tiles = 0; tiles <= 6; tiles++) {
-      for (let pets = 0; pets <= 3; pets++) {
+    let witnesses = 0
+    for (let tiles = 0; tiles <= 12; tiles++) {
+      for (let pets = 0; pets <= 7; pets++) {
         const f = withPets(grow(createFlow(), tiles), pets)
         if (!inGracePeriod(f)) continue
         expect(activeGovernor(f), `${tiles + 1} fields, ${pets} pets`).toBe('none')
+        const fields = habitableFields(f)
+        if (emptySteps(fields, pets) > 0 || crowdedSteps(fields, pets) > 0) witnesses++
       }
     }
+    expect(witnesses, 'grace never actually held a wall back').toBeGreaterThan(0)
+  })
+
+  it('puts the crowded wall out of reach below six animals — JT-016', () => {
+    /*
+     * A real consequence of the ruling, and one worth stating out loud because
+     * it is not obvious from either number on its own. Grace holds while pets
+     * <= 5 AND tiles <= 10, so at five animals or fewer she must own at least
+     * eleven fields to hear from Fred at all — and eleven fields house seven
+     * animals before the crowded wall is anywhere near. The nursery queue is
+     * therefore UNREACHABLE until the sixth friend comes home: for the whole of
+     * the opening the only governor that can ever speak is the empty one.
+     *
+     * Walked over grass islands, which is what `grow` lays. Grace counts every
+     * tile and the crowded wall counts only the habitable ones, so an island of
+     * mountains could in principle part the two numbers; nothing in the game
+     * hands a child eleven rock tiles and five animals, and if that ever changes
+     * it is a pacing decision rather than a bug in this test.
+     */
+    for (let tiles = 0; tiles <= 40; tiles++) {
+      let f = grow(createFlow(), tiles)
+      for (let pets = 0; pets <= balance.governor.grace.pets; pets++) {
+        if (pets > 0) f = withPets(f, 1)
+        expect(activeGovernor(f), `${tiles + 1} fields, ${pets} pets`)
+          .not.toBe('nursery-queue')
+      }
+    }
+    // ...and the sixth friend is where it becomes reachable at all: one hex,
+    // six animals, nowhere for any of them to live.
+    expect(activeGovernor(withPets(createFlow(), 6))).toBe('nursery-queue')
   })
 })
 
 describe('the space-surplus governor', () => {
   it('pauses new land when there is far more room than friends', () => {
-    // Seven fields for two friends: past 3.0 tiles per pet, the EMPTY wall.
-    const f = withPets(grow(createFlow(), 6), 2)
-    expect(habitableFields(f)).toBe(7)
+    /*
+     * Eleven fields for two friends: past 3.0 tiles per pet, the EMPTY WARNING
+     * wall, and past ten tiles, so JT-016's grace has ended on the tile count
+     * alone. Seven fields did this job before the ruling and now sits inside the
+     * sandbox, where Fred says nothing at all.
+     */
+    const f = withPets(grow(createFlow(), 10), 2)
+    expect(habitableFields(f)).toBe(11)
     expect(habitableFields(f)).toBeGreaterThan(3 * f.pets.length)
     expect(activeGovernor(f)).toBe('space-surplus')
     expect(landPaused(f)).toBe(true)
@@ -115,23 +198,27 @@ describe('the space-surplus governor', () => {
   it('lets a plot already under construction finish anyway', () => {
     // §5: a plot mid-build always finishes; work is never taken back. The
     // governor pauses STARTING land, never finishing it.
-    let f = withPets(grow(createFlow(), 6), 2)
+    let f = withPets(grow(createFlow(), 10), 2)
     f = { ...f, plot: { at: { q: 4, r: 0 }, type: 'grass' } }
     expect(activeGovernor(f)).toBe('space-surplus')
     expect(landPaused(f)).toBe(false)
   })
 
   it('lifts once enough friends have come home', () => {
-    // Seven fields hold three friends comfortably: inside both walls, so Fred
-    // has nothing to say and neither price is dearer than the list.
-    const f = withPets(grow(createFlow(), 6), 3)
+    /*
+     * The same eleven fields with four friends on them: inside both walls, so
+     * Fred has nothing to say and neither price is dearer than the list. Four is
+     * not a guess — it is two more than the island above, which is exactly the
+     * number Fred names there (`restoreCount`, JT-019).
+     */
+    const f = withPets(grow(createFlow(), 10), 4)
     expect(activeGovernor(f)).toBe('none')
     expect(landPaused(f)).toBe(false)
     expect(eggsPaused(f)).toBe(false)
   })
 
   it('never pauses reading — only new land', () => {
-    const f = withPets(grow(createFlow(), 6), 2)
+    const f = withPets(grow(createFlow(), 10), 2)
     expect(eggsPaused(f)).toBe(false)
   })
 })
@@ -144,6 +231,126 @@ describe('the governor lines', () => {
     }
     expect(GOVERNOR_LINE['space-surplus']).toMatch(/read/i)
     expect(GOVERNOR_LINE['nursery-queue']).toMatch(/home/i)
+  })
+})
+
+/**
+ * Fred names the number — JT-019.
+ *
+ * Joe: *"we get fred to tell her how many she needs to restore balance."*
+ *
+ * The ARITHMETIC of the way back is `tilesShortOfCorridor` and
+ * `petsShortOfCorridor`, and it is walked over every island size in
+ * `tests/island/balance-governor.test.ts`; it is not repeated here. What this
+ * block tests is the SENTENCE — the thing a six-year-old actually hears, which
+ * is where a template can go wrong in ways an integer cannot. A line that says
+ * "1 more friends" to a child learning to read is a worse failure than a count
+ * that is one out, because she will believe the spelling.
+ */
+describe('Fred names the number — JT-019', () => {
+  const NUDGES = Object.keys(GOVERNOR_LINE) as Nudge[]
+
+  it('fills the count into both island lines', () => {
+    expect(governorLine('nursery-queue', 3))
+      .toBe('They need homes! 3 more tiles will do it.')
+    expect(governorLine('space-surplus', 2))
+      .toBe("Let's read with the egg — 2 more friends will fill it up!")
+  })
+
+  it('says "1 more friend", never "1 more friends"', () => {
+    /*
+     * The whole reason the templates spell both forms out instead of bolting an
+     * `s` on: one is the count a child meets most often, because Fred speaks the
+     * moment she steps over the wall and one step is usually all she is out by.
+     */
+    expect(governorLine('space-surplus', 1))
+      .toBe("Let's read with the egg — 1 more friend will fill it up!")
+    expect(governorLine('nursery-queue', 1))
+      .toBe('They need homes! 1 more tile will do it.')
+    // ...and every other count takes the plural, including nought.
+    for (const n of [0, 2, 3, 11, 40]) {
+      expect(governorLine('space-surplus', n), `${n} friends`).toMatch(/more friends/)
+      expect(governorLine('nursery-queue', n), `${n} tiles`).toMatch(/more tiles/)
+    }
+  })
+
+  it('never shows a child a brace, at any count or any nudge', () => {
+    // The failure mode this guards is the one that ships: a template edited
+    // into a form `governorLine` does not recognise, delivered verbatim.
+    for (const which of NUDGES) {
+      for (let n = 0; n <= 12; n++) {
+        expect(governorLine(which, n), `${which} at ${n}`).not.toMatch(/[{}|]/)
+      }
+    }
+  })
+
+  it('leaves the wriggle-break line exactly as written, whatever count it is handed', () => {
+    /*
+     * It reads the CHILD rather than the island (`createBreakWatch`), so there
+     * is no number to give her and nothing in the sentence to fill. The caller
+     * hands it whatever `restoreCount` said — which is 0 — and it must come back
+     * untouched rather than growing a stray digit.
+     */
+    for (const n of [0, 1, 2, 7, 99]) {
+      expect(governorLine('wriggle-break', n), `count ${n}`)
+        .toBe(GOVERNOR_LINE['wriggle-break'])
+    }
+  })
+
+  it('asks for nothing at all on behalf of wriggle-break', () => {
+    // The mirror of the line above, at the other end of the same call: no island
+    // state can make a break into an errand with a number on it.
+    for (const f of [createFlow(),
+      withPets(grow(createFlow(), 10), 2),      // 11 fields, two friends: too bare
+      withPets(grow(createFlow(), 8), 8)]) {    // 9 fields, eight friends: too full
+      expect(restoreCount(f, 'wriggle-break')).toBe(0)
+    }
+  })
+
+  it('speaks a number that is the real way out, on a real island', () => {
+    /*
+     * End to end, which is the only place the count and the sentence meet: the
+     * island Fred is looking at, the number he says, and the island she reaches
+     * by doing exactly what he asked. Both walls, and both grammatical numbers,
+     * so the singular is proved on a state a child can actually stand in rather
+     * than only on a literal.
+     */
+    const bare = withPets(grow(createFlow(), 10), 2)       // 11 fields, two friends
+    expect(activeGovernor(bare)).toBe('space-surplus')
+    expect(governorLine('space-surplus', restoreCount(bare, 'space-surplus')))
+      .toBe("Let's read with the egg — 2 more friends will fill it up!")
+    expect(activeGovernor(withPets(bare, 2))).toBe('none')
+
+    const nearlyBare = withPets(grow(createFlow(), 10), 3) // 11 fields, three friends
+    expect(activeGovernor(nearlyBare)).toBe('space-surplus')
+    expect(governorLine('space-surplus', restoreCount(nearlyBare, 'space-surplus')))
+      .toBe("Let's read with the egg — 1 more friend will fill it up!")
+    expect(activeGovernor(withPets(nearlyBare, 1))).toBe('none')
+
+    const full = withPets(grow(createFlow(), 9), 8)        // 10 fields, eight friends
+    expect(activeGovernor(full)).toBe('nursery-queue')
+    expect(governorLine('nursery-queue', restoreCount(full, 'nursery-queue')))
+      .toBe('They need homes! 2 more tiles will do it.')
+    expect(activeGovernor(grow(full, 2))).toBe('none')
+
+    const nearlyFull = withPets(grow(createFlow(), 7), 6)  // 8 fields, six friends
+    expect(activeGovernor(nearlyFull)).toBe('nursery-queue')
+    expect(governorLine('nursery-queue', restoreCount(nearlyFull, 'nursery-queue')))
+      .toBe('They need homes! 1 more tile will do it.')
+    expect(activeGovernor(grow(nearlyFull, 1))).toBe('none')
+  })
+
+  it('stays want-framed once the number is in it', () => {
+    // The guard above this block reads the TABLE; a child is only ever shown
+    // what comes out of `governorLine`, so the same promise is re-checked on
+    // the filled sentence at every count.
+    for (const which of NUDGES) {
+      for (let n = 0; n <= 6; n++) {
+        const line = governorLine(which, n)
+        expect(line, `${which} at ${n}`).not.toMatch(/can'?t|cannot|not allowed|no more|stop/i)
+        expect(line.length).toBeGreaterThan(10)
+      }
+    }
   })
 })
 
@@ -192,10 +399,13 @@ describe('the corridor is a RATIO, not a fixed gap — Joe, 28 July', () => {
     /*
      * The property the old code could not have: with an absolute corridor the
      * ceiling rises by exactly one per pet, so this difference would be flat.
+     *
+     * Six and twelve rather than two and eight, because `ceiling` cannot see a
+     * wall through JT-016's sandbox at five animals or fewer — see `pastGrace`.
      */
-    const low = ceiling(2)
-    const high = ceiling(8)
-    expect(high - low).toBeGreaterThan(8 - 2)
+    const low = ceiling(6)
+    const high = ceiling(12)
+    expect(high - low).toBeGreaterThan(12 - 6)
   })
 
   it('does not drive the ratio to 1:1 as the island grows', () => {
@@ -265,17 +475,27 @@ describe('the floor is a RATIO too — PB-039, moved by JT-012', () => {
     expect(petsHoused(4)).toBe(2)
   })
 
-  it("is the corridor's number exactly: three fields hold two friends, and stall at three", () => {
-    // JT-012 read literally at the crowded wall — 1.5 fields per pet. Three
-    // tiles is `grow(_, 2)`; the island is born with one hex.
-    const two = withPets(grow(createFlow(), 2), 2)
-    expect(activeGovernor(two)).toBe('none')
-    expect(eggsPaused(two)).toBe(false)
+  it("is the corridor's number exactly: nine fields hold six friends, and stall at seven", () => {
+    /*
+     * JT-012 read literally at the crowded wall — 1.5 fields per pet, so six
+     * friends want nine fields. Nine tiles is `grow(_, 8)`; the island is born
+     * with one hex.
+     *
+     * SIX FRIENDS AND NOT TWO, because of JT-016. The old worked example was
+     * three fields holding two friends and stalling at three, and every island
+     * in that sentence is now inside grace, where Fred is silent whatever the
+     * ratio says. Six is the first animal count at which the crowded wall exists
+     * at all — see 'puts the crowded wall out of reach below six animals'.
+     */
+    const six = withPets(grow(createFlow(), 8), 6)
+    expect(habitableFields(six)).toBe(9)
+    expect(activeGovernor(six)).toBe('none')
+    expect(eggsPaused(six)).toBe(false)
 
-    const three = withPets(grow(createFlow(), 2), 3)
-    expect(activeGovernor(three)).toBe('nursery-queue')
-    expect(eggsPaused(three)).toBe(true)
-    expect(landPaused(three)).toBe(false)      // it asks for maths, it bars nothing
+    const seven = withPets(grow(createFlow(), 8), 7)
+    expect(activeGovernor(seven)).toBe('nursery-queue')
+    expect(eggsPaused(seven)).toBe(true)
+    expect(landPaused(seven)).toBe(false)      // it asks for maths, it bars nothing
   })
 
   it('rises in step with the pets, at one and a half fields each', () => {
@@ -284,15 +504,20 @@ describe('the floor is a RATIO too — PB-039, moved by JT-012', () => {
      * than the pets; JT-012 moves it to the crowded wall, 1.5 fields per pet, so
      * it rises with them. The property that matters either way is that it is a
      * RATIO — an absolute shortfall would give a constant difference here.
+     *
+     * Twelve and six rather than eight and two: `floor` measures the sandbox
+     * rather than the wall below six animals (JT-016, see `pastGrace`). The span
+     * is the same nine fields, so what this test says is unchanged.
      */
-    expect(floor(8) - floor(2)).toBe(Math.ceil(1.5 * 8) - Math.ceil(1.5 * 2))
-    expect(floor(8) - floor(2)).toBe(9)
+    expect(floor(12) - floor(6)).toBe(Math.ceil(1.5 * 12) - Math.ceil(1.5 * 6))
+    expect(floor(12) - floor(6)).toBe(9)
   })
 
   it('stays at 1.5 fields per pet however large the island grows', () => {
     // The fault PB-039 found was a floor that DRIFTED as the island grew. It no
     // longer drifts in either direction: it is one wall of a fixed corridor.
-    for (const pets of [2, 4, 10, 20]) {
+    // The list starts at six because grace hides the wall below it (JT-016).
+    for (const pets of [6, 8, 10, 20]) {
       expect(floor(pets), `${pets} pets`).toBe(Math.ceil(1.5 * pets))
     }
   })
@@ -307,11 +532,12 @@ describe('the floor is a RATIO too — PB-039, moved by JT-012', () => {
 
   it('leaves a wide corridor between the two walls at every size', () => {
     // The two ends are separate ratios, so the room she has to play in must grow
-    // with the island rather than staying a fixed handful of hexes.
-    for (const pets of [2, 6, 10, 20]) {
+    // with the island rather than staying a fixed handful of hexes. Six upward,
+    // for the same reason as the block above: below it there is no wall to see.
+    for (const pets of [6, 8, 10, 20]) {
       expect(ceiling(pets) - floor(pets), `${pets} pets`).toBeGreaterThan(2)
     }
-    expect(ceiling(20) - floor(20)).toBeGreaterThan(ceiling(2) - floor(2))
+    expect(ceiling(20) - floor(20)).toBeGreaterThan(ceiling(6) - floor(6))
   })
 })
 
@@ -324,24 +550,27 @@ describe('the floor is a RATIO too — PB-039, moved by JT-012', () => {
  * sums and finds the same sentence waiting has learnt that the game does not
  * mean what it says.
  */
-describe('the tap is diverted, never stranded — PB-039, re-walked for JT-012', () => {
+describe('the tap is diverted, never stranded — PB-039, re-walked for JT-019', () => {
   /*
-   * THE WAY OUT IS NOW UP TO TWO OF THE ASKED-FOR THING, not always one, and
-   * that is a real consequence of JT-012's numbers rather than a slackened test.
+   * THE WAY OUT IS NOW A NUMBER FRED SAYS OUT LOUD, and that supersedes the
+   * "within two" doctrine this block used to assert.
    *
-   * The crowded wall is 1.5 fields per pet, so a field is worth two thirds of a
-   * friend and half the time it takes two of them to house one more. And the
-   * empty wall is 3 fields per pet, so an island that reaches four bare fields
-   * during the grace period — the first thing Fred ever mentions — is four steps
-   * out, and needs two friends rather than one. PB-039's floor was two thirds of
-   * a field per pet, where one always sufficed.
+   * The old promise was a WINDOW: whatever Fred asked for, one or two of it
+   * would clear him. JT-016 broke it honestly — one field for six friends is
+   * five fields short of the crowded wall, not two — and Joe's answer was not to
+   * widen the window but to remove the guesswork: *"we get fred to tell her how
+   * many she needs to restore balance."* So the promise the game now makes is
+   * stronger and simpler than "short": it is EXACT. `restoreCount` is the number
+   * in Fred's sentence, and it is asserted from both sides, because a number
+   * that overshoots is a game asking for work it does not need and a number that
+   * falls short is a game that does not mean what it says.
    *
-   * Two is still short, still the thing Fred just asked for, and (since PB-042)
-   * she may ignore him entirely and pay the surcharge instead. What is asserted
-   * is that the way out exists, is short, and never drops her into the OTHER
-   * governor — which would satisfy the letter of the doctrine and none of it.
+   * She may still ignore him entirely and pay the surcharge instead (PB-042).
+   * What is asserted here is that the way out exists, is exactly as long as she
+   * was told, and never drops her into the OTHER governor on the way — which
+   * would satisfy the letter of the doctrine and none of it.
    */
-  it('lifts the nursery queue within two fields, and hands her nothing else', () => {
+  it('lifts the nursery queue in exactly the fields Fred names, and hands her nothing else', () => {
     for (let tiles = 0; tiles <= 20; tiles++) {
       let f = grow(createFlow(), tiles)
       for (let pets = 1; pets <= 40; pets++) {
@@ -349,19 +578,28 @@ describe('the tap is diverted, never stranded — PB-039, re-walked for JT-012',
         if (activeGovernor(f) !== 'nursery-queue') continue
         expect(eggsPaused(f)).toBe(true)
         const where = `${tiles + 1} fields, ${pets} pets`
-        const out = [1, 2].map(n => activeGovernor(grow(f, n)))
-        const free = out.indexOf('none')
-        expect(free, where).toBeGreaterThanOrEqual(0)
+
+        const need = restoreCount(f, 'nursery-queue')
+        expect(need, where).toBeGreaterThan(0)
+        // Exactly enough clears him, and eggs run again.
+        const cleared = grow(f, need)
+        expect(activeGovernor(cleared), where).toBe('none')
+        expect(eggsPaused(cleared), where).toBe(false)
+        // One fewer does NOT, so the number is not a rounded encouragement.
+        expect(activeGovernor(grow(f, need - 1)), where).toBe('nursery-queue')
         // ...and the road out never runs through the other governor. Only what
-        // she does AFTER she is free is her own business: laying a third and a
-        // fourth field would eventually empty the island, and Fred may say so.
-        expect(out.slice(0, free), where).not.toContain('space-surplus')
+        // she does AFTER she is free is her own business: laying a further field
+        // would eventually empty the island, and Fred may say so.
+        for (let n = 1; n <= need; n++) {
+          expect(activeGovernor(grow(f, n)), `${where}, +${n} fields`)
+            .not.toBe('space-surplus')
+        }
         break
       }
     }
   })
 
-  it('lifts the space surplus within two friends, and hands her nothing else', () => {
+  it('lifts the space surplus in exactly the friends Fred names, and hands her nothing else', () => {
     for (let pets = 0; pets <= 12; pets++) {
       let f = withPets(createFlow(), pets)
       for (let tiles = 1; tiles <= 60; tiles++) {
@@ -369,12 +607,19 @@ describe('the tap is diverted, never stranded — PB-039, re-walked for JT-012',
         if (activeGovernor(f) !== 'space-surplus') continue
         expect(landPaused(f)).toBe(true)
         const where = `${tiles + 1} fields, ${pets} pets`
-        const out = [1, 2].map(n => activeGovernor(withPets(f, n)))
-        const free = out.indexOf('none')
-        expect(free, where).toBeGreaterThanOrEqual(0)
-        // The mirror, and the same caveat: hatching a SECOND friend after she is
-        // already free may crowd the island, and Fred is entitled to mention it.
-        expect(out.slice(0, free), where).not.toContain('nursery-queue')
+
+        const need = restoreCount(f, 'space-surplus')
+        expect(need, where).toBeGreaterThan(0)
+        const cleared = withPets(f, need)
+        expect(activeGovernor(cleared), where).toBe('none')
+        expect(landPaused(cleared), where).toBe(false)
+        expect(activeGovernor(withPets(f, need - 1)), where).toBe('space-surplus')
+        // The mirror, and the same caveat: hatching a friend BEYOND the number
+        // she was given may crowd the island, and Fred is entitled to mention it.
+        for (let n = 1; n <= need; n++) {
+          expect(activeGovernor(withPets(f, n)), `${where}, +${n} friends`)
+            .not.toBe('nursery-queue')
+        }
         break
       }
     }
@@ -409,35 +654,69 @@ describe('the surcharge past the walls — JT-012', () => {
     }
   })
 
-  it('starts where Fred starts — no rise without an announcement', () => {
+  it('never rises without an announcement — and now Fred may speak for free', () => {
     /*
-     * THE COHERENCE REQUIREMENT, and the reason the governors and the prices
-     * call the same two functions. A price that moved while Fred said nothing
-     * would be a silent tax on a six-year-old. Walked over the whole grid,
-     * INCLUDING the grace period, where a one-hex island is already a step past
-     * the empty wall and must still cost the list price.
+     * THE COHERENCE REQUIREMENT, AS JT-014 LEFT IT — an IMPLICATION, and no
+     * longer a biconditional.
+     *
+     * It used to read `tileSteps(f) > 0` **iff** 'space-surplus', because the
+     * warning and the bill fired at the same wall. Joe pulled them apart: the
+     * corridor (1.5 / 3.0) is where Fred speaks and `price` (1.2 / 4.0) is where
+     * the till opens, and the price walls sit strictly outside the warning ones.
+     * So exactly one direction survives, and it is the direction that protects
+     * her — a price cannot rise unless Fred has already asked. The converse is
+     * now deliberately FALSE: there is a band in which she has been told and is
+     * being charged nothing.
+     *
+     * WHICH IS WHY THE BAND IS COUNTED rather than merely permitted. An
+     * implication on its own would still hold under the old one-wall code, so a
+     * test that asserted only the implication would pass against the thing
+     * JT-014 replaced and prove nothing about the ruling. The two `told*Free`
+     * counters are the ruling itself: if the price walls are ever collapsed back
+     * onto the warning walls, both fall to zero and this test goes red.
+     *
+     * Walked over the whole grid INCLUDING the grace period, where a one-hex
+     * island is already a step past the empty wall and must still cost the list
+     * price.
      */
+    let toldTileFree = 0
+    let toldEggFree = 0
     for (let tiles = 0; tiles <= 24; tiles++) {
       let f = grow(createFlow(), tiles)
       for (let pets = 0; pets <= 18; pets++) {
         if (pets > 0) f = withPets(f, 1)
         const where = `${tiles + 1} fields, ${pets} pets`
+        const governor = activeGovernor(f)
         const dearerTile = sumsForTile(f) > tileCost(f.tilesEarned + 1)
         const dearerEgg = pagesForEgg(f) > eggCost(f.pets.length + 1)
-        expect(tileSteps(f) > 0, where).toBe(activeGovernor(f) === 'space-surplus')
-        expect(eggSteps(f) > 0, where).toBe(activeGovernor(f) === 'nursery-queue')
-        // ...and the side that pays is the side that is out of balance.
-        if (activeGovernor(f) === 'none') {
+
+        // The surviving half: a charge implies an announcement, never the other
+        // way about — and that holds of the price a child is shown, not only of
+        // the step count behind it.
+        if (tileSteps(f) > 0) expect(governor, where).toBe('space-surplus')
+        if (eggSteps(f) > 0) expect(governor, where).toBe('nursery-queue')
+        if (dearerTile) expect(governor, where).toBe('space-surplus')
+        if (dearerEgg) expect(governor, where).toBe('nursery-queue')
+
+        // ...and the side that pays is the side that is out of balance. Under
+        // 'space-surplus' the TILE may or may not have got dearer — inside the
+        // band it has not — but the egg never pays for bare land, and that half
+        // is absolute.
+        if (governor === 'none') {
           expect(dearerTile || dearerEgg, where).toBe(false)
-        } else if (activeGovernor(f) === 'space-surplus') {
-          expect(dearerTile, where).toBe(true)          // too much bare land
+        } else if (governor === 'space-surplus') {
           expect(dearerEgg, where).toBe(false)
+          if (!dearerTile) toldTileFree++
         } else {
-          expect(dearerEgg, where).toBe(true)           // too many friends
           expect(dearerTile, where).toBe(false)
+          if (!dearerEgg) toldEggFree++
         }
       }
     }
+    expect(toldTileFree, 'no island where Fred asks her to read and land is list price')
+      .toBeGreaterThan(0)
+    expect(toldEggFree, 'no island where Fred asks for maths and the egg is list price')
+      .toBeGreaterThan(0)
   })
 
   it('reaches the price a child actually sees, at both walls', () => {
@@ -445,18 +724,38 @@ describe('the surcharge past the walls — JT-012', () => {
      * The wiring, pinned end to end rather than asserted as a property: the flow
      * she is in, the steps it is out by, and the number of sums or pages the
      * overlay will count out. Prices are in units; one item pays two.
+     *
+     * BOTH FIXTURES MOVED, and by both rulings at once. The old pair — nine
+     * fields for one friend, three fields for four — are now inside JT-016's
+     * grace, where the till is shut; and the step counts they quoted were read
+     * off the WARNING walls, which JT-014 is no longer what the price reads.
+     * Each number below therefore names its wall explicitly, because the whole
+     * point of the ruling is that the two are different.
      */
-    const bare = withPets(grow(createFlow(), 8), 1)      // 9 fields, one friend
-    expect(tileSteps(bare)).toBe(6)                      // 9 − 3·1
-    expect(tileCost(bare.tilesEarned + 1)).toBe(24)      // the list price
-    expect(sumsForTile(bare)).toBe(60)                   // ×2.5, and it is charged
+    const bare = withPets(grow(createFlow(), 10), 1)     // 11 fields, one friend
+    expect(emptySteps(habitableFields(bare), 1)).toBe(8) // 11 − 3·1: Fred spoke
+    expect(tileSteps(bare)).toBe(7)                      // 11 − 4·1: the till too
+    expect(tileCost(bare.tilesEarned + 1)).toBe(26)      // the list price
+    expect(sumsForTile(bare)).toBe(72)                   // ×2.75, and it is charged
     expect(pagesForEgg(bare)).toBe(eggCost(bare.pets.length + 1))
 
-    const crowded = withPets(grow(createFlow(), 2), 4)   // 3 fields, four friends
-    expect(eggSteps(crowded)).toBe(2)                    // 4 − ⌊3/1.5⌋
-    expect(eggCost(crowded.pets.length + 1)).toBe(16)
-    expect(pagesForEgg(crowded)).toBe(24)                // ×1.5, and it is charged
+    const crowded = withPets(grow(createFlow(), 8), 8)   // 9 fields, eight friends
+    expect(crowdedSteps(habitableFields(crowded), 8)).toBe(2)   // 8 − ⌊9/1.5⌋
+    expect(eggSteps(crowded)).toBe(1)                    // 8 − ⌊9/1.2⌋
+    expect(eggCost(crowded.pets.length + 1)).toBe(22)
+    expect(pagesForEgg(crowded)).toBe(28)                // ×1.25, and it is charged
     expect(sumsForTile(crowded)).toBe(tileCost(crowded.tilesEarned + 1))
+
+    /*
+     * ...and the band between the two walls, which is what PB-042 bought her:
+     * ten fields for eight friends is past the crowded WARNING wall and inside
+     * the crowded PRICE wall, so Fred asks for maths and the egg costs exactly
+     * what it has always cost.
+     */
+    const warned = withPets(grow(createFlow(), 9), 8)    // 10 fields, eight friends
+    expect(activeGovernor(warned)).toBe('nursery-queue')
+    expect(eggSteps(warned)).toBe(0)                     // 8 − ⌊10/1.2⌋
+    expect(pagesForEgg(warned)).toBe(eggCost(warned.pets.length + 1))
   })
 
   it('is a quarter dearer per step and never more than treble', () => {
@@ -560,10 +859,13 @@ describe('a price that rises never strands what she has banked — §19', () => 
   })
 
   it('keeps every sum banked on a standing plot when the island changes', () => {
-    // Walked through the real machine: nine bare fields and one friend is five
-    // steps past the empty wall, so this tile carries a real surcharge.
-    let f = withPets(grow(createFlow(), 8), 1)
+    // Walked through the real machine: eleven bare fields and one friend is
+    // eight steps past the empty warning wall and seven past the pricing one, so
+    // this tile carries a real surcharge. Nine fields did before JT-016 and is
+    // now a sandbox, where the price never moves at all.
+    let f = withPets(grow(createFlow(), 10), 1)
     expect(activeGovernor(f)).toBe('space-surplus')
+    expect(tileSteps(f)).toBeGreaterThan(0)
 
     let g: Flow = { ...f, phase: 'placing', chosen: null, plot: null, sumProgress: 0 }
     g = chooseTile(g, 'grass')
@@ -586,9 +888,12 @@ describe('a price that rises never strands what she has banked — §19', () => 
   })
 
   it('keeps every page banked on an egg when the island changes', () => {
-    // The mirror: three fields and four friends is past the crowded wall.
-    let f = withPets(grow(createFlow(), 2), 4)
+    // The mirror: nine fields and eight friends is past the crowded warning wall
+    // and one step past the pricing one, so this egg carries a real surcharge
+    // too. Three fields and four friends did before JT-016 widened the sandbox.
+    let f = withPets(grow(createFlow(), 8), 8)
     expect(activeGovernor(f)).toBe('nursery-queue')
+    expect(eggSteps(f)).toBeGreaterThan(0)
 
     f = challengePassed(tapEgg({ ...f, phase: 'free' }),
       { name: 'Pip', species: 'animal-fox' })

@@ -30,6 +30,16 @@ export interface Balance {
   pages: { wordsPerFindPage: number; mix: PageKind[] }
   governor: {
     /**
+     * How long the island stays a sandbox — the opening stretch in which no wall
+     * exists at all. Joe, JT-016: five animals and ten tiles.
+     *
+     * Both at once, and the AND is the point: a child with three animals on
+     * fourteen tiles has left the sandbox and should hear from Fred, and so has
+     * a child with eight animals on six tiles. Grace ends when EITHER number
+     * grows up. See `graceHolds`, and the tuning table above `emptySteps`.
+     */
+    grace: { pets: number; tiles: number }
+    /**
      * The two walls of the corridor she is free to play inside, in TILES PER PET.
      *
      * Joe, JT-012: *"target ratio i think should be 1 animal per 2 tiles, with a
@@ -62,6 +72,20 @@ export interface Balance {
      * the SAME two functions, so an announcement and a rise cannot drift apart.
      */
     corridor: { crowded: number; empty: number }
+    /**
+     * The two walls at which the PRICE actually starts to climb, in the same
+     * unit — tiles per pet. Joe, JT-014 and PB-042: the warning and the charge
+     * used to fire at the same wall, and he wanted daylight between them.
+     *
+     * `corridor` is where FRED SPEAKS. This is where the TILL OPENS, and it sits
+     * strictly further out on both sides: 1.2 outside 1.5, 4.0 outside 3.0. In
+     * the band between them she has been told and is not being charged, which is
+     * the whole of the ruling.
+     *
+     * The measured reasons for these two numbers, and everything else in the
+     * governor block, are in the tuning table above `emptySteps`.
+     */
+    price: { crowded: number; empty: number }
     /**
      * How much dearer a reward gets for each whole step past its wall.
      *
@@ -279,6 +303,76 @@ export const tileCost = (n: number): number => cost(balance.tile, n)
  *   3. `governors.ts` type-imports `Flow` from `flow.ts`, so a value import
  *      back the other way would be a genuine cycle. These take three numbers
  *      and no types, so neither file has to reach for the other.
+ *
+ *
+ * ===========================================================================
+ * THE GOVERNOR TUNING TABLE — JT-015. THE ONLY PLACE ANY OF THIS IS SET.
+ * ===========================================================================
+ *
+ * Joe, JT-015: *"mark the location of this explicitly if user testing finds it
+ * needs adjusting."* This is that mark. Every number below lives in the FIVE
+ * lines of the `"governor"` block in `src/island/balance/balance.json`, and
+ * nowhere else in the tree. Editing those five lines retunes the whole scheme;
+ * no code, no test and no other file has to change with them. If a child in
+ * testing is being nagged too early or charged too hard, that block is the dial.
+ *
+ *   WHAT                 SET TO           WHERE IN balance.json      RULING
+ *   -------------------  ---------------  -------------------------  -------
+ *   Target                2.0 tiles/pet   (not a knob — see below)   JT-013
+ *   Warn wall, crowded    1.5 tiles/pet   corridor.crowded           JT-012
+ *   Warn wall, empty      3.0 tiles/pet   corridor.empty             JT-012
+ *   Price wall, crowded   1.2 tiles/pet   price.crowded              JT-014
+ *   Price wall, empty     4.0 tiles/pet   price.empty                JT-014
+ *   Grace, animals        5 animals       grace.pets                 JT-016
+ *   Grace, tiles          10 tiles        grace.tiles                JT-016
+ *   Escalation            +25% per step   escalation.slope           JT-012
+ *   Ceiling               treble, never   escalation.capMultiple     JT-012
+ *                         dearer
+ *
+ * HOW TO READ IT. The island wants about two tiles for every animal. Between
+ * 1.5 and 3.0 tiles per animal nothing happens at all. Outside that, Fred SAYS
+ * something — and only outside 1.2 and 4.0 does anything cost more, a quarter
+ * more for each whole step further out, never more than three times list. The
+ * first five animals and first ten tiles are free of all of it.
+ *
+ * WHY THE PRICE WALL IS NOT THE WARN WALL (PB-042). They used to be the same
+ * wall, so the sentence "you have rather a lot of friends" and the higher price
+ * arrived in the same instant: she was told and billed together, and had no
+ * move that was merely warned. The gap is the room to act on the warning.
+ *
+ * WHY 1.2 AND 4.0 — MEASURED, not chosen by eye. Both were fixed by walking
+ * every island size 1..40 animals:
+ *
+ *   CROWDED. Standing exactly on the warn wall, at `fields = ceil(pets · 1.5)`,
+ *   the wall leaves ZERO animals of headroom — at EVERY pet count 1..10, and in
+ *   fact 1..40. `floor(fields / 1.5) - pets` is 0 every time. So one more egg
+ *   at the moment Fred speaks was always already a charged egg. Widening the
+ *   divisor buys headroom at about ONE SPARE ANIMAL PER 6 TILES (the gap is
+ *   `floor(f/1.2) - floor(f/1.5)`, which grows by exactly 1 every 6 tiles). On
+ *   the tenth-grid these numbers are tuned in, 1.2 is the TIGHTEST divisor that
+ *   buys at least one spare animal at every size outside grace: 1.3 still leaves
+ *   6 animals on 9 tiles with nothing spare, and 1.4 fails at 6, 7, 8, 10 and 12.
+ *   (1.25 also clears the bar, failing only at 1, 2 and 4 animals — all of them
+ *   deep inside grace where no wall exists. 1.2 was taken for the round number
+ *   and the extra animal of room at the sizes a child actually plays.)
+ *
+ *   EMPTY. The empty side was tighter still: `emptySteps` is already 1 at the
+ *   FIRST tile past the wall, for every pet count 1..12 — one hex too many and
+ *   the next tile is dearer. 3.5 does not fix it, because at ONE animal the
+ *   first overshoot is 4 tiles and `floor(3.5 · 1)` is 3, so it still costs a
+ *   step; 3.75 fails there too. 4.0 is the SMALLEST multiplier that absorbs the
+ *   first overshoot at every size, and what it buys is exactly ONE SPARE TILE
+ *   PER ANIMAL (`floor(4p) - floor(3p) = p`, exactly, at every p).
+ *
+ * WHY THE TWO SIDES ARE NOT SYMMETRIC (JT-018). Joe: the crowded wall prices
+ * EGGS, and animals come out of a limited stash — she cannot make more. The
+ * empty wall prices TILES, and tiles are unlimited. Being generous about bare
+ * land costs the island nothing, so the empty buffer is the wide one.
+ *
+ * WHAT IS NOT HERE. `emptySteps` and `crowdedSteps` still read `corridor` and
+ * must keep doing so: they are the WARNING — the condition Fred speaks on — and
+ * the price functions beside them are a separate pair on purpose. Pointing
+ * either of them at `price` would collapse PB-042 back to one wall in silence.
  * ------------------------------------------------------------------------- */
 
 /**
@@ -307,6 +401,70 @@ export const emptySteps = (habitableFields: number, pets: number): number =>
  */
 export const crowdedSteps = (habitableFields: number, pets: number): number =>
   Math.max(0, pets - Math.floor(habitableFields / balance.governor.corridor.crowded))
+
+/**
+ * How many whole fields past the PRICE wall on the empty side — what the tile
+ * actually gets charged for. `emptySteps`' shape exactly, one wall further out.
+ *
+ * Zero everywhere `emptySteps` is zero and for a stretch beyond it: the band
+ * where Fred has asked her to read and the tile still costs list price. Never
+ * greater than `emptySteps`, because `price.empty` is the outer wall — the
+ * warning cannot arrive after the bill.
+ */
+export const emptyPriceSteps = (habitableFields: number, pets: number): number =>
+  Math.max(0, habitableFields - Math.floor(balance.governor.price.empty * pets))
+
+/**
+ * How many whole pets past the PRICE wall on the crowded side — what the egg is
+ * actually charged for. `crowdedSteps`' shape exactly, one wall further out.
+ *
+ * In PETS, for the same reason `crowdedSteps` is: the egg is what gets dearer
+ * and an animal is the thing she is buying. The most animals `habitableFields`
+ * can hold before the till opens is `floor(fields / price.crowded)`.
+ */
+export const crowdedPriceSteps = (habitableFields: number, pets: number): number =>
+  Math.max(0, pets - Math.floor(habitableFields / balance.governor.price.crowded))
+
+/**
+ * Is the island still in its opening stretch, where no wall exists (JT-016)?
+ *
+ * AND, not OR, which is the same shape `inGracePeriod` has always had: grace
+ * holds only while BOTH numbers are small, so it ends the moment either one
+ * grows up. Five animals or ten tiles is still grace; a sixth animal ends it,
+ * and so does an eleventh tile.
+ *
+ * Here rather than in `governors.ts` because it is a statement about two
+ * numbers and the two numbers are in `balance.json` — the caller that has a
+ * `Flow` can hand it `pets.length` and `tiles.size`.
+ */
+export const graceHolds = (pets: number, tiles: number): boolean =>
+  pets <= balance.governor.grace.pets && tiles <= balance.governor.grace.tiles
+
+/**
+ * How many grass tiles she must ADD to get back inside the CROWDED warn wall —
+ * the number Fred can say out loud instead of "you have rather a lot of
+ * friends". Zero when she is already inside it.
+ *
+ * The exact inverse of `crowdedSteps` by construction, and tested as one:
+ * adding this many fields makes `crowdedSteps` exactly 0, and adding one fewer
+ * does not. `ceil` because the smallest field count that does NOT breach
+ * `crowded · pets` is `ceil(crowded · pets)` — the mirror of the `floor` in
+ * `crowdedSteps`, and it stays the mirror whatever `crowded` is retuned to.
+ */
+export const tilesShortOfCorridor = (habitableFields: number, pets: number): number =>
+  Math.max(0, Math.ceil(pets * balance.governor.corridor.crowded) - habitableFields)
+
+/**
+ * How many animals she must ADD to get back inside the EMPTY warn wall — the
+ * mirror of `tilesShortOfCorridor`, in the unit that side is measured in.
+ * Zero when she is already inside it.
+ *
+ * The exact inverse of `emptySteps`, on the same terms: adding this many pets
+ * drives it to 0 and one fewer does not. `ceil(fields / empty)` is the fewest
+ * animals that carry `fields` without the land reading as bare.
+ */
+export const petsShortOfCorridor = (habitableFields: number, pets: number): number =>
+  Math.max(0, Math.ceil(habitableFields / balance.governor.corridor.empty) - pets)
 
 /**
  * What a reward costs, as a multiple of its list price, this many steps out.

@@ -32,7 +32,10 @@
  * `createBreakWatch` at the foot of this file.
  */
 import type { Flow } from './flow'
-import { balance, emptySteps, crowdedSteps } from './balance'
+import {
+  balance, emptySteps, crowdedSteps, emptyPriceSteps, crowdedPriceSteps,
+  graceHolds, tilesShortOfCorridor, petsShortOfCorridor,
+} from './balance'
 import { sockets } from './world/grid'
 
 /** The two governors that read the ISLAND's state. `activeGovernor` answers. */
@@ -49,7 +52,18 @@ export type Governor = 'none' | 'space-surplus' | 'nursery-queue'
  */
 export type Nudge = Exclude<Governor, 'none'> | 'wriggle-break'
 
-/** Fred's line for each. Want-framed: what to do next, never what is barred. */
+/**
+ * Fred's line for each. Want-framed: what to do next, never what is barred.
+ *
+ * TWO OF THEM ARE TEMPLATES NOW (JT-019). Joe: *"we get fred to tell her how
+ * many she needs to restore balance."* — so the two island governors name the
+ * number, and `governorLine` fills it in. `{n}` is the count and `{one|many}`
+ * picks the noun's form, because "1 more tiles" is the kind of sentence a child
+ * learning to read should never be shown. `wriggle-break` reads the CHILD rather
+ * than the island, there is no number to give her, and it is left untouched.
+ *
+ * Never read this table directly for a line to speak — call `governorLine`.
+ */
 export const GOVERNOR_LINE: Record<Nudge, string> = {
   /*
    * Joe: *"'lets read some friends home first' sounds aweful. lets put it as
@@ -60,9 +74,21 @@ export const GOVERNOR_LINE: Record<Nudge, string> = {
    * whimsy rather than instruction. The new line names the OBJECT she has to tap
    * — the egg — so it tells her what to do rather than describing what will
    * happen. Kept want-framed, and the apostrophe is deliberate in a reading game.
+   *
+   * JT-019 adds the count to the SECOND clause and leaves Joe's first clause
+   * exactly as he wrote it. The number is what filling the island takes, phrased
+   * as the good thing it buys — "will fill it up!" rather than "you are 2
+   * short", which is the same fact stated as a debt. Nothing is owed here.
    */
-  'space-surplus': "Let's read with the egg to get some more friends!",
-  'nursery-queue': 'They need homes first!',
+  'space-surplus': "Let's read with the egg — {n} more {friend|friends} will fill it up!",
+
+  /*
+   * The mirror, and the count is the number of TILES: the friends are the thing
+   * she already has, so what she needs is somewhere to put them. "will do it"
+   * closes it as an achievable errand rather than a shortfall, and the sentence
+   * is still about the pets wanting something rather than about her being late.
+   */
+  'nursery-queue': 'They need homes! {n} more {tile|tiles} will do it.',
 
   /*
    * Joe: *"we have a button mash guard, but repeated mashing on successive
@@ -85,11 +111,56 @@ export const GOVERNOR_LINE: Record<Nudge, string> = {
 }
 
 /**
+ * Fred's line, with the number filled in — JT-019.
+ *
+ * `count` is ignored for `wriggle-break`, which carries no placeholders, so the
+ * caller may pass 0 (or `restoreCount`, which answers 0 there) without thinking
+ * about it. Singular and plural are both spelled out in the template rather than
+ * an `s` bolted on, so a line can be reworded into an irregular noun later
+ * without the pluraliser having to learn English.
+ */
+export function governorLine(which: Nudge, count: number): string {
+  return GOVERNOR_LINE[which]
+    .replace('{n}', String(count))
+    .replace(/\{([^|{}]*)\|([^|{}]*)\}/g, (_, one: string, many: string) =>
+      count === 1 ? one : many)
+}
+
+/**
+ * How many of the asked-for thing would put her back inside the corridor.
+ *
+ * The number Fred says out loud, and it is the REAL way out rather than a
+ * rounded encouragement: add this many and `activeGovernor` falls silent; add
+ * one fewer and it does not. Asserted that way round in the tests, because a
+ * number that turned out to be short is the game not meaning what it says.
+ *
+ * It answers against the WARNING walls, not the pricing ones (JT-014), because
+ * it is the warning she is trying to clear.
+ */
+export const restoreCount = (f: Flow, which: Nudge): number =>
+  which === 'nursery-queue' ? tilesShortOfCorridor(habitableFields(f), f.pets.length)
+    : which === 'space-surplus' ? petsShortOfCorridor(habitableFields(f), f.pets.length)
+      : 0
+
+/**
  * The island is still new. Governors stay silent for the opening stretch so a
  * child learning the loop is never redirected (§5).
+ *
+ * JT-016 — Joe: *"grace period up to 5 animals and 10 tiles."* The two numbers
+ * are no longer written here: they live in `balance.json` and are read through
+ * `graceHolds`, with the rest of the corridor they belong to. The old pair (two
+ * pets, four tiles) was small enough that no island in grace could reach either
+ * wall, so the rule had never actually held anything back; at five and ten it
+ * genuinely does, and a beginner can now run a good way out of balance before
+ * Fred says a word. That is the point of it.
+ *
+ * IT SUPPRESSES THE PRICE AS WELL AS THE WARNING, and that is intended rather
+ * than incidental — see the pricing block below. A silent surcharge on a state
+ * she has not been told about is exactly what JT-012 rules out, and during grace
+ * she is told about nothing.
  */
 export function inGracePeriod(f: Flow): boolean {
-  return f.pets.length < 2 && f.island.tiles.size < 4
+  return graceHolds(f.pets.length, f.island.tiles.size)
 }
 
 /**
@@ -199,13 +270,23 @@ export function activeGovernor(f: Flow): Governor {
   const pets = f.pets.length
 
   /*
-   * BOTH WALLS ARE THE CORRIDOR'S OWN, and both are read through the very
-   * functions that price the rewards. That is JT-012's coherence requirement
-   * rather than a tidy-up: Joe asked for the escalation to come *"with an
-   * announcement"*, and Fred's ask IS the announcement. A price that started
-   * anywhere the invitation did not would be a silent tax on a six-year-old, so
-   * `emptySteps(...) > 0` and 'space-surplus' are not two conditions that agree
-   * today — they are one condition, written once.
+   * BOTH WALLS ARE THE CORRIDOR'S OWN, and these are the WARNING walls — 1.5 and
+   * 3.0. They are no longer the walls that price the rewards.
+   *
+   * JT-014 pulled the two apart deliberately. JT-012's coherence requirement was
+   * that no price move without Fred saying something first — Joe asked for the
+   * escalation to come *"with an announcement"*, and Fred's ask IS the
+   * announcement — and until now that was implemented as ONE condition read
+   * twice, which satisfies it and overshoots it. The announcement then arrived
+   * with the bill attached, so the first thing she heard was already costing her.
+   *
+   * The walls are now nested: Fred speaks at 1.5 / 3.0 and it costs nothing, and
+   * only past the WIDER pricing walls (1.2 / 4.0, `*PriceSteps`) does the next
+   * reward get dearer. What survives is the half that protects her — a price
+   * still cannot rise without an announcement having come first, because the
+   * pricing walls sit strictly outside the warning ones. What goes is the
+   * converse: Fred may now speak with the till shut, which is the whole point.
+   * The implication is walked over the grid in `governors.test.ts`.
    *
    * Joe gave the corridor in ANIMALS PER TILE: *"target ratio i think should be
    * 1 animal per 2 tiles, with a buffer to 2:3 either way"* — 1/2 at the target,
@@ -254,13 +335,21 @@ export function activeGovernor(f: Flow): Governor {
 }
 
 /* ------------------------------------------------------------------------- *
- * What the PRICES read — and they read it from here, on purpose.
+ * What the PRICES read — and they read a WIDER corridor than Fred does.
  *
  * JT-012 asks for the escalation to arrive *"with an announcement"*, and Fred's
- * ask is that announcement. So these two must be exactly the states in which
- * `activeGovernor` speaks: `tileSteps(f) > 0` if and only if it returns
- * 'space-surplus', `eggSteps(f) > 0` if and only if 'nursery-queue'. Anything
- * else is a tax levied without a word said, which the card rules out.
+ * ask is that announcement. JT-014 keeps that in one direction only, which is
+ * the direction that matters: `tileSteps(f) > 0` IMPLIES 'space-surplus' and
+ * `eggSteps(f) > 0` IMPLIES 'nursery-queue', so nothing ever gets dearer without
+ * Fred having asked first. The converse is deliberately false now. He warns at
+ * the 1.5 / 3.0 walls for free, and she can carry on past them at list price;
+ * the surcharge starts only at the 1.2 / 4.0 walls, once she has been told twice
+ * over and kept going. An invitation that costs nothing to decline is a warmer
+ * thing than one with a bill stapled to it.
+ *
+ * The implication only holds because the pricing corridor strictly CONTAINS the
+ * warning one. That is a fact about `balance.json`, not about this file, so it
+ * is walked exhaustively in the tests rather than trusted.
  *
  * WHICH IS WHY THE GRACE PERIOD IS HERE TOO, and it is not decoration: a brand
  * new island is one hex with nobody on it, which is a whole step past the empty
@@ -270,13 +359,13 @@ export function activeGovernor(f: Flow): Governor {
  * these keep the till shut with him.
  * ------------------------------------------------------------------------- */
 
-/** Steps past the EMPTY wall, for pricing the next tile. Silent in grace. */
+/** Steps past the EMPTY PRICING wall, for the next tile. Silent in grace. */
 export const tileSteps = (f: Flow): number =>
-  inGracePeriod(f) ? 0 : emptySteps(habitableFields(f), f.pets.length)
+  inGracePeriod(f) ? 0 : emptyPriceSteps(habitableFields(f), f.pets.length)
 
-/** Steps past the CROWDED wall, for pricing the next egg. Silent in grace. */
+/** Steps past the CROWDED PRICING wall, for the next egg. Silent in grace. */
 export const eggSteps = (f: Flow): number =>
-  inGracePeriod(f) ? 0 : crowdedSteps(habitableFields(f), f.pets.length)
+  inGracePeriod(f) ? 0 : crowdedPriceSteps(habitableFields(f), f.pets.length)
 
 /** May the child start a NEW plot right now? A plot mid-build always finishes. */
 export const landPaused = (f: Flow): boolean =>

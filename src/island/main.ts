@@ -23,7 +23,7 @@ import { createPlotHost } from './plot'
 import { createAlbum } from './album'
 import { hatchProgress, landProgress, sumsForTile, pagesForEgg } from './flow'
 import { balance, applyDevBalance, pagesRead } from './balance'
-import { landPaused, eggsPaused, GOVERNOR_LINE } from './governors'
+import { landPaused, eggsPaused, governorLine, restoreCount } from './governors'
 import type { Nudge } from './governors'
 import { OPENING, HATCH_LINES, TILE_QUESTION, fill } from './script'
 import { loadIsland, saveIsland } from './save'
@@ -1719,7 +1719,14 @@ async function boot(): Promise<void> {
       if (asked === which) { asked = null; return 'again' }
       asked = which
     }
-    const line = GOVERNOR_LINE[which]
+    /*
+     * JT-019 — Joe: *"we get fred to tell her how many she needs to restore
+     * balance."* The count is read at the moment he speaks rather than passed
+     * in, because the island may have moved since whatever event triggered the
+     * ask, and a number that is one out is worse than no number at all.
+     * `restoreCount` answers 0 for the wriggle-break, whose line has no count.
+     */
+    const line = governorLine(which, restoreCount(flow, which))
     overlay.say(line)
     speech.speak(line)
     fred.talk(2.6)

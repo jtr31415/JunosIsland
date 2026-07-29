@@ -7,6 +7,12 @@
     "Text is the TARGET wording — i.e. after the splice law of voice.md §3. Where the shipped",
     "code still differs, the entry carries \"port\": the item that brings the code into line.",
     "",
+    "A few lines are TEMPLATES and say so by carrying a slot in their text: {n} is a number and",
+    "{one|many} is the noun either way. Such an entry also carries \"ref\", naming the generated",
+    "family the slot is filled from — same field, same meaning as on a slot line of its own, and",
+    "the family's character must match the line's or the splice is illegal (§3). The template is",
+    "written here in full so the wording can be audited as a sentence; the cut is in the note.",
+    "",
     "The 2D game (src/words2d, v0/junos-words.html) is NOT covered here. It is frozen and its",
     "speech must stay identical to v0, including the spoken child's name at v0:742. The splice",
     "law governs the island only."
@@ -50,6 +56,13 @@
       "note": "The album pop-out's speak button reads the friend's name and THEN her species, chained on the name's end rather than spoken over it (speak() cancels speech, v0:749). Two clips, never one splice: a name.* clip followed by a species.* clip, per the law that a name is a line of its own. Two of the twenty-four are judgement rather than transcription — 'animal-polar' is 'Polar Bear' and 'animal-hog' is 'Wild Boar', because 'animal-pig' is also in the pack. Same words as printed on the card, so what she hears is what she is reading."
     },
     {
+      "idPrefix": "count.",
+      "character": "fred",
+      "count": "1-20",
+      "source": "spoken numerals, one clip per number",
+      "note": "FRED's numerals, not the teacher's, because they are spliced into Fred's own sentences — voice.md §3 requires the slot parts and their inserts to share one voice, so the teacher counting inside Fred's line would be exactly the cross-voice splice the law forbids. They are not challenge material either: these are Fred telling her how many, so the one-voice rule for taught words (§1) does not claim them. Twenty covers every count the corridor can ask for in ordinary play, but the count is unbounded in principle — it is however far past the wall she has walked — and a number with no clip falls back to Web Speech like any other missing line (§6)."
+    },
+    {
       "idPrefix": "phoneme.",
       "character": "dad",
       "count": 43,
@@ -76,8 +89,8 @@
     { "id": "hatch.isHere", "character": "fred", "category": "ceremony", "text": "Look who's here!", "port": "item 11", "note": "Follows a name. clip. Replaces '[PETNAME] is here!'" },
     { "id": "land.counted", "character": "fred", "category": "ceremony", "text": "You have found some land for your friends!" },
 
-    { "id": "gov.spaceSurplus", "character": "fred", "category": "governor", "text": "Let's read with the egg to get some more friends!" },
-    { "id": "gov.nurseryQueue", "character": "fred", "category": "governor", "text": "They need homes first!" },
+    { "id": "gov.spaceSurplus", "character": "fred", "category": "governor", "text": "Let's read with the egg — {n} more {friend|friends} will fill it up!", "ref": "count.", "was": "Let's read with the egg to get some more friends!", "note": "A TEMPLATE, and the count is spliced at speak time. JT-019 — Joe: \"we get fred to tell her how many she needs to restore balance.\" The number is a fact about her island at the moment Fred opens his mouth, so there is no whole line to bake: it is cut either side of the numeral, \"Let's read with the egg —\" | count.n | \"more friend(s) will fill it up!\". The seam is the em dash, which is a pause he takes anyway (§3 asks for seams on natural boundaries), and the splice is legal because Fred's numerals go into Fred's own sentence — one larynx throughout, as \"You found… Bimo!\" is one larynx throughout. The tail bakes TWICE, once each way: \"1 more friends will fill it up\" is a sentence a child learning to read must never be shown, which is why the template spells both forms rather than bolting on an s." },
+    { "id": "gov.nurseryQueue", "character": "fred", "category": "governor", "text": "They need homes! {n} more {tile|tiles} will do it.", "ref": "count.", "was": "They need homes first!", "note": "The mirror, counted in tiles, and spliced the same way for the same reason (JT-019 — Joe: \"we get fred to tell her how many she needs to restore balance.\"). Cut \"They need homes!\" | count.n | \"more tile(s) will do it.\", the seam falling after the opening exclamation, and the tail baked both ways. Fred throughout, so nothing crosses a voice." },
     { "id": "gov.wriggleBreak", "character": "fred", "category": "governor", "text": "Ooh, my legs have gone all wriggly! Let's jump up and have a run about — then come back, your island will be right here.", "note": "Fired when three pages in a row are mashed (3+ wrongs each). Warmer and slower than the other two governor lines — an invitation to play, not a note about the work. FRED owns the need for the break, never the child: brief §19 forbids shame, and a line about her answers is a scoreboard however kindly it is read. Suggestion only — nothing is locked, nothing expires, and she can carry straight on." }
   ]
 }

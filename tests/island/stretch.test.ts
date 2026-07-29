@@ -528,12 +528,69 @@ describe('main.ts actually delivers the suggestion', () => {
  * voice/scripts.json's own first rule, per docs/pet-island-voice.md §5.1.
  */
 describe('the voice script', () => {
+  interface Line { id: string; character: string; text?: string; ref?: string }
+  interface Family { idPrefix: string; character: string }
+  const scripts = JSON.parse(read('../../voice/scripts.json')) as
+    { generated: Family[]; lines: Line[] }
+
+  /** A line with a slot in it: `{n}`, or `{one|many}`. See governors.ts. */
+  const isTemplate = (s: string): boolean => /\{/.test(s)
+
+  /**
+   * TEMPLATES ARE STORED WHOLE, so this stays a verbatim comparison.
+   *
+   * JT-019 turned two of the three nudges into templates, and the tempting fix
+   * was to compare only the parts either side of `{n}` — which would have made
+   * the assertion weaker exactly where the wording is newest, since the fixed
+   * head of a sentence can match while its tail has drifted. `scripts.json`
+   * carries the template as written instead (see its `about`), so the check is
+   * unchanged: the script and the code hold the same string or this is red.
+   */
   it("carries every one of Fred's nudges, verbatim", () => {
-    const scripts = JSON.parse(read('../../voice/scripts.json')) as
-      { lines: Array<{ id: string; text?: string }> }
     const texts = scripts.lines.map(l => l.text)
     for (const [id, line] of Object.entries(GOVERNOR_LINE)) {
       expect(texts, `${id} has no entry in voice/scripts.json`).toContain(line)
+    }
+  })
+
+  /**
+   * ...and a template is not a recordable line on its own.
+   *
+   * A number cannot be baked into the sentence, so the entry has to say where
+   * the numerals come from — otherwise the ledger claims to cover every spoken
+   * thing while the numbers Fred actually says have no entry at all, which is
+   * the one failure the file exists to prevent. The insert must also be the
+   * SAME CHARACTER as the line it lands in: voice.md §3, the splice law.
+   */
+  it('says where a templated line gets its insert, in the same voice', () => {
+    /*
+     * Driven off the CODE's templates, not off a list written here, so a fourth
+     * nudge with a count in it is caught by the test that already exists rather
+     * than by someone remembering to extend one.
+     */
+    const templates = Object.entries(GOVERNOR_LINE).filter(([, l]) => isTemplate(l))
+    expect(templates.length, 'JT-019 templated two of the nudges').toBeGreaterThan(0)
+
+    for (const [id, line] of templates) {
+      const entry = scripts.lines.find(l => l.text === line)
+      expect(entry, `${id} has no entry in voice/scripts.json`).toBeDefined()
+      const family = scripts.generated.find(g => g.idPrefix === entry?.ref)
+      expect(family, `${entry?.id} has a slot but no \`ref\` to fill it from`)
+        .toBeDefined()
+      expect(family?.character, `${entry?.id} splices across voices — voice.md §3`)
+        .toBe(entry?.character)
+    }
+  })
+
+  /**
+   * ...and from the other side: nothing in the script may carry a slot it has
+   * not declared, whether or not the code has caught up with it yet.
+   */
+  it('leaves no slot in the script undeclared', () => {
+    for (const line of scripts.lines) {
+      if (!line.text || !isTemplate(line.text)) continue
+      expect(scripts.generated.map(g => g.idPrefix),
+        `${line.id} has a slot but no \`ref\` to fill it from`).toContain(line.ref)
     }
   })
 })
