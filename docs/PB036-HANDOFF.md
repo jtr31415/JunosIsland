@@ -1,5 +1,90 @@
 # PB-036 handoff — themed animal collections
 
+> ## ⚠ START HERE — Joe's editor verdict and the next five jobs
+>
+> *Written by the drumbeat, 30 July 2026, at Joe's request, immediately before a
+> context clear. Nothing below was built — he said explicitly **"dont build now.
+> note in handoff and prepare for context clear."** This block is the next
+> manager's queue.*
+>
+> **His verdict on the editor** (`1f0e3f7`, `fe0ef44`, at
+> `http://127.0.0.1:4173/editor/`): *"concept of the editor is brilliant and works
+> well. needs a bit more work, but its the way to get the animals done much
+> quicker."*
+>
+> That last clause is the strategic point and it should govern priorities: **the
+> editor is now the fastest route to 296 species, so work on the editor outranks
+> building more animals.** A builder improvement helps an agent; an editor
+> improvement helps Joe, and he is the taste.
+>
+> ### His five notes, verbatim intent
+>
+> 1. **Saving is missing, and it is the one that blocks everything.** *"need to be
+>    able to save my edits."* Today "Take it out" only prints the definition text.
+>    The groundwork exists — `joe/species-edits.json` is writable and merge-safe —
+>    but `api.mjs state()` needs `edits` added before the page can read drafts
+>    back. Until this lands, every edit he makes is lost when he closes the tab,
+>    which makes the editor a toy rather than a tool. **Do this first.**
+> 2. **Sort the component dropdown, with category headers.** *"the drop down of the
+>    components is probably ok without a visual library, it sjust needs to be
+>    sorted by part and have headers for the categories in the drop down."* So the
+>    visual library with thumbnails stays deferred — he is content with a
+>    `<select>`, grouped (`<optgroup>`) by part category and ordered within it.
+>    Cheap, and it closes the library question for now.
+> 3. **He cannot insert a new component.** *"i need to be able to insert a new
+>    component."* Today he can swap, copy, mirror and delete what is already on a
+>    creature, but not add a part that is not there. That is a hole in the core
+>    loop, not a nicety.
+> 4. **A snapping BUG.** *"some parts snap to a location, even though snap is off -
+>    eyes are fine and i can move them perfectly, 3d components snap to somewhere."*
+>    So eye cards move freely and correctly; solid parts jump to some position
+>    regardless of the snap setting. Diagnose before fixing — candidates include a
+>    station/anchor being applied on top of the gizmo's transform, a placement rule
+>    normalising `at`, or the snap flag not reaching the solid-part path at all.
+>    **Note the class of bug**: a value written back to the definition and then
+>    re-derived on rebuild is exactly where tonight's hull and normalisation faults
+>    lived. Suspect the round trip, not the gizmo.
+> 5. **Start a new animal from scratch.** *"need a function to start a new animal
+>    conmpletely from scratch."* An empty definition — standard hull, four legs,
+>    two eye cards, a palette — as a starting point. Note this is distinct from the
+>    still-deferred copy-an-original flow, and cheaper.
+>
+> ### The one piece of debt that could bite
+>
+> Opening a species in the editor relies on a **PROVISIONAL dev-only Vite
+> transform** that rewrites `defineCreature(` → `captureDef(` as the 14 leaf files
+> are served, because `defineCreature` builds and then drops the definition. It is
+> marked loudly and throws if a file stops matching. **The permanent fix is two
+> lines in `src/island/species/parts/creature.ts` — a `CREATURE_DEFS` map written
+> by `defineCreature` — then delete the plugin.** Do this before the workaround
+> becomes load-bearing.
+>
+> ### Still deferred, seams written down at the top of the editor's `main.ts`
+>
+> The visual parts library with thumbnails and shape search; the
+> copy-an-original-and-decompose flow (its hard half IS measured — join
+> `PARTS_BANK.provenance` on `(species, node:'body', ordinal)`, **177 of 206
+> resolve unambiguously, 16 of 24 species at 100%**, the 29 misses being horns and
+> claws never banked; **do not match on triangle counts, 46.6% ambiguous**); and
+> the two-tone colour experiment, which was **not built, so nobody has a verdict on
+> which route reads better for the deer's belly or the penguin's front**.
+>
+> ### Open with Joe, not with us
+>
+> - **JT-036** — Kenney leaves 0.236 mean clearance above the hull, ours is 0.134,
+>   and mouse, shrew, mole and badger have **zero**. Do they get ears? Three costed
+>   options, nothing built on any.
+> - **14 Garden animals and 96 facts sit unapproved** in the approver bench, 12
+>   facts flagged unverified. His sign-off is the gate.
+>
+> ### State at the clear
+>
+> Nothing is running — no managers, no heartbeat, no queued work. Tree clean,
+> `origin/main` level. `governors` and `pettap` are **flaky, not broken** — do not
+> chase them. The dev server is up on 4173; `strictPort` means it binds that port
+> or fails loudly, so kill the old PID rather than accepting a fallback.
+
+
 *Run 14 (PB-036 manager, phase 6), written 30 July 2026. Read
 `docs/MANAGER-ORDERS.md` for the job. This file is PB-036's baton only —
 `docs/MANAGER-HANDOFF.md` belongs to the queue manager and was not touched.*
