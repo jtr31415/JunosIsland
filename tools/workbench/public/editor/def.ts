@@ -912,7 +912,7 @@ export function warningsFor(
     }
     const kept = was.filter(s => now.includes(s))
     const order = now.filter(s => kept.includes(s))
-    if (kept.join(' ') !== order.join(' ')) {
+    if (kept.join(' ') !== order.join(' ')) {
       out.push({
         axiom: 'palette-order',
         severity: 'loud',

@@ -74,5 +74,48 @@ export default defineConfig({
         server.middlewares.use(createApi(root))
       },
     },
+    /*
+     * >>> PROVISIONAL — the species editor's only way to READ a definition.
+     *
+     * `defineCreature(id, def)` returns the built `AssemblyBuild` and throws the
+     * `def` away; `register.ts` stores the build alone. So a shipped species'
+     * DEFINITION is unrecoverable at runtime, and `editor/def.ts defFrom()`
+     * documents itself as always returning `null` because of it. The editor
+     * edits definitions, so with no def there is nothing to open.
+     *
+     * The permanent fix is two added lines in `src/island/species/parts/creature.ts`
+     * — a `CREATURE_DEFS` map written by `defineCreature` — and it belongs to
+     * whoever owns `src/`. This run may not touch `src/`, so instead the
+     * dev server rewrites the fourteen leaf definition files as it serves them:
+     * `defineCreature(` becomes `captureDef(`, which records the def and then
+     * calls the real `defineCreature`. Identical geometry, because it IS the
+     * real one; nothing is bundled, because this config has no `build`.
+     *
+     * WHEN THE `src/` CHANGE LANDS, DELETE THIS PLUGIN and point `defFrom` at
+     * `CREATURE_DEFS`. Until then the anchor is checked and the plugin THROWS if
+     * a definition file stops matching — a capture that silently found nothing
+     * would present Joe an empty editor and blame the species.
+     */
+    {
+      name: 'joe-workbench-capture-defs',
+      apply: 'serve',
+      enforce: 'pre',
+      transform(code, id) {
+        const path = (id.split('?')[0] ?? id).replace(/\\/g, '/')
+        if (!/\/src\/island\/species\/parts\/assembled\/animal-[a-z-]+\.ts$/.test(path)) return null
+        if (!code.includes('defineCreature(')) {
+          throw new Error(
+            `joe-workbench-capture-defs: ${path} no longer calls defineCreature(. The editor `
+            + 'reads definitions through this rewrite; fix the plugin or land the '
+            + 'CREATURE_DEFS map in src/island/species/parts/creature.ts and delete it.',
+          )
+        }
+        return {
+          code: "import { captureDef } from '/editor/capture.ts'\n"
+            + code.replace(/\bdefineCreature\(/g, 'captureDef('),
+          map: null,
+        }
+      },
+    },
   ],
 })

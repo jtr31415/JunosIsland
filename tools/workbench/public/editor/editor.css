@@ -1,0 +1,167 @@
+/* JOE_WORKBENCH_ONLY — the species editor's own sheet. Dev-only. */
+
+:root {
+  --bg: #1b1b1d;
+  --panel: #232326;
+  --line: #35353a;
+  --ink: #e8e6e2;
+  --dim: #9a9791;
+  --hot: #7fb2ff;
+  --warn: #ffb95e;
+  --loud: #ff7d6b;
+  --ok: #7fd39b;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 13px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+header {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+  flex: none;
+}
+
+h1 { font-size: 15px; margin: 0; font-weight: 600; }
+h2 { font-size: 11px; margin: 0 0 6px; text-transform: uppercase; letter-spacing: .07em; color: var(--dim); }
+h3 { font-size: 11px; margin: 10px 0 4px; color: var(--dim); font-weight: 600; }
+
+#tabs { display: flex; gap: 12px; }
+#tabs a { color: var(--hot); text-decoration: none; }
+#tabs a:hover { text-decoration: underline; }
+#tabs .here { color: var(--dim); }
+
+.say { margin: 0 0 0 auto; color: var(--dim); font-variant-numeric: tabular-nums; }
+.say.bad { color: var(--loud); }
+.say.good { color: var(--ok); }
+
+#layout {
+  display: grid;
+  grid-template-columns: 250px minmax(320px, 1fr) 300px;
+  flex: 1;
+  min-height: 0;
+}
+
+#rail, #detail {
+  overflow-y: auto;
+  background: var(--panel);
+  padding: 10px 12px 40px;
+}
+#rail { border-right: 1px solid var(--line); }
+#detail { border-left: 1px solid var(--line); }
+
+section { margin-bottom: 18px; }
+
+main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+#stage { flex: 1; width: 100%; min-height: 0; display: block; }
+
+#tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+  flex: none;
+}
+.group { display: flex; gap: 4px; align-items: center; }
+.group + .group { border-left: 1px solid var(--line); padding-left: 10px; }
+
+button, select, input, textarea {
+  font: inherit;
+  color: var(--ink);
+  background: #2c2c31;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 3px 7px;
+}
+button { cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--hot); }
+button:disabled { opacity: .4; cursor: not-allowed; }
+button.on { background: var(--hot); color: #10161f; border-color: var(--hot); font-weight: 600; }
+button.quiet { background: transparent; color: var(--dim); }
+input[type="color"] { padding: 0; width: 34px; height: 24px; }
+input[type="range"] { flex: 1; min-width: 60px; padding: 0; }
+label { display: block; color: var(--dim); font-size: 11px; margin: 8px 0 2px; }
+.group label, .row label { display: inline-flex; align-items: center; gap: 4px; margin: 0; }
+select, input[type="text"], input[type="search"], textarea { width: 100%; }
+textarea { resize: vertical; }
+
+.row { display: flex; gap: 6px; align-items: center; margin-top: 8px; }
+.note { color: var(--dim); font-size: 11px; margin: 6px 0 0; }
+.note.warn { color: var(--warn); }
+.count { color: var(--dim); font-weight: 400; font-size: 11px; }
+.selected { margin-left: auto; color: var(--dim); }
+.hint { margin: 0; padding: 4px 10px; color: var(--dim); font-size: 11px; border-top: 1px solid var(--line); flex: none; }
+
+ul { list-style: none; margin: 0; padding: 0; }
+
+#part-list li, #shape-list li, #palette li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+}
+#part-list li:hover, #shape-list li:hover { background: #2c2c31; }
+#part-list li.on, #shape-list li.on { background: #2c3a4f; border-color: var(--hot); }
+#part-list li.axiom { border-left: 3px solid var(--warn); }
+#part-list .what { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#part-list .tag, #shape-list .tag { color: var(--dim); font-size: 10px; }
+
+#shape-list { max-height: 260px; overflow-y: auto; }
+#shape-axes { flex-wrap: wrap; }
+#shape-axes .dial { display: flex; align-items: center; gap: 4px; width: 100%; }
+#shape-axes .dial span { color: var(--dim); font-size: 10px; width: 46px; }
+
+#palette li { cursor: default; }
+#palette .swatch { width: 18px; height: 18px; border-radius: 3px; border: 1px solid var(--line); flex: none; }
+#palette .slot { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#palette .col { color: var(--dim); font-size: 10px; }
+#palette li.used { font-weight: 600; }
+
+#warnings { flex: none; max-height: 132px; overflow-y: auto; border-top: 1px solid var(--line); }
+#warnings li { padding: 5px 10px; font-size: 11px; border-bottom: 1px solid var(--line); cursor: pointer; }
+#warnings li .axiom { font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: .05em; margin-right: 6px; }
+#warnings li.loud .axiom { color: var(--loud); }
+#warnings li.warn .axiom { color: var(--warn); }
+#warnings li.note .axiom { color: var(--dim); }
+
+#size-dials .dial { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+#size-dials .dial span { color: var(--dim); width: 12px; }
+#size-dials .dial output { width: 44px; text-align: right; font-variant-numeric: tabular-nums; }
+
+#region { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 4px; }
+
+#source-out {
+  max-height: 300px;
+  overflow: auto;
+  background: #17171a;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 8px;
+  font: 11px/1.4 ui-monospace, Consolas, monospace;
+  white-space: pre;
+  margin-top: 8px;
+}

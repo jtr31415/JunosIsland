@@ -1,0 +1,105 @@
+<!doctype html>
+<!-- JOE_WORKBENCH_ONLY — the visual species editor. Dev-only; see tools/smoke/channel.mjs. -->
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Species editor — Juno's Island workbench</title>
+  <link rel="stylesheet" href="/editor/editor.css" />
+</head>
+<body>
+  <header>
+    <h1>Species editor</h1>
+    <nav id="tabs">
+      <a href="/">Workbench</a>
+      <a href="/viewer.html">Galleries</a>
+      <span class="here">Editor</span>
+    </nav>
+    <p id="say" class="say" role="status" aria-live="polite">loading the built species…</p>
+  </header>
+
+  <div id="layout">
+    <!-- LEFT: which animal, and what it is made of. -->
+    <aside id="rail">
+      <section id="open">
+        <h2>Animal</h2>
+        <select id="subject"></select>
+        <div class="row">
+          <button id="revert" type="button" class="quiet">Start again from the original</button>
+        </div>
+        <p id="open-note" class="note"></p>
+      </section>
+
+      <section id="parts">
+        <h2>Parts <span id="part-count" class="count"></span></h2>
+        <ul id="part-list"></ul>
+        <p id="parts-note" class="note"></p>
+      </section>
+    </aside>
+
+    <!-- CENTRE: the animal, and the gestures on it. -->
+    <main>
+      <div id="tools">
+        <div class="group" role="group" aria-label="Gizmo">
+          <button id="mode-translate" type="button" class="on" data-mode="translate">Move</button>
+          <button id="mode-rotate" type="button" data-mode="rotate">Rotate</button>
+          <button id="mode-scale" type="button" data-mode="scale">Resize</button>
+        </div>
+        <div class="group" role="group" aria-label="Part">
+          <button id="act-copy" type="button">Copy</button>
+          <button id="act-mirror" type="button">Mirror</button>
+          <button id="act-delete" type="button">Delete</button>
+        </div>
+        <div class="group">
+          <label><input type="checkbox" id="snap" checked /> snap</label>
+          <label><input type="checkbox" id="explode" /> explode</label>
+        </div>
+        <span id="selected" class="selected">nothing selected</span>
+      </div>
+      <canvas id="stage"></canvas>
+      <p id="hint" class="hint">Click a part to select it. Drag the gizmo to move it. Every change is written to the species DEFINITION and rebuilt.</p>
+      <ul id="warnings"></ul>
+    </main>
+
+    <!-- RIGHT: the inspector. -->
+    <aside id="detail">
+      <section id="shape">
+        <h2>Shape</h2>
+        <select id="shape-pick"></select>
+        <p id="shape-note" class="note"></p>
+      </section>
+
+      <section id="size">
+        <h2>Size</h2>
+        <div class="row">
+          <label><input type="radio" name="size-mode" id="size-uniform" value="uniform" checked /> uniform</label>
+          <label><input type="radio" name="size-mode" id="size-free" value="free" /> per-axis</label>
+        </div>
+        <div id="size-dials"></div>
+        <div class="row">
+          <button id="size-reset" type="button" class="quiet">Back to 1×</button>
+        </div>
+        <p id="size-note" class="note"></p>
+      </section>
+
+      <section id="colour">
+        <h2>Colour</h2>
+        <ul id="palette"></ul>
+        <p id="colour-note" class="note"></p>
+      </section>
+
+      <section id="out">
+        <h2>Take it out</h2>
+        <div class="row">
+          <button id="show-source" type="button">Show the definition as a module</button>
+        </div>
+        <p class="note">Nothing here is saved yet. This prints the edited definition as the text of
+          <code>src/island/species/parts/assembled/animal-&lt;name&gt;.ts</code>, to copy out.</p>
+        <pre id="source-out" hidden></pre>
+      </section>
+    </aside>
+  </div>
+
+  <script type="module" src="/editor/main.ts"></script>
+</body>
+</html>
