@@ -24,11 +24,12 @@
  */
 import { describe, it, expect } from 'vitest'
 import {
-  OPEN_AT, MAX_ACTIVE, HELD_BACK, RELATED_GROUP,
-  completion, isComplete, activeIds, candidates, nextToOpen,
+  OPEN_AT, MAX_ACTIVE, HELD_BACK, HELD_BACK_BY_JOE, NOT_BUILT_YET, RELATED_GROUP,
+  completion, isComplete, activeIds, candidates, nextToOpen, fillToCap,
 } from '../../src/island/species/unlock'
 import type { UnlockState } from '../../src/island/species/unlock'
 import { COLLECTIONS, collection } from '../../src/island/species/roster'
+import { shippedIn } from '../../src/island/species/registry'
 import type { Collection } from '../../src/island/species/types'
 import { mulberry32 } from '../../src/core/rng'
 
@@ -36,6 +37,14 @@ const size = (id: string) => collection(id)!.members.length
 /** The smallest owned count that reaches `OPEN_AT` for this collection. */
 const atOpen = (id: string) => Math.ceil(OPEN_AT * size(id))
 const CONSERVATION = ['near-threatened', 'vulnerable', 'endangered', 'critically-endangered']
+
+/** Every non-base collection with at least one species actually built, from the registry. */
+const buildable = (): readonly string[] =>
+  COLLECTIONS.map((c) => c.id).filter((id) => id !== 'base' && shippedIn(id).length > 0)
+
+/** Every collection with NOTHING built, from the registry. The thing PB-058 is about. */
+const unbuilt = (): readonly string[] =>
+  COLLECTIONS.map((c) => c.id).filter((id) => shippedIn(id).length === 0)
 
 function state(o: Partial<UnlockState> & { open: readonly string[] }): UnlockState {
   return { owned: {}, lastOpened: null, roster: COLLECTIONS, ...o }
@@ -56,10 +65,22 @@ function allOwned(ids: readonly string[]): Record<string, number> {
 }
 
 describe('the dials are the numbers Joe gave, spelled out', () => {
-  it('opens at 80%, caps at 4, holds exactly three back', () => {
+  it('opens at 80%, caps at 4, and holds back Joe\'s three by name', () => {
     expect(OPEN_AT).toBe(0.80)
     expect(MAX_ACTIVE).toBe(4)
-    expect([...HELD_BACK].sort()).toEqual(['dinosaurs', 'legendary', 'prehistoric'])
+    // Joe's half of the hold, and the only half his sentence is about. The
+    // other half is a measurement rather than a ruling and gets its own
+    // describe block below, because the two are undone by different people.
+    expect([...HELD_BACK_BY_JOE].sort()).toEqual(['dinosaurs', 'legendary', 'prehistoric'])
+  })
+
+  it('composes HELD_BACK as the union of the two holds, with no id counted twice', () => {
+    // The three are ALSO unbuilt today, so a naive concatenation would double
+    // them and quietly make `HELD_BACK.length` lie to anything that counts it.
+    expect([...HELD_BACK].sort())
+      .toEqual([...new Set([...HELD_BACK_BY_JOE, ...NOT_BUILT_YET])].sort())
+    expect(HELD_BACK).toHaveLength(new Set(HELD_BACK).size)
+    expect(HELD_BACK).not.toContain('base')
   })
 
   it('groups every collection except base, so the relatedness rule can never hit a gap', () => {
@@ -256,30 +277,53 @@ describe('"avoid consecutive collections that may be perceived as related"', () 
     }
   })
 
-  it('never opens two Red List tiers back to back while any other page is left', () => {
+  it('cannot reach a Red List tier at all today, so that case is not live to test', () => {
+    /*
+     * THIS REPLACES A TEST THAT HAD QUIETLY GONE VACUOUS, and it is written out
+     * rather than deleted so the next reader knows the cover was lost on
+     * purpose. It used to walk the whole roster asserting two conservation
+     * tiers never opened one after the other. Since PB-058 all four tiers are
+     * in `NOT_BUILT_YET` — not one of them has a single model built — so the
+     * walk can never reach one and the assertion inside the loop stopped
+     * running. A test that passes because its body is unreachable claims cover
+     * it does not have, which is worse than no test, so this asserts the thing
+     * that IS true: the tiers are unreachable, and the reason is the hold, not
+     * the grouping.
+     *
+     * The grouping rule itself is still genuinely proved, by the test above,
+     * on the pairs that ARE reachable — garden and woodland are both
+     * `temperate`, home-pets and farm are both `domestic`, and all four are
+     * built — so the rule has live cover even while the tiers do not.
+     *
+     * The day a tier ships, its id leaves `NOT_BUILT_YET`, the first assertion
+     * here goes red by name, and the back-to-back tiers test belongs back in.
+     */
+    for (const id of CONSERVATION) {
+      expect(
+        HELD_BACK,
+        `${id} is drawable again — restore the "two Red List tiers back to back" test`,
+      ).toContain(id)
+    }
     for (let seed = 0; seed < 60; seed++) {
-      const steps = run(seed)
-      for (let i = 1; i < steps.length; i++) {
-        if (!CONSERVATION.includes(steps[i - 1]!.id)) continue
-        if (steps[i]!.pool.some((id) => !CONSERVATION.includes(id))) {
-          expect(CONSERVATION, `seed ${seed}, step ${i}`).not.toContain(steps[i]!.id)
-        }
-      }
+      for (const step of run(seed)) expect(CONSERVATION).not.toContain(step.id)
     }
   })
 
   it('FALLS BACK to a related collection rather than returning null', () => {
-    // Everything open and finished except three Red List tiers, and the last
-    // thing opened was the fourth. Avoiding the group would empty the pool.
-    const left = ['vulnerable', 'endangered', 'critically-endangered']
+    // Everything open and finished except Woodland, and the last thing opened
+    // was Garden — the same `temperate` walk. Avoiding the group would empty
+    // the pool, so it opens a related page rather than leaving her with none.
+    // (Before PB-058 this case was staged on three of the four Red List tiers;
+    // they are all unbuilt and therefore held back, so the pool it needs has to
+    // be built out of collections that actually have animals in them.)
+    const left = ['woodland']
     const open = COLLECTIONS.map((c) => c.id).filter((id) => !left.includes(id))
-    const s = state({ open, owned: allOwned(open), lastOpened: 'near-threatened' })
+    const s = state({ open, owned: allOwned(open), lastOpened: 'garden' })
     expect(candidates(s)).toEqual(left)
-    expect(candidates(s).every((id) => RELATED_GROUP[id] === 'conservation')).toBe(true)
+    expect(RELATED_GROUP['woodland']).toBe(RELATED_GROUP['garden'])
 
     const got = nextToOpen(s, mulberry32(10))
-    expect(got).not.toBeNull()
-    expect(left).toContain(got)
+    expect(got).toBe('woodland')
   })
 })
 
@@ -292,10 +336,19 @@ describe('"random order" — the caller\'s seeded stream and nothing else', () =
     }
   })
 
-  it('spreads across the pool as the seed changes', () => {
+  it('spreads across every page the pool can offer, as the seed changes', () => {
+    /*
+     * This used to assert "more than five distinct answers" and that number is
+     * now unreachable: PB-058 cut the drawable pool to five collections, of
+     * which the relatedness rule drops one here. So the assertion is stated
+     * against the pool itself rather than against a count — every candidate is
+     * reached and nothing outside it ever is, which is what "random order"
+     * actually promises and which survives the pool changing size again.
+     */
+    const pool = candidates(s()).filter((id) => RELATED_GROUP[id] !== RELATED_GROUP['garden'])
     const seen = new Set<string | null>()
     for (let seed = 0; seed < 200; seed++) seen.add(nextToOpen(s(), mulberry32(seed)))
-    expect(seen.size).toBeGreaterThan(5)
+    expect([...seen].sort()).toEqual([...pool].sort())
     expect(seen.has(null)).toBe(false)
   })
 
@@ -331,5 +384,88 @@ describe('a collection with no members does not divide by zero', () => {
   it('clamps an owned count above the collection size', () => {
     const s = state({ open: ['garden'], owned: { garden: size('garden') + 99 } })
     expect(completion(s, 'garden')).toBe(1)
+  })
+})
+
+describe('the hold on unbuilt collections is derived from the registry, not remembered', () => {
+  /*
+   * THIS BLOCK IS THE WHOLE ANSWER TO "how will anyone know to update that
+   * list?", and it is the reason `NOT_BUILT_YET` is allowed to be twelve hand
+   * written strings in a pure module instead of a call to `shippedIn`.
+   *
+   * `unlock.ts` cannot import `registry.ts` — the registry reaches three.js
+   * through `collections/garden.ts` and the unlock rules are deliberately pure —
+   * so the derivation cannot be performed where the list lives. It is performed
+   * HERE instead, in a file that may import anything, and the list is checked
+   * against it. Nobody has to remember `NOT_BUILT_YET` exists: the day a
+   * modeller commits the first ocean species, this block goes red and names the
+   * collection and says what to do about it.
+   */
+  it('holds back every collection that has no models at all', () => {
+    for (const id of unbuilt()) {
+      const frames = collection(id)!.members.length
+      expect(
+        HELD_BACK,
+        `${id} has no species built, so opening it shows a child ${frames} empty `
+          + 'frames. Add it to NOT_BUILT_YET in src/island/species/unlock.ts.',
+      ).toContain(id)
+    }
+  })
+
+  it('names a collection the day it ships, so the list cannot silently rot', () => {
+    for (const id of NOT_BUILT_YET) {
+      expect(
+        shippedIn(id).length,
+        `${id} now has models — take it out of NOT_BUILT_YET in `
+          + 'src/island/species/unlock.ts so the cadence can start offering it.',
+      ).toBe(0)
+    }
+  })
+
+  it('holds back nothing else: the union is exactly the unbuilt plus Joe\'s three', () => {
+    expect([...HELD_BACK].sort())
+      .toEqual([...new Set([...unbuilt(), ...HELD_BACK_BY_JOE])].sort())
+  })
+})
+
+describe('the draw can neither starve nor deadlock on the pool PB-058 leaves it', () => {
+  it('offers exactly the collections that have animals in them, and nothing else', () => {
+    // The card's acceptance test, said as plainly as it can be said: whatever
+    // the cadence is willing to open, a child opening it finds animals there.
+    const s = state({ open: ['base'], owned: { base: atOpen('base') } })
+    expect([...candidates(s)].sort()).toEqual([...buildable()].sort())
+    for (const id of candidates(s)) expect(shippedIn(id).length).toBeGreaterThan(0)
+  })
+
+  it('fills a fresh island to the cap and then stops, rather than looping', () => {
+    // base plus three is four active. The pool is five, so two are held in
+    // reserve for the only two completions the cadence can still reward.
+    const s = state({ open: ['base'] })
+    const drawn = fillToCap(s, mulberry32(12))
+    expect(drawn).toHaveLength(MAX_ACTIVE - 1)
+    expect(new Set(drawn).size).toBe(drawn.length)
+    for (const id of drawn) expect(buildable()).toContain(id)
+
+    // Called again on the filled state it has nothing to add.
+    const filled = state({ open: ['base', ...drawn], lastOpened: drawn[drawn.length - 1]! })
+    expect(activeIds(filled)).toHaveLength(MAX_ACTIVE)
+    expect(fillToCap(filled, mulberry32(12))).toEqual([])
+  })
+
+  it('returns null and an empty fill when the pool is exhausted, rather than spinning', () => {
+    /*
+     * The hostile case: nothing left that could be opened. `HELD_BACK` is a
+     * frozen export and cannot be mutated to stage it, so the equivalent is
+     * built the honest way — every buildable collection is already open, and
+     * every open collection is finished, so the cap is NOT what is refusing.
+     * Rule 2 is satisfied by the completed collections, the draw is reached,
+     * and it declines because there is genuinely nothing to give.
+     */
+    const open = ['base', ...buildable()]
+    const s = state({ open, owned: allOwned(open), lastOpened: 'farm' })
+    expect(activeIds(s)).toEqual([])
+    expect(candidates(s)).toEqual([])
+    expect(nextToOpen(s, mulberry32(13))).toBeNull()
+    expect(fillToCap(s, mulberry32(13))).toEqual([])
   })
 })

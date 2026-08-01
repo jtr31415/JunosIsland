@@ -19,6 +19,7 @@ import {
 } from '../../src/island/species/opened'
 import { MAX_ACTIVE, HELD_BACK } from '../../src/island/species/unlock'
 import { COLLECTIONS, collection } from '../../src/island/species/roster'
+import { shippedIn } from '../../src/island/species/registry'
 import { toSave, fromSave, readOpened } from '../../src/island/save'
 import { createFlow } from '../../src/island/flow'
 import type { Pet } from '../../src/island/flow'
@@ -77,11 +78,34 @@ describe('a fresh island', () => {
   })
 
   it('draws a different four for different children', () => {
-    // "random order" (JT-027). If every island opened the same three beside
-    // base, the playground currency roster §3 is after would be worthless.
+    /*
+     * "random order" (JT-027). If every island opened the same three beside
+     * base, the playground currency roster §3 is after would be worthless.
+     *
+     * THE PROPERTY IS WEAKER THAN IT LOOKS SINCE PB-058, and the two seeds are
+     * now chosen rather than arbitrary. Three drawn from a pool of five is ten
+     * combinations before order, so two children colliding outright is common
+     * and would be no evidence of a bug — it is the true consequence of only
+     * five collections having any animals built. What this can still honestly
+     * prove is that the seed reaches the draw at all, which is what it proves.
+     * The property gets its strength back when the pool does.
+     */
     const a = advance([], NOTHING_OPENED, mulberry32(1)).open.join()
     const b = advance([], NOTHING_OPENED, mulberry32(9)).open.join()
     expect(a).not.toBe(b)
+  })
+
+  it('opens nothing but albums that actually have animals in them', () => {
+    // PB-058 stated directly, at the seam where a child would meet it: before
+    // this, four drawn at random from twenty-one meant most of what she opened
+    // was a page of empty frames.
+    for (let seed = 1; seed < 40; seed++) {
+      const opened = advance([], NOTHING_OPENED, mulberry32(seed))
+      for (const id of opened.open) {
+        expect(shippedIn(id).length, `${id} was opened with no models built`)
+          .toBeGreaterThan(0)
+      }
+    }
   })
 })
 
@@ -126,6 +150,87 @@ describe('and then nothing, until she finishes one', () => {
     const owned = [...allOf(two[0] as string), ...allOf(two[1] as string)]
     opened = advance(owned, opened, rng())
     expect(opened.open).toHaveLength(MAX_ACTIVE + 2)
+  })
+})
+
+describe('the save she is already carrying, with albums that were never worth giving', () => {
+  /*
+   * The half of PB-058 that a one-line change to HELD_BACK does not touch.
+   * Juno's live save has up to three empty collections open right now, and they
+   * are not merely ugly — they are permanent. `completion` divides what she owns
+   * by the ROSTER size, so a collection with no models sits at 0% forever, never
+   * completes, never stops being active, and holds one of Joe's four slots for
+   * good. Three of them and she has one working slot and is never given another
+   * album for the rest of the game.
+   */
+  const STUCK = { open: ['base', 'ocean', 'ice', 'jungle'], lastOpened: 'jungle' }
+
+  it('takes back the empty albums and gives her live ones in their place', () => {
+    const after = advance(['animal-fox'], STUCK, rng())
+    for (const id of ['ocean', 'ice', 'jungle']) expect(after.open).not.toContain(id)
+    expect(after.open).toContain(BASE_COLLECTION)
+    expect(after.open).toHaveLength(MAX_ACTIVE)
+    expect(activeCount(['animal-fox'], after)).toBe(MAX_ACTIVE)
+    for (const id of after.open) expect(shippedIn(id).length).toBeGreaterThan(0)
+  })
+
+  it('loses her nothing she owns — brief §19 — because base is untouched', () => {
+    const after = advance(BASE.slice(0, 5), STUCK, rng())
+    expect(after.open).toContain(BASE_COLLECTION)
+    // The count she had is the count she has. Nothing about the prune reaches
+    // her pets; it only ever removes a page she could not have collected from.
+    expect(ownedByCollection(BASE.slice(0, 5))[BASE_COLLECTION]).toBe(5)
+  })
+
+  it('KEEPS a held-back album she has already collected from, which is the §19 guard', () => {
+    /*
+     * The case the (b) guard exists for, and it is built out of real roster data
+     * rather than a mock: `animal-unicorn` is a genuine member of `legendary` in
+     * `roster.ts`, so `ownedByCollection` gives her a real count of 1 there even
+     * though not one legendary species has been modelled yet. That is exactly
+     * the shape of the day Joe releases `legendary` to a child who already has
+     * some of it — and on that day an (a)-only prune would take her unicorn's
+     * page off the shelf. It does not.
+     */
+    expect(HELD_BACK).toContain('legendary')
+    const owning = { open: [BASE_COLLECTION, 'legendary'], lastOpened: 'legendary' }
+    const after = advance(['animal-unicorn'], owning, rng())
+    expect(after.open).toContain('legendary')
+    expect(after.open).toHaveLength(MAX_ACTIVE)
+  })
+
+  it('leaves lastOpened alone even when it names an album that has just gone', () => {
+    // It is still an honest record of what was drawn last, and `RELATED_GROUP`
+    // is total over every non-base id, so the relatedness rule resolves against
+    // a pruned id perfectly well. Rewriting it would be a second lie.
+    const after = advance([], { open: ['base', 'ocean'], lastOpened: 'ocean' }, rng())
+    expect(after.open).not.toContain('ocean')
+    expect(after.lastOpened).not.toBeNull()
+  })
+
+  it('is idempotent across the prune — the second arrival changes nothing', () => {
+    /*
+     * The prune could in principle oscillate: drop three, refill three, drop
+     * them again next time. It cannot, and this is the proof. Everything the
+     * prune removes is in `HELD_BACK`, and everything the refill draws comes
+     * from `candidates`, which filters `HELD_BACK` out — so no pruned id can be
+     * drawn back into the hole it left, and the second call finds nothing to
+     * take. `main.ts` calls `advance` on every arrival, so an oscillation would
+     * reshuffle her albums every time she came back to the island.
+     */
+    const once = advance(['animal-fox'], STUCK, rng())
+    const twice = advance(['animal-fox'], once, rng())
+    expect(twice.open).toEqual(once.open)
+    expect(twice.lastOpened).toBe(once.lastOpened)
+  })
+
+  it('never lets the cadence run past the cap however many arrivals there are', () => {
+    let opened = advance(['animal-fox'], STUCK, rng())
+    for (let i = 0; i < 20; i++) {
+      opened = advance(['animal-fox'], opened, rng())
+      expect(activeCount(['animal-fox'], opened)).toBeLessThanOrEqual(MAX_ACTIVE)
+    }
+    expect(opened.open).toHaveLength(MAX_ACTIVE)
   })
 })
 
