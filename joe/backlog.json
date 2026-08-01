@@ -356,7 +356,7 @@
     {
       "id": "PB-051",
       "title": "Change Font to Sassoon",
-      "detail": "Sassoon font in the assets folder. change all writing to that, the most standard version of it.",
+      "detail": "Sassoon font in the assets folder. change all writing to that, the most standard version of it. BUILT AND GREEN, HELD OFF MAIN ON A LICENCE QUESTION — JT-037, which is Joe's and is the only thing left. The work is on branch `pb-051-sassoon-font` (81af67f, f0f36b8), handoff at docs/handoffs/PB-051.md, all five gates green. The face chosen is SassoonInfantRg-Regular, plus its real Bold because tokens.css uses weight 800/900 and synthetic bold smears a teaching letterform; five of the zip's eight faces are handwriting-PRACTICE faces you trace rather than read. Why it is not merged: the repo is public, the zip's COPYRIGHT.txt says the font is licensed not sold, the License Agreement is not on disk, and .gitignore:16 already keeps Assets/*.zip out — so merging would be the first time Sassoon binaries entered public git history, which is the part that cannot be undone by deleting the file later. Two things it found that a font swap is not supposed to need: src/island/sign.ts paints the title into a canvas texture and had been out of step with the app's font since it was built, and the island's precache glob knew woff2 but not ttf, so the font would have worked online and vanished offline with every test green.",
       "state": "open",
       "run": ""
     },

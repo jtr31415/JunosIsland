@@ -481,6 +481,20 @@
       "check": "",
       "note": "",
       "state": "open"
+    },
+    {
+      "id": "JT-037",
+      "type": "ruling",
+      "title": "NEEDS JOE: does your Sassoon licence let us put the font in a PUBLIC repo? (PB-051)",
+      "detail": "PB-051 is BUILT and GREEN but is NOT on main, and will not be until you answer this. The work sits on branch `pb-051-sassoon-font` (81af67f, f0f36b8) with its handoff at docs/handoffs/PB-051.md. Nothing is lost either way.\n\nWHY IT STOPPED. github.com/jtr31415/JunosIsland is PUBLIC. Sassoon Infant is commercial — the zip's own COPYRIGHT.txt says \"This product is licensed, not sold, and may only be used in accordance with the terms specified in the License Agreement\" — and that License Agreement is not in the zip, so nothing on disk says what you are permitted to do. Committing the .ttf to a public repo is redistribution, not use.\n\nTHE DETAIL THAT DECIDED IT. .gitignore:16 already excludes Assets/*.zip, so the font has NEVER been in the repo. Somebody — you — already drew this line for source assets. Merging would be the first time Sassoon binaries entered public git history, and git history is the part that is genuinely hard to undo: deleting the file later does not remove it from the history that has been cloned.\n\nWHAT IS NEEDED FROM YOU, one of:\nA) Your licence permits webfont embedding and redistribution — say so, and it merges as built.\nB) It does not, or you cannot find the agreement — then the retreat is three edits and is written down in the handoff. Options are to keep the font out of git and load it from a path you place by hand, or to ship a free teaching-hand face (Andika and Edu QLD Beginner are open-licensed and have the single-storey a and open-tailed g that make Sassoon the right choice for a child learning to read).\nC) You want to buy a licence tier that covers it — then this waits on that.\n\nWHAT IS TRUE REGARDLESS. The build itself is sound and all five gates are green (2712 tests, smoke 8/8, parity 18/18). It found a surface CSS could never have reached: src/island/sign.ts paints \"Juno's Island\" into a canvas texture and had been out of step with the app's font since it was built. It also had to add .gitattributes, because `* text=auto eol=lf` would have silently corrupted the glyph tables, and to teach the island's precache glob about .ttf — without which the font would have worked online and vanished offline with every test still green.\n\nALSO WORTH YOUR EYE, once it merges: a screenshot of the old face beside the new one. The handoff says how to get both builds.",
+      "blocks": [
+        "PB-051"
+      ],
+      "artefact": "branch pb-051-sassoon-font, docs/handoffs/PB-051.md",
+      "doneRule": "manual",
+      "check": "",
+      "note": "",
+      "state": "open"
     }
   ],
   "archive": []
