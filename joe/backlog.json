@@ -98,7 +98,8 @@
       "id": "PB-014",
       "title": "Prop glTFs 404 on a texture that is never used (#45)",
       "detail": "props/*.gltf reference hexagons_medieval.png but the folder ships only the _Summer variant. Harmless, but it has cost two agents time. A clean console is a debugging tool. Cheapest fix is the loading manager.",
-      "state": "open",
+      "state": "done",
+      "note": "DONE 1 Aug, and the card's instinct was right — a LoadingManager rewrites that one URL to a 1x1 PNG data URI. All 37 prop glTFs asked for it; forest and tiles were checked and are clean, so props was the only source of red. THE THING WORTH KNOWING, because the obvious fix is wrong: deleting the image from the 37 files removes the baseColorTexture declaration, and that declaration is what makes GLTFLoader compile the map define into the material's shader. Nothing in props.ts calls needsUpdate after assigning .map, so stripping it would render EVERY PROP UNTEXTURED. The broken reference is load-bearing, which is plausibly why two agents noticed it and neither touched it. Pointing it at the _Summer file that does exist would also work but makes GLTFLoader fetch and decode a full atlas 37 times to build textures thrown away on the next line. Tests guard the NARROW side rather than the hit: a URL modifier sits in front of every prop fetch, and the real risk is swallowing a texture that exists — tiles/hexagons_medieval.png is a real and different file, and an endsWith on the bare filename would have eaten it. One test also asserts the props folder still lacks the file, so if anyone ever ships it this fix is flagged as dead weight rather than left to confuse. Gates all five green; the clean console follows from there being no network fetch at all, and was not separately eyeballed in a browser.",
       "run": ""
     },
     {
