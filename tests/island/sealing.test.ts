@@ -368,7 +368,14 @@ describe('the pet radius widens the net — or, here, provably cannot', () => {
     // "P implies Q" is free where P never holds. The five-rock board supplies
     // the antecedent, so the implication above is actually exercised.
     expect(witnessed).toBeGreaterThan(0)
-  })
+    // 30s because this is a genuine exhaustive search — 64 socket subsets by
+    // every still-open socket, against the REAL placement code and the REAL
+    // mountain glTFs, which is the whole point of it. It measured 9.2s alone
+    // and more under a full concurrent suite, so the 5s default was never
+    // going to hold. Do not make it cheaper by sampling: the exhaustion IS
+    // the assertion, and this is the test that turns red first if a future
+    // prop ever lands in the empty band.
+  }, 30_000)
 })
 
 /* ------------------------------------------- 7. hatching into the pocket */

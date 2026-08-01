@@ -538,7 +538,13 @@ describe('the floor is a RATIO too — PB-039, moved by JT-012', () => {
       expect(ceiling(pets) - floor(pets), `${pets} pets`).toBeGreaterThan(2)
     }
     expect(ceiling(20) - floor(20)).toBeGreaterThan(ceiling(6) - floor(6))
-  })
+    // The 20s budget is NOT for the arithmetic above, which is microseconds.
+    // This is the first test in the file to touch the balance module, so it
+    // pays that module's one-off load, and under a full concurrent suite that
+    // alone has exceeded the 5s default. PB-054 named this test as a flake and
+    // its manager then cleared it of RANDOMNESS, correctly — but the cause was
+    // never randomness, it is load time landing on whichever test goes first.
+  }, 20_000)
 })
 
 /**
