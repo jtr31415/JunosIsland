@@ -23,6 +23,12 @@ each one and kept `joe/*.json` centrally so parallel runs could not conflict.*
 | PB-054 | Rng threaded through `pets.ts`; test seeds it. 1-in-14 failures → 0 in 16. |
 | PB-009 | Test corrected, render deliberately untouched. Dead trunks **do not flicker**. |
 | PB-047 | Wipe becomes three tick-boxes. Nearly deleted her name — see below. |
+| PB-036 ph.7 | All five editor notes + the `CREATURE_DEFS` debt. Snap bug was **arithmetic**, not the gizmo. |
+| PB-014 | Prop 404 silenced with a `LoadingManager`. **The broken reference is load-bearing** — see below. |
+
+**Also surveyed and deliberately NOT built: PB-010 and PB-048.** Both have their
+findings on their cards; PB-048's survey is `docs/asset-loading-survey.md` and
+its five questions are JT-039. Neither should be built before those are answered.
 
 ### The three things a future manager most needs to know
 
@@ -43,6 +49,26 @@ each one and kept `joe/*.json` centrally so parallel runs could not conflict.*
    `governors.test.ts` shares the cause was false. PB-009's trunks don't
    flicker. PB-055's JPGs don't exist. PB-058's list of six buildable
    collections was stale. **Re-measure a card's premise before building to it.**
+
+4. **Two fixes that look obvious and are wrong.** PB-014: deleting the missing
+   texture from the 37 prop glTFs removes the `baseColorTexture` declaration,
+   which is what compiles the map define into the shader — and nothing calls
+   `needsUpdate` after assigning `.map`. The broken reference is load-bearing;
+   strip it and every prop renders untextured. PB-010: sharing the blob-shadow
+   material removes **zero** draw calls, because three.js counts them per mesh.
+
+### The scale question is already answered, and it was not answered by loading
+
+From the PB-048 survey: a Kenney GLB costs ~141 KB per species, so 296 would be
+~41.7 MB. A parts-bank definition costs ~9.9 KB of source, so 296 are ~2.9 MB.
+**The kits solved it.** What remains is eager *parsing* — one JS chunk, so every
+unlocked-never species is parsed at boot while JT-027 caps her at four open
+collections. Do not design a loading strategy on the assumption the roster will
+not fit; it already does.
+
+Also measured, and not previously known: **the game does not work offline.**
+`vite.island.config.ts:69` precaches js/css/html/woff2 with no `runtimeCaching`
+— 8 entries, not one 3D model. Whether that is a defect is Joe's JT-039 q3.
 
 ### Blocked on Joe, not on us
 
@@ -69,12 +95,21 @@ directly. If a run like this is repeated, raise
 
 ### Where the next manager starts
 
-Not yet done and needing no ruling: **PB-014** (prop glTF 404 on
-`hexagons_medieval.png`), **PB-010** (batch blob shadows — must exclude pets,
-whose `castShadow` mutates opacity per frame), and **PB-048** which is
-explicitly *"investigation/discussion first"* and must come back as questions
-for Joe, not as a build. Then new species — but note the standing verdict in
-`docs/PB036-HANDOFF.md` that **the editor outranks building animals**.
+**The no-ruling work is exhausted.** Everything still open either needs a Joe
+ruling (JT-030, JT-037, JT-038, JT-039, and PB-009's dead-trunk shadow), belongs
+to a later phase (PB-010 beside the Phase 5 lighting rework, PB-005 itself), or
+is a feature card that needs a spec first.
+
+So the next run is **new species**, which is where Joe pointed when the defect
+slate ran dry — built deterministically the way Garden was. Two things govern it:
+the standing verdict in `docs/PB036-HANDOFF.md` that **the editor outranks
+building animals** (now partly discharged, since phase 7 shipped all five of his
+notes), and the fact that **14 Garden animals and 96 facts still sit unapproved**
+in the approver bench. His sign-off is the gate on those, not our throughput.
+
+**Check JT-030 before starting.** If the answer makes `completion()` count built
+members rather than rostered ones, that changes which collection is worth
+building next — and it is what unwedges home-pets and africa.
 
 ---
 
