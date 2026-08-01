@@ -52,7 +52,7 @@ import { createLighting, sunShadow } from '../../src/island/lighting'
 import type { LightingPreset } from '../../src/island/lighting'
 import { createBlobShadow, castShadow, SHADOW_LIFT } from '../../src/island/juice'
 import {
-  shadowUnder, createPropField, fitInto, FITS, VARY, varyMax,
+  shadowUnder, createPropField, fitInto, FITS, VARY, varyMax, varyMin,
   SHADOW_MIN_HEIGHT, SHADOW_MIN_REACH,
 } from '../../src/island/world/props'
 import type { Surface } from '../../src/island/world/tiles'
@@ -299,12 +299,53 @@ describe('the shadow threshold sits in the measured gaps', () => {
     expect(FITS.lily[1] * most).toBeLessThan(SHADOW_MIN_HEIGHT)
   })
 
-  it('is cleared by the shortest dead trunk and the shortest live tree', () => {
-    // Both are fitted taller than they are wide, so height binds and the FITS
-    // entry is very nearly what they end up as. Measured minima are 0.506 and
-    // 0.567; the entry floors are what a test can hold onto.
-    expect(FITS.bare[1] * VARY.cover.min).toBeGreaterThan(SHADOW_MIN_HEIGHT)
-    expect(FITS.tree[1] * VARY.tree.min).toBeGreaterThan(SHADOW_MIN_HEIGHT)
+  it('is cleared by the shortest live tree there can ever be', () => {
+    /*
+     * Height binds on a tree — it is fitted taller than it is wide — so the
+     * question is only whether the SMALLEST roll clears the arm. `varyMin`, not
+     * `VARY.tree.min`: the floor is 0.51, not 0.95. It clears anyway, at 0.536.
+     */
+    expect(FITS.tree[1] * varyMin(VARY.tree)).toBeGreaterThan(SHADOW_MIN_HEIGHT)
+  })
+
+  it('is NOT cleared by the smallest dead trunk, and that is correct — PB-009', () => {
+    /*
+     * THE CARD, AND WHY THE TEST WAS THE DEFECT RATHER THAN THE PRODUCT.
+     *
+     * This assertion used to read `FITS.bare[1] * VARY.cover.min >
+     * SHADOW_MIN_HEIGHT` and pass at 0.560, which certified that every dead
+     * trunk on the island earns a blob. It does not. `VARY.cover.min` is not a
+     * floor (see `varyMin`), the real floor is 0.36, and measured over 15,129
+     * pieces 24.5% of dead trunks come out too small for either arm — which is
+     * the "quarter of dead trunks flicker shadowless" the card reports.
+     *
+     * They are not flickering. A piece's size is a pure function of its hash, so
+     * a given trunk is that size for the life of the save; what varies is which
+     * trunk, not one trunk over time.
+     *
+     * And the rule is right. The shadow threshold is a rule about SIZE, not
+     * about kind — deliberately, per the header above, so a model added next
+     * year is judged the same way as the ones measured today. The smallest dead
+     * trunk is 0.252 tall and 0.081 across: SHORTER than the reed at 0.322 and
+     * NARROWER than the tuft at 0.260, both of which are excluded on purpose.
+     * Giving it a blob because of what it is called, while the taller reed
+     * beside it has none, would be less consistent on screen, not more.
+     *
+     * So the fix is here rather than in `shadowUnder`, and the numbers are
+     * asserted from BOTH sides: the smallest is genuinely below, the trunk at
+     * its nominal fit is genuinely above, and nobody may re-justify the
+     * threshold against a floor that does not exist again.
+     */
+    const smallest = varyMin(VARY.cover)
+    expect(FITS.bare[1] * smallest).toBeLessThan(SHADOW_MIN_HEIGHT)
+    expect((FITS.bare[0] * smallest) / 2).toBeLessThan(SHADOW_MIN_REACH)
+    // Smaller than the two things the threshold excludes on purpose.
+    expect(FITS.bare[1] * smallest).toBeLessThan(FITS.reed[1] * varyMax(VARY.cover))
+    expect((FITS.bare[0] * smallest) / 2)
+      .toBeLessThan((FITS.cover[0] * varyMax(VARY.cover)) / 2)
+    // A trunk at its unvaried fit, and every larger roll, still earns its blob.
+    expect(FITS.bare[1]).toBeGreaterThan(SHADOW_MIN_HEIGHT)
+    expect(FITS.bare[1] * varyMax(VARY.cover)).toBeGreaterThan(SHADOW_MIN_HEIGHT)
   })
 
   it('is cleared by the widest thing a grown plot can plant', () => {
@@ -315,8 +356,10 @@ describe('the shadow threshold sits in the measured gaps', () => {
      * this fails rather than the boulder quietly starting to float.
      */
     expect(FITS.grown[0] / 2).toBeGreaterThanOrEqual(SHADOW_MIN_REACH)
-    expect((FITS.feature[0] * VARY.feature.min) / 2).toBeGreaterThan(SHADOW_MIN_REACH)
-    expect((FITS.big[0] * VARY.feature.min) / 2).toBeGreaterThan(SHADOW_MIN_REACH)
+    // `varyMin`, not `VARY.feature.min` — the same false floor PB-009 was
+    // about. Both still clear it, at 0.315 and 0.536, but on the real number.
+    expect((FITS.feature[0] * varyMin(VARY.feature)) / 2).toBeGreaterThan(SHADOW_MIN_REACH)
+    expect((FITS.big[0] * varyMin(VARY.feature)) / 2).toBeGreaterThan(SHADOW_MIN_REACH)
   })
 })
 
