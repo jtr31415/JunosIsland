@@ -284,3 +284,96 @@ export function summarise(r: ShapeRow): string {
     : 'no donor'
   return `${r.id} · ${num(r.longest)} ${noun(r)} · ${taperWord(r.taper)} · ${role} · ${seen}`
 }
+
+/* ------------------------------------------------- headers for a dropdown --- */
+
+/** One `<optgroup>`: a header a human reads, and the rows under it. */
+export type ShapeGroup = { readonly label: string; readonly rows: readonly ShapeRow[] }
+
+/**
+ * `box` -> `Boxes`, and `blade` at a count of one -> `Blade`.
+ *
+ * A pure function of the form string and the count, so a form the bank grows
+ * later gets a header without anyone editing a table. English's four spelling
+ * cases and nothing clever: a sibilant takes `-es`, a consonant before a final
+ * `y` takes `-ies`, everything else takes `-s`.
+ */
+const plural = (form: string, count: number): string => {
+  const one = form.charAt(0).toUpperCase() + form.slice(1)
+  if (count === 1) return one
+  if (/(?:s|x|z|ch|sh)$/.test(form)) return `${one}es`
+  if (/[^aeiou]y$/.test(form)) return `${one.slice(0, -1)}ies`
+  return `${one}s`
+}
+
+/** Digit runs and non-digit runs, which is what makes a natural sort natural. */
+const CHUNKS = /\d+|\D+/g
+
+/**
+ * `box-9` before `box-10`.
+ *
+ * The ids are `<form>-<zero-padded-number>` today, so a plain string sort
+ * happens to give the same answer — which is exactly why this is written out:
+ * the day one unpadded id is authored, a string sort files `box-9` after
+ * `box-10` and the list is quietly wrong in the middle where nobody looks.
+ */
+const naturalCompare = (a: string, b: string): number => {
+  const xs = a.match(CHUNKS) ?? []
+  const ys = b.match(CHUNKS) ?? []
+  const n = Math.min(xs.length, ys.length)
+  for (let i = 0; i < n; i++) {
+    const x = xs[i]!
+    const y = ys[i]!
+    const bothNumeric = /^\d/.test(x) && /^\d/.test(y)
+    if (bothNumeric) {
+      /* Equal numerically but differently padded (`1` vs `01`) falls through to
+       * the next chunk, and to the whole-string tie-break below. */
+      if (Number(x) !== Number(y)) return Number(x) - Number(y)
+    } else if (x !== y) return x < y ? -1 : 1
+  }
+  if (xs.length !== ys.length) return xs.length - ys.length
+  return a < b ? -1 : a > b ? 1 : 0
+}
+
+/**
+ * The same rows, bucketed by `form` under a header — what a `<select>` turns
+ * into `<optgroup>`s.
+ *
+ * **GROUPING IS NOT FILTERING, and that is the whole reason this is allowed to
+ * exist.** The header of this file says `form` is a LABEL and never a
+ * discriminator, because the hog's tusk is a `wedge` and the hog's ear a `cone`
+ * and they do the same job. An `<optgroup>` shows every row it was given, in one
+ * list, still scrollable end to end — nothing is excluded and no control here
+ * can exclude anything. `LibraryFilter.form` is still the only way to lose a row
+ * to a bucket, and it is still off by default.
+ *
+ * EXHAUSTIVE and NON-LOSSY by construction: every input row is pushed into
+ * exactly one bucket and no bucket is dropped, so the groups' rows concatenated
+ * are a permutation of the input. `tests/tools/editor-library.test.ts` asserts
+ * that as a property rather than against a list of forms typed there, so a form
+ * added to the bank appears in the dropdown on the next reload.
+ *
+ * Groups come out ALPHABETICAL by form. There is no measured order to prefer —
+ * `form` is not an axis — and a human scanning a dropdown for `plate` finds it
+ * faster in the one order he can predict without being taught it. Empty groups
+ * are not emitted: `spike` is declared in the type with zero rows in the bank,
+ * and a header over nothing is a scroll stop that teaches Joe the library has a
+ * drawer he cannot open.
+ */
+export const groupShapes = (rows: readonly ShapeRow[]): readonly ShapeGroup[] => {
+  const byForm = new Map<string, ShapeRow[]>()
+  for (const r of rows) {
+    const bucket = byForm.get(r.form)
+    if (bucket === undefined) byForm.set(r.form, [r])
+    else bucket.push(r)
+  }
+  return [...byForm.keys()]
+    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
+    .map((form) => {
+      const sorted = byForm.get(form)!.slice().sort((a, b) => naturalCompare(a.id, b.id))
+      /* The count is in the header because Joe is scanning: 41 boxes is a page of
+       * scrolling and 5 blades is not, and knowing which before he starts is the
+       * difference between reading the list and hunting through it. */
+      return { label: `${plural(form, sorted.length)} (${sorted.length})`, rows: sorted }
+    })
+}

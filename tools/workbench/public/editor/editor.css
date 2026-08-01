@@ -107,6 +107,12 @@ select, input[type="text"], input[type="search"], textarea { width: 100%; }
 textarea { resize: vertical; }
 
 .row { display: flex; gap: 6px; align-items: center; margin-top: 8px; }
+/* A text field in a row takes the slack; the button beside it keeps its label. */
+.row input[type="text"] { flex: 1; min-width: 0; }
+.row button { flex: none; white-space: nowrap; }
+/* The category headers Joe asked for. A group is a label, never a filter. */
+optgroup { font-style: normal; font-weight: 600; color: var(--dim); }
+optgroup option { font-weight: 400; color: var(--ink, inherit); }
 .note { color: var(--dim); font-size: 11px; margin: 6px 0 0; }
 .note.warn { color: var(--warn); }
 .count { color: var(--dim); font-weight: 400; font-size: 11px; }

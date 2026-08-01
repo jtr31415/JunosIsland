@@ -1,71 +1,61 @@
 /**
- * JOE_WORKBENCH_ONLY — the definitions of the built species, captured as they
- * are declared.
+ * JOE_WORKBENCH_ONLY — the definitions of the built species, read back off the
+ * game's own register.
  *
- * >>> PROVISIONAL. Paired with the `joe-workbench-capture-defs` plugin in
- * `vite.workbench.config.ts`, which rewrites `defineCreature(` to `captureDef(`
- * in the fourteen `src/island/species/parts/assembled/animal-*.ts` files as the
- * dev server serves them. Read that plugin's comment before touching this file;
- * it says why the rewrite exists and what deletes it.
+ * Why any of this: the editor edits a `CreatureDef`, and a species file passes
+ * its definition into `defineCreature` as an object literal and exports only the
+ * built `AssemblyBuild`. `creature.ts` now keeps the definition too, in
+ * `CREATURE_DEFS`, which is the whole of the mechanism — this file imports the
+ * barrel for its side effects and copies what it finds.
  *
- * Why any of this: the editor edits a `CreatureDef`, and `defineCreature`
- * returns the built `AssemblyBuild` and drops the definition on the floor. So
- * there is no way to OPEN a shipped species. The permanent fix is two lines in
- * `creature.ts`; this is the dev-only stand-in for it, and it calls the real
- * `defineCreature` so the geometry is not merely equivalent — it is the same.
+ * There used to be a `joe-workbench-capture-defs` plugin in
+ * `vite.workbench.config.ts` that rewrote `defineCreature(` to a local
+ * `captureDef(` in the fourteen `animal-*.ts` files as the dev server served
+ * them, because the definitions were unrecoverable and this run could not touch
+ * `src/`. The `src/` change has landed and the plugin is gone. Nothing here
+ * rewrites anything now, and the editor works under the plain node server too.
  *
- * Imported from `./creature` and NOT from the barrel on purpose. The barrel
- * pulls in `assembled/index.ts`, which imports the animal files, which import
- * this one: a cycle, and in a cycle `defineCreature` can be `undefined` at the
- * moment a module-scope call reaches it. `creature.ts` imports only the bank,
- * the authored parts, the texture, the hulls, the motion resolver and
- * `assembled/register` — no edge back to a species file.
+ * `CREATURE_DEFS` is imported from `./creature` and NOT from the barrel on
+ * purpose. The barrel pulls in `assembled/index.ts`, which imports the animal
+ * files, which import `creature.ts`: a cycle, and in a cycle a binding can still
+ * be uninitialised at the moment a module-scope call reaches it. The barrel is
+ * reached below by a dynamic import inside a function, which runs long after
+ * every module has been evaluated.
  */
 
-import { defineCreature } from '../../../../src/island/species/parts/creature'
-import type { AssemblyBuild } from '../../../../src/island/species/parts/assembly'
+import { CREATURE_DEFS } from '../../../../src/island/species/parts/creature'
 import type { CreatureDef } from '../../../../src/island/species/parts'
 
 /**
- * Every definition as it was WRITTEN, by species id, in declaration order.
+ * Import the species barrel for its side effects, then hand back a COPY of every
+ * definition it registered. Await this once before offering Joe a list.
  *
- * Populated as a side effect of importing `assembled/index.ts` — see
- * `loadBuiltDefs()`. A `Map` rather than a record because insertion order is
- * the barrel's order, which is the order Joe's list should show.
- */
-export const CAPTURED_DEFS = new Map<string, CreatureDef>()
-
-/**
- * The stand-in for `defineCreature`. Records a DEEP COPY, then defines.
+ * The import is what does the work: `CREATURE_DEFS` is written by
+ * `defineCreature` at module scope, so it is empty until something evaluates the
+ * species files, and a map does not populate itself.
  *
- * The copy matters: the editor hands its working definition to `creatureSpec`
+ * The copies matter. The editor hands its working definition to `creatureSpec`
  * on every gesture, and if that object were the one the species module still
  * holds, an edit would rewrite the shipped species inside the running page and
- * every later rebuild would start from the edit. `structuredClone` is enough
- * because a `CreatureDef` is plain data by construction — numbers, strings,
- * booleans, arrays and objects of them.
- */
-export function captureDef(id: string, def: CreatureDef): AssemblyBuild {
-  CAPTURED_DEFS.set(id, structuredClone(def) as CreatureDef)
-  return defineCreature(id, def)
-}
-
-/**
- * Import the species barrel for its side effects, then hand back what was
- * captured. Await this once before offering Joe a list.
+ * every later rebuild would start from the edit. `structuredClone` is deep
+ * enough because a `CreatureDef` is plain data by construction — numbers,
+ * strings, booleans, arrays and objects of them.
  *
- * Throws rather than returning an empty map if the rewrite did not fire. An
- * editor with no species to open is a broken editor, and it should say which
- * layer broke rather than look like a tree with no animals in it.
+ * Throws rather than returning an empty map. An editor with no species to open
+ * is a broken editor, and it should say which layer broke rather than look like
+ * a tree with no animals in it.
  */
 export async function loadBuiltDefs(): Promise<ReadonlyMap<string, CreatureDef>> {
   await import('../../../../src/island/species/parts/assembled/index')
-  if (CAPTURED_DEFS.size === 0) {
+  if (CREATURE_DEFS.size === 0) {
     throw new Error(
-      'no species definitions were captured. The joe-workbench-capture-defs plugin in '
-      + 'vite.workbench.config.ts did not rewrite the animal-*.ts files — are you on the '
-      + 'plain node server (npm run workbench:plain) instead of Vite?',
+      'no species definitions were registered. Importing parts/assembled/index left '
+      + 'CREATURE_DEFS empty — either the barrel no longer evaluates the animal-*.ts '
+      + 'files, or defineCreature in src/island/species/parts/creature.ts stopped '
+      + 'writing the map.',
     )
   }
-  return CAPTURED_DEFS
+  const out = new Map<string, CreatureDef>()
+  for (const [id, def] of CREATURE_DEFS) out.set(id, structuredClone(def) as CreatureDef)
+  return out
 }

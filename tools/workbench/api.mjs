@@ -121,6 +121,18 @@ function state(root) {
      * is built to show.
      */
     facts: readJson(root, 'joe/species-facts.json', null),
+    /*
+     * Joe's saved species drafts, so the editor can read its own work back.
+     *
+     * `edits` has been WRITABLE since `6bde9ec` and merge-safe since the same
+     * commit, but it was never readable, so every edit Joe made died with the
+     * tab — "need to be able to save my edits" was the first of his five notes
+     * on the editor and this line is the half that was missing. `.drafts` is
+     * unwrapped the way `primitives` and `names` are unwrapped, because the page
+     * wants the rows; the envelope (`schemaVersion`, `nextId`) is the server's
+     * business and the page must never send its own id.
+     */
+    edits: readJson(root, 'joe/species-edits.json', { schemaVersion: 1, nextId: 1, drafts: [] }).drafts ?? [],
     voices,
     statuses: STATUSES,
     /*

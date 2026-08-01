@@ -69,6 +69,73 @@ export interface StageHooks {
   onSay(text: string, bad?: boolean): void
 }
 
+/* ---------------------------------------------------- a drag, as arithmetic */
+
+/** Round every component to the snap step, or just to the bank's six decimals. */
+const quantise = (v: Vec3, step: number): Vec3 =>
+  step > 0
+    ? [round6(Math.round(v[0] / step) * step), round6(Math.round(v[1] / step) * step), round6(Math.round(v[2] / step) * step)]
+    : [round6(v[0]), round6(v[1]), round6(v[2])]
+
+/**
+ * What a finished translate means for the definition — the whole sum, in one
+ * place with no WebGL under it, so it can be measured rather than trusted.
+ *
+ * ## `from` and `to` are ALREADY in definition units. Do not divide them.
+ *
+ * `TransformControls` converts a drag into the object's PARENT space before it
+ * ever writes `object.position`: it divides the world-space offset by the
+ * parent's world scale — `three/examples/jsm/controls/TransformControls.js:561`
+ * for the world-space axes, `:557` for the local ones, both
+ * `.divide( this._parentScale )` — and adds `_positionStart` at `:565`.
+ * `_parentScale` is decomposed from `object.parent.matrixWorld` at `:1139`, so
+ * it INCLUDES the `SHARED_SCALE` that `show` puts on the built group. The
+ * conversion has already happened.
+ *
+ * Dividing by `SHARED_SCALE` a second time here is what made Joe's parts "snap
+ * to a location even though snap is off". It pushed every translate 1/0.6207 =
+ * 1.611x past the cursor, and for the hull — whose base is an ABSOLUTE position
+ * rather than a delta — one nudge wrote `1.611 * at + 1.611 * delta`, a fixed
+ * repeatable destination. The eyes escaped it because `def.ts`'s `setJoin` keeps
+ * only x and y of an eye drag and `creature.ts` pins z to `EYE_CARD_Z`, so the
+ * same error only slid the card along the face plane, where nobody saw it.
+ *
+ * Two places nearby DO scale, correctly and in opposite directions, and are not
+ * this: `applyExplode` divides a WORLD push to get a local offset, and
+ * `setSnap` multiplies a definition-unit step because `translationSnap` really
+ * is measured in world units (`TransformControls.js:597` snaps the world
+ * position). Their existence is not a reason to scale here.
+ *
+ * ## Deltas, not centres
+ *
+ * The gizmo moves the mesh's CENTRE, while the definition holds the JOIN point a
+ * measured `shift` away along the part's facing. So everything works in DELTAS
+ * off `joinedAt`, where the shift cancels exactly. The hull is the exception:
+ * `hull.at` really is a centre, and `assembly.ts:549` writes it straight onto
+ * the mesh, which is why its base is the mesh's own start position.
+ */
+export function joinFromDrag(drag: {
+  /** `handle.position` when the drag began, in DEFINITION units. */
+  from: Vec3
+  /** `handle.position` now, in DEFINITION units. */
+  to: Vec3
+  /** True for the hull alone: its `at` is an absolute centre, not a join point. */
+  absolute: boolean
+  /** `userData.joinedAt` — where the build joined this part to the mass. */
+  joinedAt: Vec3 | undefined
+  /** The `-l` copy of a pair. `setJoin` wants the +x one, so the answer flips. */
+  mirror: boolean
+  /** The snap step in DEFINITION units, or 0 when snap is off. */
+  step: number
+}): Vec3 {
+  const delta: Vec3 = [
+    drag.to[0] - drag.from[0], drag.to[1] - drag.from[1], drag.to[2] - drag.from[2],
+  ]
+  const base: Vec3 = drag.absolute ? drag.from : (drag.joinedAt ?? [0, 0, 0])
+  const at: Vec3 = [base[0] + delta[0], base[1] + delta[1], base[2] + delta[2]]
+  return quantise(drag.mirror ? [-at[0], at[1], at[2]] : at, drag.step)
+}
+
 export function createStage(canvas: HTMLCanvasElement, hooks: StageHooks): Stage {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
   renderer.setPixelRatio(Math.min(2, window.devicePixelRatio))
@@ -293,21 +360,41 @@ export function createStage(canvas: HTMLCanvasElement, hooks: StageHooks): Stage
 
     if (mode === 'translate') {
       /*
-       * The gizmo moved the mesh's CENTRE. What the definition holds is the JOIN
-       * point, which sits a measured `shift` away along the part's facing — so
-       * work in DELTAS, where the shift cancels exactly, rather than trying to
-       * recover it. The hull is the exception: `hull.at` really is a centre.
+       * `handle.position` is in DEFINITION units on both ends — three has already
+       * divided the drag by the parent's world scale, `SHARED_SCALE` included,
+       * before writing it (`TransformControls.js:561`, `:565`). `joinFromDrag`
+       * carries the whole argument; do not reintroduce a divisor here.
        */
-      const delta = handle.position.clone().sub(before.position).divideScalar(SHARED_SCALE)
-      const joined = u['joinedAt'] as Vec3 | undefined
-      const base: Vec3 = path.role === 'hull'
-        ? [before.position.x / SHARED_SCALE, before.position.y / SHARED_SCALE, before.position.z / SHARED_SCALE]
-        : (joined ?? [0, 0, 0])
-      let at: Vec3 = [base[0] + delta.x, base[1] + delta.y, base[2] + delta.z]
-      /* `setJoin` wants the +x copy. Dragging the `-l` mesh mirrors the answer. */
-      if (u['mirror'] === true) at = [-at[0], at[1], at[2]]
-      const step = snap ? 0.0125 : 0
-      hooks.onGesture({ kind: 'move', path, at: quantise(at, step) })
+      const at = joinFromDrag({
+        from: [before.position.x, before.position.y, before.position.z],
+        to: [handle.position.x, handle.position.y, handle.position.z],
+        absolute: path.role === 'hull',
+        joinedAt: u['joinedAt'] as Vec3 | undefined,
+        mirror: u['mirror'] === true,
+        step: snap ? 0.0125 : 0,
+      })
+
+      /*
+       * Two slots keep only PART of a drag — `setJoin` in `def.ts` says which —
+       * and a gizmo that moves and then reverts without a word is how a person
+       * learns to distrust the tool. The ridge keeps nothing at all, so put its
+       * spike back here and say so, rather than leave it sitting where the gizmo
+       * dropped it until some later rebuild jumps it home.
+       */
+      if (path.role === 'ridge') {
+        handle.position.copy(before.position)
+        frameHighlight()
+        hooks.onSay('the ridge has no join point — its rows are solved off the hull’s own faces', true)
+        return
+      }
+      const liftedY = Math.abs(handle.position.y - before.position.y) > 1e-6
+      /* `show` rebuilds inside this call and `handle` becomes a new mesh — so the
+       * measurement above is taken first, and the notice goes AFTER, or the
+       * editor's own "moved legs" would write over it. */
+      hooks.onGesture({ kind: 'move', path, at })
+      if (path.role === 'legs' && liftedY) {
+        hooks.onSay('legs stand on the ground — the up-down of that drag was dropped, only across and along were kept', true)
+      }
       return
     }
 
@@ -340,11 +427,6 @@ export function createStage(canvas: HTMLCanvasElement, hooks: StageHooks): Stage
     ], 0.01)
     hooks.onGesture({ kind: 'resize', path, stretch })
   }
-
-  const quantise = (v: Vec3, step: number): Vec3 =>
-    step > 0
-      ? [round6(Math.round(v[0] / step) * step), round6(Math.round(v[1] / step) * step), round6(Math.round(v[2] / step) * step)]
-      : [round6(v[0]), round6(v[1]), round6(v[2])]
 
   /* --------------------------------------------------------------- explode */
 
