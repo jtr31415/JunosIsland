@@ -386,8 +386,9 @@
     {
       "title": "JPGs in album often have a load lag",
       "detail": "when opening the animals in the album there can be a load lag. explore idea of copying the already loaded 3d models? check computational demand",
-      "state": "open",
+      "state": "done",
       "run": "",
+      "note": "DONE 1 Aug, and the premise was wrong in Joe's favour: THERE ARE NO JPGs AND NEVER WERE. Album portraits have always been rendered from the models, so 'copying the already loaded 3d models' was not an idea to evaluate — it was already the design. What was actually costing the lag: the album kept its OWN private GLTFLoader and re-fetched up to 24 GLBs / 3.26 MB that the island already had in memory, in copies that were also missing the face-decal fix. It now takes `pets.preview`, the cache holds the in-flight promise so a fast page turn cannot start a second fetch, and turning a page warms the next one on idle. No new render path was built — the thumbnail pipeline and the offscreen render-to-texture were costed and rejected in the header comment, so the next reader does not re-open the question.",
       "id": "PB-055"
     },
     {
@@ -407,8 +408,9 @@
     {
       "title": "The album opens collections that have no animals built",
       "detail": "The four albums are drawn at random and the draw does not know which collections have models. Only base, garden, home-pets, woodland, africa and farm can be drawn; the other 15 show as rows of empty frames. Fix is one line: put the unbuilt ids in HELD_BACK (species/unlock.ts), which is already a holding pen meant to shrink. Second question in the same place, Joe's call: should the four Red List tiers be drawn for a five-year-old at all?",
-      "state": "open",
+      "state": "done",
       "run": "",
+      "note": "DONE 1 Aug. The 'one line' was half the fix, and the missing half was the one that mattered. HELD_BACK gates the DRAW only, so a save that had ALREADY drawn an empty collection kept it forever: `completion()` divides by roster size, an unbuilt collection can never reach complete, never goes inactive, and so wedges one of the four active slots permanently. `advance()` now prunes a held-back collection, but ONLY when she owns nothing from it — §19 by construction, and the owning case is tested with real data. The held-back set is now the union of Joe's three and twelve with zero models, DERIVED from `shippedIn()` rather than transcribed, with a tripwire test that goes red naming the collection the day one ships. Starvation and deadlock were checked: the pool degrades to fewer open albums and never loops. The card's list of six buildable collections was not trusted and turned out to be stale.",
       "id": "PB-058"
     },
     {

@@ -270,8 +270,10 @@ Five things already established:
 5. LEAVE ROOM FOR A THIRD LINE — item 7 makes a pet `{setId, speciesId}`, so the
    card will read "Cherry — Fox" eventually.
 
-If the pop-out ever shows a DRESSED variant it needs `wearFaceUVs()`, because
-`album.ts` loads its own GLBs and the face-decal fix does not reach it.
+If the pop-out ever shows a DRESSED variant it needs `wearFaceUVs()`. This used
+to be because `album.ts` loaded its own GLBs, which the face-decal fix never
+reached — no longer true since PB-055, which pointed the album at
+`pets.preview` and deleted the private loader.
 
 ### PB-046 · #36 Suggest a break when mashing persists — SHIPPED
 
