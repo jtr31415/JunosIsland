@@ -495,6 +495,18 @@
       "check": "",
       "note": "",
       "state": "open"
+    },
+    {
+      "id": "JT-038",
+      "type": "preference",
+      "title": "Editor shape dropdown: group by FORM or by ROLE? (PB-036)",
+      "detail": "Small and reversible, blocking nothing — answer it next time you have the editor open rather than making a special trip.\n\nYour note 2 asked for the component dropdown to be 'sorted by part and have headers for the categories'. It now has six optgroups grouped by FORM — Boxes, Wedges and so on — alphabetical between groups, natural order within them, so box-9 sits before box-10 rather than after it. Grouping is not filtering: all 95 rows are still there.\n\nThe question is whether 'part' meant form or ROLE — Ears, Noses, Tails. Role reads closer to how you actually think when building an animal ('this one needs ears'), but a shape is reusable across roles and the same wedge is a beak on one species and a tail on another, so a role grouping is a judgement about intent rather than a fact about the mesh, and some shapes would need to appear twice or be filed arbitrarily.\n\nReversible in one function, `groupShapes`. Say which you want, or say 'try role and I will look'.",
+      "blocks": [],
+      "artefact": "tools/workbench/public/editor/library.ts",
+      "doneRule": "manual",
+      "check": "",
+      "note": "",
+      "state": "open"
     }
   ],
   "archive": []
