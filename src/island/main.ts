@@ -26,14 +26,14 @@ import { balance, applyDevBalance, pagesRead } from './balance'
 import { landPaused, eggsPaused, governorLine, restoreCount } from './governors'
 import type { Nudge } from './governors'
 import { OPENING, HATCH_LINES, TILE_QUESTION, fill } from './script'
-import { loadIsland, saveIsland } from './save'
+import { loadIsland, saveIsland, wipeIsland } from './save'
 import { advance, albumsToShow } from './species/opened'
 import { createHarness } from './harness'
 import type { Path } from './harness'
 import { openingGate } from './opening'
 import { commit, ceremony } from './ceremony'
 import {
-  askPin, askChoice, askConfirm, showLearning, stageLabel,
+  askPin, askChoice, askConfirm, askWipe, showLearning, stageLabel,
   applyWordColours, WORD_COLOUR_CHOICES,
 } from './grownups'
 import type { Committed, Exits } from './ceremony'
@@ -760,7 +760,7 @@ async function boot(): Promise<void> {
       { id: 'backup', label: 'Back up to a file', detail: `${friends} and this island` },
       { id: 'restore', label: 'Restore from a backup', detail: 'replaces what is here' },
       { id: 'story', label: 'Play the story again', detail: 'the opening, from the top' },
-      { id: 'wipe', label: 'Start again', detail: `wipes this island and ${friends}` },
+      { id: 'wipe', label: 'Start again', detail: 'choose what to clear' },
     ])
     if (choice === null) return
 
@@ -776,20 +776,32 @@ async function boot(): Promise<void> {
      */
     if (choice === 'story') { void runOpening(); return }
 
-    const sure = await askConfirm(document.body, 'Start again?',
-      [`This wipes this island and ${friends}.`, '', 'It cannot be undone.'].join('\n'),
-      'wipe it', true)
-    if (!sure) return
     /*
-     * Through the store, not by reaching into localStorage.
+     * THREE TICK-BOXES, NOT ONE RED BUTTON (PB-047).
      *
-     * Removing the one key stopped working the moment there were two copies:
-     * the IndexedDB document survived, the next load found it, and the island
-     * came straight back. A parent-facing control that confirms a wipe and
-     * then silently does nothing is a trust problem even though it fails in
-     * the safe direction. removeProfile clears both copies and the ring.
+     * Joe's card: *"it should be at least a question to the adult ... wipe
+     * should offer 3 options with tick boxes: 1. wipe island and animals, 2
+     * wipe academic progress ... 3 wipe kids name."* It used to be
+     * all-or-nothing, so a parent who wanted her maths to start over had to
+     * destroy her animals to get there — and animals are the thing brief §19
+     * is most emphatic she cannot lose.
+     *
+     * `askWipe` includes its own confirm and only resolves after it, so a
+     * value here means a grown-up has seen the ticked list read back and said
+     * yes. Which field belongs to which box lives in `save.ts:wipeSave`, next
+     * to the reasoning; nothing about the split is decided in this file.
+     *
+     * Reloaded rather than un-built in place: half an island torn down while
+     * the renderer is still holding its meshes is a much larger surface than a
+     * fresh boot from the save that was just written.
      */
-    void store.removeProfile(PROFILE).then(() => location.reload())
+    const picked = await askWipe(document.body, {
+      pets: flow.pets.length,
+      tiles: flow.island.tiles.size,
+      childName,
+    })
+    if (!picked) return
+    void wipeIsland(store, PROFILE, picked).then(() => location.reload())
   }
 
   /**
