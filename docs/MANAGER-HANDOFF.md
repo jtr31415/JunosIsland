@@ -2,6 +2,82 @@
 
 ---
 
+## Run 15 (drumbeat, parallel defect burn-down) — 1 Aug. PREPENDED, NOT OVERWRITTEN.
+
+*Joe went away for ten hours with one instruction: pick pieces that can be
+built independently, keep it local, don't push, don't make more work, burn the
+backlog down. Six managers ran in isolated git worktrees; the drumbeat merged
+each one and kept `joe/*.json` centrally so parallel runs could not conflict.*
+
+**Backlog moved 39 open / 13 done → 32 open / 20 done. Nothing pushed.
+`origin/main` is behind on purpose.**
+
+### Shipped and merged, all five gates green on the MERGED tree
+
+| Card | What actually happened |
+|---|---|
+| PB-052 | Sealed pet now **relocated**, per Joe's JT-033 ruling. The card's walkability layer was NOT built. |
+| PB-053 | Refused mountain gets a second try with a narrower peak. 2763 refusals before and after, 0 bare hexes. |
+| PB-055 | **There are no JPGs and never were.** Real cost was a duplicate `GLTFLoader` re-fetching 3.26 MB. |
+| PB-058 | `HELD_BACK` derived from `shippedIn()` with a tripwire test; `advance()` prunes, but only when she owns nothing. |
+| PB-054 | Rng threaded through `pets.ts`; test seeds it. 1-in-14 failures → 0 in 16. |
+| PB-009 | Test corrected, render deliberately untouched. Dead trunks **do not flicker**. |
+| PB-047 | Wipe becomes three tick-boxes. Nearly deleted her name — see below. |
+
+### The three things a future manager most needs to know
+
+1. **Merging three green worktrees produced a RED suite.** Every manager was
+   green alone; together, `sealing.test.ts` and `governors.test.ts` timed out at
+   the 5s default (9.2s and 5.5s). Fixed in `3c29614` by giving both a real time
+   budget, not a smaller job. **Always run the full suite after a merge — a
+   green worktree is not evidence about the merged tree.**
+2. **`fromSave` treats an empty tile list as "no save at all"** and its fresh
+   branch returns `childName: ''`. The obvious spelling of an island wipe would
+   therefore have destroyed her name with nobody ticking the name box — a §19
+   violation arriving through the one feature allowed to delete her things. A
+   fresh island is now written as `createFlow()`'s single grass tile. Pinned by
+   a test named after the landmine.
+3. **Cards were wrong about themselves, repeatedly, and the corrections are on
+   the cards.** PB-054's "load-sensitive" diagnosis was wrong (the test reset
+   position while `goal`/`restFor` are pet state too) and its claim that
+   `governors.test.ts` shares the cause was false. PB-009's trunks don't
+   flicker. PB-055's JPGs don't exist. PB-058's list of six buildable
+   collections was stale. **Re-measure a card's premise before building to it.**
+
+### Blocked on Joe, not on us
+
+- **JT-037 — the Sassoon licence.** PB-051 is BUILT AND GREEN but deliberately
+  **not merged**, held on branch `pb-051-sassoon-font`. The repo is public,
+  Sassoon is "licensed, not sold", the agreement is not on disk, and
+  `.gitignore:16` already keeps `Assets/*.zip` out. Merging would be the first
+  time the binaries entered public git history, which is the part that survives
+  deleting the file later. Retreat is three edits.
+- **JT-030 now wedges the ladder, not just the look.** `completion()` divides by
+  ROSTER size, so home-pets (14/16) and africa (13/16) can never complete and
+  never free their slot — two of four held forever. Option (c) already needed
+  the 80% counted against BUILT members, and that same change unwedges it.
+  `completion()` was left alone deliberately; the denominator is Joe's ruling.
+- PB-009 taste question: does a 0.25-unit dead trunk want a blob shadow?
+  Shadow-by-kind would add blobs to islands that already exist.
+
+### Operational note that cost this run real capacity
+
+**The 200-subagent session cap was hit** partway through, with the PB-047
+manager reporting it too. After that the drumbeat did the merge-regression fix
+directly. If a run like this is repeated, raise
+`CLAUDE_CODE_MAX_SUBAGENTS_PER_SESSION` first.
+
+### Where the next manager starts
+
+Not yet done and needing no ruling: **PB-014** (prop glTF 404 on
+`hexagons_medieval.png`), **PB-010** (batch blob shadows — must exclude pets,
+whose `castShadow` mutates opacity per frame), and **PB-048** which is
+explicitly *"investigation/discussion first"* and must come back as questions
+for Joe, not as a build. Then new species — but note the standing verdict in
+`docs/PB036-HANDOFF.md` that **the editor outranks building animals**.
+
+---
+
 ## Run 10 (ladder manager) — 29 July, ~18:30. PREPENDED, NOT OVERWRITTEN.
 
 *Two managers were live in this tree at once. Run 9's baton below is still
