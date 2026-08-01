@@ -49,13 +49,14 @@
  *     the rect this card's own slot happens to occupy, exactly as the challenge
  *     vignette is. One context, one `requestAnimationFrame`, and the spin, the
  *     bob and the pop-in all come free and already tuned.
- *   - **The pet comes from `pets.preview`, not from a loader of our own.** The
- *     album's portrait renderer has its own `GLTFLoader` and therefore misses
- *     the face-decal UV fix that `pets.ts` applies to every shared prototype —
- *     harmless while the island is all natural colours, and a bug the day item 7
- *     dresses anybody. Borrowing the island's own cache means the friend on this
- *     card is literally the friend on the island, patched the same way, and one
- *     fewer copy of a 140KB model in memory.
+ *   - **The pet comes from `pets.preview`, not from a loader of our own.** This
+ *     used to be true of the pop-out ALONE: the grid's portrait renderer kept a
+ *     private `GLTFLoader`, so it missed the face-decal UV fix that `pets.ts`
+ *     applies to every shared prototype — harmless while the island is all
+ *     natural colours, and a bug the day item 7 dresses anybody — and it re-fetched
+ *     models the island was already holding. PB-055 handed the same `preview` to
+ *     the grid, so the friend on every card is literally the friend on the island,
+ *     patched the same way, and there is no second copy of a 140KB model.
  *   - **The card is a hole, not a card.** Anything drawn into the canvas is
  *     BEHIND every piece of DOM, so a pop-out on an opaque paper panel would
  *     render the pet underneath it and show nothing. The pop-out is therefore
@@ -64,8 +65,6 @@
  *     is up — see `popOpen`.
  */
 import * as THREE from 'three'
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { flattenImported } from './lighting'
 import { createStage } from './stage'
 import { speciesName } from './script'
 import { setById } from './variants/sets'
@@ -76,8 +75,48 @@ import { collection, SPECIES_COLLECTION } from './species/roster'
 import type { Pet } from './flow'
 import type { Speaker } from '../platform/speech'
 
-/** One offscreen renderer, reused for every portrait. */
-function createPortraitRenderer(size = 192): {
+/**
+ * One offscreen renderer, reused for every portrait.
+ *
+ * ## PB-055: where the models come from, and what was NOT built
+ *
+ * Joe: *"when opening the animals in the album there can be a load lag. explore
+ * idea of copying the already loaded 3d models? check computational demand"*.
+ *
+ * The answer is that the portraits were ALWAYS drawn from models — there is not a
+ * single .jpg in this repo and the file header above says why there never will be
+ * — so the idea was already the design. The miss was narrower and worse: this
+ * renderer kept a `GLTFLoader` of its own, so opening the album re-fetched up to
+ * 24 GLBs (3.26MB) the island was already holding, and kept a second copy of each
+ * in GPU memory. The fix is the `preview` parameter below and it costs one
+ * argument. `main.ts` hands over `pets.preview`, which is the island's own cache.
+ *
+ * Two things were considered and deliberately NOT built, recorded here so PB-055
+ * is not explored a second time:
+ *
+ *   - **A build-time thumbnail/JPG pipeline.** ~320 new assets and a new build
+ *     step, to solve a problem three lines of reuse solve — and the header's
+ *     ruling on pre-drawn art for a ~1,000-variant space applies to pre-rendered
+ *     art just as squarely: it drifts from the models the moment either changes.
+ *   - **An offscreen-worker or render-to-texture path.** No such thing exists
+ *     anywhere in this tree, and `toDataURL` below is not the thing that made the
+ *     album feel slow; the network was.
+ *
+ * ONE HONEST REMAINDER, measured and left alone: a full base page still does ~24
+ * synchronous `toDataURL` PNG encodes, which is main-thread work that no amount of
+ * model reuse removes. The prefetch in `turn()` moves them off the turn she is
+ * making rather than deleting them. If a real tablet still janks, chunking the
+ * encodes or moving to `createImageBitmap` is the next lever — not a new pipeline.
+ *
+ * @param preview The island's own `pets.preview`. It hands back a fresh CLONE
+ * that shares geometry and materials with every live pet of that species, so this
+ * renderer may move it and parent it, and must never dispose it (brief §19, and
+ * the note on `AlbumWorld.preview`). `shoot` detaches with `scene.remove` alone.
+ */
+function createPortraitRenderer(
+  preview: (species: string) => Promise<THREE.Object3D>,
+  size = 192,
+): {
   shoot(species: string): Promise<string | null>
 } {
   const scene = new THREE.Scene()
@@ -88,17 +127,23 @@ function createPortraitRenderer(size = 192): {
   scene.add(hemi, key)
 
   const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 50)
-  const loader = new GLTFLoader()
   /**
-   * Species -> portrait, INCLUDING the misses.
+   * Species -> portrait, cached as a PROMISE, and INCLUDING the misses.
    *
    * `null` is cached as hard as a hit. The roster has 320 species and only 98 of
    * them can be drawn at all, so an album full of blank slots asks this renderer
    * for the same two hundred impossible portraits every single time it is
    * opened; without the negative entry that is a fresh `buildSpecies` traverse,
    * or a fresh 404, per slot per open.
+   *
+   * The PROMISE rather than the finished data URL, exactly as `pets.ts:526` does
+   * and for the same reason. A cache of finished results is only consulted once
+   * the work has completed, so two callers who overlap both do the whole job —
+   * the model, the render and the PNG encode — and neither ever knows. That used
+   * to be a rare race; the prefetch in `turn()` makes overlap the normal case,
+   * since a page being warmed ahead of her is the same page she is about to open.
    */
-  const cache = new Map<string, string | null>()
+  const cache = new Map<string, Promise<string | null>>()
 
   /**
    * Where a species' shape comes from, and the ONE place that decides.
@@ -113,7 +158,12 @@ function createPortraitRenderer(size = 192): {
    *   2. A KIT BUILD. `buildSpecies` throws for a kit that is declared but not
    *      built (swim, minibeast, bespoke), which is a normal state for a third of
    *      the roster and not an error — hence the catch and the blank slot.
-   *   3. THE GLB PACK, which is the base 24 and nothing else.
+   *   3. THE ISLAND'S OWN CACHE, which covers the base 24 and nothing else.
+   *      `preview` is the same call the pop-out makes and the hatch makes, so
+   *      this is the same clone, patched the same way — see the second bullet in
+   *      the header: a private loader here missed `wearFaceUVs` and fetched a
+   *      model the island already had. The grid was simply the part left behind
+   *      when the pop-out was given `pets.preview`.
    *
    * NO REQUEST IS MADE FOR A SPECIES THE ROSTER KNOWS AND CANNOT BUILD. That is
    * deliberate and it is the difference between a clean console and PB-014's
@@ -132,9 +182,7 @@ function createPortraitRenderer(size = 192): {
       try { return buildSpecies(record.build) } catch { return null }
     }
     if (record && SPECIES_COLLECTION[species] !== 'base') return null
-    const gltf = await loader.loadAsync(`pets/${species}.glb`)
-    flattenImported(gltf.scene)
-    return gltf.scene
+    return preview(species)
   }
 
   /**
@@ -170,32 +218,59 @@ function createPortraitRenderer(size = 192): {
     return renderer
   }
 
+  /**
+   * The whole job for one species, done once.
+   *
+   * Nothing here is disposed on the way out. The model is a clone from the
+   * island's cache and shares its geometry and materials with every pet of the
+   * species walking about outside — including ones she already owns — so
+   * `scene.remove` is the entire cleanup, exactly as it always was and for the
+   * reason `AlbumWorld.preview` and brief §19 give.
+   */
+  async function take(species: string): Promise<string | null> {
+    const r = gl()
+    if (!r) return null
+
+    const model = await shapeOf(species)
+    if (!model) return null
+
+    // Frame the model from its own bounds, so every species fills the
+    // portrait the same amount whatever its actual size.
+    const bounds = new THREE.Box3().setFromObject(model)
+    const centre = bounds.getCenter(new THREE.Vector3())
+    const radius = bounds.getSize(new THREE.Vector3()).length() / 2
+    model.position.sub(centre)
+    model.rotation.y = Math.PI * 0.18        // three-quarter view, not flat-on
+
+    scene.add(model)
+    camera.position.set(0, radius * 0.35, radius * 3.1)
+    camera.lookAt(0, 0, 0)
+    r.render(scene, camera)
+    const url = r.domElement.toDataURL('image/png')
+    scene.remove(model)
+
+    return url
+  }
+
   return {
-    async shoot(species) {
-      if (cache.has(species)) return cache.get(species) ?? null
-      const r = gl()
-      if (!r) return null
+    shoot(species) {
+      const held = cache.get(species)
+      if (held) return held
 
-      const model = await shapeOf(species)
-      if (!model) { cache.set(species, null); return null }
-
-      // Frame the model from its own bounds, so every species fills the
-      // portrait the same amount whatever its actual size.
-      const bounds = new THREE.Box3().setFromObject(model)
-      const centre = bounds.getCenter(new THREE.Vector3())
-      const radius = bounds.getSize(new THREE.Vector3()).length() / 2
-      model.position.sub(centre)
-      model.rotation.y = Math.PI * 0.18        // three-quarter view, not flat-on
-
-      scene.add(model)
-      camera.position.set(0, radius * 0.35, radius * 3.1)
-      camera.lookAt(0, 0, 0)
-      r.render(scene, camera)
-      const url = r.domElement.toDataURL('image/png')
-      scene.remove(model)
-
-      cache.set(species, url)
-      return url
+      const shot = take(species)
+      /*
+       * A FAILURE IS NOT REMEMBERED — the same rule as `pets.ts:587`.
+       *
+       * Caching a rejection would turn one dropped request on a tablet's flaky
+       * wifi into a friend who has no picture for the rest of the session, and
+       * the picture is the whole point of this page. Evicting lets the next open
+       * try again. The `.catch` also guarantees this promise always has a
+       * handler, which matters because the prefetch fires it with nobody
+       * awaiting: the callers' own `.catch` is on their copy, not on this one.
+       */
+      shot.catch(() => { if (cache.get(species) === shot) cache.delete(species) })
+      cache.set(species, shot)
+      return shot
     },
   }
 }
@@ -504,7 +579,12 @@ export function createAlbum(
 
   root.append(layer, pop)
 
-  const portraits = createPortraitRenderer()
+  /*
+   * The grid's portraits are drawn from the ISLAND'S models, not from models of
+   * this file's own — see the renderer's own header for PB-055 and for what was
+   * deliberately not built instead.
+   */
+  const portraits = createPortraitRenderer(species => world.preview(species))
 
   /**
    * The turntable the friend turns on: a SECOND `Stage`, not a second renderer.
@@ -824,6 +904,47 @@ export function createAlbum(
       }
 
       /**
+       * Warm the page she has not turned to yet. PB-055.
+       *
+       * Joe: *"when opening the animals in the album there can be a load lag"*.
+       * The portraits are cached for the session, so the lag is only ever the
+       * FIRST look at a page — which is exactly the moment she is watching. This
+       * spends the quiet time after a turn on the next page's pictures, so the
+       * turn she is about to make finds them already taken.
+       *
+       * Three things it must not become:
+       *
+       *   - NOT EVERY PAGE. Only `at + 1`. Building all five pages up front is
+       *     precisely the cost the paging commit removed (see the note above
+       *     `pages`), and a child who never turns past the first page should not
+       *     pay for four rosters she is not looking at.
+       *   - NOT THE ORPHANS PAGE, which is not a collection and holds pets whose
+       *     portraits the roster pages have already asked for.
+       *   - NOT AT THE EXPENSE OF THIS TURN. Idle time where the browser offers
+       *     it, a macrotask where it does not (jsdom, older Safari), so the page
+       *     she IS looking at is drawn and interactive before this starts.
+       *
+       * Fire and forget, and it may never reject: nobody awaits it, and the
+       * unhandled rejection would land in the middle of an animation. `shoot`
+       * evicts its own failures, so a page warmed on a dropped connection is
+       * simply cold again when she gets there.
+       */
+      const warmNext = (): void => {
+        const members = at + 1 < pages.length
+          ? collection(pages[at + 1] as string)?.members
+          : undefined
+        if (!members?.length) return
+        const soon = (): void => {
+          for (const species of members) void portraits.shoot(species).catch(() => {})
+        }
+        const idle = (globalThis as {
+          requestIdleCallback?: (fn: () => void) => number
+        }).requestIdleCallback
+        if (typeof idle === 'function') idle(soon)
+        else setTimeout(soon, 0)
+      }
+
+      /**
        * Turn to a page.
        *
        * The scroll goes back to the top on every turn. A page turned while
@@ -850,6 +971,8 @@ export function createAlbum(
           dot.className = i === at ? 'album-dot album-dot-here' : 'album-dot'
           dots.append(dot)
         }
+
+        warmNext()
       }
 
       back.onclick = () => turn(at - 1)
