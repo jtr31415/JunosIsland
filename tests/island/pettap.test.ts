@@ -50,6 +50,7 @@ vi.mock('three/examples/jsm/loaders/GLTFLoader.js', async () => {
 })
 
 import { createPetField, PICK_RADIUS, TAP_TARGET, pickRadiusAt } from '../../src/island/pets'
+import { mulberry32 } from '../../src/core/rng'
 import { pickFrom, isShowing } from '../../src/island/picking'
 import type { PickTargets, Hit } from '../../src/island/picking'
 import { createOrbitCamera, DEFAULT_LIMITS } from '../../src/island/camera'
@@ -275,8 +276,31 @@ function tapRadiusPx(field: Field, id: string, cam: THREE.Camera, t: PickTargets
   return worst
 }
 
+/**
+ * The seed every field in this file is built on — PB-054.
+ *
+ * A pet draws where it wants to go, how long it rests first, and the phase of
+ * its hop from an rng. That is real product behaviour and it stays; what was
+ * wrong was a test asserting on a pet's position without controlling the draw.
+ * `does NOT let the camera into the keep-out or the blob` replays one frame
+ * twice and compares the two to nine decimal places, and about one run in six
+ * the opening goal landed inside the 0.12 "arrived" radius — so frame one rested
+ * instead of walking, ran its rest countdown out, drew a NEW goal, and frame two
+ * walked somewhere frame one never went. Measured before the seed: one failure
+ * in fourteen cold runs, and three of the first twenty-four seeds reproduce it.
+ *
+ * 7 is chosen, not arbitrary: it puts the opening goal 0.598 away, the furthest
+ * of those twenty-four and five times the arrived radius, so the pet is
+ * unambiguously walking and no goal is re-drawn inside the frames under test.
+ * Seeds 11, 14 and 18 are the ones that reproduce the old failure — they are
+ * worth keeping in mind, because they fail HONESTLY. A pet whose goal is
+ * covered by a new obstacle really does re-plan, and no tolerance or retry
+ * should ever be added here to hide that.
+ */
+const SEED = 7
+
 async function fieldWith(...pets: Pet[]): Promise<Field> {
-  const field = createPetField()
+  const field = createPetField('', mulberry32(SEED))
   await field.sync(pets, ISLAND, HEX)
   // Pets spawn on their tile and only wander once `update` runs. Nothing here
   // calls it except the flyer tests, so a pet sits exactly where it hatched.
@@ -517,6 +541,11 @@ describe('and it stays that big as her island grows', () => {
      * One pet, one frame, played twice from the same start — so the hop, the
      * random phase and the goal are all the same and the only difference on
      * the second run is the shot.
+     *
+     * That sentence was an ASSUMPTION until PB-054 and it was false one run in
+     * six; `SEED` above is what makes it true. Resetting the position is not
+     * resetting the pet: `goal` and `restFor` are state too, and frame one can
+     * change both. The seed is chosen so it does not.
      */
     const own = (1.43 * 0.16) / 2
     const field = await fieldWith(pet('a', 'animal-cow'))

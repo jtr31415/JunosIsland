@@ -533,7 +533,14 @@ export const FITS = {
  * island behind the child's back.
  */
 export const VARY = {
-  /** Tufts, stones, undergrowth, dead trunks, water plants. */
+  /**
+   * Tufts, stones, undergrowth, dead trunks, water plants.
+   *
+   * `min` is not a floor here either — see `tree` below for why, and `varyMin`
+   * for the real one. This is the entry that sizes DEAD TRUNKS, so it is the one
+   * PB-009 turned on: 0.8 reads as the floor, the floor is 0.36, and a dead
+   * trunk therefore runs 0.252..0.868 tall rather than 0.560..0.868.
+   */
   cover: { min: 0.8, span: 45 },
   /**
    * Live trees start higher. Joe asked for "fewer small ones in favour of
@@ -565,6 +572,28 @@ export const VARY = {
 /** The largest multiplier a given variation can produce. */
 export const varyMax = (v: { min: number; span: number }): number =>
   v.min + (v.span - 1) / 100
+
+/**
+ * The smallest multiplier a given variation can produce — and it is NOT `min`.
+ *
+ * The missing half of the arithmetic above, written down because its absence
+ * cost a card. `min` reads like a floor and is not one: the term added to it is
+ * `(h >> n) % span` on a signed shift of an unsigned hash, so it runs
+ * `-(span - 1) .. span - 1` and the real floor is `min - (span - 1) / 100`.
+ *
+ * PB-009 is what happens when only `varyMax` exists. The shadow threshold's
+ * lower edge was justified against `FITS.bare[1] * VARY.cover.min` — 0.560,
+ * comfortably over `SHADOW_MIN_HEIGHT` — while the true floor is 0.252, well
+ * under it. Measured over 15,129 pieces: 48.8% of terms are negative and 24.5%
+ * of dead trunks are fitted too small to earn a blob. That is the product
+ * working as designed (the rule is about SIZE, and a 0.25-tall trunk is smaller
+ * than the reed beside it, which is deliberately unshadowed) — but the test
+ * certifying the edge was asserting a floor that does not exist.
+ *
+ * Use this, not `min`, whenever the question is "can the smallest one ever".
+ */
+export const varyMin = (v: { min: number; span: number }): number =>
+  v.min - (v.span - 1) / 100
 
 /* ---------- which props are "larger", and therefore cast ----------
  *
