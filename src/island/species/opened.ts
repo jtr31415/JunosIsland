@@ -20,7 +20,7 @@
  * and `advance` below is the one place they meet.
  */
 import { COLLECTIONS, SPECIES_COLLECTION } from './roster'
-import { activeIds, fillToCap, nextToOpen } from './unlock'
+import { activeIds, fillToCap, nextToOpen, HELD_BACK } from './unlock'
 import type { UnlockState } from './unlock'
 import type { Rng } from '../../core/rng'
 
@@ -89,24 +89,44 @@ export function stateOf(species: readonly string[], opened: Opened): UnlockState
 /**
  * Everything that should be open right now, given what she owns.
  *
- * THE ORDER OF THE TWO STEPS IS THE DESIGN, so it is written down rather than
+ * THE ORDER OF THE THREE STEPS IS THE DESIGN, so it is written down rather than
  * left to be inferred:
  *
- *   1. THE CADENCE FIRST. `nextToOpen` is Joe's ratified rule and gets first
+ *   0. THE PRUNE, AND ONLY FOR SAVES WRITTEN BEFORE PB-058. Adding the twelve
+ *      unbuilt collections to `HELD_BACK` stops them being DRAWN; it does
+ *      nothing whatever about the ones a child has already been given. Juno's
+ *      live save has up to three of them open right now, and they are wedged
+ *      there forever rather than merely ugly: `completion` divides what she owns
+ *      by the collection's ROSTER size (sixteen), never by the number actually
+ *      shipped (zero), so an empty collection sits at 0% permanently, never
+ *      completes, never stops counting as ACTIVE, and therefore holds one of
+ *      Joe's four slots for good. Three such albums and she has one working slot
+ *      and will never be given a new album again. Nothing downstream saves her:
+ *      `readOpened` keeps the id, this function used to copy it through
+ *      verbatim, `candidates` only ever filtered what could be OPENED, and
+ *      `albumsToShow` happily draws it. So it has to be undone here, once, on
+ *      the way past.
+ *   1. THE CADENCE NEXT. `nextToOpen` is Joe's ratified rule and gets first
  *      refusal on every slot. Called in a loop, not once, because a single call
  *      answers "does anything open now" and a save can arrive several
  *      completions behind — a build that was away for a version, or a child who
  *      finished two albums in one sitting.
- *   2. THE SEEDING SECOND, and normally never. `fillToCap` only has anything to
+ *   2. THE SEEDING LAST, and normally never. `fillToCap` only has anything to
  *      do when fewer than four are active and rule 2 was not satisfied, which is
- *      a fresh island, or a save written before this field existed. Once the
- *      four are seeded the cadence owns every subsequent opening, because being
- *      at the cap is exactly what makes a completion the only thing that
- *      releases the next one.
+ *      a fresh island, a save written before this field existed, or — new since
+ *      PB-058 — a save that step 0 has just taken slots away from. That last
+ *      case is the whole point of the prune: the freed slots are refilled in the
+ *      same pass, so a child who was stuck on three dead albums arrives with
+ *      four live ones and never sees the gap.
  *
- * IDEMPOTENT ON A STEADY STATE: called twice with the same pets it returns the
- * same `open` the second time, because four are active and both steps decline.
- * That matters because `main.ts` calls it on every arrival, not on an event.
+ * IDEMPOTENT ON A STEADY STATE, INCLUDING ACROSS THE PRUNE: called twice with
+ * the same pets it returns the same `open` the second time, because four are
+ * active and all three steps decline. The prune does not break that and cannot
+ * oscillate, because everything it removes is in `HELD_BACK` and everything step
+ * 2 puts back is drawn from `candidates`, which filters `HELD_BACK` out — so no
+ * id the prune drops can ever be re-drawn into the hole it left, and the second
+ * call finds nothing to prune. It matters because `main.ts` calls this on every
+ * arrival, not on an event.
  *
  * `base` is forced into `open` rather than assumed to be there, so a save that
  * lost it — hand-edited, or truncated — comes back with her own album rather
@@ -115,10 +135,50 @@ export function stateOf(species: readonly string[], opened: Opened): UnlockState
 export function advance(
   species: readonly string[], opened: Opened, rng: Rng,
 ): Opened {
-  const open = opened.open.includes(BASE_COLLECTION)
+  const was = opened.open.includes(BASE_COLLECTION)
     ? [...opened.open]
     : [BASE_COLLECTION, ...opened.open]
   let last = opened.lastOpened
+
+  /*
+   * Step 0. Take back the albums that were never worth giving, and ONLY those.
+   *
+   * Two conditions, both required, and the second one is BRIEF §19 — nothing a
+   * child owns may be lost — so it is not an optimisation and it is not
+   * optional:
+   *
+   *   (a) the collection is in `HELD_BACK`, so the cadence would refuse to draw
+   *       it today; and
+   *   (b) she owns NOTHING from it.
+   *
+   * For a collection with no shipped species (b) is always true — no model
+   * means no pet means no species means no count — so on today's data the
+   * prune is provably lossless and (a) alone would do the same work. The guard
+   * is here because "provably" is doing a lot of work in that sentence and the
+   * proof rots. `HELD_BACK` is a union (see `unlock.ts`), and Joe's half of it
+   * is not about models at all: the day he releases `legendary` he may well do
+   * it while a child already has some of it open and half collected, and an
+   * (a)-only prune would quietly take her unicorns off the shelf. With (b) in
+   * place the rule is lossless BY CONSTRUCTION rather than by an argument about
+   * what happens to be true this week. If she owns anything in a held-back
+   * collection, it keeps its album and its slot, and the cadence simply never
+   * offers her a second one like it.
+   *
+   * `base` is never pruned. It is not in `HELD_BACK` so (a) already excludes it,
+   * but it is spelled out because base going missing is the one failure here
+   * nobody would forgive — it is the album she has actually been collecting
+   * since her first egg — and a guard that is obvious to read is worth more than
+   * one that has to be traced through two files.
+   *
+   * `lastOpened` is deliberately left alone even when it names something pruned.
+   * `RELATED_GROUP` is total over every non-base id, so the relatedness rule
+   * still resolves against a pruned id perfectly well, and it remains an honest
+   * record of what was drawn last — which is what the field is for.
+   */
+  const owned = ownedByCollection(species)
+  const open = was.filter(id =>
+    id === BASE_COLLECTION || !HELD_BACK.includes(id) || (owned[id] ?? 0) > 0,
+  )
 
   // Step 1. The cadence, until it has nothing more to say.
   for (;;) {

@@ -949,9 +949,14 @@ async function boot(): Promise<void> {
      *
      * `pets.preview` clones the shared prototype, which has already had
      * `wearFaceUVs` applied — so the friend on the card is literally the friend
-     * on the island, and she stays right the day item 7 dresses anybody. The
-     * album's separate GLTFLoader (still used for the grid's thumbnails) never
-     * sees that fix.
+     * on the island, and she stays right the day item 7 dresses anybody.
+     *
+     * THIS NOW FEEDS THE GRID'S THUMBNAILS TOO, which is PB-055. Until then the
+     * album kept a second `GLTFLoader` for the little pictures, so opening it
+     * could re-fetch up to 24 GLBs the island was already holding — and those
+     * copies missed the face-decal fix, because only the shared prototype gets
+     * it. One port now feeds both, so there is one cache, one download and one
+     * patched model per species. See `createPortraitRenderer` in `album.ts`.
      */
     preview: species => pets.preview(species),
     /*

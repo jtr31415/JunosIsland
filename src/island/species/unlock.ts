@@ -64,22 +64,92 @@ export const OPEN_AT = 0.80
 export const MAX_ACTIVE = 4
 
 /**
- * Collections that are never offered.
+ * The three Joe is holding back by JUDGEMENT. His call, and only his to undo.
  *
- * >>> PROVISIONAL, JT-027 — THIS LIST IS MEANT TO SHRINK. Joe's word was *"but
- * >>> hold legendary, dinosaurs and prehistoric FOR NOW"* (emphasis the point).
- * >>> This is a holding pen, not a policy: these three are expected to be
- * >>> released one at a time as he decides they are ready, and releasing one is
- * >>> deleting a string from this array and nothing else. No save migrates, no
- * >>> id moves, no other file changes.
+ * >>> PROVISIONAL, JT-027 — THIS LIST IS MEANT TO SHRINK, AND ONLY TO SHRINK.
+ * >>> Joe's word was *"but hold legendary, dinosaurs and prehistoric FOR NOW"*
+ * >>> (emphasis the point). This is a holding pen, not a policy: these three are
+ * >>> expected to be released one at a time as he decides they are ready, and
+ * >>> releasing one is deleting a string from this array and nothing else. No
+ * >>> save migrates, no id moves, no other file changes.
  *
- * Why these three and not others is his judgement and is not reconstructed
- * here. They are also the three the roster treats as odd elsewhere —
- * `types.ts:56-64` gives `fictional` and `prehistoric` their own threat statuses
- * precisely because a dragon and a trilobite are not Red List animals — so the
- * hold is at least consistent with how the data already thinks.
+ * Why these three and not others is his judgement and is not reconstructed here.
+ * They are also the three the roster treats as odd elsewhere — `types.ts:56-64`
+ * gives `fictional` and `prehistoric` their own threat statuses precisely
+ * because a dragon and a trilobite are not Red List animals — so the hold is at
+ * least consistent with how the data already thinks.
+ *
+ * Nothing about MODELS is said here. All three happen also to be unbuilt today,
+ * and so appear in `NOT_BUILT_YET`'s reasoning as well, but the two holds are
+ * different questions with different release conditions and are kept apart for
+ * exactly that reason. See `HELD_BACK` below.
  */
-export const HELD_BACK: readonly string[] = ['legendary', 'dinosaurs', 'prehistoric']
+export const HELD_BACK_BY_JOE: readonly string[] = ['legendary', 'dinosaurs', 'prehistoric']
+
+/**
+ * Collections with NOT ONE species built. Held back by arithmetic, not taste.
+ *
+ * THIS IS A DIFFERENT KIND OF HOLD FROM JOE'S, and confusing the two is how this
+ * list gets deleted by someone tidying up. `HELD_BACK_BY_JOE` is a judgement and
+ * shrinks when he rules. This one is a measurement and shrinks when a modeller
+ * finishes a collection. A collection whose registry entry is empty does not
+ * render as "coming soon" or as anything else considerate: `album.ts` draws one
+ * frame per ROSTER member, so opening `ocean` today puts sixteen empty squares
+ * in front of a five-year-old and calls it a new album. PB-058 is that bug. Four
+ * albums drawn at random from twenty-one, when six of the twenty-one have any
+ * animals in them at all, means most children open mostly nothing.
+ *
+ * IT IS DERIVED, NOT DECIDED. The truth is `shippedIn(id).length === 0` in
+ * `registry.ts:144`, and that derivation is PINNED BY A TRIPWIRE TEST in
+ * `tests/island/species-unlock.test.ts` which recomputes the set from the
+ * registry and fails BY NAME the day a collection gains its first model —
+ * "ocean now has models, take it out of NOT_BUILT_YET". Nobody has to remember
+ * this list exists; the test remembers for them.
+ *
+ * SO WHY IS IT WRITTEN OUT BY HAND rather than computed here? Because this
+ * module is pure and intends to stay pure — the header says "no three.js" —
+ * and importing `registry.ts` would drag three.js in behind it, transitively,
+ * through `collections/garden.ts:70` to `parts/assembled` to
+ * `parts/texture.ts`. Twelve short strings and a test that checks them is a
+ * cheaper price than putting a renderer inside the unlock rules.
+ *
+ * REMOVING AN ID FROM HERE IS WHAT "SHIPPING A COLLECTION" MEANS. There is no
+ * other switch. Build the species, delete the string, and the cadence starts
+ * offering it the next time a child finishes an album.
+ */
+export const NOT_BUILT_YET: readonly string[] = [
+  'birds', 'ocean', 'critters', 'night-time', 'ice', 'outback', 'jungle', 'raptors',
+  'near-threatened', 'vulnerable', 'endangered', 'critically-endangered',
+]
+
+/**
+ * Collections that are never offered — the union of the two holds above.
+ *
+ * The name and the type are unchanged from when this was Joe's three alone, so
+ * the one place that reads it (`candidates`, below) and every test that imports
+ * it carry on working. What changed is that it is now COMPOSED rather than
+ * typed out, and the two halves are named separately because they are undone by
+ * different people for different reasons: `HELD_BACK_BY_JOE` shrinks when Joe
+ * rules on a collection, `NOT_BUILT_YET` shrinks when a collection is actually
+ * built. Merging them into one flat array would lose that, and the first person
+ * to release `legendary` would have no way of knowing whether they were
+ * answering a design question or a modelling one.
+ *
+ * >>> AND IT NO LONGER ONLY SHRINKS. The note above `HELD_BACK_BY_JOE` still
+ * >>> says "meant to shrink" and that is true OF THAT LIST. It is not true of
+ * >>> this one: today it grew from three ids to fifteen, and it will grow again
+ * >>> the moment someone adds a collection to the roster ahead of its models.
+ * >>> A roster row is an ambition; a registry entry is a shipped thing; this
+ * >>> union is the gap between them plus Joe's judgement, and the gap moves in
+ * >>> both directions.
+ *
+ * Deduplicated because the two lists overlap today — all three of Joe's three
+ * are also unbuilt — and a doubled id would make `HELD_BACK.length` lie to any
+ * test that counts it.
+ */
+export const HELD_BACK: readonly string[] = [
+  ...new Set([...HELD_BACK_BY_JOE, ...NOT_BUILT_YET]),
+]
 
 /**
  * Which collections would read as "related" if they opened back to back.
@@ -101,8 +171,8 @@ export const HELD_BACK: readonly string[] = ['legendary', 'dinosaurs', 'prehisto
  * having at all.
  *
  * The table is TOTAL over `COLLECTIONS` minus `base`: every id in the roster has
- * a group, including the three in `HELD_BACK`, so that releasing one of them
- * needs no edit here. `base` is absent on purpose — it is never a candidate and
+ * a group, including every id in `HELD_BACK` however long that list grows, so
+ * that releasing one of them needs no edit here. `base` is absent on purpose — it is never a candidate and
  * never the "most recently opened", because it was never opened.
  */
 export const RELATED_GROUP: Readonly<Record<string, string>> = {
@@ -313,6 +383,27 @@ function draw(state: UnlockState, rng: Rng): string | null {
  *
  * Returns the ids to open, in the order they were drawn, so the caller can fold
  * them in and record the last one. Empty when four are already active.
+ *
+ * >>> THE POOL IS FIVE COLLECTIONS WIDE TODAY, AND THAT IS TIGHT. Since PB-058
+ * >>> put the twelve unbuilt collections into `HELD_BACK` (see `NOT_BUILT_YET`),
+ * >>> everything this function can ever draw is `garden`, `home-pets`,
+ * >>> `woodland`, `africa` and `farm` — five. A fresh island opens `base` plus
+ * >>> three of those to reach the cap of four, which leaves exactly TWO in
+ * >>> reserve for the whole of the rest of the game: she completes an album, one
+ * >>> of the two opens, she completes another, the last one opens, and after
+ * >>> that the cadence has nothing left to give until a modeller ships a
+ * >>> collection. That is not a fault in this function, it is the true state of
+ * >>> the registry, and it is a great deal better than opening her an album of
+ * >>> sixteen empty frames — but it is the number to look at first when someone
+ * >>> asks why the album stopped growing.
+ * >>>
+ * >>> A POOL SMALLER THAN THE CAP DEGRADES SILENTLY, ON PURPOSE. It neither
+ * >>> throws nor spins: `draw` returns null the instant `candidates` is empty
+ * >>> (the `pool.length === 0` guard), and the `room--` bound below caps the loop
+ * >>> at the pool's size however far off the cap we still are. A child on a build
+ * >>> where nothing at all was buildable would simply see her own base album and
+ * >>> no others. Fewer albums is a disappointment; a hang or a crash on the way
+ * >>> to her island is not, and that is the trade being made.
  *
  * TERMINATES BY CONSTRUCTION even though it is a loop with a draw in it: every
  * id drawn is added to `open`, `candidates` excludes anything open, so the pool
