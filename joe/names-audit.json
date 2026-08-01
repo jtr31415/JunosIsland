@@ -261,9 +261,9 @@
       "collection": "home-pets",
       "band": "short",
       "name": "Boopvi",
-      "verdict": "",
-      "replacement": "",
-      "note": ""
+      "verdict": "reject",
+      "replacement": "Boovip",
+      "note": "the pv sound is too hard"
     },
     {
       "id": "natural/animal-canary",

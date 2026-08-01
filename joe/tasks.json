@@ -436,8 +436,8 @@
       "artefact": "joe/backlog.json",
       "doneRule": "manual",
       "check": "",
-      "note": "",
-      "state": "open"
+      "note": "C - just relocate the animal from a trapped position, that is no issue at all",
+      "state": "done"
     },
     {
       "id": "JT-034",
