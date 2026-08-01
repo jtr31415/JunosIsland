@@ -2,9 +2,28 @@
  * The album: every friend read home, with the name she gave them.
  *
  * Pets are never lost or taken (brief section 5), so this is a record of
- * ownership, not a checklist. There are no locked slots, no percentages and
- * nothing to complete — an empty album says "your friends will appear here",
- * never "you are missing 23".
+ * ownership first: every friend she has read home is in here, with her name, and
+ * nothing in this file can ever remove one.
+ *
+ * ## It IS a checklist now, and that is a reversal
+ *
+ * This header used to say the opposite — *"no locked slots, no percentages and
+ * nothing to complete... never 'you are missing 23'"* — and that was the right
+ * reading of the brief until Joe overruled it on 1 Aug:
+ *
+ *   *"show the blank slots in the album of what is to come. silhouettes only, no
+ *   names, no animals, no clickability, just a roster of the animals per album,
+ *   4 albums always on show, next one shows when one is completed. we need to
+ *   keep motivation up. and anticipation is motivation."*
+ *
+ * The old rule was protecting against a scoreboard — a page that tells a child
+ * she is behind. What replaced it is not that, and the difference is in the
+ * detail of what a blank slot is allowed to be: a shape and a count, with no
+ * name, no tap and no way to fail. She is never missing anything; there are
+ * simply animals she has not met yet, and they have outlines.
+ *
+ * The four albums come from `species/unlock.ts` by way of `species/opened.ts`.
+ * This file is handed the list and does not decide it.
  *
  * Portraits are RENDERED from the live models rather than drawn: hand-drawn
  * art for a ~1,000-variant space is impossible and would drift from the models
@@ -50,6 +69,10 @@ import { flattenImported } from './lighting'
 import { createStage } from './stage'
 import { speciesName } from './script'
 import { setById } from './variants/sets'
+import { speciesRecord } from './species/registry'
+import { buildSpecies } from './species/kit'
+import { buildAssembly } from './species/parts/assembly'
+import { collection, SPECIES_COLLECTION } from './species/roster'
 import type { Pet } from './flow'
 import type { Speaker } from '../platform/speech'
 
@@ -66,7 +89,53 @@ function createPortraitRenderer(size = 192): {
 
   const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 50)
   const loader = new GLTFLoader()
-  const cache = new Map<string, string>()
+  /**
+   * Species -> portrait, INCLUDING the misses.
+   *
+   * `null` is cached as hard as a hit. The roster has 320 species and only 98 of
+   * them can be drawn at all, so an album full of blank slots asks this renderer
+   * for the same two hundred impossible portraits every single time it is
+   * opened; without the negative entry that is a fresh `buildSpecies` traverse,
+   * or a fresh 404, per slot per open.
+   */
+  const cache = new Map<string, string | null>()
+
+  /**
+   * Where a species' shape comes from, and the ONE place that decides.
+   *
+   * Three sources, in this order, because they are three different kinds of
+   * animal rather than three attempts at the same one:
+   *
+   *   1. AN ASSEMBLED BUILD, if it has one. `parts/assembled` is the newer and
+   *      more faithful of the two records a species can carry, and
+   *      `docs/building-animals-from-parts.md` §6 keeps both — so preferring it
+   *      here is the same preference the workbench viewer takes.
+   *   2. A KIT BUILD. `buildSpecies` throws for a kit that is declared but not
+   *      built (swim, minibeast, bespoke), which is a normal state for a third of
+   *      the roster and not an error — hence the catch and the blank slot.
+   *   3. THE GLB PACK, which is the base 24 and nothing else.
+   *
+   * NO REQUEST IS MADE FOR A SPECIES THE ROSTER KNOWS AND CANNOT BUILD. That is
+   * deliberate and it is the difference between a clean console and PB-014's
+   * complaint: the blank slots are the majority case now, and a fetch per blank
+   * would put two hundred 404s in the log every time the album is opened. A
+   * species the roster has never heard of still tries the pack, exactly as this
+   * file always did, because that is the only guess left for a save from a build
+   * that knows more than this one.
+   */
+  async function shapeOf(species: string): Promise<THREE.Object3D | null> {
+    const record = speciesRecord(species)
+    if (record?.assembly) {
+      try { return buildAssembly(record.assembly) } catch { /* try the kit next */ }
+    }
+    if (record?.build) {
+      try { return buildSpecies(record.build) } catch { return null }
+    }
+    if (record && SPECIES_COLLECTION[species] !== 'base') return null
+    const gltf = await loader.loadAsync(`pets/${species}.glb`)
+    flattenImported(gltf.scene)
+    return gltf.scene
+  }
 
   /**
    * The second GL context, made on FIRST USE and never insisted upon.
@@ -103,14 +172,12 @@ function createPortraitRenderer(size = 192): {
 
   return {
     async shoot(species) {
-      const hit = cache.get(species)
-      if (hit) return hit
+      if (cache.has(species)) return cache.get(species) ?? null
       const r = gl()
       if (!r) return null
 
-      const gltf = await loader.loadAsync(`pets/${species}.glb`)
-      flattenImported(gltf.scene)
-      const model = gltf.scene
+      const model = await shapeOf(species)
+      if (!model) { cache.set(species, null); return null }
 
       // Frame the model from its own bounds, so every species fills the
       // portrait the same amount whatever its actual size.
@@ -263,7 +330,13 @@ export interface AlbumWorld {
 }
 
 export interface Album {
-  open(pets: readonly Pet[]): void
+  /**
+   * @param albums Which collections to lay out, in the order they were opened —
+   * `albumsToShow(opened)`. Four of them while she is mid-collection, and one
+   * more each time she finishes one. An id this build cannot resolve is skipped
+   * rather than drawn empty.
+   */
+  open(pets: readonly Pet[], albums: readonly string[]): void
   close(): void
   isOpen(): boolean
   /** Which friend is popped out, if any. For diagnostics and for tests. */
@@ -292,8 +365,18 @@ export function createAlbum(
   const title = document.createElement('h2')
   title.className = 'album-title'
 
+  /*
+   * The column of albums — NOT a grid of cells.
+   *
+   * It carried `album-grid` until the rosters landed, and re-using that class
+   * here laid the four albums out as four narrow COLUMNS side by side: the
+   * sections became items in the cell grid and inherited its
+   * `repeat(auto-fill, minmax(7.5rem, 1fr))`. Seen in the browser, which is the
+   * only way this sort of thing gets seen. `album-grid` now belongs to the row
+   * inside a section and to nothing else.
+   */
   const grid = document.createElement('div')
-  grid.className = 'album-grid'
+  grid.className = 'album-sets'
 
   const shut = document.createElement('button')
   shut.className = 'chunk chunk-button album-close'
@@ -526,56 +609,170 @@ export function createAlbum(
       { x: r.left, y: r.top, width: r.width, height: r.height })
   })
 
+  /** A friend she owns: her portrait, her name, and a way into the pop-out. */
+  function cellFor(pet: Pet): HTMLElement {
+    const cell = document.createElement('div')
+    cell.className = 'chunk album-cell'
+
+    const img = document.createElement('img')
+    img.className = 'album-portrait'
+    img.alt = pet.name
+    cell.append(img)
+
+    const name = document.createElement('span')
+    name.className = 'album-name'
+    name.textContent = pet.name
+    cell.append(name)
+
+    /*
+     * Tapping a friend opens her, big and turning.
+     *
+     * It used to speak her name and nothing else. Joe: "if you click it, it
+     * should pop out bigger..." — the name is still a tap away, on a button
+     * that also says what she is.
+     */
+    cell.setAttribute('role', 'button')
+    cell.setAttribute('aria-label', `${pet.name}, ${speciesName(pet.species)}`)
+    cell.onclick = () => popOpen(pet)
+
+    /*
+     * Each portrait is fired on its own and CAUGHT on its own.
+     *
+     * `shoot` can reject, and this runs once per slot in the album, so one bad
+     * species used to raise one unhandled rejection per open. The cell is
+     * already complete without it: the name is under the picture and the alt
+     * text is the name, so a friend whose portrait never arrives is a blank
+     * square with her name on it rather than a hole in the grid.
+     */
+    void portraits.shoot(pet.species)
+      .then(url => { if (url) img.src = url })
+      .catch(() => { /* no picture of this one; her name is still there */ })
+    return cell
+  }
+
+  /**
+   * ONE SHE HAS NOT MET. A shape, and deliberately nothing else.
+   *
+   * Joe, 1 Aug: *"silhouettes only, no names, no animals, no clickability"*. So:
+   *
+   *   - NO NAME, and no empty name element either — the row below the picture is
+   *     reserved by the CSS instead, so a blank slot is exactly as tall as a
+   *     friend's and the grid does not go ragged where she has gaps.
+   *   - NOT A BUTTON. No `role`, no `onclick`, and `pointer-events: none` in the
+   *     CSS, because a slot that highlights under a finger promises something
+   *     will happen when nothing will.
+   *   - `aria-hidden`, which is the honest reading of "no names": there is no
+   *     information in this slot to announce. The count in the heading beside it
+   *     is what a screen reader gets, and that is the whole message — three of
+   *     fourteen — rather than eleven announcements of "not found yet".
+   *
+   * The silhouette is the species' own outline, blackened in CSS rather than
+   * re-rendered in black: it is the same cached portrait the day she finds one,
+   * so a friend arriving swaps a filter rather than fetching a picture.
+   */
+  function blankFor(species: string): HTMLElement {
+    const cell = document.createElement('div')
+    cell.className = 'chunk album-cell album-blank'
+    cell.setAttribute('aria-hidden', 'true')
+
+    const img = document.createElement('img')
+    img.className = 'album-portrait album-silhouette'
+    img.alt = ''
+    cell.append(img)
+
+    void portraits.shoot(species)
+      .then(url => { if (url) img.src = url })
+      .catch(() => { /* nothing to draw yet; the empty slot is the message */ })
+    return cell
+  }
+
+  /**
+   * One album: a heading, a count, and a slot for every species in it.
+   *
+   * IN ROSTER ORDER, never in the order she found them. The roster order is the
+   * same on every island, which is what makes the shape of a half-finished album
+   * something two children can talk about — roster §3's "playground currency"
+   * applied to the page rather than to the names on it.
+   */
+  function sectionFor(id: string, mine: ReadonlyMap<string, Pet>): HTMLElement | null {
+    const set = collection(id)
+    if (!set) return null
+
+    const section = document.createElement('section')
+    section.className = 'album-set'
+
+    const head = document.createElement('h3')
+    head.className = 'album-set-title'
+    head.textContent = set.name
+
+    const have = set.members.filter(m => mine.has(m)).length
+    const count = document.createElement('span')
+    count.className = 'album-set-count'
+    count.textContent = `${have} of ${set.members.length}`
+    head.append(count)
+
+    const row = document.createElement('div')
+    row.className = 'album-grid'
+    for (const species of set.members) {
+      const pet = mine.get(species)
+      row.append(pet ? cellFor(pet) : blankFor(species))
+    }
+
+    section.append(head, row)
+    return section
+  }
+
   return {
-    open(pets) {
+    open(pets, albums) {
       popDown(false)
       title.textContent = pets.length === 1
         ? '1 friend has come home'
         : `${pets.length} friends have come home`
       if (pets.length === 0) title.textContent = 'Your friends will appear here'
 
+      /*
+       * The FIRST pet of each species fills that species' slot.
+       *
+       * First rather than newest, so a slot never changes the friend it shows
+       * once it is filled. Everyone who does not get a slot — a second animal of
+       * the same species, or a species no open album lists — is gathered below
+       * rather than dropped: brief §19 is that nothing she owns is ever lost, and
+       * a roster view is exactly the sort of change that loses somebody quietly.
+       */
+      const mine = new Map<string, Pet>()
+      for (const pet of pets) if (!mine.has(pet.species)) mine.set(pet.species, pet)
+
       grid.replaceChildren()
-      for (const pet of pets) {
-        const cell = document.createElement('div')
-        cell.className = 'chunk album-cell'
+      const shown = new Set<string>()
+      for (const id of albums) {
+        const section = sectionFor(id, mine)
+        if (!section) continue
+        for (const m of collection(id)?.members ?? []) shown.add(m)
+        grid.append(section)
+      }
 
-        const img = document.createElement('img')
-        img.className = 'album-portrait'
-        img.alt = pet.name
-        cell.append(img)
-
-        const name = document.createElement('span')
-        name.className = 'album-name'
-        name.textContent = pet.name
-        cell.append(name)
-
-        /*
-         * Tapping a friend opens her, big and turning.
-         *
-         * It used to speak her name and nothing else. Joe: "if you click it, it
-         * should pop out bigger..." — the name is still a tap away, on a button
-         * that also says what she is.
-         */
-        cell.setAttribute('role', 'button')
-        cell.setAttribute('aria-label', `${pet.name}, ${speciesName(pet.species)}`)
-        cell.onclick = () => popOpen(pet)
-
-        grid.append(cell)
-        /*
-         * Each portrait is fired on its own and CAUGHT on its own.
-         *
-         * `shoot` fetches a .glb, so it can reject — and this runs once per
-         * friend in the grid, so one bad species used to raise one unhandled
-         * rejection per open of the album. The cell is already complete without
-         * it: the name is under the picture and the alt text is the name, so a
-         * friend whose portrait never arrives is a blank square with her name on
-         * it rather than a hole in the grid. Nothing here abandons the loop —
-         * the sibling cells are already built — this is only about the console
-         * staying readable, which is how the last three of these were found.
-         */
-        void portraits.shoot(pet.species)
-          .then(url => { if (url) img.src = url })
-          .catch(() => { /* no picture of this one; her name is still there */ })
+      /*
+       * Anybody the four albums did not account for.
+       *
+       * Two ways in, and both are real: a duplicate species once a pack is
+       * exhausted (`collection.ts` starts dealing repeats again at that point),
+       * and a species belonging to an album that is not open on this island —
+       * which a save from a later build can carry. Neither has a slot, and
+       * neither may vanish.
+       */
+      const orphans = pets.filter(
+        p => !(shown.has(p.species) && mine.get(p.species) === p))
+      if (orphans.length > 0) {
+        const section = document.createElement('section')
+        section.className = 'album-set'
+        const head = document.createElement('h3')
+        head.className = 'album-set-title'
+        head.textContent = 'More friends'
+        const row = document.createElement('div')
+        row.className = 'album-grid'
+        for (const pet of orphans) row.append(cellFor(pet))
+        section.append(head, row)
+        grid.append(section)
       }
       layer.classList.remove('hide')
     },

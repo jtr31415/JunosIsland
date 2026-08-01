@@ -27,6 +27,7 @@ import { landPaused, eggsPaused, governorLine, restoreCount } from './governors'
 import type { Nudge } from './governors'
 import { OPENING, HATCH_LINES, TILE_QUESTION, fill } from './script'
 import { loadIsland, saveIsland } from './save'
+import { advance, albumsToShow } from './species/opened'
 import { createHarness } from './harness'
 import type { Path } from './harness'
 import { openingGate } from './opening'
@@ -335,6 +336,27 @@ async function boot(): Promise<void> {
    */
   const onceFlags = loaded.onceFlags
 
+  /**
+   * Which albums she has open, advanced the moment the save is read.
+   *
+   * ADVANCED HERE AND NOT IN `save.ts` because opening one is a DRAW, and a
+   * loader has no business consuming randomness — the same separation
+   * `collection.ts`'s deck keeps a hundred lines below. It is done at boot
+   * rather than lazily when the album opens so that the four are decided once
+   * and written on her next save, whether or not she ever taps the book: a
+   * roster that materialised only on first view would be a different four for
+   * every child who never opened it.
+   *
+   * Declared ABOVE `persist` on purpose. `persist` closes over it, and a `let`
+   * declared after would be a temporal-dead-zone fault waiting for the first
+   * save that beats this line.
+   */
+  let opened = advance(loaded.flow.pets.map(p => p.species), loaded.opened, defaultRng)
+  /** Fold in anything a new friend has just unlocked. Idempotent; see `advance`. */
+  const refreshAlbums = (): void => {
+    opened = advance(flow.pets.map(p => p.species), opened, defaultRng)
+  }
+
   let persistGranted: PersistState = loaded.persistGranted
   async function askToKeepIt(): Promise<void> {
     if (!shouldRequest(persistGranted, flow.pets.length, flow.tilesEarned)) return
@@ -374,7 +396,7 @@ async function boot(): Promise<void> {
 
   const persist = (): Promise<void> =>
     saveIsland(store, PROFILE, flow, opening.seen(), childName, persistGranted,
-      attainment, onceFlags, calmColours)
+      attainment, onceFlags, calmColours, opened)
 
   /**
    * Save, wait for it, and come back with proof.
@@ -959,7 +981,7 @@ async function boot(): Promise<void> {
   albumBtn.className = 'chunk chunk-button album-button'
   albumBtn.textContent = '\u{1F4D6} friends'
   albumBtn.setAttribute('aria-label', 'open the album of friends')
-  albumBtn.onclick = () => album.open(flow.pets)
+  albumBtn.onclick = () => album.open(flow.pets, albumsToShow(opened))
   document.body.append(albumBtn)
 
   /* ---------- the two verbs ---------- */
@@ -1217,6 +1239,14 @@ async function boot(): Promise<void> {
 
       flow = handleChallengePassed(flow, { name, species })
       const hatched = flow.pets.length > petsBefore
+      /*
+       * A new friend can be the one that finishes an album, and finishing an
+       * album is the only thing that opens the next one. Run it before the
+       * ceremony rather than after: `persist` is called inside that ceremony,
+       * and an album opened but not written would be drawn again — differently —
+       * on the next load.
+       */
+      if (hatched) refreshAlbums()
 
       if (hatched) {
         /*

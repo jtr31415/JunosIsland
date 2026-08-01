@@ -16,6 +16,8 @@ import type { Axial } from './world/hex'
 import type { SaveStore } from '../platform/storage'
 import { readAttainment } from './harness'
 import type { Attainment } from './harness'
+import { NOTHING_OPENED } from './species/opened'
+import type { Opened } from './species/opened'
 
 /** The serialised shape. Plain JSON — no Maps, no class instances. */
 interface IslandSave {
@@ -120,6 +122,23 @@ interface IslandSave {
    * from today so that C wires a consumer rather than a migration.
    */
   onceFlags?: unknown
+  /**
+   * Which albums are open, and which was drawn last (the album roster).
+   *
+   * ADDITIVE, AND NOT A SCHEMA BUMP, for exactly the reasons `attainment` gives
+   * two fields above: bumping the envelope turns "a build that has not heard of
+   * this" from a shrug into a REFUSAL, and a refusal costs the child her island.
+   * A save without these reads as a fresh roster and `advance` seeds four on the
+   * spot — the same shape of default `tilesEarned` set.
+   *
+   * WHY IT IS SAVED AT ALL, since it can be recomputed: the draw is random
+   * (JT-027, *"random order"*). Recomputing it every load would deal her a
+   * different three albums every time she opened the game, so the anticipation
+   * this feature exists to build would reset overnight. The draw happens once
+   * and is then a fact about her island.
+   */
+  openCollections?: unknown
+  lastOpened?: unknown
 }
 
 /**
@@ -138,6 +157,14 @@ export type OnceFlags = string[]
 /** Bounds on untrusted input: a hand-edited save may not grow without limit. */
 const ONCE_FLAG_KEEP = 64
 const ONCE_FLAG_MAX_LEN = 64
+
+/**
+ * The same bounds for the album roster. Twenty-one collections exist today and
+ * the roster is not expected to double, but a save is untrusted input and a
+ * number here is cheaper than a loop that trusts one.
+ */
+const COLLECTION_KEEP = 64
+const COLLECTION_ID_MAX_LEN = 64
 
 /**
  * Rebuild the once-flags from whatever was on disk.
@@ -167,16 +194,45 @@ export function readOnceFlags(v: unknown): OnceFlags {
   return out
 }
 
+/**
+ * Rebuild the album roster from whatever was on disk.
+ *
+ * Sanitised like `readOnceFlags`, and it KEEPS IDS THIS BUILD DOES NOT KNOW for
+ * the same reason that one does. A later build will open collections today's
+ * roster has never heard of; dropping them here would mean a downgrade, then an
+ * upgrade, silently loses an album she had already been given — and with it the
+ * slot it occupied, so the game would draw her a different one in its place. The
+ * album skips what it cannot render (`albumsToShow`), which costs a downgraded
+ * build one invisible entry and costs the child nothing.
+ */
+export function readOpened(open: unknown, last: unknown): Opened {
+  const ids: string[] = []
+  if (Array.isArray(open)) {
+    for (const id of open) {
+      if (typeof id !== 'string' || !id || id.length > COLLECTION_ID_MAX_LEN) continue
+      if (!ids.includes(id)) ids.push(id)
+      if (ids.length >= COLLECTION_KEEP) break
+    }
+  }
+  const lastOpened = typeof last === 'string' && last && last.length <= COLLECTION_ID_MAX_LEN
+    ? last
+    : null
+  return ids.length === 0 ? NOTHING_OPENED : { open: ids, lastOpened }
+}
+
 export function toSave(
   flow: Flow, openingSeen: boolean, childName?: string,
   persistGranted: boolean | null = null,
   attainment?: Attainment, onceFlags?: OnceFlags,
   calmColours = false,
+  opened: Opened = NOTHING_OPENED,
 ): IslandSave {
   return {
     attainment,
     onceFlags,
     calmColours,
+    openCollections: [...opened.open],
+    lastOpened: opened.lastOpened,
     tiles: [...flow.island.tiles.entries()],
     pets: [...flow.pets],
     bankedTiles: flow.bankedTiles,
@@ -209,6 +265,12 @@ export interface Loaded {
   persistGranted: boolean | null
   attainment: Attainment
   onceFlags: OnceFlags
+  /**
+   * Which albums are open. NOT yet advanced — `main.ts` runs `advance` once it
+   * has the pets, because what opens is a function of what she owns and this
+   * file has no business drawing from an rng.
+   */
+  opened: Opened
 }
 
 export function fromSave(save: IslandSave | null): Loaded {
@@ -219,6 +281,7 @@ export function fromSave(save: IslandSave | null): Loaded {
       childName: '', persistGranted: null,
       attainment: readAttainment(save?.attainment),
       onceFlags: readOnceFlags(save?.onceFlags),
+      opened: readOpened(save?.openCollections, save?.lastOpened),
     }
   }
   const island: Island = { tiles: new Map(save.tiles) }
@@ -309,6 +372,7 @@ export function fromSave(save: IslandSave | null): Loaded {
     persistGranted: typeof save.persistGranted === 'boolean' ? save.persistGranted : null,
     attainment: readAttainment(save.attainment),
     onceFlags: readOnceFlags(save.onceFlags),
+    opened: readOpened(save.openCollections, save.lastOpened),
   }
 }
 
@@ -324,8 +388,9 @@ export async function saveIsland(
   childName?: string, persistGranted: boolean | null = null,
   attainment?: Attainment, onceFlags?: OnceFlags,
   calmColours = false,
+  opened: Opened = NOTHING_OPENED,
 ): Promise<void> {
   await store.put(profileId, 'save',
     toSave(flow, openingSeen, childName, persistGranted, attainment, onceFlags,
-      calmColours))
+      calmColours, opened))
 }

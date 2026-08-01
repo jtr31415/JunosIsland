@@ -255,6 +255,17 @@ export function nextToOpen(state: UnlockState, rng: Rng): string | null {
   )
   if (!triggered) return null
 
+  return draw(state, rng)
+}
+
+/**
+ * Rules 3, 4 and 5 — WHICH one opens, given that one is opening.
+ *
+ * Split out of `nextToOpen` so that `fillToCap` cannot drift from it. The two
+ * differ over exactly one thing, rule 2, and everything about how a candidate is
+ * chosen is stated once, here.
+ */
+function draw(state: UnlockState, rng: Rng): string | null {
   // Rule 3.
   const pool = candidates(state)
   if (pool.length === 0) return null
@@ -279,4 +290,46 @@ export function nextToOpen(state: UnlockState, rng: Rng): string | null {
   // Rule 5. The caller's seeded stream, never Math.random, so a save reproduces
   // and a test can pin the draw (`src/core/rng.ts:23`).
   return choices[ri(rng, choices.length)] ?? null
+}
+
+/**
+ * Open collections until four are active. The START of a game, not a cadence.
+ *
+ * >>> WHY THIS EXISTS AT ALL, because it looks like it contradicts rule 2.
+ * >>> Joe, on the album, 1 Aug: *"4 albums always on show, next one shows when
+ * >>> one is completed."* Both halves of that sentence have to be true at once,
+ * >>> and under `nextToOpen` alone the first one never is: a fresh island has
+ * >>> only `base` open at 0%, nothing satisfies rule 2, and she would see ONE
+ * >>> album until she owned twenty of the twenty-four — which is the opposite of
+ * >>> the anticipation the whole feature is for.
+ *
+ * So the four are seeded AT THE CAP and the cadence takes over from there. That
+ * is not a second policy fighting the first: starting full means `activeIds` is
+ * already 4, so rule 1 holds the line and the only thing that can ever open a
+ * fifth is a completion — which is Joe's second half, word for word. Rule 2 is
+ * skipped here and NOWHERE ELSE, because "how does the game begin" is a
+ * different question from "what does progress unlock", and rule 2 only answers
+ * the second.
+ *
+ * Returns the ids to open, in the order they were drawn, so the caller can fold
+ * them in and record the last one. Empty when four are already active.
+ *
+ * TERMINATES BY CONSTRUCTION even though it is a loop with a draw in it: every
+ * id drawn is added to `open`, `candidates` excludes anything open, so the pool
+ * strictly shrinks and the loop is bounded by its size. That bound is what
+ * matters rather than the active count, because a hypothetical zero-member
+ * collection reads as complete (see `completion`) and so would never raise the
+ * active count at all.
+ */
+export function fillToCap(state: UnlockState, rng: Rng): readonly string[] {
+  const opened: string[] = []
+  let at = state
+  let room = candidates(state).length
+  while (activeIds(at).length < MAX_ACTIVE && room-- > 0) {
+    const id = draw(at, rng)
+    if (id === null) break
+    opened.push(id)
+    at = { ...at, open: [...at.open, id], lastOpened: id }
+  }
+  return opened
 }

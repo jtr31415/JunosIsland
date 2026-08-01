@@ -320,13 +320,67 @@ body:has(.overlay:not(.hide)) .album-button { display: none; }
   gap: 1rem;
 }
 
+/* ---- one album: a heading with its count, then its roster ---- */
+
+/* The albums stack. Only the cells inside one are a grid — see `album-grid`. */
+.album-sets {
+  display: block;
+}
+
+.album-set + .album-set {
+  margin-top: 1.6rem;
+}
+
+.album-set-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .8rem;
+  margin: 0 0 .7rem;
+  font-size: clamp(1rem, 2.8vmin, 1.35rem);
+  color: var(--ink);
+}
+
+.album-set-count {
+  font-weight: 800;
+  font-size: clamp(.8rem, 2.2vmin, 1rem);
+  opacity: .65;
+}
+
 .album-cell {
+  /*
+   * TWO ROWS, ALWAYS. The name row is reserved rather than added, so a blank
+   * slot — which has no name by Joe's ruling — is exactly as tall as a friend's
+   * cell and a half-filled album does not go ragged.
+   */
   display: grid;
+  grid-template-rows: 1fr auto;
   justify-items: center;
   gap: .4rem;
   padding: .7rem .5rem;
+  min-height: 8.4rem;
   background: #f2fbe9;
   cursor: pointer;
+}
+
+/* ---- a friend she has not met: a shape, and nothing to tap ---- */
+
+.album-blank {
+  background: #eef1ea;
+  /* Not a button and must not feel like one — see `blankFor` in album.ts. */
+  cursor: default;
+  pointer-events: none;
+}
+
+.album-silhouette {
+  /*
+   * Blackened in CSS rather than re-rendered in black, so the day she finds this
+   * animal the picture is already cached and the slot swaps a filter rather than
+   * fetching anything. Not fully opaque: a solid black cut-out reads as a hole
+   * punched in the page, and this is meant to read as a promise.
+   */
+  filter: brightness(0) saturate(0);
+  opacity: .26;
 }
 
 .album-portrait {

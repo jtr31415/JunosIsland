@@ -92,7 +92,15 @@ function setup(over: Partial<AlbumWorld> = {}) {
 
   const album = createAlbum(root, speech, world)
   const $ = (sel: string): HTMLElement | null => root.querySelector(sel)
-  const cells = (): HTMLElement[] => [...root.querySelectorAll('.album-cell')] as HTMLElement[]
+  /*
+   * HER FRIENDS' CELLS ONLY. Since the album became a roster (1 Aug) the grid
+   * also holds a blank slot for every species she has not met, and every
+   * assertion in this file is about the ones she has — a `.album-cell` index
+   * that silently drifted onto a silhouette would pass or fail for reasons
+   * nothing here is testing. The blanks have their own tests.
+   */
+  const cells = (): HTMLElement[] =>
+    [...root.querySelectorAll('.album-cell:not(.album-blank)')] as HTMLElement[]
   return { root, album, world, speak, spoken, focusOn, frames, overlays, previews, $, cells }
 }
 
@@ -154,7 +162,7 @@ describe('what a species is CALLED', () => {
 describe('tapping a friend pops her out', () => {
   it('opens a card with her name AND her species on it', () => {
     const { album, cells, $ } = setup()
-    album.open([FOX])
+    album.open([FOX], ['base'])
     cells()[0]?.click()
 
     expect(album.popped()).toBe(FOX)
@@ -172,7 +180,7 @@ describe('tapping a friend pops her out', () => {
      * layout looks the way it does.
      */
     const { album, cells, $ } = setup()
-    album.open([FOX])
+    album.open([FOX], ['base'])
     cells()[0]?.click()
     expect($('.album')?.classList.contains('hide')).toBe(true)
     // ...and she is still in the album as far as anything else is concerned.
@@ -183,7 +191,7 @@ describe('tapping a friend pops her out', () => {
     // A MENU dismisses on a tap outside; a work page does not (HANDOFF §6).
     // Nothing here is in flight and nothing costs anything.
     const { album, cells, $ } = setup()
-    album.open([FOX])
+    album.open([FOX], ['base'])
     cells()[0]?.click()
     $('.album-pop')?.click()
 
@@ -194,7 +202,7 @@ describe('tapping a friend pops her out', () => {
 
   it('comes back to the grid on the corner cross', () => {
     const { album, cells, $ } = setup()
-    album.open([FOX])
+    album.open([FOX], ['base'])
     cells()[0]?.click()
     $('.album-pop-close')?.click()
     expect($('.album')?.classList.contains('hide')).toBe(false)
@@ -211,7 +219,7 @@ describe('tapping a friend pops her out', () => {
     const late = new THREE.Group()
     const { album, cells } = setup({ preview: () => held.promise })
 
-    album.open([FOX])
+    album.open([FOX], ['base'])
     cells()[0]?.click()
     album.close()
     held.resolve(late)
@@ -235,7 +243,7 @@ describe('tapping a friend pops her out', () => {
       const matDispose = vi.spyOn(material, 'dispose')
 
       const { album, cells } = setup({ preview: async () => model })
-      album.open([FOX])
+      album.open([FOX], ['base'])
       cells()[0]?.click()
       await settle()
       expect(model.parent).not.toBeNull()
@@ -269,7 +277,7 @@ describe('the friend turns', () => {
     expect(frames).toHaveLength(1)
     expect(overlays).toHaveLength(1)
 
-    album.open([FOX])
+    album.open([FOX], ['base'])
     cells()[0]?.click()
     await settle()
 
@@ -287,7 +295,7 @@ describe('the friend turns', () => {
     // A turntable nobody can see must not be rendering a scene on a mid-range
     // tablet. The tick is registered once and skipped when there is no card.
     const { album, cells, frames, overlays, previews } = setup()
-    album.open([FOX])
+    album.open([FOX], ['base'])
     cells()[0]?.click()
     await settle()
 
@@ -309,7 +317,7 @@ describe('the friend turns', () => {
 describe('the button that reads her name', () => {
   it('says her name', () => {
     const { album, cells, $, spoken } = setup()
-    album.open([FOX])
+    album.open([FOX], ['base'])
     cells()[0]?.click()
     $('.album-say')?.click()
     expect(spoken.map(s => s.text)).toEqual(['Gachap'])
@@ -324,7 +332,7 @@ describe('the button that reads her name', () => {
      * of its own, never spliced into another utterance.
      */
     const { album, cells, $, spoken } = setup()
-    album.open([FOX])
+    album.open([FOX], ['base'])
     cells()[0]?.click()
     $('.album-say')?.click()
 
@@ -335,14 +343,14 @@ describe('the button that reads her name', () => {
 
   it('says nothing when there is no friend on the card', () => {
     const { album, $, spoken } = setup()
-    album.open([FOX])
+    album.open([FOX], ['base'])
     $('.album-say')?.click()
     expect(spoken).toHaveLength(0)
   })
 
   it('speaks nothing on open — a card must not behead Fred mid-sentence', () => {
     const { album, cells, spoken } = setup()
-    album.open([FOX])
+    album.open([FOX], ['base'])
     cells()[0]?.click()
     expect(spoken).toHaveLength(0)
   })
@@ -363,7 +371,7 @@ describe('find it on the map', () => {
       livePosition: () => new THREE.Vector3(5.25, 0.11, -3.5),
       hatchPosition: () => new THREE.Vector3(0, 0, 0),
     })
-    album.open([FOX])
+    album.open([FOX], ['base'])
     cells()[0]?.click()
     $('.album-find')?.click()
 
@@ -384,7 +392,7 @@ describe('find it on the map', () => {
     const { album, cells, $, focusOn } = setup({
       livePosition: () => new THREE.Vector3(2, 2.31, 1),
     })
-    album.open([BEE])
+    album.open([BEE], ['base'])
     cells()[0]?.click()
     $('.album-find')?.click()
     expect((focusOn.mock.calls[0]?.[0] as THREE.Vector3).y).toBe(0)
@@ -397,7 +405,7 @@ describe('find it on the map', () => {
       livePosition: () => null,
       hatchPosition: () => new THREE.Vector3(-2.31, 0, 4),
     })
-    album.open([FOX])
+    album.open([FOX], ['base'])
     cells()[0]?.click()
     $('.album-find')?.click()
     const at = focusOn.mock.calls[0]?.[0] as THREE.Vector3
@@ -408,7 +416,7 @@ describe('find it on the map', () => {
     const { album, cells, $ } = setup({
       livePosition: () => new THREE.Vector3(1, 0, 1),
     })
-    album.open([FOX])
+    album.open([FOX], ['base'])
     cells()[0]?.click()
     $('.album-find')?.click()
 
@@ -420,7 +428,7 @@ describe('find it on the map', () => {
 
   it('does nothing when no friend is popped out', () => {
     const { album, $, focusOn } = setup()
-    album.open([FOX])
+    album.open([FOX], ['base'])
     $('.album-find')?.click()
     expect(focusOn).not.toHaveBeenCalled()
   })
@@ -463,7 +471,7 @@ describe('the card is laid out for THREE facts, not two', () => {
 
   it('renders one row per fact, so the third needs no new code', () => {
     const { album, cells, root } = setup()
-    album.open([FOX])
+    album.open([FOX], ['base'])
     cells()[0]?.click()
     expect(root.querySelectorAll('.album-fact')).toHaveLength(petFacts(FOX).length)
   })
@@ -570,9 +578,15 @@ describe('an album with no WebGL at all', () => {
      * Thumbnails are the right thing to lose; nothing else is.
      */
     const { album, cells, $ } = setup()
-    expect(() => album.open([FOX, BEE])).not.toThrow()
+    expect(() => album.open([FOX, BEE], ['base'])).not.toThrow()
     expect(cells()).toHaveLength(2)
-    cells()[1]?.click()
+    /*
+     * FOUND BY NAME, not by index. The grid is in roster order now rather than
+     * in the order they came home, and `animal-bee` sits eleven places ahead of
+     * `animal-fox` in the base set — so an index here would be asserting the
+     * roster's ordering by accident while claiming to test the pop-out.
+     */
+    cells().find(c => c.textContent?.includes('Vusp'))?.click()
     expect($('.album-fact-name')?.textContent).toBe('Vusp')
     expect($('.album-fact-species')?.textContent).toBe('Bee')
   })
