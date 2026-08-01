@@ -15,6 +15,8 @@ import { toWorld, parse, key } from './world/hex'
 import type { Axial } from './world/hex'
 import { rescueHexFor } from './world/walk'
 import { keepOutFor } from './world/mountains'
+import { defaultRng } from '../core/rng'
+import type { Rng } from '../core/rng'
 import type { Island } from './world/grid'
 import type { Pet } from './flow'
 
@@ -584,7 +586,25 @@ export interface PetField {
   update(dt: number, t: number, island: Island, hexSize: number): void
 }
 
-export function createPetField(base = ''): PetField {
+/**
+ * A field of pets.
+ *
+ * `rng` is the repo's ordinary injection (`src/core/rng.ts`), and it is here
+ * because of a test defect rather than a product one. Where a pet WANTS to go,
+ * how long it rests before wanting somewhere else, and the phase of its hop are
+ * all drawn at random — correctly, because a field of pets that all move in step
+ * looks mechanical. But a test that asserts on a pet's position without
+ * controlling that draw is asserting on a coin toss, and
+ * `pettap.test.ts > does NOT let the camera into the keep-out or the blob` was
+ * doing exactly that: about one run in six the pet's opening goal landed within
+ * the "arrived" radius, the pet re-planned mid-frame, and the two frames the test
+ * compares stopped being the same frame.
+ *
+ * Production passes nothing and gets `Math.random`, so the island is as varied
+ * as it ever was. Nothing about a save is seeded from this — pets wander
+ * differently every session by design, and always have.
+ */
+export function createPetField(base = '', rng: Rng = defaultRng): PetField {
   const group = new THREE.Group()
   group.name = 'pets'
   const loader = new GLTFLoader()
@@ -690,12 +710,12 @@ export function createPetField(base = ''): PetField {
     const solid = solidNow()
 
     for (let attempt = 0; attempt < 12; attempt++) {
-      const k = keys[Math.floor(Math.random() * keys.length)] as string
+      const k = keys[Math.floor(rng() * keys.length)] as string
       const parts = k.split(',').map(Number)
       const w = toWorld({ q: parts[0] as number, r: parts[1] as number }, hexSize)
       spot.set(
-        w.x + (Math.random() - 0.5) * hexSize * 0.8, 0,
-        w.z + (Math.random() - 0.5) * hexSize * 0.8,
+        w.x + (rng() - 0.5) * hexSize * 0.8, 0,
+        w.z + (rng() - 0.5) * hexSize * 0.8,
       )
       const blocked = solid.some(o =>
         Math.hypot(spot.x - o.x, spot.z - o.z) < o.r * 1.15 + self)
@@ -836,9 +856,9 @@ export function createPetField(base = ''): PetField {
         live.set(pet.id, {
           pet, root: holder, shadow, radius, flying, wings, proxy, bodyHalf,
           goal: randomSpot(island, hexSize, radius),
-          phase: Math.random() * Math.PI * 2,
+          phase: rng() * Math.PI * 2,
           bounce: 0,
-          restFor: 2 + Math.random() * 6,
+          restFor: 2 + rng() * 6,
           stuckFor: 0,
         })
         // Arrived at last: play the welcome that was asked for too early.
@@ -924,7 +944,7 @@ export function createPetField(base = ''): PetField {
           l.restFor -= dt
           if (l.restFor <= 0) {
             l.goal = randomSpot(island, hexSize, l.radius)
-            l.restFor = 4 + Math.random() * 8
+            l.restFor = 4 + rng() * 8
           }
         } else {
           to.normalize()
@@ -1001,7 +1021,7 @@ export function createPetField(base = ''): PetField {
               pos.x = out.x
               pos.z = out.z
               l.goal = out.clone()
-              l.restFor = 2 + Math.random() * 4
+              l.restFor = 2 + rng() * 4
             } else {
               l.goal = randomSpot(island, hexSize, l.radius)
             }
