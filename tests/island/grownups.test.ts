@@ -14,9 +14,10 @@
  */
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import {
-  showLearning, stageLabel,
+  showLearning, stageLabel, askWipe,
   applyWordColours, CALM_COLOURS_CLASS, WORD_COLOUR_CHOICES,
 } from '../../src/island/grownups'
+import type { WipeChoice } from '../../src/island/save'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import type { LearningDeps } from '../../src/island/grownups'
@@ -464,5 +465,205 @@ describe('colour comfort — the switch that repaints red words green', () => {
     for (const forbidden of ['wrong', 'correct', 'mistake', 'error']) {
       expect(words).not.toContain(forbidden)
     }
+  })
+})
+
+/* ------------------------------------------------------------------------
+ * PB-047 — the wipe screen.
+ *
+ * The one surface in the game that is allowed to destroy what a child owns
+ * (brief §19), so what is tested here is mostly the guard rails: that nothing
+ * arrives pre-ticked, that the red button is dead until a grown-up has said
+ * what, and above all that the three boxes are INDEPENDENT — a tick on one
+ * must not quietly carry another out with it.
+ *
+ * What each box then clears is `wipe.test.ts`'s job; this file only cares that
+ * the screen reports the grown-up's answer faithfully.
+ */
+
+const SUMMARY = { pets: 3, tiles: 12, childName: 'Juno' }
+
+/** The tick screen, and the rows on it in the order they are shown. */
+type WipeRows = [HTMLElement, HTMLElement, HTMLElement]
+
+function openWipe(summary = SUMMARY): {
+  root: HTMLElement; answer: Promise<WipeChoice | null>; rows: WipeRows
+} {
+  const root = document.createElement('div')
+  document.body.append(root)
+  const answer = askWipe(root, summary)
+  return { root, answer, rows: [...root.querySelectorAll('.grownups-row')] as WipeRows }
+}
+
+const dangerIn = (root: HTMLElement): HTMLButtonElement =>
+  root.querySelector('.grownups-danger') as HTMLButtonElement
+
+const backIn = (root: HTMLElement): HTMLElement =>
+  root.querySelector('.overlay-back') as HTMLElement
+
+/** Tick some rows, press the red button, and say yes to the confirm behind it. */
+async function tickAndConfirm(
+  root: HTMLElement, rows: WipeRows, which: number[],
+): Promise<void> {
+  for (const i of which) tap(tickOf(rows[i]!))
+  tap(dangerIn(root))
+  await settle()
+  tap(dangerIn(root))
+  await settle()
+}
+
+describe('the wipe screen', () => {
+  it('opens with all three boxes empty, so a mis-tap destroys nothing', () => {
+    /*
+     * The anti-mis-tap guarantee, and the reason it is first. A wipe screen
+     * that opened with anything already ticked would let one stray thumb on
+     * the red button take a child's animals — which is the single thing brief
+     * §19 is most emphatic she cannot lose.
+     */
+    const { root, rows } = openWipe()
+    expect(rows).toHaveLength(3)
+    for (const row of rows) {
+      expect(tickOf(row).getAttribute('aria-pressed')).toBe('false')
+      expect(tickOf(row).classList.contains('on')).toBe(false)
+    }
+    expect(dangerIn(root).disabled).toBe(true)
+    expect(dangerIn(root).textContent).toBe('nothing ticked')
+  })
+
+  it('will not fire while nothing is ticked', async () => {
+    const { root } = openWipe()
+    tap(dangerIn(root))
+    await settle()
+    // Still the tick screen: no confirm was raised behind it.
+    expect(root.querySelector('.grownups-body')).toBeNull()
+    expect(root.querySelector('.grownups-wipe')).not.toBeNull()
+  })
+
+  it('wakes the red button up as soon as a grown-up has said what', () => {
+    const { root, rows } = openWipe()
+    tap(tickOf(rows[0]))
+    expect(dangerIn(root).disabled).toBe(false)
+    expect(dangerIn(root).textContent).toBe('wipe what is ticked')
+  })
+
+  it('lets a tick come back off again', () => {
+    const { root, rows } = openWipe()
+    tap(tickOf(rows[1]))
+    expect(tickOf(rows[1]).getAttribute('aria-pressed')).toBe('true')
+    tap(tickOf(rows[1]))
+    expect(tickOf(rows[1]).getAttribute('aria-pressed')).toBe('false')
+    expect(dangerIn(root).disabled).toBe(true)
+  })
+
+  it('takes a tap anywhere on the row, not only on the little square', () => {
+    // A thumb on a tablet, not a mouse pointer.
+    const { rows } = openWipe()
+    tap(rows[2].querySelector('.grownups-stage-label') as HTMLElement)
+    expect(tickOf(rows[2]).getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('reports the island box, and only the island box', async () => {
+    const { root, rows, answer } = openWipe()
+    await tickAndConfirm(root, rows, [0])
+    expect(await answer).toEqual({ island: true, academic: false, name: false })
+  })
+
+  it('reports the academic box, and only the academic box', async () => {
+    const { root, rows, answer } = openWipe()
+    await tickAndConfirm(root, rows, [1])
+    expect(await answer).toEqual({ island: false, academic: true, name: false })
+  })
+
+  it('reports the name box, and only the name box', async () => {
+    const { root, rows, answer } = openWipe()
+    await tickAndConfirm(root, rows, [2])
+    expect(await answer).toEqual({ island: false, academic: false, name: true })
+  })
+
+  it('reports two boxes without dragging the third along', async () => {
+    const { root, rows, answer } = openWipe()
+    await tickAndConfirm(root, rows, [1, 2])
+    expect(await answer).toEqual({ island: false, academic: true, name: true })
+  })
+
+  it('reads back only what is going, in the confirm', async () => {
+    /*
+     * A parent does this once, under pressure, and the last thing on screen
+     * before it happens has to name what it is about to take. A confirm that
+     * mentioned animals while only the maths box was ticked would be worse
+     * than no confirm at all.
+     */
+    const { root, rows } = openWipe()
+    tap(tickOf(rows[1]))
+    tap(dangerIn(root))
+    await settle()
+    const body = (root.querySelector('.grownups-body')?.textContent ?? '').toLowerCase()
+    expect(body).toContain('year 1')
+    expect(body).not.toContain('animal')
+    expect(body).toContain('cannot be undone')
+  })
+
+  it('counts her friends and her land in the confirm, rather than saying "data"', async () => {
+    const { root, rows } = openWipe()
+    tap(tickOf(rows[0]))
+    tap(dangerIn(root))
+    await settle()
+    const body = (root.querySelector('.grownups-body')?.textContent ?? '').toLowerCase()
+    expect(body).toContain('3 friends')
+    expect(body).toContain('12 pieces of land')
+    expect(body).not.toContain('year 1')
+  })
+
+  it('names the child in the name row when there is a name to give back', () => {
+    const { rows } = openWipe()
+    expect(rows[2].textContent).toContain('Juno')
+    // And says nothing about a name she has not given yet.
+    document.body.innerHTML = ''
+    const unnamed = openWipe({ pets: 0, tiles: 1, childName: '' })
+    expect(unnamed.rows[2].textContent).not.toContain('called')
+  })
+
+  it('says what each box LEAVES, not only what it takes', () => {
+    // The independence is the point of the card, and a parent cannot be
+    // expected to infer it from the layout.
+    const { rows } = openWipe()
+    expect(rows[0].textContent?.toLowerCase())
+      .toContain('what she is working on stays')
+    expect(rows[1].textContent?.toLowerCase())
+      .toContain('her island, her animals and her name all stay')
+    expect(rows[2].textContent?.toLowerCase()).toContain('nothing else changes')
+  })
+
+  it('wipes nothing when the confirm is cancelled', async () => {
+    const { root, rows, answer } = openWipe()
+    tap(tickOf(rows[0]))
+    tap(dangerIn(root))
+    await settle()
+    tap(backIn(root))
+    expect(await answer).toBeNull()
+  })
+
+  it('wipes nothing when a grown-up backs out of the tick screen', async () => {
+    const { root, answer } = openWipe()
+    tap(backIn(root))
+    expect(await answer).toBeNull()
+  })
+
+  it('wipes nothing when the backdrop is tapped', async () => {
+    const { root, rows, answer } = openWipe()
+    tap(tickOf(rows[0]))
+    const wrap = root.querySelector('.overlay.grownups') as HTMLElement
+    wrap.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+    expect(await answer).toBeNull()
+  })
+
+  it('never uses the class that the overlay rule hides', () => {
+    /*
+     * tokens.css:115 hides `.say` under any open `.overlay`, and this panel's
+     * wrapper IS an `.overlay`. Same tripwire as the learning panel above.
+     */
+    const { root } = openWipe()
+    expect(root.querySelector('.overlay.grownups')).not.toBeNull()
+    expect(root.querySelectorAll('.say')).toHaveLength(0)
   })
 })

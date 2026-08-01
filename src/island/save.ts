@@ -14,7 +14,7 @@ import type { Flow, Pet } from './flow'
 import type { Island, TileType } from './world/grid'
 import type { Axial } from './world/hex'
 import type { SaveStore } from '../platform/storage'
-import { readAttainment } from './harness'
+import { createAttainment, readAttainment } from './harness'
 import type { Attainment } from './harness'
 import { NOTHING_OPENED } from './species/opened'
 import type { Opened } from './species/opened'
@@ -374,6 +374,150 @@ export function fromSave(save: IslandSave | null): Loaded {
     onceFlags: readOnceFlags(save.onceFlags),
     opened: readOpened(save.openCollections, save.lastOpened),
   }
+}
+
+/* ------------------------------------------------ wiping, one box at a time */
+
+/**
+ * What a grown-up ticked on the way out (PB-047).
+ *
+ * Joe: *"it should be at least a question to the adult ... wipe should offer 3
+ * options with tick boxes: 1. wipe island and animals, 2 wipe academic
+ * progress ... 3 wipe kids name."* Before this the wipe was one button that
+ * took everything, so a parent who wanted a fresh maths start had to destroy
+ * her animals to get it.
+ *
+ * THE THREE ARE INDEPENDENT, and that independence is the card. A child who
+ * keeps her animals but restarts her maths, and a child who keeps her maths
+ * and starts a fresh island, must both come out the far side intact — see
+ * `wipeSave` for which field belongs to which box and why.
+ */
+export interface WipeChoice {
+  /** Her island, her animals, and the work banked toward the next of each. */
+  island: boolean
+  /** Everything the harness measures: the ladder, the stage stats, the offer. */
+  academic: boolean
+  /** What she is called. */
+  name: boolean
+}
+
+/**
+ * The wiped blob, computed from the saved one. Pure, so it is testable.
+ *
+ * WHY IT IS A BLOB TRANSFORM rather than a reset of the live objects: this is
+ * the one place the game is allowed to destroy what a child owns (brief §19),
+ * so it wants to be a function whose whole behaviour a test can pin, field by
+ * field, on both sides of the round trip. The caller writes the result and
+ * reloads; nothing half-wiped is ever left running in memory.
+ *
+ * THE THREE HARD CALLS, said out loud, because a later reader will second-guess
+ * each of them:
+ *
+ * 1. THE ECONOMY GOES WITH THE ISLAND, NOT WITH THE ACADEMIC BOX.
+ *    `readProgress`, `sumProgress`, `tilesEarned`, `honeymoonTiles` and
+ *    `bankedTiles` are EARNED WORK toward the next egg and the next tile, not
+ *    a measurement of how she is doing. Brief §19 says earned work is hers, so
+ *    "wipe academic progress" — which is a request to re-measure her, not to
+ *    charge her again — must not take it. A fresh island naturally starts with
+ *    a fresh purse, so it goes there.
+ *
+ * 2. THE ACADEMIC BOX DOES NOT TOUCH `honeymoonTiles`, though it does clear
+ *    `honeymoonFrom` inside the attainment record. The two are not two halves
+ *    of one switch. `honeymoonFrom` is a live discount that ends when the
+ *    measurement it was granted against is thrown away; `honeymoonTiles` is a
+ *    PRICE OFFSET for tiles she already bought (see `flow.sumsForTile`), and
+ *    zeroing it would silently re-price every tile she has left. That is the
+ *    exact half-wipe this card exists to prevent, just pointing the other way.
+ *
+ * 3. `onceFlags` GO WITH THE ACADEMIC BOX. They are the once-only teaching
+ *    moments (INTRO-TEN and its successors), keyed to where she is on the
+ *    ladder. Reset the ladder and leave them, and she re-climbs to the rung
+ *    that introduces tens having been told the game already showed her — a
+ *    save that says she has seen something she has not.
+ *
+ * AND ONE TRAP, which cost the best part of an hour: a fresh island is written
+ * here as `createFlow()`'s ONE grass tile, never as `tiles: []`. `fromSave`
+ * treats an empty tile array as "no save at all" and its fresh branch returns
+ * `childName: ''` — so an island wipe expressed as an empty array would
+ * silently take her name with it, which is precisely the coupling the three
+ * boxes exist to break. Do not "simplify" this to an empty array.
+ *
+ * Whatever no box claims survives every combination, deliberately:
+ * `calmColours` is a colour-comfort setting a grown-up chose and none of the
+ * three asked about, and `persistGranted` is a browser answer, not hers.
+ */
+export function wipeSave(save: IslandSave | null, what: WipeChoice): IslandSave | null {
+  if (!save) return null
+  const out: IslandSave = { ...save }
+
+  if (what.island) {
+    const fresh = createFlow()
+    // One grass tile, not none. See the trap above.
+    out.tiles = [...fresh.island.tiles.entries()]
+    out.pets = []
+    out.bankedTiles = fresh.bankedTiles
+    out.plot = fresh.plot
+    out.readProgress = fresh.readProgress
+    out.sumProgress = fresh.sumProgress
+    out.tilesEarned = fresh.tilesEarned
+    out.honeymoonTiles = fresh.honeymoonTiles
+    // Re-stamped so today's unit is the scale the zeroes are denominated in.
+    out.pay = itemPay()
+    // A new island gets its opening, exactly as the first one did.
+    out.openingSeen = false
+    /*
+     * The album roster is a fact about the animals she owns, so it cannot
+     * outlive them: left alone it would show collections standing open with
+     * nothing in them, and `lastOpened` pointing at a collection that is no
+     * longer hers. `advance` re-seeds on the next load from the pets she has.
+     */
+    out.openCollections = [...NOTHING_OPENED.open]
+    out.lastOpened = NOTHING_OPENED.lastOpened
+  }
+
+  if (what.academic) {
+    /*
+     * The whole harness record in one line, and that is the point: ticks,
+     * mode, per-stage attempts, the EWMA, the latency, early, session, rescue
+     * and probe rings, the offer cursor and `honeymoonFrom` all live inside
+     * `Attainment`, so replacing it wholesale cannot leave a rung behind.
+     * `createAttainment()` is the same virgin record a brand-new island gets:
+     * sums 1, reading 1, building 1, mode auto — Joe's "start of y1 level".
+     *
+     * >>> WHERE THE INTRO ASSESSMENT PLUGS IN. Joe's card: *"once available
+     * this will reset the intro assessment stage that we have not built yet."*
+     * It does not exist and is not stubbed here. When it is built, whatever
+     * records that it has been sat belongs INSIDE `Attainment` (so this line
+     * already clears it) or, if it cannot be, it is cleared HERE beside this
+     * comment and nowhere else.
+     */
+    out.attainment = createAttainment()
+    out.onceFlags = []
+  }
+
+  if (what.name) out.childName = ''
+
+  return out
+}
+
+/**
+ * Apply a wipe to what is on disk. The caller reloads.
+ *
+ * Through the store, not by reaching into localStorage — removing the one key
+ * stopped working the moment there were two copies (see the note this replaced
+ * in `main.ts`). An ordinary `put` is enough and is what every other change to
+ * her island already uses: it lands in both copies and in the ring, so the
+ * newest thing any recovery path can find is the wiped save. Only a wipe with
+ * nothing on disk to wipe falls back to `removeProfile`.
+ */
+export async function wipeIsland(
+  store: SaveStore, profileId: string, what: WipeChoice,
+): Promise<void> {
+  if (!what.island && !what.academic && !what.name) return
+  const raw = await store.get<IslandSave>(profileId, 'save')
+  const next = wipeSave(raw, what)
+  if (!next) { await store.removeProfile(profileId); return }
+  await store.put(profileId, 'save', next)
 }
 
 export async function loadIsland(

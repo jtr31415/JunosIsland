@@ -23,6 +23,7 @@ import { LIVE_PATHS, RESERVED_PATHS, STAGES } from './harness'
 import type { Attainment, Harness, Mode, Path, ReservedPath } from './harness'
 import { TIER_WORDS, autoWouldDo, stageReport } from './report'
 import type { Measure } from './report'
+import type { WipeChoice } from './save'
 
 /** A modal panel over the world, dismissible by tapping outside it. */
 function panel(root: HTMLElement, build: (box: HTMLElement) => void,
@@ -217,6 +218,173 @@ export function askConfirm(
       row.append(go, back)
       box.append(row)
     }, () => resolve(false))
+  })
+}
+
+/* ------------------------------------------------------------- the wipe ---
+ *
+ * PB-047. "Start again" used to be one red button that took everything, and
+ * Joe's card is that it should not be: *"it should be at least a question to
+ * the adult ... wipe should offer 3 options with tick boxes."*
+ *
+ * Three things about the shape of this screen are deliberate, because this is
+ * the ONE place the game is allowed to destroy what a child owns (brief §19):
+ *
+ * - EVERY BOX STARTS OFF. A wipe screen that opens with anything pre-ticked is
+ *   a screen where a mis-tap on the red button destroys something nobody asked
+ *   to destroy. Nothing happens here until a grown-up has said what.
+ * - EACH ROW SAYS WHAT IT TAKES, IN COUNTS — "3 friends and 12 pieces of
+ *   land", not "island data". A parent does this once, under pressure, and
+ *   should not have to infer what a word covers.
+ * - EACH ROW ALSO SAYS WHAT IT LEAVES. The whole point of the card is that the
+ *   three are independent, and a parent cannot be expected to trust that from
+ *   the layout alone.
+ *
+ * The red button is dead until something is ticked, and the confirm that
+ * follows reads the ticked rows back line by line. So a wipe is: the PIN, the
+ * menu, a tick, the red button, and a yes — and the two steps that name what
+ * is going are the last two.
+ */
+
+export interface WipeSummary {
+  pets: number
+  tiles: number
+  childName: string
+}
+
+const friendCount = (n: number): string => `${n} friend${n === 1 ? '' : 's'}`
+const landCount = (n: number): string =>
+  `${n} piece${n === 1 ? '' : 's'} of land`
+
+interface WipeRow {
+  key: keyof WipeChoice
+  label: string
+  detail: string
+  /** How the confirm reads this row back. */
+  going: string
+}
+
+const wipeRows = (s: WipeSummary): WipeRow[] => [
+  {
+    key: 'island',
+    label: 'Her island and her animals',
+    detail: `${friendCount(s.pets)} and ${landCount(s.tiles)}, and the work saved up`
+      + ' toward the next of each. The story plays again from the top.'
+      + ' What she is working on stays exactly where it is.',
+    going: `her island and her animals — ${friendCount(s.pets)}, ${landCount(s.tiles)}`,
+  },
+  {
+    key: 'academic',
+    label: 'What she is working on',
+    detail: 'Back to the start of Year 1: every tick, and everything the game has'
+      + ' worked out about how she is getting on. Her island, her animals and'
+      + ' her name all stay.',
+    going: 'what she is working on — back to the start of Year 1',
+  },
+  {
+    key: 'name',
+    label: 'Her name',
+    detail: (s.childName ? `She is called ${s.childName}. ` : '')
+      + 'She is asked again next time she plays. Nothing else changes.',
+    going: s.childName ? `her name — ${s.childName}` : 'her name',
+  },
+]
+
+/**
+ * Which of the three to wipe, or null if the grown-up backed out.
+ *
+ * Resolves ONLY after the confirm, so a caller that gets a value has been told
+ * yes twice about a named list of things. Nothing here writes; the caller does
+ * that, and reloads.
+ */
+export function askWipe(
+  root: HTMLElement, summary: WipeSummary,
+): Promise<WipeChoice | null> {
+  return new Promise(resolve => {
+    const picked: WipeChoice = { island: false, academic: false, name: false }
+    const rows = wipeRows(summary)
+    let go: HTMLButtonElement
+    let close: () => void
+
+    const anyTicked = (): boolean => picked.island || picked.academic || picked.name
+
+    const refresh = (): void => {
+      go.disabled = !anyTicked()
+      go.textContent = anyTicked() ? 'wipe what is ticked' : 'nothing ticked'
+    }
+
+    close = panel(root, box => {
+      box.classList.add('grownups-wipe')
+      box.append(heading('Start again'))
+      box.append(note('Tick what to clear. Anything left unticked is not touched.'))
+
+      const list = document.createElement('div')
+      list.className = 'grownups-stages'
+
+      for (const row of rows) {
+        const line = document.createElement('div')
+        line.className = 'grownups-row grownups-row-off'
+
+        const tick = document.createElement('button')
+        tick.className = 'chunk chunk-button grownups-tick'
+        tick.setAttribute('aria-label', row.label)
+        tick.setAttribute('aria-pressed', 'false')
+
+        const body = document.createElement('div')
+        body.className = 'grownups-stage'
+
+        const label = document.createElement('div')
+        label.className = 'grownups-stage-label'
+        label.textContent = row.label
+
+        const detail = document.createElement('div')
+        detail.className = 'grownups-stage-meta'
+        detail.textContent = row.detail
+
+        body.append(label, detail)
+        line.append(tick, body)
+
+        const toggle = (): void => {
+          picked[row.key] = !picked[row.key]
+          const on = picked[row.key]
+          tick.classList.toggle('on', on)
+          tick.textContent = on ? '✓' : ''
+          tick.setAttribute('aria-pressed', String(on))
+          line.classList.toggle('grownups-row-off', !on)
+          refresh()
+        }
+        // The whole row, not only the 2.1rem square: a thumb, not a pointer.
+        tick.onclick = toggle
+        body.onclick = toggle
+
+        list.append(line)
+      }
+      box.append(list)
+
+      const controls = document.createElement('div')
+      controls.className = 'overlay-controls'
+
+      go = document.createElement('button')
+      go.className = 'chunk chunk-button grownups-danger'
+      go.onclick = () => {
+        if (!anyTicked()) return
+        const going = rows.filter(r => picked[r.key]).map(r => `• ${r.going}`)
+        close()
+        void askConfirm(root, 'Wipe these?',
+          ['This will clear:', ...going, '', 'It cannot be undone.'].join('\n'),
+          'wipe it', true,
+        ).then(sure => { resolve(sure ? picked : null) })
+      }
+
+      const back = document.createElement('button')
+      back.className = 'chunk chunk-button overlay-back'
+      back.textContent = 'never mind'
+      back.onclick = () => { close(); resolve(null) }
+
+      controls.append(go, back)
+      box.append(controls)
+      refresh()
+    }, () => resolve(null))
   })
 }
 

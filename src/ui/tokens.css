@@ -802,6 +802,35 @@ body:has(.overlay:not(.hide)) .album-button { display: none; }
   border-color: #8f3229;
 }
 
+/* ------------------------------------------------ the wipe screen (PB-047)
+ *
+ * Three tick rows, borrowed wholesale from the learning panel below
+ * (`.grownups-stages` / `.grownups-row` / `.grownups-tick`) — the same gesture
+ * means the same thing in both places, and there is still no `<input
+ * type=checkbox>` in this game. All this adds is the left-aligned page, and a
+ * red button that is visibly dead until a grown-up has said what to destroy.
+ */
+.grownups-wipe {
+  max-width: min(30rem, 94vw);
+  text-align: left;
+}
+
+.grownups-wipe > .grownups-title,
+.grownups-wipe > .grownups-note { text-align: center; }
+
+.grownups-wipe .grownups-stages { margin-bottom: .9rem; }
+.grownups-wipe .grownups-stage-meta { line-height: 1.35; }
+.grownups-wipe .grownups-stage { cursor: pointer; }
+
+/* Nothing ticked, nothing to press. Greyed rather than hidden, so the button
+ * that is about to be needed does not appear from nowhere. */
+.grownups-danger[disabled] {
+  background: #b9b1af;
+  border-color: #9c9391;
+  cursor: default;
+  opacity: .8;
+}
+
 /* ------------------------------------- what she is working on (A4 / A6) ---
  *
  * The one panel here that is READ rather than answered: a mode switch, a
