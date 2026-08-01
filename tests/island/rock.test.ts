@@ -446,6 +446,27 @@ describe('the mountain on the plot is the mountain she gets', () => {
     expect(code(HOST)).toContain('mountainSpinFor(state.plot.at)')
   })
 
+  it('ONE primary chooser, plus one fallback that only runs where nothing stood', () => {
+    /*
+     * WIDENED BY PB-053. The invariant above was "there is one chooser"; it is
+     * now "there is one PRIMARY chooser, and one documented fallback used only
+     * when the primary placement was refused". The distinction is the whole
+     * safety of the fix, so it is asserted rather than left to the comments.
+     *
+     * The plot is on the far side of that line. `plot.ts` names its peak through
+     * `mountainHexFor` alone and the finished build arrives via `props.adopt`,
+     * which never touches the refusal path — so the peak she watched rise is
+     * still, exactly, the peak she is given.
+     */
+    expect(code(PROPS)).toContain('mountainFallbackFor(a)')
+    expect(code(HOST)).not.toContain('mountainFallbackFor')
+    expect(code(INCREMENTS)).not.toContain('mountainFallbackFor')
+
+    // And it is reached only from inside the refusal: the retry sits behind a
+    // test on `!at`, the same null that used to end the hex bare.
+    expect(code(PROPS)).toMatch(/if\s*\(!at\s*&&\s*rockTile\)/)
+  })
+
   it('the plot takes a pre-assembled feature instead of eight scattered pieces', () => {
     const src = code(INCREMENTS)
     expect(src).toContain('feature')

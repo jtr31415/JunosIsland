@@ -23,6 +23,15 @@
  * walking pet says "there is no way between them" (PB-052). Both tables are
  * pinned below, and the last test in the file states the inequality outright.
  *
+ * THE FIX, and what it may not disturb. A refused rock hex now asks
+ * `mountainFallbackFor` for a narrower peak and tries once more, so the bare hex
+ * is gone: the sweep that measured 2763 bare hexes over 19182 adjacent pairs
+ * measures none. What did NOT change is the PRIMARY chooser — the same 2763
+ * pairs still collide on first choice, `{q:1,r:0}` and `{q:2,r:0}` still both
+ * hash to `mountain_C_grass_trees`, and every mountain that stands today stands
+ * in the same place tomorrow. Those pins are kept below, deliberately, as the
+ * statement that existing saves render identically.
+ *
  * Everything here re-measures the real `.gltf` files rather than quoting a
  * number, for the reason `coast.test.ts` and `walk.test.ts` do: a fact about a
  * binary asset that nothing checks is a fact that goes stale the first time
@@ -40,6 +49,7 @@ import { key, distance, toWorld, DIRECTIONS } from '../../src/island/world/hex'
 import type { Axial } from '../../src/island/world/hex'
 import {
   MOUNTAIN_HEXES, mountainHexFor,
+  MOUNTAIN_FALLBACKS, mountainFallbackFor,
   MOUNTAIN_KEEPOUT, MOUNTAIN_FOOTPRINT, NATIVE_HEX_SIZE,
   keepOutFor, bareRockHexes,
 } from '../../src/island/world/mountains'
@@ -251,13 +261,48 @@ describe('the measured tables are the real geometry', () => {
 describe('keepOutFor', () => {
   it('is a KeepOut, structurally — walk.ts can be handed it directly', () => {
     const asKeepOut: KeepOut = keepOutFor
-    expect(asKeepOut(FIRST, 'rock')).toBeCloseTo(MOUNTAIN_KEEPOUT['mountain_C_grass_trees'] as number, 6)
+    expect(asKeepOut(FIRST, 'rock')).toBeGreaterThan(1.0)
   })
 
-  it('gives a rock hex the radius of the mountain it actually grows', () => {
+  /*
+   * CHANGED BY PB-053, and this is the honest form of the old assertion.
+   *
+   * It used to be `toBe(MOUNTAIN_KEEPOUT[mountainHexFor(a)])` — the radius of
+   * the mountain the hex grows. A hex may now grow either the primary model or,
+   * where the primary was refused, the fallback, and which of the two happened
+   * depends on the NEIGHBOURS and on Map insertion order. `keepOutFor(a, t)` is
+   * given a coordinate and a tile type and can see neither, so it cannot answer
+   * exactly and does not pretend to: it answers with the larger of the two.
+   *
+   * The direction is the point. The fallback family is narrower at PLACEMENT
+   * size (that is why it fits) and WIDER at walking height, so quoting the
+   * primary for a hex that grew a fallback would under-report the space a pet
+   * needs — and `walk.ts` under-reporting is a pet sealed into a pocket the
+   * rules swore was open. Over-reporting only costs a refused tile placement.
+   */
+  it('gives a rock hex a radius no smaller than either mountain it might grow', () => {
     for (const a of [FIRST, SECOND, { q: 0, r: 0 }, { q: -3, r: 2 }, { q: 7, r: -4 }]) {
-      expect(keepOutFor(a, 'rock')).toBe(MOUNTAIN_KEEPOUT[mountainHexFor(a)])
+      const primary = MOUNTAIN_KEEPOUT[mountainHexFor(a)] as number
+      const fallback = MOUNTAIN_KEEPOUT[mountainFallbackFor(a)] as number
+      expect(keepOutFor(a, 'rock')).toBe(Math.max(primary, fallback))
+      expect(keepOutFor(a, 'rock')).toBeGreaterThanOrEqual(primary)
       expect(keepOutFor(a, 'rock')).toBeGreaterThan(1.0)
+    }
+  })
+
+  it('never under-reports, on any hex, and never invents a radius', () => {
+    // The bound is conservative but not arbitrary: it is always the keep-out of
+    // a REAL model, never a number no mountain has.
+    const real = new Set(Object.values(MOUNTAIN_KEEPOUT))
+    const widest = Math.max(...Object.values(MOUNTAIN_KEEPOUT))
+    for (let q = -12; q <= 12; q++) {
+      for (let r = -12; r <= 12; r++) {
+        const a = { q, r }
+        const out = keepOutFor(a, 'rock')
+        expect(out).toBeGreaterThanOrEqual(MOUNTAIN_KEEPOUT[mountainHexFor(a)] as number)
+        expect(out).toBeLessThanOrEqual(widest)
+        expect(real.has(out)).toBe(true)
+      }
     }
   })
 
@@ -267,42 +312,170 @@ describe('keepOutFor', () => {
   })
 })
 
+/* ------------------------------------------------------ the second chooser */
+
+describe('mountainFallbackFor: the peak a refused hex gets instead', () => {
+  const SPACING = Math.sqrt(3) * NATIVE_HEX_SIZE
+
+  it('is a pure function of the hex, and stable', () => {
+    for (let q = -20; q <= 20; q++) {
+      for (let r = -20; r <= 20; r++) {
+        const a = { q, r }
+        const name = mountainFallbackFor(a)
+        // Twice the same question, twice the same answer — and the same answer
+        // for a freshly built coordinate object, so nothing is keyed on identity.
+        expect(mountainFallbackFor(a)).toBe(name)
+        expect(mountainFallbackFor({ q, r })).toBe(name)
+      }
+    }
+  })
+
+  it('only ever names a model that exists in the table', () => {
+    const names = new Set(MOUNTAIN_HEXES.map(m => m.name))
+    for (let q = -12; q <= 12; q++) {
+      for (let r = -12; r <= 12; r++) {
+        expect(names.has(mountainFallbackFor({ q, r }))).toBe(true)
+      }
+    }
+  })
+
+  /**
+   * THE ASSERTION THE FIX RESTS ON.
+   *
+   * A retry that can be refused for the same reason is not a retry. Derived from
+   * the MEASURED table rather than from a list of names, so a re-export that
+   * widened `mountain_A` past the point where two of them fit side by side fails
+   * here instead of quietly reinstating the bare hex.
+   */
+  it('every fallback actually fits where the primary did not', () => {
+    for (const m of MOUNTAIN_FALLBACKS) {
+      const r = MOUNTAIN_FOOTPRINT[m.name] as number
+      // Beside another of itself...
+      expect(2 * r).toBeLessThan(SPACING)
+      // ...and beside the widest thing that could already be standing there,
+      // which is the case that actually arises: the fallback fires precisely
+      // when a neighbour has taken the room.
+      expect(r + Math.max(...Object.values(MOUNTAIN_FOOTPRINT))).toBeLessThan(SPACING)
+    }
+    expect(MOUNTAIN_FALLBACKS.length).toBeGreaterThan(0)
+  })
+
+  it('the narrow list is the A/B family, by measurement and not by name', () => {
+    // Stated as arithmetic, then checked against what the table happens to hold
+    // today, so the two cannot drift apart silently.
+    const narrow = MOUNTAIN_HEXES
+      .filter(m => (MOUNTAIN_FOOTPRINT[m.name] as number) < SPACING / 2)
+      .map(m => m.name).sort()
+    expect(MOUNTAIN_FALLBACKS.map(m => m.name).sort()).toEqual(narrow)
+    expect(narrow).toEqual([
+      'mountain_A', 'mountain_A_grass', 'mountain_A_grass_trees',
+      'mountain_B', 'mountain_B_grass',
+    ])
+  })
+
+  it('is DISJOINT from the models that can be refused', () => {
+    /*
+     * The C family is the only family wide enough to be refused, and it is
+     * exactly the family the fallback cannot name. So the retry is never a
+     * re-run of the choice that just failed — which is what makes "try again"
+     * different from "try again and lose again".
+     */
+    const fallbacks = new Set(MOUNTAIN_FALLBACKS.map(m => m.name))
+    const wide = MOUNTAIN_HEXES
+      .filter(m => 2 * (MOUNTAIN_FOOTPRINT[m.name] as number) > SPACING)
+      .map(m => m.name)
+    expect(wide.length).toBeGreaterThan(0)
+    for (const name of wide) expect(fallbacks.has(name)).toBe(false)
+    // ...and said the other way round, over the hexes that really collide.
+    for (let q = -12; q <= 12; q++) {
+      for (let r = -12; r <= 12; r++) {
+        const a = { q, r }
+        const primary = mountainHexFor(a)
+        if (2 * (MOUNTAIN_FOOTPRINT[primary] as number) <= SPACING) continue
+        expect(mountainFallbackFor(a)).not.toBe(primary)
+      }
+    }
+  })
+
+  it('reaches every model in the narrow list, so the retry is not one peak', () => {
+    const seen = new Set<string>()
+    for (let q = -12; q <= 12; q++) {
+      for (let r = -12; r <= 12; r++) seen.add(mountainFallbackFor({ q, r }))
+    }
+    expect(seen.size).toBe(MOUNTAIN_FALLBACKS.length)
+  })
+
+  it('leaves the PRIMARY chooser alone — the pins that saves depend on', () => {
+    /*
+     * Island geometry is deterministic from the coordinate and existing saves
+     * must render byte-identically. The fallback runs only where nothing stood
+     * before, so nothing that stands may move.
+     */
+    expect(mountainHexFor(FIRST)).toBe('mountain_C_grass_trees')
+    expect(mountainHexFor(SECOND)).toBe('mountain_C_grass_trees')
+    expect(MOUNTAIN_HEXES.map(m => `${m.name}:${m.weight}`)).toEqual([
+      'mountain_A:2', 'mountain_B:2', 'mountain_C:2',
+      'mountain_A_grass:3', 'mountain_B_grass:3', 'mountain_C_grass:3',
+      'mountain_A_grass_trees:3', 'mountain_C_grass_trees:3',
+    ])
+  })
+})
+
 /* ----------------------------------------------------------------- PB-053 */
 
-describe('PB-053: a rock hex whose mountain is refused stays bare', () => {
-  it('drops the SECOND of two colliding neighbours', () => {
+describe('PB-053: a refused mountain becomes a smaller mountain, not a bare hex', () => {
+  it('the two neighbours still collide on FIRST choice — and both stand anyway', () => {
     // Not assumed — the pair is a genuine hash outcome, checked here so that a
     // change to `hash` or the weights fails loudly rather than quietly making
-    // this test vacuous.
+    // this test vacuous. THE COLLISION IS UNCHANGED; only the outcome is.
     expect(mountainHexFor(FIRST)).toBe('mountain_C_grass_trees')
     expect(mountainHexFor(SECOND)).toBe('mountain_C_grass_trees')
     const wa = toWorld(FIRST, NATIVE_HEX_SIZE)
     const wb = toWorld(SECOND, NATIVE_HEX_SIZE)
+    const gap = Math.hypot(wa.x - wb.x, wa.z - wb.z)
     const sum = (MOUNTAIN_FOOTPRINT[mountainHexFor(FIRST)] as number)
       + (MOUNTAIN_FOOTPRINT[mountainHexFor(SECOND)] as number)
-    expect(Math.hypot(wa.x - wb.x, wa.z - wb.z)).toBeLessThan(sum)
+    expect(gap).toBeLessThan(sum)
 
-    const island = islandOf([[FIRST, 'rock'], [SECOND, 'rock']])
-    expect(bareRockHexes(island).map(key)).toEqual([key(SECOND)])
-  })
-
-  it('the survivor keeps its mountain — exactly one of the two is lost', () => {
-    const island = islandOf([[FIRST, 'rock'], [SECOND, 'rock']])
-    expect(bareRockHexes(island)).toHaveLength(1)
-    expect(bareRockHexes(island).map(key)).not.toContain(key(FIRST))
-  })
-
-  it('ORDER decides it — the same two hexes the other way round', () => {
     /*
-     * The sharpest statement of the defect. Nothing about the geometry changed;
-     * the only difference is which key went into the Map first. A bug whose
-     * victim depends on iteration order is a bug that will look intermittent to
-     * anyone who meets it in the browser.
+     * CHANGED BY THE FIX. This assertion read `.toEqual([key(SECOND)])` — the
+     * second hex of a colliding pair went bare and stayed bare. It is the whole
+     * card, so it is the assertion that must now say the opposite.
+     */
+    const island = islandOf([[FIRST, 'rock'], [SECOND, 'rock']])
+    expect(bareRockHexes(island)).toEqual([])
+
+    // ...and the reason it fits: the retry asks for a peak narrow enough that
+    // the sum no longer exceeds the gap.
+    const retry = (MOUNTAIN_FOOTPRINT[mountainHexFor(FIRST)] as number)
+      + (MOUNTAIN_FOOTPRINT[mountainFallbackFor(SECOND)] as number)
+    expect(retry).toBeLessThan(gap)
+  })
+
+  it('the FIRST hex is untouched — the survivor did not have to move', () => {
+    /*
+     * The fix may not disturb what already worked. `bareRockHexes` cannot report
+     * a position, but the model it walks is the one that decides: the first hex
+     * takes its primary radius, is never refused, and the second is fitted
+     * around it rather than the other way about.
+     */
+    const island = islandOf([[FIRST, 'rock'], [SECOND, 'rock']])
+    expect(bareRockHexes(island).map(key)).not.toContain(key(FIRST))
+    expect(bareRockHexes(islandOf([[FIRST, 'rock']]))).toEqual([])
+  })
+
+  it('ORDER NO LONGER DECIDES IT — the same two hexes the other way round', () => {
+    /*
+     * CHANGED BY THE FIX, and this is the sharpest statement of it. This test
+     * used to assert that the victim depended on which key went into the Map
+     * first — `[SECOND]` forward and `[FIRST]` backward — a bug that looked
+     * intermittent to anyone who met it in the browser. Both orders now dress
+     * both hexes, so insertion order stops being a thing the child can see.
      */
     const forward = islandOf([[FIRST, 'rock'], [SECOND, 'rock']])
     const backward = islandOf([[SECOND, 'rock'], [FIRST, 'rock']])
-    expect(bareRockHexes(forward).map(key)).toEqual([key(SECOND)])
-    expect(bareRockHexes(backward).map(key)).toEqual([key(FIRST)])
+    expect(bareRockHexes(forward)).toEqual([])
+    expect(bareRockHexes(backward)).toEqual([])
   })
 
   it('is unaffected by grass tiles sharing the map', () => {
@@ -313,7 +486,29 @@ describe('PB-053: a rock hex whose mountain is refused stays bare', () => {
       [{ q: 0, r: 1 }, 'grass'], [SECOND, 'rock'],
       [{ q: 3, r: -1 }, 'grass'],
     ])
-    expect(bareRockHexes(island).map(key)).toEqual([key(SECOND)])
+    expect(bareRockHexes(island)).toEqual([])
+  })
+
+  it('a whole range of mountains, every hex of it, keeps its peak', () => {
+    /*
+     * The shape the child actually builds: not a pair, but a solid block where
+     * every hex has up to six neighbours and each refusal has to be repaired
+     * against everything already standing. The retry survives that because the
+     * arithmetic has room — the widest primary plus the widest fallback is
+     * 1.949578 against 2.0000 — so no chain of refusals can run out of models.
+     */
+    for (const R of [1, 2, 3, 4]) {
+      const entries: Array<readonly [Axial, TileType]> = []
+      for (let q = -R; q <= R; q++) {
+        for (let r = -R; r <= R; r++) {
+          if (distance({ q: 0, r: 0 }, { q, r }) > R) continue
+          entries.push([{ q, r }, 'rock'])
+        }
+      }
+      const island = islandOf(entries)
+      expect(island.tiles.size).toBeGreaterThan(0)
+      expect(bareRockHexes(island).map(key)).toEqual([])
+    }
   })
 })
 
@@ -338,7 +533,7 @@ describe('how often it happens', () => {
     return out
   }
 
-  it('about one adjacent rock pair in seven leaves a bare hex', () => {
+  it('about one adjacent rock pair in seven is REFUSED on first choice', () => {
     const pairs = adjacentPairs(46)
     expect(pairs.length).toBe(19182)
 
@@ -365,6 +560,11 @@ describe('how often it happens', () => {
      * The band is deliberately wide. It is here to catch a re-export that moves
      * the geometry or a change that reweights the table — not to pin four
      * decimal places of a statistic.
+     *
+     * KEPT UNCHANGED THROUGH THE FIX, on purpose. This is arithmetic on the
+     * PRIMARY chooser, so it is the pin that says the primary chooser did not
+     * move: the same 2763 pairs collide on first choice as before PB-053 was
+     * fixed. What changed is only what happens next, asserted below.
      */
     const rate = collide / pairs.length
     expect(rate).toBeGreaterThan(0.08)
@@ -372,21 +572,58 @@ describe('how often it happens', () => {
     expect(collide).toBe(2763)
   })
 
-  it('every colliding pair really does produce a bare hex', () => {
-    // The rate above is arithmetic on the table; this walks the same pairs
-    // through `bareRockHexes` so the statistic and the function cannot drift.
-    let checked = 0
-    for (const [a, b] of adjacentPairs(8)) {
+  /**
+   * THE ACCEPTANCE TEST FOR PB-053.
+   *
+   * The same 19182 adjacent pairs that produced 2763 bare hexes, walked through
+   * `bareRockHexes` — which models the retry because `props.ts` performs it — and
+   * every one of them now dresses both hexes. Not "fewer": none.
+   *
+   * This test used to be `'every colliding pair really does produce a bare hex'`
+   * and asserted `[key(b)]` for exactly the pairs that overlap. It is the same
+   * sweep with the opposite expectation, which is the point of the card.
+   */
+  it('and NONE of them leaves a bare hex — 2763 refusals, 0 bare', () => {
+    const pairs = adjacentPairs(46)
+    expect(pairs.length).toBe(19182)
+
+    let refused = 0
+    let bare = 0
+    for (const [a, b] of pairs) {
       const wa = toWorld(a, NATIVE_HEX_SIZE)
       const wb = toWorld(b, NATIVE_HEX_SIZE)
       const sum = (MOUNTAIN_FOOTPRINT[mountainHexFor(a)] as number)
         + (MOUNTAIN_FOOTPRINT[mountainHexFor(b)] as number)
-      const overlaps = Math.hypot(wa.x - wb.x, wa.z - wb.z) < sum
-      const bare = bareRockHexes(islandOf([[a, 'rock'], [b, 'rock']]))
-      expect(bare.map(key)).toEqual(overlaps ? [key(b)] : [])
-      checked++
+      if (Math.hypot(wa.x - wb.x, wa.z - wb.z) < sum) refused++
+      bare += bareRockHexes(islandOf([[a, 'rock'], [b, 'rock']])).length
     }
-    expect(checked).toBeGreaterThan(500)
+
+    // The sweep really did exercise the defect — otherwise zero is vacuous.
+    expect(refused).toBe(2763)
+    expect(bare).toBe(0)
+  })
+
+  it('the retry is what fixes it, pair by pair', () => {
+    // The count above is a total; this checks the mechanism on every pair that
+    // was actually refused, so the statistic and the function cannot drift.
+    let checked = 0
+    for (const [a, b] of adjacentPairs(8)) {
+      const wa = toWorld(a, NATIVE_HEX_SIZE)
+      const wb = toWorld(b, NATIVE_HEX_SIZE)
+      const gap = Math.hypot(wa.x - wb.x, wa.z - wb.z)
+      const sum = (MOUNTAIN_FOOTPRINT[mountainHexFor(a)] as number)
+        + (MOUNTAIN_FOOTPRINT[mountainHexFor(b)] as number)
+      expect(bareRockHexes(islandOf([[a, 'rock'], [b, 'rock']]))).toEqual([])
+      if (gap < sum) {
+        // Refused — so the second hex must be standing on its fallback, and
+        // that fallback must genuinely clear the first hex's primary.
+        const retry = (MOUNTAIN_FOOTPRINT[mountainHexFor(a)] as number)
+          + (MOUNTAIN_FOOTPRINT[mountainFallbackFor(b)] as number)
+        expect(retry).toBeLessThan(gap)
+        checked++
+      }
+    }
+    expect(checked).toBeGreaterThan(50)
   })
 })
 
