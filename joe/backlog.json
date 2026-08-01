@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "nextId": 58,
+  "nextId": 60,
   "cards": [
     {
       "id": "PB-001",
@@ -54,7 +54,7 @@
     {
       "id": "PB-008",
       "title": "void async over a loop — three more sites (#46)",
-      "detail": "props.ts water-piece and cloud load, pets.ts sync(), album.ts portraits.shoot. One rejection abandons every item after it AND surfaces unhandled. Also: the scatter comment claims a lost cover piece is re-dressed next sync — FALSE, placed.add(k) runs before scatter(). DONE 1 Aug. All four awaits now catch to null and continue, matching the pattern the feature load at props.ts:1159 already used. The cloud loop was the worst of them: it runs BEFORE the tile loop, so one unfetchable cloud 34 units away in the sky left the whole island undressed — and because main.ts:638 says `void props.sync(...).then(publishObstacles)`, the rejection also meant obstacles were never published and the egg was never re-sited. THE TWO RETRY SEMANTICS DIFFER AND THAT IS DELIBERATE: a pet retries on the next sync (prototype evicts a rejected promise, and nothing is in `live` or the group at the point it fails), a prop does not (every caller marks the hex placed BEFORE dressing it, and scatter has no memory of what it already grew, so re-dressing would stack a second copy of every piece that did load). THE FALSE COMMENT IS CORRECTED RATHER THAN MADE TRUE, for that reason — see the note in scatter, which now says why moving the placed.add would be worse than the gap. Regression at tests/island/missing-model.test.ts: 8 tests, all 8 fail against the tree without the fix, verified by stashing it. The album catch is console hygiene only and has no test — no behaviour changes, the cell is already complete without its portrait.",
+      "detail": "props.ts water-piece and cloud load, pets.ts sync(), album.ts portraits.shoot. One rejection abandons every item after it AND surfaces unhandled. Also: the scatter comment claims a lost cover piece is re-dressed next sync — FALSE, placed.add(k) runs before scatter(). DONE 1 Aug (7e13060). All four awaits catch and continue now. Worst was the cloud loop: it runs before the tile loop, so one bad cloud left the whole island undressed and stopped obstacles publishing. A pet retries next sync, a prop does not — the hex is marked placed before it is dressed, and re-dressing would stack a second copy of everything that did load. That is why the false comment was corrected rather than made true. Regression: tests/island/missing-model.test.ts, 8 tests, all 8 checked failing without the fix.",
       "state": "done",
       "run": ""
     },
@@ -401,6 +401,20 @@
       "state": "open",
       "run": "",
       "id": "PB-057"
+    },
+    {
+      "title": "The album opens collections that have no animals built",
+      "detail": "The four albums are drawn at random and the draw does not know which collections have models. Only base, garden, home-pets, woodland, africa and farm can be drawn; the other 15 show as rows of empty frames. Fix is one line: put the unbuilt ids in HELD_BACK (species/unlock.ts), which is already a holding pen meant to shrink. Second question in the same place, Joe's call: should the four Red List tiers be drawn for a five-year-old at all?",
+      "state": "open",
+      "run": "",
+      "id": "PB-058"
+    },
+    {
+      "title": "A new album opens silently",
+      "detail": "She finds it next time she taps the book. No moment was asked for so none was built. Does it want one?",
+      "state": "open",
+      "run": "",
+      "id": "PB-059"
     }
   ]
 }
