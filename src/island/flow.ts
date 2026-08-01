@@ -524,8 +524,7 @@ export function tileTypeFor(f: Flow, a: Axial, chosen: TileType): TileType {
    * gentler of the two readings of "land" is the one that keeps her fields.
    */
   /*
-   * >>> REMEDY SEAM — PB-052, held on JT-033. DETECTION ONLY; nothing below is
-   * >>> called yet, and that is deliberate.
+   * >>> PB-052 IS RULED, AND THE ANSWER IS THAT NOTHING HAPPENS HERE. JT-033.
    *
    * The paragraph above is true about BUILDING and false about WALKING, and that
    * asymmetry is the defect. A rock hex never cuts the corridor because the
@@ -534,20 +533,25 @@ export function tileTypeFor(f: Flow, a: Axial, chosen: TileType): TileType {
    * mountains on adjacent hexes OVERLAP. Six rock hexes around one grass hex are
    * all accepted here, and a pet of radius zero standing in the middle can never
    * leave. It survives a reload. `sealsAPet` below is the question this function
-   * cannot ask today.
+   * cannot ask today — and, now, does not need to.
    *
-   * Three remedies were put to Joe as JT-033 and he has not ruled. Each is one
-   * line, and each goes HERE, immediately above the return:
+   * Three remedies went to Joe. He chose the third, verbatim: *"C - just
+   * relocate the animal from a trapped position, that is no issue at all"*. So
+   * the two that would have landed on this line are BOTH closed:
    *
-   *   a) the tap silently becomes grass —
-   *        if (chosen === 'rock' && sealsAPet(f, a, 'rock')) return 'grass'
-   *   b) the socket is refused — needs `buildableSockets` to drop it too, so it
-   *      never glows; this line alone would leave her tapping a dead socket.
-   *   c) the pet is rescued — nothing changes here at all; the remedy lives at
-   *      the pet layer, and it is the ONLY one of the three that repairs an
-   *      island that is ALREADY sealed (see the handoff).
+   *   a) the rock tap silently becoming grass — NOT BUILT. She keeps her
+   *      mountain. Do not add `if (chosen === 'rock' && sealsAPet(...))` here.
+   *   b) the socket refusing to glow — NOT BUILT, and it would have taken a
+   *      choice away for a reason no child could infer.
+   *   c) the pet is rescued — BUILT, and it lives entirely in `pets.ts`
+   *      (`rescueFrom`, used by `sync` and by the stuck handler) on top of
+   *      `world/walk.ts: rescueHexFor`. It is also the only one of the three
+   *      that repairs an island that is ALREADY sealed, because `sync` re-sites
+   *      every pet from `at` on every load and asks the question again.
    *
-   * Do not pick one. Pick up his note on JT-033 first.
+   * `sealsAPet` and `sealedLand` below stay exported and stay tested. They are
+   * the measurement that proved the defect and the tripwire that will say if the
+   * geometry ever moves; they are deliberately not guards.
    */
   if (chosen === 'rock') return canBeRock(f.island, a) ? 'rock' : 'grass'
   return landedType(f.island, a, chosen)
@@ -792,9 +796,15 @@ function commitPlot(f: Flow, honeymoon = false): Flow {
  * back as a pet wanders (`pets.ts:424-427`), so this set is hatch history, not
  * where the animals are. It checks no tile type, nothing standing on the hex,
  * and no reachability. **A new pet can therefore be hatched INSIDE a pocket
- * that is already sealed.** `sealedLand(f)` is the query that would exclude
- * them; it is one condition on the loop below. It is not applied here because
- * where an animal appears is something a child sees, and JT-033 is open.
+ * that is already sealed.**
+ *
+ * STILL TRUE, AND DELIBERATELY LEFT ALONE. JT-033 ruled PB-052 as recovery
+ * rather than prevention, so a pet dealt a hex inside a pocket is simply moved
+ * off it — `pets.ts: sync` asks `rescueFrom` about `pet.at` before it puts the
+ * creature down, and that is the same code path that repairs a save which was
+ * already sealed. Adding `sealedLand(f)` as a condition on the loop below would
+ * be a second remedy for a defect that already has one, and where an animal
+ * appears is something a child sees. If it is ever wanted, it is one line.
  */
 function firstFreeSpot(f: Flow): Axial {
   const taken = new Set(f.pets.map(p => key(p.at)))

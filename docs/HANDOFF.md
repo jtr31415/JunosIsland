@@ -711,3 +711,36 @@ hex, and no reachability. A reload re-sites every pet at that same hex
 (`askToRetype` only ever touches the half-built plot) and `grid.place` has no
 inverse, so **an island that is already sealed cannot be repaired by the child**.
 Any brief §19 argument about pets recovering on their own is false.
+
+## Landmines added 1 August (PB-052 / PB-053)
+
+- **PB-052 is RULED, and the ruling is recovery — not prevention.** JT-033, Joe,
+  verbatim: *"C - just relocate the animal from a trapped position, that is no
+  issue at all"*. She may still ring a hex with six mountains. No rock tap
+  silently becomes grass, no socket stops glowing, and **the walkability layer
+  the card proposed is out of scope** — building it is doing work Joe has ruled
+  unnecessary. The remedy lives entirely in `pets.ts` (`rescueFrom`, called from
+  `sync` and from the stuck handler) on top of `walk.ts: rescueHexFor`.
+  `sealsAPet`/`sealedLand` stay exported and tested as measurement, never guards.
+  This **amends the paragraph directly above**: an island that is already sealed
+  still cannot be un-sealed, but the PET is rescued off it on every load, because
+  `sync` is the load path, re-asks the question, and never writes `pet.at`.
+- **`placed.add(k); continue` in `props.ts` is permanent for the SESSION**, not
+  for the frame. `placed` is never cleared and `createPropField` is built once.
+  Any code that "leaves this hex for next time" there leaves it forever unless it
+  deliberately avoids `placed.add`. That is how PB-053 left 14.4% of adjacent
+  rock pairs with a bare hex.
+- **Never fix a mountain-fit bug by moving a constant or by changing the metric.**
+  `footprintOf` (placement) and `footprintBelow` (walking) are each right for
+  their own question. Swapping them at the placement test refuses EVERY adjacent
+  rock pair — measured, 100% bare instead of 14%. What works is a SECOND TRY with
+  a narrower model, which touches only hexes that were already bare and so cannot
+  re-roll scenery on an island that already exists (the PB-009 trap).
+- **`keepOutFor` is now a conservative bound, not the true radius.** A rock hex
+  may grow the primary model or the PB-053 fallback, and which one happened
+  depends on neighbours it cannot see, so it returns the max of the two.
+  Under-reporting is the dangerous direction: it opens a gap the rules believe a
+  pet can walk through and the geometry does not.
+- **`flow.pets[].at` is hatch history, not position**, and `sync` skips pets
+  already live. Together those two facts are why a pet fix needs two call sites:
+  one for the pet being put down, one for the pet already out walking.

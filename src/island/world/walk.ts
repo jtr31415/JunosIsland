@@ -46,9 +46,17 @@
  * island only ever grows outward from what she already owns, so it is always
  * one mass — but a future world with archipelagos wants this widened.
  *
- * DETECTION ONLY. Nothing here refuses a placement or moves a pet.
+ * DETECTION, plus the one question a RECOVERY needs answering.
+ *
+ * Joe ruled PB-052 as JT-033: *"C - just relocate the animal from a trapped
+ * position, that is no issue at all"*. So nothing here refuses a placement and
+ * nothing here is a guard — she may still ring a hex with six mountains, and
+ * `sealsAPet` stays the query it always was. What recovery needs on top of
+ * detection is a DESTINATION, and that is `rescueHexFor` at the foot of the
+ * file. Moving the pet is the pet layer's job; naming the hex is this one's,
+ * because the region graph is here.
  */
-import { key, parse, neighbours, toWorld } from './hex'
+import { key, parse, neighbours, toWorld, distance } from './hex'
 import type { Axial } from './hex'
 import { isLand, place, tileAt } from './grid'
 import type { Island, TileType } from './grid'
@@ -286,4 +294,44 @@ export function wouldSeal(
   const later = reachableLand(after, hexSize, keepOut, petRadius)
   for (const k of before) if (!later.has(k)) return true
   return false
+}
+
+/**
+ * Somewhere to put a pet that is walled in — or null if it is not.
+ *
+ * THE REMEDY IS RECOVERY, NOT PREVENTION. Joe's ruling on JT-033 is that a
+ * sealed pet is simply moved: *"C - just relocate the animal from a trapped
+ * position, that is no issue at all"*. So this function is the whole of the
+ * "where to" question, and a null answer is the common one — a pet standing on
+ * ordinary ground is not sealed and nothing should happen to it. Callers must
+ * treat null as "leave it alone", never as "no idea".
+ *
+ * NEAREST FIRST, and OPEN GROUND BEFORE OCCUPIED GROUND. Nearest, because a
+ * rescue that flings a creature to the far shore reads as losing it rather than
+ * freeing it, and brief §19 is unforgiving about that. Open ground first,
+ * because a rock hex IS its mountain — dropping a pet on the centre of one puts
+ * it inside the mesh, and the obstacle clamp would only shove it back out to
+ * the rim it was rescued from. `keepOut(a, t) === 0` is exactly the test for
+ * "nothing stands here", asked of the same table that decided it was sealed.
+ *
+ * Ties are broken by coordinate so the answer is the same on every machine and
+ * on every reload: a rescue that lands somewhere different each time she opens
+ * the game is a pet that will not stay put.
+ */
+export function rescueHexFor(
+  island: Island, from: Axial, hexSize: number, keepOut: KeepOut, petRadius: number,
+): Axial | null {
+  const reachable = reachableLand(island, hexSize, keepOut, petRadius)
+  if (reachable.has(key(from))) return null           // not sealed: nothing to do
+  const open = (a: Axial): number =>
+    radiusOn(island, a, keepOut) === 0 ? 0 : 1
+  const best = landOf(island)
+    .filter(a => reachable.has(key(a)))
+    .sort((x, y) =>
+      open(x) - open(y)
+      || distance(from, x) - distance(from, y)
+      || x.q - y.q || x.r - y.r)
+  // Nowhere at all is reachable — an island of one sealed hex, or none. The pet
+  // stays where it is, which is the only honest answer.
+  return best[0] ?? null
 }

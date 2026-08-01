@@ -30,10 +30,11 @@
  * The second is larger for every model, which is why PB-052 exists: placement
  * happily accepts two mountains whose walking-height discs already overlap, and
  * six of them ring a hex that no pet can then leave. And where even the smaller
- * metric overlaps, placement drops the second mountain outright — PB-053, below.
+ * metric overlaps, placement dropped the second mountain outright — PB-053,
+ * below, where `mountainFallbackFor` now offers it a narrower peak instead.
  *
- * DETECTION AND GEOMETRY ONLY. Nothing here refuses a placement, moves a pet, or
- * touches the scene graph.
+ * DETECTION, CHOICE AND GEOMETRY ONLY. Nothing here refuses a placement, moves a
+ * pet, or touches the scene graph.
  */
 import { toWorld, parse } from './hex'
 import type { Axial } from './hex'
@@ -193,6 +194,77 @@ export const MOUNTAIN_FOOTPRINT: Readonly<Record<string, number>> = {
  */
 export const NATIVE_HEX_SIZE = 1.1547000408172607
 
+/* ---------------------------------------------------------- the second try */
+
+/** Adjacent hex centres, in world units. 2.0000, and the whole argument. */
+const ADJACENT_SPACING = Math.sqrt(3) * NATIVE_HEX_SIZE
+
+/** The widest thing that can already be standing on the hex next door. */
+const WIDEST_FOOTPRINT = Math.max(...Object.values(MOUNTAIN_FOOTPRINT))
+
+/**
+ * The models that fit BESIDE ANYTHING — the second chance a refused hex gets.
+ *
+ * DERIVED, NOT LISTED. The test that matters is arithmetic, so it is written as
+ * arithmetic: a model may serve as a fallback exactly when its placement radius
+ * plus the widest radius in the table still fits inside the gap between adjacent
+ * hex centres. Today that admits the five A/B models at 0.938085 (0.938085 +
+ * 1.011493 = 1.949578 < 2.0000) and excludes the three C models at 1.011493
+ * (2.022986 > 2.0000) — which is precisely the set that was ever refused, and
+ * precisely the set that can never be. Writing the names out twice would let a
+ * ninth model be added to `MOUNTAIN_HEXES` and quietly not be considered here,
+ * or worse, be considered here after a re-export made it too wide.
+ *
+ * The guard is for a re-export that widens EVERYTHING past the point where any
+ * two mountains can share a side. There is then no honest fallback and the
+ * narrowest model is the least dishonest one; `mountains.test.ts` asserts the
+ * derived list is non-empty and genuinely narrow, so that case fails loudly
+ * there rather than silently degrading here.
+ */
+export const MOUNTAIN_FALLBACKS: ReadonlyArray<{ name: string; weight: number; big?: boolean }> =
+  (() => {
+    const fits = MOUNTAIN_HEXES.filter(m =>
+      (MOUNTAIN_FOOTPRINT[m.name] ?? Infinity) + WIDEST_FOOTPRINT < ADJACENT_SPACING)
+    if (fits.length) return fits
+    const narrowest = [...MOUNTAIN_HEXES].sort((x, y) =>
+      (MOUNTAIN_FOOTPRINT[x.name] ?? Infinity) - (MOUNTAIN_FOOTPRINT[y.name] ?? Infinity))[0]
+    return narrowest ? [narrowest] : MOUNTAIN_HEXES
+  })()
+
+/**
+ * PB-053's fix: which SMALLER mountain a refused rock hex grows instead.
+ *
+ * `props.ts` gives a mountain hex exactly one candidate position — dead centre,
+ * because the mound IS the tile — so when a C-family peak stands inside the
+ * C-family peak next door, `firstClear` returns null and the hex was marked
+ * placed with nothing on it, for the rest of the session. About one adjacent
+ * rock pair in seven. The fix is not a wider tolerance (HANDOFF:464 forbids it,
+ * and rightly: the two mountains really do overlap) and not a different metric
+ * (`footprintBelow` refuses EVERY adjacent pair — measured). It is to ask for a
+ * peak that actually fits and try again.
+ *
+ * A PURE FUNCTION OF THE HEX, exactly like `mountainHexFor`, and for the same
+ * reason: whether the retry fires depends on the neighbours, but WHICH model it
+ * offers must not — every island, every session, every load must reach for the
+ * same second peak on the same coordinate, or a save re-renders differently.
+ *
+ * THE PRIMARY CHOOSER IS UNTOUCHED. Nothing here runs for a hex that places
+ * successfully, and `MOUNTAIN_HEXES` and its weights are unchanged, so every
+ * mountain that stands today stands in the same place, facing the same way,
+ * tomorrow. The sets are disjoint by construction — the C family is excluded
+ * from `MOUNTAIN_FALLBACKS` — so the retry is never a re-run of the refusal.
+ *
+ * `>>> 3`, unsigned and shifted: `pick` consumes the low bits, and the primary
+ * chooser already spends them. Sharing them would tie a hex's second choice to
+ * its first for no reason. `>>>` and never `>>`, per `hash`.
+ *
+ * THE PLOT IS NOT AFFECTED. `plot.ts` names its peak through `mountainHexFor`
+ * and the finished build arrives via `props.adopt`, which never goes near the
+ * refusal path — so the peak she watched rise is still the peak she gets.
+ */
+export const mountainFallbackFor = (a: Axial): string =>
+  pick(MOUNTAIN_FALLBACKS, hash(a) >>> 3).name
+
 /* ------------------------------------------------------------- the helpers */
 
 /**
@@ -204,25 +276,60 @@ export const NATIVE_HEX_SIZE = 1.1547000408172607
  * renderer anywhere in the chain. `walk.test.ts` builds the same thing by
  * reading the meshes directly, which is the stricter version and the reason to
  * trust this one.
+ *
+ * A CONSERVATIVE BOUND SINCE PB-053, and deliberately not the true value.
+ *
+ * A rock hex now grows one of two models: the primary, or — if the primary was
+ * refused for standing inside its neighbour — the fallback. Which one happened
+ * depends on what was already placed around it, and `keepOutFor(a, t)` is handed
+ * a coordinate and a tile type and cannot see a neighbour, let alone the
+ * insertion order that decided the refusal. So it cannot answer exactly.
+ *
+ * It answers with the MAXIMUM of the two instead, because the two errors are not
+ * equal. The fallback family is the NARROWER one at placement size but the WIDER
+ * one at walking height (A/B keep out 1.038811 and `mountain_A_grass_trees`
+ * 1.062458, against the C family's 1.026901), so reporting the primary's radius
+ * for a hex that grew a fallback would UNDER-report by up to 0.036 — and
+ * `walk.ts`'s header is explicit that under-reporting is the dangerous
+ * direction: it opens a gap the rules believe a pet can walk through and the
+ * geometry does not, which is a pet sealed in a pocket that `sealsAPet` swore
+ * was fine. Over-reporting only makes `wouldSeal` refuse a tile placement that
+ * would in fact have been survivable, and the widest over-report is 0.036 on a
+ * side that is already shut by more than 0.05 for every pair of mountains.
  */
 export const keepOutFor: KeepOut = (a, t) =>
-  t === 'rock' ? (MOUNTAIN_KEEPOUT[mountainHexFor(a)] ?? 0) : 0
+  t === 'rock'
+    ? Math.max(
+      MOUNTAIN_KEEPOUT[mountainHexFor(a)] ?? 0,
+      MOUNTAIN_KEEPOUT[mountainFallbackFor(a)] ?? 0,
+    )
+    : 0
 
 /**
- * PB-053 detection. Rock hexes whose mountain is silently refused and never
- * appears, leaving the hex bare.
+ * PB-053 detection. Rock hexes that end up with no mountain on them at all.
  *
- * THE DEFECT. `props.ts` dresses hexes one at a time, in `island.tiles` Map
- * insertion order (props.ts:1051), keeping a running `footprints` list of what
- * it has already put down. A mountain sits dead centre — `spread` is 0 for a
- * rock tile (props.ts:1179) — so unlike a tree it gets exactly ONE candidate
- * position and no inward retries that mean anything. If that position stands
- * inside a mountain already placed, `firstClear` returns null, props.ts:1232
- * marks the hex placed with nothing on it, and it is never revisited. A rock
- * tile with no rock on it, for the rest of the session.
+ * THE DEFECT, as it was. `props.ts` dresses hexes one at a time, in
+ * `island.tiles` Map insertion order (props.ts:1051), keeping a running
+ * `footprints` list of what it has already put down. A mountain sits dead
+ * centre — `spread` is 0 for a rock tile (props.ts:1179) — so unlike a tree it
+ * gets exactly ONE candidate position and no inward retries that mean anything.
+ * If that position stood inside a mountain already placed, `firstClear` returned
+ * null, props.ts marked the hex placed with nothing on it, and it was never
+ * revisited. A rock tile with no rock on it, for the rest of the session.
  *
- * Insertion order therefore decides which of a colliding pair survives, and the
- * pair is symmetric: swap the two keys in the Map and the other hex goes bare.
+ * Insertion order therefore decided which of a colliding pair survived, and the
+ * pair is symmetric: swap the two keys in the Map and the other hex went bare.
+ *
+ * THE SECOND TRY, which this now models because `props.ts` does it. A refused
+ * rock hex asks `mountainFallbackFor` for a narrower peak and tests THAT in the
+ * same one position; only if the narrower peak is refused too is the hex given
+ * up as bare. Since the widest model is 1.011493 and every fallback 0.938085,
+ * their sum is 1.949578 against 2.0000 between centres, so on a board made only
+ * of mountains the second try cannot fail — the sweep in `mountains.test.ts`
+ * that measured 2763 bare hexes over 19182 adjacent pairs now measures none.
+ * The function is kept, rather than deleted with the bug, because the three
+ * blind spots below are real and a future change can put a hex back on this
+ * list.
  *
  * A LOWER BOUND, and honestly so. This is pure code and there are three things
  * it cannot see, every one of which can only make the real count HIGHER:
@@ -246,22 +353,31 @@ export function bareRockHexes(
   const standing: Array<{ x: number; z: number; r: number }> = []
   const bare: Axial[] = []
 
+  /*
+   * `standsInside` (props.ts:426), verbatim: STRICT less-than, so two
+   * footprints that merely kiss both stand. "Touching counts as clear: two
+   * pieces whose footprints just kiss look like two things next to each other,
+   * which is what a wood is."
+   */
+  const refused = (x: number, z: number, r: number): boolean =>
+    standing.some(f => Math.hypot(f.x - x, f.z - z) < f.r + r)
+
   for (const [k, t] of island.tiles) {
     if (t !== 'rock') continue
     const a = parse(k)
-    const r = MOUNTAIN_FOOTPRINT[mountainHexFor(a)] ?? 0
     const { x, z } = toWorld(a, hexSize)
-    /*
-     * `standsInside` (props.ts:426), verbatim: STRICT less-than, so two
-     * footprints that merely kiss both stand. "Touching counts as clear: two
-     * pieces whose footprints just kiss look like two things next to each
-     * other, which is what a wood is."
-     */
-    if (standing.some(f => Math.hypot(f.x - x, f.z - z) < f.r + r)) {
-      // Refused, and NOT added to the list — a mountain that never appeared
-      // cannot go on to block the hex after it.
-      bare.push(a)
-      continue
+
+    let r = MOUNTAIN_FOOTPRINT[mountainHexFor(a)] ?? 0
+    if (refused(x, z, r)) {
+      // The retry, exactly as props.ts does it: same one position, narrower
+      // model, and the fallback's own radius from that point on.
+      r = MOUNTAIN_FOOTPRINT[mountainFallbackFor(a)] ?? 0
+      if (refused(x, z, r)) {
+        // Refused twice, and NOT added to the list — a mountain that never
+        // appeared cannot go on to block the hex after it.
+        bare.push(a)
+        continue
+      }
     }
     standing.push({ x, z, r })
   }

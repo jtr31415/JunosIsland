@@ -27,6 +27,17 @@ import * as THREE from 'three'
 /** Substrings of a URL that the stubbed loader refuses to fetch. */
 const dead = vi.hoisted(() => new Set<string>())
 
+/**
+ * Models the stub should hand back at a stated WIDTH rather than at 1.
+ *
+ * Empty for everything above, which is deliberate: a uniform box keeps the
+ * refusal tests about the fetch and nothing else. PB-053 is the one question in
+ * this file that turns on size — a mountain is refused because it is too wide
+ * for the gap — so that block, and only that block, fills this in with the
+ * measured widths.
+ */
+const sized = vi.hoisted(() => new Map<string, number>())
+
 vi.mock('three/examples/jsm/loaders/GLTFLoader.js', async () => {
   const T = await import('three')
   class GLTFLoader {
@@ -37,8 +48,9 @@ vi.mock('three/examples/jsm/loaders/GLTFLoader.js', async () => {
         if (url.includes(bad)) throw new SyntaxError(`Unexpected token '<' — ${url}`)
       }
       const name = (url.split('/').pop() ?? '').replace(/\.(gltf|glb)$/, '')
+      const w = sized.get(name) ?? 1
       const mesh = new T.Mesh(
-        new T.BoxGeometry(1, 1.4, 1), new T.MeshStandardMaterial())
+        new T.BoxGeometry(w, 1.4, w), new T.MeshStandardMaterial())
       mesh.position.y = 0.7
       const scene = new T.Group()
       scene.name = name
@@ -50,6 +62,11 @@ vi.mock('three/examples/jsm/loaders/GLTFLoader.js', async () => {
 })
 
 import { createPropField } from '../../src/island/world/props'
+import {
+  MOUNTAIN_HEXES, MOUNTAIN_FOOTPRINT,
+  mountainHexFor, mountainFallbackFor, mountainSpinFor,
+} from '../../src/island/world/mountains'
+import { toWorld } from '../../src/island/world/hex'
 import { createPetField } from '../../src/island/pets'
 import { createLighting } from '../../src/island/lighting'
 import meadowDay from '../../src/island/lighting/presets/meadow-day.json'
@@ -89,6 +106,7 @@ const petAt = (group: THREE.Object3D, id: string): THREE.Object3D | undefined =>
 
 beforeEach(() => {
   dead.clear()
+  sized.clear()
   createLighting(null, meadowDay as LightingPreset)
   vi.spyOn(THREE.TextureLoader.prototype, 'loadAsync')
     .mockResolvedValue(new THREE.Texture())
@@ -163,6 +181,102 @@ describe('the scenery survives a model it cannot fetch', () => {
     for (const n of ['cloud', 'waterlily', 'waterplant']) dead.add(n)
     const props = createPropField()
     await expect(props.sync(POND, HEX, flat)).resolves.toBeUndefined()
+  })
+})
+
+/* ----------------------------------------------------------------- PB-053 */
+
+/**
+ * The other way a hex ends up bare: not a fetch that failed, but a mountain that
+ * would not fit.
+ *
+ * `props.ts` gives a mountain hex ONE candidate position — dead centre, because
+ * the mound is the tile — so a refusal there is final, and `placed.add(k)` shuts
+ * the hex for the session. The C-family models measure 1.011493 in placement
+ * radius against 2.0000 between adjacent centres, so a C beside a C loses one of
+ * the two: 14.4% of adjacent rock pairs, a rock tile with no rock on it.
+ *
+ * `mountains.test.ts` proves the arithmetic and the pure model of it. THIS proves
+ * that `props.ts` actually performs the retry, on the real scene graph, with the
+ * real `firstClear` — which is the only thing the child can see.
+ */
+describe('a mountain that will not fit is replaced, not dropped', () => {
+  const MOUNTAINS = /^mountain_/
+  const peaks = (group: THREE.Object3D): THREE.Object3D[] =>
+    group.children.filter(c => MOUNTAINS.test(c.name))
+
+  /** The measured widths, so the stubbed boxes collide exactly as the art does. */
+  const withRealWidths = (): void => {
+    for (const { name } of MOUNTAIN_HEXES) {
+      sized.set(name, 2 * (MOUNTAIN_FOOTPRINT[name] as number))
+    }
+  }
+
+  /** Two adjacent hexes that both hash to the same C-family peak. */
+  const FIRST = { q: 1, r: 0 }
+  const SECOND = { q: 2, r: 0 }
+  const RANGE: Island = { tiles: new Map([['1,0', 'rock'], ['2,0', 'rock']]) }
+
+  it('plants BOTH hexes of a colliding pair', async () => {
+    // The premise, checked rather than assumed: these two really do refuse.
+    expect(mountainHexFor(FIRST)).toBe(mountainHexFor(SECOND))
+    expect(2 * (MOUNTAIN_FOOTPRINT[mountainHexFor(FIRST)] as number))
+      .toBeGreaterThan(Math.sqrt(3) * HEX)
+
+    withRealWidths()
+    const props = createPropField()
+    await props.sync(RANGE, HEX, flat)
+
+    const both = peaks(props.group)
+    expect(both).toHaveLength(2)
+    // The first keeps the peak it always had; the second takes the fallback.
+    expect(both.map(p => p.name)).toEqual([
+      mountainHexFor(FIRST), mountainFallbackFor(SECOND),
+    ])
+    // ...and the fallback is a DIFFERENT model, or nothing was retried.
+    expect(mountainFallbackFor(SECOND)).not.toBe(mountainHexFor(SECOND))
+  })
+
+  it('leaves the retried mountain on its own hex centre, at native size', async () => {
+    withRealWidths()
+    const props = createPropField()
+    await props.sync(RANGE, HEX, flat)
+
+    const [first, second] = peaks(props.group)
+    for (const [obj, a] of [[first, FIRST], [second, SECOND]] as const) {
+      const w = toWorld(a, HEX)
+      // Dead centre: `spread` is 0 for a rock tile and the retry did not move it.
+      expect(obj?.position.x).toBeCloseTo(w.x, 6)
+      expect(obj?.position.z).toBeCloseTo(w.z, 6)
+      // NATIVE SIZE — `fitInto` is gated behind `!rockTile` and the retry takes
+      // the same path, so a scale factor here would be a real regression.
+      expect(obj?.scale.x).toBeCloseTo(1, 6)
+      expect(obj?.scale.y).toBeCloseTo(1, 6)
+      // ...and the shared facing, not a fresh roll.
+      expect(obj?.rotation.y).toBeCloseTo(mountainSpinFor(a), 6)
+    }
+  })
+
+  it('does not retry a hex that was never refused', async () => {
+    // The fix may not touch what already worked: alone, the hex keeps its
+    // primary peak, which is what every existing save contains.
+    withRealWidths()
+    const props = createPropField()
+    await props.sync({ tiles: new Map([['1,0', 'rock']]) } as Island, HEX, flat)
+
+    expect(peaks(props.group).map(p => p.name)).toEqual([mountainHexFor(FIRST)])
+  })
+
+  it('gives up honestly when the fallback cannot be fetched either', async () => {
+    // Refused, then 404: the hex goes bare and the island still finishes. The
+    // old behaviour, kept for the case where there is genuinely nothing to put
+    // down — a lost piece, never a lost island.
+    withRealWidths()
+    dead.add(mountainFallbackFor(SECOND))
+    const props = createPropField()
+    await expect(props.sync(RANGE, HEX, flat)).resolves.toBeUndefined()
+
+    expect(peaks(props.group).map(p => p.name)).toEqual([mountainHexFor(FIRST)])
   })
 })
 

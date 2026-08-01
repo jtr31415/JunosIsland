@@ -27,7 +27,7 @@ import type { Surface, Ground } from './tiles'
  * be one edit away from disagreeing about which peak a hex grows — which is
  * precisely the failure `mountainHexFor`'s own comment warns about.
  */
-import { hash, pick, mountainHexFor, mountainSpinFor } from './mountains'
+import { hash, pick, mountainHexFor, mountainFallbackFor, mountainSpinFor } from './mountains'
 
 /**
  * WHAT KIND OF PLACE a tile is.
@@ -181,8 +181,12 @@ export const FEATURES: Record<Character, Array<{ name: string; weight: number; b
  * still imports these three from `props`, and should keep doing so: this file
  * remains the place that DRESSES a hex, and the re-export says the chooser
  * belongs to that story even though the code sits next door.
+ *
+ * ONE PRIMARY CHOOSER, plus ONE fallback that runs only where the primary was
+ * refused (PB-053, at the placement below). The plot and the finished hex still
+ * agree by construction, because the plot never goes down the refusal path.
  */
-export { MOUNTAIN_HEXES, mountainHexFor, mountainSpinFor } from './mountains'
+export { MOUNTAIN_HEXES, mountainHexFor, mountainFallbackFor, mountainSpinFor } from './mountains'
 /*
  * `hash` went too, being the thing the chooser is built on. `scenery.test.ts`
  * imports it from here to drive `coverPiece` with the numbers the island really
@@ -1183,7 +1187,9 @@ export function createPropField(base = ''): PropField {
          */
         // Same rule as the cover above: a feature that will not load leaves
         // this hex for the next sync rather than every hex after it bare.
-        const obj = await model(spec.name, rockTile).catch(() => null)
+        // `let`, because a refused mountain hex is offered a narrower model
+        // below and everything after that point works on whichever one stood.
+        let obj = await model(spec.name, rockTile).catch(() => null)
         if (!obj) continue
         /*
          * Landscape is fitted by FOOTPRINT and objects by HEIGHT.
@@ -1207,7 +1213,7 @@ export function createPropField(base = ''): PropField {
           const vary = VARY.feature.min + ((h >> 11) % VARY.feature.span) / 100
           fitInto(obj, fw * vary, fh * vary)
         }
-        const r = footprintOf(obj)
+        let r = footprintOf(obj)
 
         /*
          * A feature also has to clear its NEIGHBOURS' features. Tiles are
@@ -1223,8 +1229,58 @@ export function createPropField(base = ''): PropField {
           const oz = (((h >> 9) % 100) / 100 - 0.5) * hexSize * spread * pull
           return { x: w.x + ox, z: w.z + oz }
         })
-        const at = firstClear(tries, r,
+        let at = firstClear(tries, r,
           (x, z) => allows(spec.name, surface.groundAt(x, z)), footprints)
+
+        /*
+         * PB-053. A REFUSED MOUNTAIN GETS A SMALLER MOUNTAIN, not a bare hex.
+         *
+         * Every other kind of feature that is refused here has already had six
+         * goes at it — `spread` pushes it around its own hex and the loop above
+         * walks it back inward. A mountain hex has `spread` 0, because the mound
+         * IS the tile, so all six candidates are the identical hex centre and
+         * the refusal is final. And it happens: the C-family models measure
+         * 1.011493 in placement radius, adjacent hex centres are 2.0000 apart,
+         * so a C beside a C overlaps by 0.023 and the second of the two was
+         * dropped. `placed.add(k)` below then closed the hex for the session.
+         * Measured at 14.4% of adjacent rock pairs — a rock tile with no rock on
+         * it, and the child had built a mountain.
+         *
+         * So ask for a peak that fits. `mountainFallbackFor` is a pure function
+         * of the coordinate, like the primary chooser, and draws only from the
+         * models narrow enough to stand beside anything in the table (0.938085,
+         * and 0.938085 + 1.011493 < 2.0000). It cannot return what was just
+         * refused: the two sets are disjoint.
+         *
+         * ROCK ONLY. A grass feature that will not fit has genuinely nowhere to
+         * go and a bare patch of meadow is what a meadow looks like.
+         *
+         * AND BEFORE ANYTHING TOUCHES `group`, which is the whole reason this
+         * sits here rather than after the placement. Read the header at the top
+         * of `scatter`: a hex is marked `placed` before anything can throw, so
+         * that a re-sync cannot re-run a partly-dressed tile and stack a second
+         * copy of everything on it. Retrying the LOAD is safe only while nothing
+         * has been added yet — which is here, and not four lines further down.
+         */
+        if (!at && rockTile) {
+          const smaller = mountainFallbackFor(a)
+          const alt = await model(smaller, true).catch(() => null)
+          if (alt) {
+            const ar = footprintOf(alt)
+            const spot = firstClear(tries, ar,
+              (x, z) => allows(smaller, surface.groundAt(x, z)), footprints)
+            /*
+             * Same path as a first-try mountain from here on — native size (no
+             * `fitInto`, the gate above is on `rockTile` and this is one),
+             * `mountainSpinFor(a)` for the facing, no blob shadow. The only
+             * difference between this mountain and the one that was refused is
+             * which file it came from.
+             */
+            if (spot) { obj = alt; r = ar; at = spot }
+          }
+        }
+        // Refused twice, or refused and not a mountain: the hex keeps its
+        // ground and grows nothing, and is not asked again this session.
         if (!at) { placed.add(k); continue }
         const spot = { x: at.x, z: at.z, y: surface.heightAt(at.x, at.z) ?? 0 }
 

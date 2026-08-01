@@ -11,8 +11,10 @@ import { createBlobShadow, castShadow } from './juice'
 import { flattenImported } from './lighting'
 import { wearFaceUVs } from './variants/facedecals'
 import { FITS } from './world/props'
-import { toWorld } from './world/hex'
+import { toWorld, parse, key } from './world/hex'
 import type { Axial } from './world/hex'
+import { rescueHexFor } from './world/walk'
+import { keepOutFor } from './world/mountains'
 import type { Island } from './world/grid'
 import type { Pet } from './flow'
 
@@ -412,6 +414,84 @@ export function clearOf(
   }
 }
 
+/*
+ * ---------------------------------------------------------------------------
+ * WALLED IN (PB-052), and the rescue Joe asked for
+ * ---------------------------------------------------------------------------
+ *
+ * Six rock hexes around one grass hex seal a pet in for good. The mountains are
+ * a little over 1.03 units wide at walking height while adjacent hex centres
+ * are exactly 2.0000 apart, so every consecutive pair of keep-outs OVERLAPS and
+ * the ring is a closed wall. `clearOf` above is a hard positional clamp and not
+ * a push, so it can never carry a pet through one; the stuck handler in
+ * `update` rerolls the GOAL and never the position; and there is no pathfinder,
+ * deliberately. A pet in that pocket lives in a disc of radius ~0.6 forever and
+ * it reads, accurately, as "that bunny never goes anywhere".
+ *
+ * Joe ruled it as JT-033 and his ruling is much smaller than the fix the card
+ * proposed: *"C - just relocate the animal from a trapped position, that is no
+ * issue at all"*. So there is no walkability layer wired into placement, no
+ * corridor check, and no rock tap that silently becomes grass. She may build
+ * the ring. If a friend ends up inside it, the friend is moved.
+ *
+ * WHY THE WHOLE REMEDY LIVES IN THIS FILE, and nothing of it in `flow.ts`:
+ * `flow.pets[].at` is the HATCH hex and is never written back as a pet wanders
+ * (see `positionOf` above). So a rescue recorded in the flow would be a first
+ * ever post-hatch write to a saved field, and it would still not cover the pet
+ * that was already out walking when the sixth mountain landed. Doing it here
+ * instead is STATELESS: `sync` re-sites every pet from `at` on load, so the
+ * check runs again on every load, an island that is ALREADY sealed is repaired
+ * the next time she opens the game, and no save changes shape. It also picks up
+ * the hazard the card raised separately — `firstFreeSpot` can hatch a new pet
+ * straight into a sealed pocket, and under recovery that fixes itself.
+ */
+
+/**
+ * Nearest ground a pet at `from` could actually walk about on, or null when it
+ * is not walled in — which is the answer almost every time this is asked.
+ *
+ * Memoised on the island OBJECT, which is safe because an island is immutable:
+ * `grid.place` returns a new one rather than mutating, so a stale entry cannot
+ * outlive the shape it was computed for, and a WeakMap lets the old island and
+ * its answers be collected together. Without this the region flood would run on
+ * every stuck pet on every 1.2s tick.
+ */
+const rescueMemo = new WeakMap<Island, Map<string, Axial | null>>()
+
+function rescueFrom(
+  island: Island, hexSize: number, from: Axial, self: number,
+): Axial | null {
+  let answers = rescueMemo.get(island)
+  if (!answers) { answers = new Map(); rescueMemo.set(island, answers) }
+  const k = `${key(from)}|${hexSize}|${self}`
+  if (answers.has(k)) return answers.get(k) ?? null
+  const to = rescueHexFor(island, from, hexSize, keepOutFor, self)
+  answers.set(k, to)
+  return to
+}
+
+/**
+ * Which hex a pet is standing on.
+ *
+ * Nearest owned centre, which for a hex lattice IS the cell the point falls in
+ * — the cells are the Voronoi regions of their centres. Restricting it to the
+ * tiles she owns means a pet nudged a little off the edge answers with the tile
+ * it came off rather than with open sea, which is what the caller wants.
+ */
+function hexUnder(
+  island: Island, hexSize: number, x: number, z: number,
+): Axial | null {
+  let best: Axial | null = null
+  let nearest = Infinity
+  for (const k of island.tiles.keys()) {
+    const a = parse(k)
+    const w = toWorld(a, hexSize)
+    const d = Math.hypot(x - w.x, z - w.z)
+    if (d < nearest) { nearest = d; best = a }
+  }
+  return best
+}
+
 export interface PetField {
   group: THREE.Group
   /** Bring the scene in line with flow state, loading any new species. */
@@ -625,6 +705,36 @@ export function createPetField(base = ''): PetField {
     return spot.clone()
   }
 
+  /**
+   * A clear standing place on ONE named hex — where a rescued pet is put down.
+   *
+   * Not `randomSpot`: that samples the whole island and would undo the rescue
+   * about as often as not, because most of the island is not the hex we chose.
+   * The centre first, then the six facings at half a hex out, then the centre
+   * anyway. DETERMINISTIC on purpose — a pet rescued to a different spot every
+   * time she opens the game is a pet that will not stay put, and `sync` re-runs
+   * this on every load.
+   *
+   * The last resort cannot be "nowhere": `clearOf` runs on the next frame and
+   * will slide the pet off anything it has been set down inside, which is the
+   * ordinary machinery doing its ordinary job.
+   */
+  function openSpotOn(a: Axial, hexSize: number, self = 0): THREE.Vector3 {
+    const w = toWorld(a, hexSize)
+    const solid = solidNow()
+    const blocked = (x: number, z: number): boolean =>
+      solid.some(o => Math.hypot(x - o.x, z - o.z) < o.r * 1.15 + self)
+
+    if (!blocked(w.x, w.z)) return new THREE.Vector3(w.x, 0, w.z)
+    for (let i = 0; i < 6; i++) {
+      const turn = (i * Math.PI) / 3
+      const x = w.x + Math.cos(turn) * hexSize * 0.5
+      const z = w.z + Math.sin(turn) * hexSize * 0.5
+      if (!blocked(x, z)) return new THREE.Vector3(x, 0, z)
+    }
+    return new THREE.Vector3(w.x, 0, w.z)
+  }
+
   return {
     group,
 
@@ -672,7 +782,27 @@ export function createPetField(base = ''): PetField {
          * A single assumed height would give the elephant a bunny's shadow.
          */
         const standing = body.max.y - body.min.y
-        const w = toWorld(pet.at as Axial, hexSize)
+        /*
+         * ON ITS HATCH HEX — unless a pet standing there could never walk off
+         * it (PB-052, ruled as recovery by JT-033).
+         *
+         * This is the load path as well as the hatch path, so it is also the
+         * repair for an island that is ALREADY sealed: `pet.at` is never
+         * written back as a pet wanders, so every reload comes through here and
+         * asks the question again. And `firstFreeSpot` in the flow checks no
+         * reachability at all, so a brand new pet can be dealt a hex inside an
+         * existing pocket — same question, same answer, nothing special needed
+         * for it.
+         *
+         * `rescueFrom` returns null for ordinary ground, which is what it
+         * returns for every pet on every island that has no ring on it. The
+         * untrapped case is untouched.
+         */
+        const home = pet.at as Axial
+        const rescue = rescueFrom(island, hexSize, home, radius)
+        const w = rescue
+          ? openSpotOn(rescue, hexSize, radius)
+          : toWorld(home, hexSize)
         holder.position.set(w.x, 0, w.z)
         holder.userData.pick = { kind: 'pet', id: pet.id }
         /*
@@ -845,7 +975,36 @@ export function createPetField(base = ''): PetField {
           const moved = Math.hypot(pos.x - was.x, pos.z - was.z)
           l.stuckFor = moved < dt * 0.25 ? l.stuckFor + dt : 0
           if (l.stuckFor > 1.2) {
-            l.goal = randomSpot(island, hexSize, l.radius)
+            /*
+             * WEDGED, or WALLED IN? They look identical from here and the
+             * answers are different, so ask rather than guess.
+             *
+             * Wedged is the ordinary case — a goal directly behind a tree —
+             * and a different goal fixes it. Walled in is PB-052, and a
+             * different goal fixes NOTHING: on an N-tile island roughly
+             * (N-1)/N of goals are outside the pocket, so the pet would reroll
+             * here every 1.2 seconds for the life of the save.
+             *
+             * The question is exact and it is not a heuristic about how long
+             * something has been stuck: `rescueFrom` floods the free-space
+             * region graph and answers null unless this pet genuinely cannot
+             * reach the island's main body. A pet merely leaning on a rock
+             * gets the reroll it always got.
+             */
+            const on = hexUnder(island, hexSize, pos.x, pos.z)
+            const to = on ? rescueFrom(island, hexSize, on, l.radius) : null
+            if (to) {
+              // Relocated, per Joe's ruling. The goal moves with it — put down
+              // on open ground still wanting the pocket, it would walk back to
+              // the wall and be stuck against the inside of it again.
+              const out = openSpotOn(to, hexSize, l.radius)
+              pos.x = out.x
+              pos.z = out.z
+              l.goal = out.clone()
+              l.restFor = 2 + Math.random() * 4
+            } else {
+              l.goal = randomSpot(island, hexSize, l.radius)
+            }
             l.stuckFor = 0
           }
         } else l.stuckFor = 0
