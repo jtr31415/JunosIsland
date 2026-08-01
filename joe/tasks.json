@@ -507,6 +507,20 @@
       "check": "",
       "note": "",
       "state": "open"
+    },
+    {
+      "id": "JT-039",
+      "type": "ruling",
+      "title": "NEEDS JOE: five questions off the asset-loading survey (PB-048)",
+      "detail": "You asked for investigation and discussion first, so nothing was built. The survey is docs/asset-loading-survey.md, measured against a real build. Three things you did not know before answering:\n\n1. THE SCALE PROBLEM IS ALREADY SOLVED, and the kits solved it. A Kenney GLB costs ~141 KB per species, so 296 of them would be ~41.7 MB. A parts-bank definition costs ~9.9 KB of source, so 296 are ~2.9 MB — roughly fourteenfold better, and it compresses far better again because it is repetitive source rather than binary geometry. Nothing about loading needs to change to make the roster fit.\n\n2. THE REAL ISSUE IS EAGER PARSING, NOT SIZE. All of it compiles into ONE JS chunk (297 KB gzipped today), so every species she has never unlocked is parsed at boot — and your own JT-027 rule caps her at four open collections. The splitting seam already exists and is the same unit she unlocks: a collection.\n\n3. THERE IS NO AUDIO AT ALL. Your card says 'given all the audio, flora and fauna', but not one sound file ships — speech is synthesised through Azure at runtime and the 43 phonemes are still JT-006. So audio is a future weight whose shape is entirely in your gift, which is why question 4 is worth answering now rather than after the recordings exist.\n\nAND ONE THING THE CARD DID NOT ASK ABOUT, which may be the most important line in the survey: THE GAME DOES NOT WORK OFFLINE. vite.island.config.ts:69 precaches only js/css/html/woff2 and there is no runtimeCaching at all — 8 precache entries, not one 3D model among them. On a tablet with no connection the app boots to a shell and then cannot load a single animal, tile, tree or mountain. Whether that matters is question 3.\n\nTHE FIVE QUESTIONS, each answerable in a sentence:\n(1) Does an unopened collection ship to the device at all? Splitting trades a smaller boot for a wait at the moment an album opens — and that moment is a reward, so a spinner on it is a real cost.\n(2) Is a longer first boot acceptable in exchange for no waiting later? Suits a tablet set up once by an adult and then handed over.\n(3) Do you expect her to play with no connection? This decides whether the offline finding is a defect or a non-issue.\n(4) When the recorded voice arrives, does it ship with the app or stream? Phonemes are small, numerous and needed with low latency — a different problem from one big model.\n(5) Is there a device you are actually targeting? One named device turns most of these from opinions into measurements.\n\nNOTHING IS BUILT AND NOTHING SHOULD BE until (3) is answered, because offline support and lazy-loading pull in opposite directions and building either first makes the other dearer.",
+      "blocks": [
+        "PB-048"
+      ],
+      "artefact": "docs/asset-loading-survey.md",
+      "doneRule": "manual",
+      "check": "",
+      "note": "",
+      "state": "open"
     }
   ],
   "archive": []
