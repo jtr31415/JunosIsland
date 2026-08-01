@@ -178,10 +178,21 @@ export function pathFromUserData(
   const name = stripCopyTag(raw)
 
   if (def) {
-    /* Exact: match the names this definition actually gives its features. */
+    /* Exact: match the names this definition actually gives its features.
+     *
+     * The WHOLE name first, across every extra, and only then the copy-tag-stripped
+     * one — two passes rather than one, because a stripped name can belong to
+     * another extra. `uniqueExtraName` hands out `wart`, `wart-2`, `wart-3`, and
+     * `stripCopyTag('wart-2')` is `wart`: a single pass testing both per entry
+     * resolved the SECOND part's mesh to the FIRST part's slot, so a click on the
+     * copy moved the original. Exact wins; the stripped form is the fallback for
+     * a real copy tag (`wart-2-r`, `wart-2-l`), which no entry is ever named. */
     const extras = def.extras ?? []
     for (let i = 0; i < extras.length; i++) {
-      if (extras[i]!.name === raw || extras[i]!.name === name) return { role: 'extras', index: i }
+      if (extras[i]!.name === raw) return { role: 'extras', index: i }
+    }
+    for (let i = 0; i < extras.length; i++) {
+      if (extras[i]!.name === name) return { role: 'extras', index: i }
     }
     if (def.ridge) {
       const stem = def.ridge.name ?? RIDGE_STEM
@@ -634,6 +645,96 @@ export function uniqueExtraName(def: CreatureDef, stem: string): string {
   for (let n = 2; ; n++) {
     const candidate = `${stem}-${n}`
     if (!used.has(candidate)) return candidate
+  }
+}
+
+/**
+ * ADD a part this species does not have: a new `extras` entry wearing `partId`.
+ *
+ * The structural sibling of `duplicatePart` — append to `extras`, return the
+ * definition and the path of what was appended — because `extras` is the only
+ * slot that takes an arbitrary new part at all. The other eight are the roles
+ * `creature.ts` names, each is one thing or a count, and a species does not get a
+ * second tail by adding one.
+ *
+ * **Nothing is invented that already has a measured default.** `PartDef` requires
+ * `part` and nothing else: `sink` is the shape's own `attachment.sunkFractionMean`
+ * — the depth its donor actually used — and `at` is the donor transfer, join at
+ * the face of THIS hull that the donor joined it to. Both are recoveries, and a
+ * number written here would be this file's second opinion about geometry it does
+ * not own. So the entry is `{ part, name }`, and the part lands where the pack
+ * itself put that shape. The user drags it from there.
+ *
+ * `name` is the one field that cannot be defaulted, and it is not decoration: it
+ * names the meshes, it is what `PartDef.on` anchors to, and it is the only way
+ * `pathFromUserData` maps a picked mesh back to this slot. `uniqueExtraName`
+ * gives a collision-free one — the shape id, then `-2`, `-3` — so inserting the
+ * same shape five times leaves five separately pickable parts.
+ *
+ * **A blank id is DECLINED by identity**: the SAME object comes back with a
+ * `null` path, which is how the page's `apply()` reads a refusal (`next === def`).
+ * Nothing else is refused here, deliberately:
+ *
+ *   - a HULL-shaped id as an extra is not blocked. `warningsFor` says it loudly
+ *     (`one-mass`, and it names both masses), and `creatureSpec` then refuses it
+ *     by name — "RULE 3", with the 72 scrapped animals in the message. Both are
+ *     better than a dropdown row that silently does nothing, and §2's escape
+ *     clause is Joe's. Note that this is the one insert that will NOT build.
+ *   - a `bespoke-` id is not blocked either, for the same reason: `creatureSpec`
+ *     refuses one without a `flag` and says what the flag is for.
+ *   - an id in no bank at all is not blocked: `creatureSpec` refuses it by name,
+ *     which is a better message than anything this file could word.
+ */
+export function insertPart(
+  def: CreatureDef, partId: string,
+): { def: CreatureDef; path: DefPath | null } {
+  const part = partId.trim()
+  if (part === '') return { def, path: null }
+  const entry: PartDef & { name: string } = { part, name: uniqueExtraName(def, part) }
+  const extras = [...(def.extras ?? []), entry]
+  return { def: { ...def, extras }, path: { role: 'extras', index: extras.length - 1 } }
+}
+
+/**
+ * A new animal from nothing: standard hull, four legs, two eye cards, a palette.
+ *
+ * Joe's fifth note on the editor: *"need a function to start a new animal
+ * conmpletely from scratch."* This is that function, and the striking thing about
+ * it is how little it contains — **it is a palette and nothing else.**
+ *
+ * That is not a stub, it is the architecture showing through. `CreatureDef` makes
+ * the standard body the DEFAULT, not a thing you ask for: `hull` omitted is the
+ * 1.250 cube at its own recorded offset, `legs` omitted is four legs on the row
+ * that never moves, `eyes` omitted is two cards at `EYE_CARD_Z`. `listParts`
+ * shows all three anyway — it says so in its own doc — so Joe opens this and sees
+ * Hull, Legs and Eyes in the list and a plain animal on the canvas, which is
+ * exactly what he asked for. Writing them out explicitly would say the same thing
+ * in more words and would put three hand-typed numbers where measured defaults
+ * belong.
+ *
+ * The palette IS required, and its INSERTION ORDER IS THE TEXTURE LAYOUT, so
+ * these five slots in this order are data, not decoration. They are the same five
+ * the mouse carries, which makes a new animal's texture laid out like every
+ * shipped one. `pupil` is the pack's own measured grey, copied as a literal
+ * rather than imported from `texture.ts` because this file is deliberately
+ * three.js-free so the edit model runs in a node test.
+ *
+ * The colours are a NEUTRAL GREY on purpose. A new animal should look unpainted
+ * rather than look like some other animal — a plausible brown invites Joe to
+ * leave it, and then every species he starts is the same brown.
+ *
+ * This never touches a shipped species: it returns a fresh object and the caller
+ * gives it a new id. The live 24 are frozen and nothing here can reach them.
+ */
+export function blankDef(): CreatureDef {
+  return {
+    palette: {
+      coat: 0x9a9a9a,  // deliberately unpainted grey — recolour it, do not keep it
+      belly: 0xe8e8e8, // the pale slot: belly patch, sclera, an inner ear
+      inner: 0xc98f86, // the detail slot: inner ears, a nose
+      limb: 0x5c5c5c,  // legs, a muzzle, a tail
+      pupil: 0x4c4f5e, // PACK_PUPIL, measured off 544 real eye texels (texture.ts)
+    },
   }
 }
 

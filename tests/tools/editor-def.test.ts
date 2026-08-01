@@ -25,12 +25,15 @@
  */
 import { describe, it, expect } from 'vitest'
 import {
-  addPaletteSlot, cloneAs, defFrom, defToModuleSource, deletePart, duplicatePart, listParts,
-  partAt, pathFromUserData, pathKey, setJoin, setMirrored, setPaint, setPaletteColour,
+  addPaletteSlot, cloneAs, defFrom, defToModuleSource, deletePart, duplicatePart, insertPart,
+  listParts, partAt, pathFromUserData, pathKey, setJoin, setMirrored, setPaint, setPaletteColour,
   setPartShape, setSpin, setStretch, uniqueExtraName, warningsFor,
 } from '../../tools/workbench/public/editor/def'
 import type { DefPath } from '../../tools/workbench/public/editor/def'
-import { buildAssembly, creatureSpec } from '../../src/island/species/parts'
+import { loadBuiltDefs } from '../../tools/workbench/public/editor/capture'
+import {
+  assembledCount, ASSEMBLED_BUILDS, buildAssembly, creatureSpec,
+} from '../../src/island/species/parts'
 import type { CreatureDef, PartDef } from '../../src/island/species/parts'
 import { EYE_CARD_Z, LEG_ROW } from '../../src/island/species/parts/hulls'
 
@@ -249,6 +252,7 @@ describe('every op leaves a buildable definition', () => {
     }
     setPaletteColour(BASE, 'coat', 0)
     addPaletteSlot(BASE, 'new', 0xffffff)
+    insertPart(BASE, 'cone-01')
     expect(BASE).toEqual(SNAPSHOT)
   })
 })
@@ -277,6 +281,90 @@ describe('rule 6: a pair is one mesh placed twice', () => {
   })
 })
 
+describe('insert: the part this species does not have yet', () => {
+  it('adds an extra wearing the chosen shape, and the species still builds', () => {
+    const before = (BASE.extras ?? []).length
+    const { def, path } = insertPart(BASE, 'wedge-07')
+    expect(path).toEqual({ role: 'extras', index: before })
+    expect((def.extras ?? []).length).toBe(before + 1)
+    /* The part is AT the path that came back — the page selects it by that path
+     * the moment the button is clicked, so a path that named a different slot
+     * would put the inspector on somebody else's part. */
+    expect(partAt(def, path!)).toEqual({ part: 'wedge-07', name: 'wedge-07' })
+    expect(listParts(def).map(r => pathKey(r.path))).toContain(pathKey(path!))
+    builds(def)
+  })
+
+  it('writes only what has no measured default: the shape and the name', () => {
+    /* `sink` is the shape's own `sunkFractionMean` and `at` is the donor transfer,
+     * both recoveries `creature.ts` owns. A number written here would be this
+     * file's second opinion about geometry it does not measure. */
+    const added = (insertPart(BASE, 'cone-04').def.extras ?? []).at(-1)!
+    expect(Object.keys(added).sort()).toEqual(['name', 'part'])
+    /* And the donor transfer really does place it: the built feature has a spot. */
+    const spec = creatureSpec(ID, insertPart(BASE, 'cone-04').def)
+    const placed = spec.features.find(f => f.name === 'cone-04')
+    expect(placed, 'the inserted part never reached the build under its own name').toBeDefined()
+    expect(placed!.part).toBe('cone-04')
+  })
+
+  it('never collides a name, however many times the same shape is inserted', () => {
+    let def = BASE
+    const paths: DefPath[] = []
+    for (let i = 0; i < 4; i++) {
+      const r = insertPart(def, 'cone-01')
+      def = r.def
+      paths.push(r.path!)
+    }
+    const names = (def.extras ?? []).map(e => e.name)
+    expect(new Set(names).size, `two extras share a name: ${names.join(', ')}`).toBe(names.length)
+    expect(names).toEqual(['wart', 'cone-01', 'cone-01-2', 'cone-01-3', 'cone-01-4'])
+    expect(paths.map(pathKey)).toEqual(['extras:1', 'extras:2', 'extras:3', 'extras:4'])
+    builds(def)
+    /* A name is what makes a mesh pickable, so each one resolves to its OWN slot. */
+    for (const p of paths) {
+      const name = (partAt(def, p) as PartDef & { name: string }).name
+      expect(pathFromUserData({ role: name }, def)).toEqual(p)
+    }
+  })
+
+  it('leaves the definition it was given exactly as it found it', () => {
+    const before = JSON.parse(JSON.stringify(BASE)) as CreatureDef
+    insertPart(BASE, 'cone-01')
+    insertPart(BASE, '')
+    expect(BASE).toEqual(before)
+    /* Not the same array either: undo is a stack of old objects. */
+    expect(insertPart(BASE, 'cone-01').def.extras).not.toBe(BASE.extras)
+  })
+
+  it('declines a blank id by identity, which is how the page reads a refusal', () => {
+    for (const blank of ['', '   ', '\n']) {
+      const r = insertPart(BASE, blank)
+      expect(r.def, `"${blank}" should have been declined`).toBe(BASE)
+      expect(r.path).toBeNull()
+    }
+    /* A species with no extras at all is not given an empty `extras` key by a
+     * declined insert — the emitted source would grow a line meaning nothing. */
+    const bare: CreatureDef = { palette: { coat: 1 } }
+    expect(insertPart(bare, '').def).toBe(bare)
+    expect('extras' in insertPart(bare, '').def).toBe(false)
+  })
+
+  it('does not silently prevent a second mass — it is warned about, then refused by name', () => {
+    /* Rule 3 is the fault that scrapped 72 animals, and an insert is the one
+     * gesture that can reach it from the shape list. It is NOT blocked here: the
+     * warning names both masses and `creatureSpec` throws by name, and both say
+     * more than a dropdown row that quietly does nothing. */
+    const two = insertPart(BASE, 'box-12')
+    expect(two.path).toEqual({ role: 'extras', index: 1 })
+    const w = warningsFor(two.def).filter(x => x.axiom === 'one-mass')
+    expect(w).toHaveLength(1)
+    expect(w[0]!.severity).toBe('loud')
+    expect(w[0]!.path).toEqual(two.path)
+    expect(() => creatureSpec(ID, two.def)).toThrow(/RULE 3/)
+  })
+})
+
 describe('duplicate, and the names that must not collide', () => {
   it('is unique after three copies, and still builds', () => {
     let def = BASE
@@ -302,6 +390,21 @@ describe('duplicate, and the names that must not collide', () => {
       expect(r.def).toBe(BASE)
       expect(r.path).toEqual({ role })
     }
+  })
+
+  /**
+   * A copy whose mesh selects the original is a copy that cannot be dragged off
+   * it — the first click undoes the second half of the gesture. `uniqueExtraName`
+   * hands out `wart-2` beside `wart`, and `stripCopyTag('wart-2')` is `wart`, so
+   * the resolver has to prefer the WHOLE name over the stripped one.
+   */
+  it('resolves a copy\'s mesh to the copy, not to the part it was copied from', () => {
+    const { def, path } = duplicatePart(BASE, { role: 'extras', index: 0 })
+    expect((def.extras ?? []).map(e => e.name)).toEqual(['wart', 'wart-2'])
+    expect(pathFromUserData({ role: 'wart-2' }, def)).toEqual(path)
+    expect(pathFromUserData({ role: 'wart' }, def)).toEqual({ role: 'extras', index: 0 })
+    /* A real copy tag — the -r and -l of a pair — still falls back to the stem. */
+    expect(pathFromUserData({ role: 'wart-2-r' }, def)).toEqual(path)
   })
 
   it('uniqueExtraName avoids the role names too, not just the extras', () => {
@@ -529,11 +632,64 @@ describe('copying an animal to edit it into another one', () => {
   })
 
   it('cannot recover a shipped species\' definition, and says so by returning null', () => {
-    /* Only the COMPILED `AssemblyBuild` is reachable: a species file passes its
-     * `CreatureDef` straight into `defineCreature` as an object literal and
-     * exports what comes back. Nothing keeps the definition. */
+    /* The definition IS kept now — `defineCreature` writes it to `CREATURE_DEFS`
+     * in `creature.ts`, which is how the workbench editor opens a species. This
+     * file still cannot reach it: `def.ts` is deliberately three.js-free so the
+     * edit model runs in a node test, and `creature.ts` imports `spinVec` from
+     * `assembly.ts`, which imports three. So `defFrom` stays `null`, the caller
+     * is still GIVEN a definition, and nothing here is reconstructed from a
+     * build — which `def.ts`'s own comment says is the point regardless. */
     expect(defFrom('animal-hedgehog')).toBeNull()
     expect(defFrom('animal-nonesuch')).toBeNull()
+  })
+})
+
+/**
+ * ...so the editor is GIVEN the definition, and this is who gives it.
+ *
+ * `loadBuiltDefs()` is the editor's only route to a shipped species, and it used
+ * to depend on a dev-server transform that rewrote `defineCreature(` in the
+ * fourteen leaf files. The transform is gone; `creature.ts` keeps the map. That
+ * is a change nothing in a browser would announce — the failure mode is an
+ * editor that opens on an empty list — so it is asserted here, on the real map,
+ * with no mock in it.
+ */
+describe('the editor can open a shipped species', () => {
+  it('loads every registered species\' definition, and no fixture', async () => {
+    const defs = await loadBuiltDefs()
+    // Derived off the register, not typed here: the register is the OUTPUT of the
+    // same call that writes the def map, so a species reaching one and not the
+    // other is exactly the drift worth catching.
+    expect(defs.size).toBe(assembledCount())
+    expect([...defs.keys()]).toEqual(Object.keys(ASSEMBLED_BUILDS))
+  })
+
+  it('hands out a COPY, so a gesture cannot rewrite the running game', async () => {
+    // Every edit goes back through `creatureSpec`, and if the editor held the
+    // object the species module still holds, the first drag would rewrite the
+    // shipped species inside the page and every later rebuild would start from it.
+    const a = await loadBuiltDefs()
+    const b = await loadBuiltDefs()
+    const one = a.get('animal-mouse')!
+    expect(one).toBeDefined()
+    expect(b.get('animal-mouse')).not.toBe(one)
+    expect(b.get('animal-mouse')).toEqual(one)
+    // Deep, not shallow — nested objects are the ones a drag actually writes to.
+    expect(b.get('animal-mouse')!.palette).not.toBe(one.palette)
+  })
+
+  it('is a definition and not a build — the mouse says only what it chose', async () => {
+    const mouse = (await loadBuiltDefs()).get('animal-mouse')!
+    // No hull, no legs, no eyes: those are what `creature.ts` gives a definition
+    // that says nothing, and reconstructing them from the build would hand Joe a
+    // different species that merely builds the same mesh today.
+    expect(Object.keys(mouse).sort())
+      .toEqual(['belly', 'ears', 'nose', 'palette', 'snout', 'tail'])
+    expect(mouse.belly).toBe(0.5)
+    expect(mouse.snout).toBe('tube-01')
+    expect(mouse.tail).toEqual({ part: 'wedge-07', paint: 'limb', at: [0, 0.9, -0.625] })
+    // And it still builds, which is the only claim that matters downstream.
+    expect(() => creatureSpec('animal-mouse-copy', mouse)).not.toThrow()
   })
 })
 

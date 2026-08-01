@@ -787,6 +787,32 @@ export function creatureSpec(id: string, def: CreatureDef): AssemblyBuild {
 }
 
 /**
+ * Every species' definition AS IT WAS AUTHORED, by species id, in registration
+ * order — the input beside `assembled/register.ts`'s output.
+ *
+ * It exists because Joe's local species editor edits a `CreatureDef`, and
+ * without this map there is nowhere to read one back from: a species file passes
+ * an object literal straight into `defineCreature` and exports only the built
+ * `AssemblyBuild`, so the definition was unrecoverable and the editor could not
+ * OPEN a shipped species at all. The editor imports `assembled/index.ts` for its
+ * side effects and reads this map. (Named no more precisely than that on
+ * purpose: `tools/smoke/channel.mjs` fails the build if anything under `src/`
+ * so much as mentions the dev tool's path.)
+ *
+ * It costs the shipped bundle nothing measurable. A `CreatureDef` is plain data
+ * by construction — numbers, strings, booleans and arrays and objects of them,
+ * no three.js and no geometry — and the fourteen literals are already emitted,
+ * because they are the arguments to a side-effectful top-level call that Rollup
+ * cannot drop today either. All that changes is that fourteen small plain
+ * objects stay reachable instead of becoming garbage.
+ *
+ * A `Map` and not a record for the same reason `register.ts` uses one: insertion
+ * order is a stated guarantee, and it is the barrel's order, which is the order
+ * Joe's species list should show.
+ */
+export const CREATURE_DEFS = new Map<string, CreatureDef>()
+
+/**
  * Declare one species from a definition, and put it on the register.
  *
  * Returns the `AssemblyBuild`, so a species file still reads
@@ -794,9 +820,15 @@ export function creatureSpec(id: string, def: CreatureDef): AssemblyBuild {
  * downstream — `ASSEMBLED_BUILDS`, `assemblyFor`, `buildAssembled`, the tests
  * that read `.features` and `.palette` — is unchanged. Adding a species is still
  * a file and one appended line in `assembled/index.ts`.
+ *
+ * The definition is kept in `CREATURE_DEFS` beside the build; see there for why.
+ * The build is what is returned, exactly as before.
  */
-export const defineCreature = (id: string, def: CreatureDef): AssemblyBuild =>
-  defineAssembly(id, creatureSpec(id, def))
+export const defineCreature = (id: string, def: CreatureDef): AssemblyBuild => {
+  const build = defineAssembly(id, creatureSpec(id, def))
+  CREATURE_DEFS.set(id, def)
+  return build
+}
 
 /**
  * Every shape the pack used as a hull. Exported so a review surface can say why a

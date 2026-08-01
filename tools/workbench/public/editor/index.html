@@ -27,6 +27,14 @@
         <div class="row">
           <button id="revert" type="button" class="quiet">Start again from the original</button>
         </div>
+        <!-- Its own row: the rail is 250px and a button beside the field squeezed it
+             to about a hundred, which truncated the placeholder to "a new animal's". -->
+        <div class="row">
+          <input id="new-name" type="text" placeholder="a new animal's name" autocomplete="off" />
+        </div>
+        <div class="row">
+          <button id="new-animal" type="button">Start from scratch</button>
+        </div>
         <p id="open-note" class="note"></p>
       </section>
 
@@ -54,6 +62,12 @@
           <label><input type="checkbox" id="snap" checked /> snap</label>
           <label><input type="checkbox" id="explode" /> explode</label>
         </div>
+        <!-- Saving lives WITH the actions, not in the export panel at the bottom of
+             a scrolling column, where it was never on screen at all on a short window. -->
+        <div class="group" role="group" aria-label="Save">
+          <button id="save" type="button">Save</button>
+          <span id="save-note" class="note"></span>
+        </div>
         <span id="selected" class="selected">nothing selected</span>
       </div>
       <canvas id="stage"></canvas>
@@ -67,6 +81,15 @@
         <h2>Shape</h2>
         <select id="shape-pick"></select>
         <p id="shape-note" class="note"></p>
+      </section>
+
+      <section id="add">
+        <h2>Add a part</h2>
+        <select id="insert-pick"></select>
+        <div class="row">
+          <button id="act-insert" type="button">Insert it</button>
+        </div>
+        <p id="insert-note" class="note"></p>
       </section>
 
       <section id="size">
@@ -91,10 +114,12 @@
       <section id="out">
         <h2>Take it out</h2>
         <div class="row">
-          <button id="show-source" type="button">Show the definition as a module</button>
+          <button id="show-source" type="button">Show it as a module</button>
         </div>
-        <p class="note">Nothing here is saved yet. This prints the edited definition as the text of
-          <code>src/island/species/parts/assembled/animal-&lt;name&gt;.ts</code>, to copy out.</p>
+        <p class="note"><b>Save</b> is in the toolbar above the animal. It writes a draft to
+          <code>joe/species-edits.json</code>. It never touches a
+          shipped species — the live twenty-four are frozen. Your drafts come back in the Animal list
+          at the top of the page, and survive closing the tab.</p>
         <pre id="source-out" hidden></pre>
       </section>
     </aside>

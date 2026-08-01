@@ -23,6 +23,10 @@ import {
   PACK_HEIGHT_MIN, HEIGHT_FLOOR, HEIGHT_FLOOR_MARGIN, OTHER_HULLS,
   hullFrontZ, hullFacts, ASSEMBLED_BUILDS, assemblyFor, PACK_PUPIL,
 } from '../../src/island/species/parts'
+/* Straight from `creature.ts` and not the barrel above: the barrel re-exports
+ * `defineCreature` but not the map, and the map is the thing under test. The
+ * barrel import is still what POPULATES it — a map does not fill itself. */
+import { CREATURE_DEFS } from '../../src/island/species/parts/creature'
 import { PARTS_BANK, partById } from '../../src/island/species/parts/bank.generated'
 import { speciesRecord } from '../../src/island/species/registry'
 
@@ -210,6 +214,38 @@ describe('a species is a file and a line, and both are checked', () => {
         expect(spec.palette[slot!], `${id} paints its pupil ${slot}`).toBe(PACK_PUPIL)
       }
     }
+  })
+
+  it('keeps every species\' DEFINITION, which is what the editor opens', () => {
+    // The workbench species editor edits a `CreatureDef`, and until `creature.ts`
+    // kept one there was nothing to open: a species file passes an object literal
+    // into `defineCreature` and exports only the build. The dev server used to
+    // rewrite the fourteen leaf files to capture them; this map is what deleted
+    // that plugin, so if it ever empties, the editor goes blank and blames the
+    // species. Nothing is typed in here — the count is the directory's.
+    expect(CREATURE_DEFS.size).toBe(files.length)
+    expect([...CREATURE_DEFS.keys()].sort()).toEqual(files.sort())
+    // Registration order is the barrel's order, which is the order Joe's list
+    // shows, and the hedgehog is first because it shipped first.
+    expect([...CREATURE_DEFS.keys()]).toEqual(Object.keys(ASSEMBLED_BUILDS))
+  })
+
+  it('keeps the definition AS AUTHORED, not the arithmetic done to it', () => {
+    // The mouse, against its own file. A definition's whole point is what it does
+    // NOT say — no hull, no legs, no eyes — and if this ever came back as the
+    // built `AssemblyBuild`'s ~40 solved numbers instead, the editor would be
+    // handing Joe a different species that merely builds the same mesh today.
+    const def = CREATURE_DEFS.get('animal-mouse')
+    expect(def).toBeDefined()
+    expect(Object.keys(def!).sort())
+      .toEqual(['belly', 'ears', 'nose', 'palette', 'snout', 'tail'])
+    expect(def!.belly).toBe(0.5)
+    expect(def!.snout).toBe('tube-01')
+    expect(def!.tail).toEqual({ part: 'wedge-07', paint: 'limb', at: [0, 0.9, -0.625] })
+    expect(def!.palette.pupil).toBe(PACK_PUPIL)
+    // And it is the SAME object the species module holds, not a copy — the copy
+    // is the reader's job, and `editor/capture.ts` clones on the way out.
+    expect(def!.palette.coat).toBe(0xa08a76)
   })
 
   it('keeps the collection\'s side-effect import, which is what evaluates them', () => {

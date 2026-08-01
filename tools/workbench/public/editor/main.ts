@@ -47,11 +47,11 @@
  */
 
 import {
-  deletePart, duplicatePart, defToModuleSource, listParts, partAt, pathKey, samePath,
-  setJoin, setMirrored, setPaint, setPaletteColour, setPartShape, setSpin, setStretch,
-  warningsFor, type DefPath, type Warning,
+  blankDef, deletePart, duplicatePart, defToModuleSource, insertPart, listParts, partAt,
+  pathKey, samePath, setJoin, setMirrored, setPaint, setPaletteColour, setPartShape, setSpin,
+  setStretch, warningsFor, type DefPath, type Warning,
 } from './def'
-import { ALL_SHAPES, HULL_SHAPES, summarise } from './library'
+import { ALL_SHAPES, HULL_SHAPES, groupShapes, summarise, type ShapeRow } from './library'
 import { loadBuiltDefs } from './capture'
 import { createStage, type GizmoMode } from './stage'
 import type { CreatureDef } from '../../../../src/island/species/parts'
@@ -80,10 +80,44 @@ const sizeNote = el<HTMLParagraphElement>('#size-note')
 const paletteList = el<HTMLUListElement>('#palette')
 const colourNote = el<HTMLParagraphElement>('#colour-note')
 const sourceOut = el<HTMLPreElement>('#source-out')
+const insertPick = el<HTMLSelectElement>('#insert-pick')
+const insertNote = el<HTMLParagraphElement>('#insert-note')
+const newName = el<HTMLInputElement>('#new-name')
+const saveNote = el<HTMLParagraphElement>('#save-note')
 
 function say(text: string, bad = false): void {
   saySpan.textContent = text
   saySpan.className = bad ? 'say bad' : 'say good'
+}
+
+/**
+ * Fill a `<select>` with the shape library, grouped and sorted.
+ *
+ * Joe's second note: *"the drop down of the components is probably ok without a
+ * visual library, it sjust needs to be sorted by part and have headers for the
+ * categories in the drop down."* `groupShapes` does the grouping and the natural
+ * ordering; this turns it into `<optgroup>`s. Ninety-five options in bank-file
+ * order was the thing that made him ask.
+ *
+ * **Grouping is not filtering.** Every row of the list handed in still appears,
+ * exactly once — `library.ts` says loudly that `form` is a label and never a
+ * filter, and a test guards against a default-on form filter. An `<optgroup>`
+ * excludes nothing, so this is compliant, and this sentence is here so the next
+ * reader does not think the rule was bent.
+ */
+function fillShapes(select: HTMLSelectElement, rows: readonly ShapeRow[], current?: string): void {
+  select.replaceChildren(...groupShapes(rows).map(group => {
+    const optgroup = document.createElement('optgroup')
+    optgroup.label = group.label
+    optgroup.append(...group.rows.map(row => {
+      const option = document.createElement('option')
+      option.value = row.id
+      option.textContent = summarise(row)
+      option.selected = row.id === current
+      return option
+    }))
+    return optgroup
+  }))
 }
 
 /* ---------------------------------------------------------------- the state */
@@ -94,6 +128,46 @@ let opened: CreatureDef | null = null
 let def: CreatureDef | null = null
 let speciesId = ''
 let selected: DefPath | null = null
+
+/**
+ * One saved species draft, as `joe/species-edits.json` holds it.
+ *
+ * The server owns `id` — the page NEVER deals one. It sends a draft with no id
+ * at all and `merge.mjs` allocates `SD-nnn` inside the request, against the file
+ * as it stands that instant. That is what makes two writers safe, and it is why
+ * a save here cannot destroy a draft an agent appended while this tab was open.
+ */
+interface Draft {
+  id: string
+  speciesId: string
+  /** The shipped species this was derived from; `''` when started from scratch. */
+  from: string
+  fromKind: string
+  collection: string
+  givenName: string
+  fact: string
+  factSource: string
+  def: CreatureDef
+  warnings: readonly Warning[]
+  state: string
+  note: string
+}
+
+let drafts: readonly Draft[] = []
+/**
+ * Which of Joe's own definitions is on screen, if it is one of his.
+ *
+ * `''` means the subject is a shipped species being edited but not yet saved.
+ * A draft is keyed by its `speciesId`, ONE per species id — saving the mouse
+ * twice updates the same draft rather than growing a pile of near-identical
+ * ones. A second variant is a new animal with a new name, which is a thing the
+ * page can now do.
+ */
+let draftId = ''
+/** False the moment a gesture lands, true again only when the server has it. */
+let saved = true
+/** Joe's name for an animal he started himself. Empty for a shipped species. */
+let givenName = ''
 
 const stage = createStage(el<HTMLCanvasElement>('#stage'), {
   onPick(path) { select(path) },
@@ -133,9 +207,9 @@ const label = (path: DefPath): string =>
  * def` is a reliable "declined", and it is reported rather than swallowed: a
  * gesture that silently does nothing is how a person learns to distrust a tool.
  */
-function apply(next: CreatureDef, why: string): void {
-  if (!def) return
-  if (next === def) { say(`${why}: that part has no such handle`, true); return }
+function apply(next: CreatureDef, why: string): boolean {
+  if (!def) return false
+  if (next === def) { say(`${why}: that part has no such handle`, true); return false }
   const result = stage.show(speciesId, next)
   if (!result.ok) {
     /*
@@ -145,11 +219,13 @@ function apply(next: CreatureDef, why: string): void {
      * throw is the builder's own line and it is not ours to talk him past.
      */
     say(`refused: ${result.error}`, true)
-    return
+    return false
   }
   def = next
+  saved = false
   say(why)
   draw()
+  return true
 }
 
 /* --------------------------------------------------------------- the parts */
@@ -204,13 +280,7 @@ function drawInspector(): void {
   /* Shape. The hull gets the ten real shells and nothing else. */
   const rows = path?.role === 'hull' ? HULL_SHAPES : ALL_SHAPES
   const current = slot && 'part' in slot ? slot.part : undefined
-  shapePick.replaceChildren(...rows.map(row => {
-    const option = document.createElement('option')
-    option.value = row.id
-    option.textContent = summarise(row)
-    option.selected = row.id === current
-    return option
-  }))
+  fillShapes(shapePick, rows, current)
   shapePick.disabled = !path || path.role === 'legs'
   shapeNote.textContent = !path
     ? 'select a part'
@@ -327,23 +397,56 @@ function draw(): void {
   drawInspector()
   drawWarnings()
   drawSelected()
+  /*
+   * The unsaved marker belongs in the SAME redraw as the change that caused it.
+   * Left out of here it only refreshed when a species was opened, so the panel
+   * cheerfully read "saved" over an hour of unsaved work — the exact lie this
+   * whole run exists to stop telling.
+   */
+  drawSaveNote()
 }
 
 /* -------------------------------------------------------------- the wiring */
 
+/**
+ * Put a definition on the screen.
+ *
+ * `baseline` is what `warningsFor` compares against and what "Start again" goes
+ * back to. For a shipped species that is the species as it ships; for a draft it
+ * is the shipped species it came FROM, so the warnings keep telling Joe how far
+ * he has moved from a real animal rather than resetting to his own last save.
+ * A draft started from scratch has no such original, so it is its own baseline.
+ */
+function show(id: string, next: CreatureDef, baseline: CreatureDef, what: string): void {
+  const result = stage.show(id, next)
+  if (!result.ok) { say(`${id} does not build: ${result.error}`, true); return }
+  speciesId = id
+  opened = baseline
+  def = next
+  selected = null
+  select(null)
+  draw()
+  openNote.textContent
+    = `${Object.keys(next.palette).length} palette slots · ${listParts(next).length} parts`
+  drawSaveNote()
+  say(what)
+}
+
 function open(id: string): void {
   const found = defs.get(id)
   if (!found) { say(`no definition captured for ${id}`, true); return }
-  speciesId = id
-  opened = found
-  selected = null
-  const result = stage.show(id, found)
-  if (!result.ok) { say(`${id} does not build: ${result.error}`, true); return }
-  def = found
-  select(null)
-  draw()
-  openNote.textContent = `${Object.keys(found.palette).length} palette slots · ${listParts(found).length} parts`
-  say(`opened ${id}`)
+  draftId = ''
+  givenName = ''
+  saved = true
+  show(id, found, found, `opened ${id}`)
+}
+
+/** Reopen one of Joe's own saved drafts, exactly as he left it. */
+function openDraft(draft: Draft): void {
+  draftId = draft.id
+  givenName = draft.givenName
+  saved = true
+  show(draft.speciesId, draft.def, defs.get(draft.from) ?? draft.def, `opened ${draft.id}`)
 }
 
 for (const mode of ['translate', 'rotate', 'scale'] as const) {
@@ -359,9 +462,12 @@ el<HTMLButtonElement>('#act-copy').addEventListener('click', () => {
   if (!def || !selected) { say('select a part first', true); return }
   const { def: next, path } = duplicatePart(def, selected)
   if (next === def) { say(`${label(selected)} cannot be copied`, true); return }
-  selected = path
-  apply(next, `copied ${pathKey(path)}`)
-  select(path)
+  /*
+   * Select the copy ONLY if it landed. `apply` can still refuse — the builder
+   * throwing is an answer — and a selection pointing at an extras index that
+   * was never created leaves the inspector describing a part that is not there.
+   */
+  if (apply(next, `copied ${pathKey(path)}`)) select(path)
 })
 
 el<HTMLButtonElement>('#act-mirror').addEventListener('click', () => {
@@ -381,14 +487,32 @@ el<HTMLButtonElement>('#act-delete').addEventListener('click', () => {
   const gone = label(selected)
   const next = deletePart(def, selected)
   if (next === def) { say(`${gone} cannot be deleted — an animal is one mass`, true); return }
-  selected = null
-  apply(next, `deleted ${gone}`)
-  select(null)
+  if (apply(next, `deleted ${gone}`)) select(null)
 })
 
 shapePick.addEventListener('change', () => {
   if (!def || !selected) return
   apply(setPartShape(def, selected, shapePick.value), `${label(selected)} is now ${shapePick.value}`)
+})
+
+/**
+ * Add a part that is not on the animal at all.
+ *
+ * Joe's third note: *"i need to be able to insert a new component."* Copy, mirror
+ * and delete all needed something already there; this is the one that starts from
+ * nothing. It lands in `extras`, which is the only slot that takes an arbitrary
+ * part, and it arrives at the donor transfer — the shape's own measured join
+ * against this hull — rather than at a guessed offset. So it appears ON the
+ * animal, and he drags it where he wants it.
+ *
+ * It is selected immediately: an insert whose result you then have to hunt for in
+ * a list of fourteen is an insert that feels like it failed.
+ */
+el<HTMLButtonElement>('#act-insert').addEventListener('click', () => {
+  if (!def) return
+  const { def: next, path } = insertPart(def, insertPick.value)
+  if (!path) { say('choose a shape to insert', true); return }
+  if (apply(next, `inserted ${insertPick.value}`)) select(path)
 })
 
 el<HTMLButtonElement>('#size-reset').addEventListener('click', () => {
@@ -407,7 +531,17 @@ el<HTMLInputElement>('#explode').addEventListener('change', event => {
 })
 
 el<HTMLButtonElement>('#revert').addEventListener('click', () => {
-  if (speciesId) open(speciesId)
+  /*
+   * Back to the BASELINE, not back through `open`. A draft Joe started from
+   * scratch has a species id no shipped animal answers to, and re-opening by id
+   * would tell him his own animal does not exist.
+   */
+  if (!opened) return
+  const wasDraft = draftId
+  show(speciesId, opened, opened, 'back to the original')
+  draftId = wasDraft
+  saved = false
+  drawSaveNote()
 })
 
 el<HTMLButtonElement>('#show-source').addEventListener('click', () => {
@@ -416,21 +550,191 @@ el<HTMLButtonElement>('#show-source').addEventListener('click', () => {
   sourceOut.textContent = defToModuleSource(speciesId, def)
 })
 
-subjectPick.addEventListener('change', () => open(subjectPick.value))
+/* ---------------------------------------------------------------- the saving */
 
-/* ----------------------------------------------------------------- the boot */
+const api = async (path: string, body?: unknown): Promise<Record<string, unknown>> => {
+  const res = await fetch(path, body === undefined ? undefined : {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+  })
+  return res.json() as Promise<Record<string, unknown>>
+}
 
-loadBuiltDefs().then(loaded => {
-  defs = loaded
-  subjectPick.replaceChildren(...[...loaded.keys()].map(id => {
+function drawSaveNote(): void {
+  saveNote.textContent = !def
+    ? ''
+    : draftId
+      ? `${draftId}${saved ? ' — saved' : ' — unsaved changes'}`
+      : saved ? 'not saved yet' : 'unsaved changes'
+  saveNote.className = saved ? 'note' : 'note warn'
+}
+
+/** The Animal list: what ships, then what Joe has made, kept apart. */
+function drawSubjects(): void {
+  const chosen = draftId ? `draft:${draftId}` : speciesId
+  const groups: HTMLOptGroupElement[] = []
+  const shipped = document.createElement('optgroup')
+  shipped.label = `Shipped species (${defs.size})`
+  shipped.append(...[...defs.keys()].map(id => {
     const option = document.createElement('option')
     option.value = id
     option.textContent = id.replace(/^animal-/, '')
     return option
   }))
+  groups.push(shipped)
+  if (drafts.length) {
+    const mine = document.createElement('optgroup')
+    mine.label = `My drafts (${drafts.length})`
+    mine.append(...drafts.map(d => {
+      const option = document.createElement('option')
+      option.value = `draft:${d.id}`
+      option.textContent = `${d.givenName || d.speciesId.replace(/^animal-/, '')} · ${d.id}`
+      return option
+    }))
+    groups.push(mine)
+  }
+  subjectPick.replaceChildren(...groups)
+  if (chosen) subjectPick.value = chosen
+}
+
+/** Read the drafts back off the server. The page never keeps its own copy warm. */
+async function refreshDrafts(): Promise<void> {
+  const state = await api('/api/state')
+  drafts = (state['edits'] ?? []) as readonly Draft[]
+  drawSubjects()
+}
+
+/**
+ * Save Joe's edits.
+ *
+ * His first note, and the one that blocked the other four: *"need to be able to
+ * save my edits."* Until this landed the editor could do everything except keep
+ * anything, so every session's work died with the tab.
+ *
+ * Two shapes, and which one is used is decided against the file as it is RIGHT
+ * NOW, not against what the page loaded:
+ *
+ *  - a draft for this species already exists → `patch`, naming only the fields
+ *    this page owns. A patch cannot disturb a field it does not mention, which
+ *    is what lets an agent and this page write the same file.
+ *  - it does not → a whole-file payload carrying **only the new draft**, and
+ *    **no id**. `merge.mjs` deals `SD-nnn` inside the request and KEEPS every
+ *    record the payload does not mention. Sending the drafts we already knew
+ *    about would risk a 409 against anything changed since; sending one record
+ *    cannot.
+ *
+ * This writes to `joe/species-edits.json` and nowhere else. **It cannot touch a
+ * shipped species** — the live twenty-four are frozen, and the only way out of
+ * this page into `src/` is Joe copying the module text himself.
+ */
+async function save(): Promise<void> {
+  if (!def) return
+  await refreshDrafts()
+  const mine = drafts.find(d => d.speciesId === speciesId)
+  const fields = {
+    speciesId,
+    from: defs.has(speciesId) ? speciesId : (mine?.from ?? ''),
+    fromKind: defs.has(speciesId) ? 'built' : 'scratch',
+    collection: mine?.collection ?? '',
+    givenName: givenName || mine?.givenName || '',
+    fact: mine?.fact ?? '',
+    factSource: mine?.factSource ?? '',
+    def,
+    warnings: opened ? warningsFor(def, opened) : [],
+    state: 'draft',
+    note: mine?.note ?? '',
+  }
+  const reply = mine
+    ? await api('/api/save', { what: 'edits', patch: { id: mine.id, ...fields } })
+    : await api('/api/save', {
+      what: 'edits', value: { schemaVersion: 1, nextId: 1, drafts: [fields] },
+    })
+  if (reply['error']) {
+    say(`could not save: ${String(reply['error'])}`, true)
+    return
+  }
+  await refreshDrafts()
+  draftId = drafts.find(d => d.speciesId === speciesId)?.id ?? ''
+  saved = true
+  drawSubjects()
+  drawSaveNote()
+  say(`saved ${draftId || speciesId}`)
+}
+
+el<HTMLButtonElement>('#save').addEventListener('click', () => {
+  void save().catch((error: unknown) => {
+    say(error instanceof Error ? error.message : String(error), true)
+  })
+})
+
+/* ------------------------------------------------------- a new animal, blank */
+
+/**
+ * An animal id from whatever Joe typed.
+ *
+ * UK English, lower case, dashes: `Fen Hare` becomes `animal-fen-hare`, which is
+ * the shape every shipped species id already has and the shape the file name
+ * would take if he takes it out as a module.
+ */
+const idFromName = (name: string): string =>
+  'animal-' + name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+
+/**
+ * Joe's fifth note: *"need a function to start a new animal conmpletely from
+ * scratch."*
+ *
+ * A new animal REFUSES a shipped id. The live twenty-four are frozen, and an
+ * editor that lets a typo put him on top of the hedgehog — thinking he is making
+ * something new — is exactly the accident that must not be possible here. His
+ * drafts are his own and are overwritten happily; only the shipped ones are shut.
+ */
+el<HTMLButtonElement>('#new-animal').addEventListener('click', () => {
+  const name = newName.value.trim()
+  if (!name) { say('give the new animal a name first', true); return }
+  const id = idFromName(name)
+  if (id === 'animal-') { say(`"${name}" leaves nothing to make an id out of`, true); return }
+  if (defs.has(id)) {
+    say(`${id} is a shipped species and is frozen — choose another name`, true)
+    return
+  }
+  const blank = blankDef()
+  draftId = drafts.find(d => d.speciesId === id)?.id ?? ''
+  givenName = name
+  saved = false
+  show(id, blank, blank, `started ${name} — ${id}`)
+  drawSubjects()
+})
+
+subjectPick.addEventListener('change', () => {
+  const value = subjectPick.value
+  if (value.startsWith('draft:')) {
+    const found = drafts.find(d => d.id === value.slice('draft:'.length))
+    if (found) openDraft(found)
+    return
+  }
+  open(value)
+})
+
+/* ----------------------------------------------------------------- the boot */
+
+loadBuiltDefs().then(async loaded => {
+  defs = loaded
+  drawSubjects()
+  fillShapes(insertPick, ALL_SHAPES)
+  insertNote.textContent
+    = `${ALL_SHAPES.length} shapes, grouped by form. An inserted part lands at its own measured join `
+    + 'to this body, and you drag it from there.'
   stage.setSnap(true)
   const first = [...loaded.keys()][0]
-  if (first) { subjectPick.value = first; open(first) }
+  if (first) open(first)
+  /*
+   * The drafts come last and never block the animals. The editor is useful with
+   * no server behind it — that is how it was reviewed — so a workbench served by
+   * something that cannot answer `/api/state` must still open a species.
+   */
+  await refreshDrafts().catch(() => {
+    saveNote.textContent = 'no workbench server, so nothing can be saved from here'
+  })
+  drawSubjects()
 }).catch((error: unknown) => {
   say(error instanceof Error ? error.message : String(error), true)
 })

@@ -21,7 +21,7 @@
  */
 import { describe, it, expect } from 'vitest'
 import {
-  ALL_SHAPES, HULL_SHAPES, AXES, shapeRow, filterShapes, summarise,
+  ALL_SHAPES, HULL_SHAPES, AXES, shapeRow, filterShapes, groupShapes, summarise,
   type ShapeRow,
 } from '../../tools/workbench/public/editor/library'
 import { PARTS_BANK } from '../../src/island/species/parts/bank.generated'
@@ -181,6 +181,90 @@ describe('filterShapes', () => {
       const rows = filterShapes(ALL_SHAPES, { symmetry: sym })
       for (const r of rows) expect(r.symmetry).toBe(sym)
     }
+  })
+})
+
+/**
+ * GROUPING IS NOT FILTERING.
+ *
+ * `form` was measured not to discriminate, so an `<optgroup>` over it is only
+ * allowed to exist because it EXCLUDES NOTHING — the header block above says the
+ * test that matters is behavioural, not a grep, and this is that test for the
+ * dropdown: what goes in comes out, every row, once. Every count below is derived
+ * from the data rather than typed here, so a form added to the bank tomorrow gets
+ * a header instead of falling out of the list.
+ */
+describe('groupShapes gives the dropdown headers without losing a row', () => {
+  const flat = (rows: readonly ShapeRow[]): ShapeRow[] => groupShapes(rows).flatMap(g => [...g.rows])
+
+  it('is exhaustive and lossless over the whole library', () => {
+    const out = flat(ALL_SHAPES)
+    expect(out.length, 'a row went into no group, or into two').toBe(ALL_SHAPES.length)
+    expect(out.map(r => r.id).sort()).toEqual(ALL_SHAPES.map(r => r.id).slice().sort())
+    /* The rows themselves, not copies of them — a group holds what it was given. */
+    for (const r of out) expect(ALL_SHAPES.includes(r), r.id).toBe(true)
+  })
+
+  it('is exhaustive and lossless over the torso shells too', () => {
+    const out = flat(HULL_SHAPES)
+    expect(out.length).toBe(HULL_SHAPES.length)
+    expect(out.map(r => r.id).sort()).toEqual(HULL_SHAPES.map(r => r.id).slice().sort())
+  })
+
+  it('puts every row of a form in that form\'s one group', () => {
+    for (const g of groupShapes(ALL_SHAPES)) {
+      const forms = [...new Set(g.rows.map(r => r.form))]
+      expect(forms.length, `"${g.label}" mixes ${forms.join(', ')}`).toBe(1)
+      expect(g.rows.length, `"${g.label}" is missing rows of its own form`)
+        .toBe(ALL_SHAPES.filter(r => r.form === forms[0]).length)
+    }
+    const labelled = groupShapes(ALL_SHAPES).length
+    expect(labelled, 'one group per form the data actually has')
+      .toBe(new Set(ALL_SHAPES.map(r => r.form)).size)
+  })
+
+  it('emits no empty group — `spike` is declared and has no rows', () => {
+    for (const g of groupShapes(ALL_SHAPES)) {
+      expect(g.rows.length, `"${g.label}" is a header over nothing`).toBeGreaterThan(0)
+    }
+    const labels = groupShapes(ALL_SHAPES).map(g => g.label)
+    expect(labels.some(l => l.startsWith('Spike')),
+      `spike has ${ALL_SHAPES.filter(r => r.form === 'spike').length} rows: ${labels.join(', ')}`)
+      .toBe(false)
+  })
+
+  it('orders the groups alphabetically by form, which needs no judgement call', () => {
+    const forms = groupShapes(ALL_SHAPES).map(g => g.rows[0]!.form)
+    expect(forms).toEqual(forms.slice().sort())
+  })
+
+  it('heads each group with a plural and the count, so Joe knows the scroll', () => {
+    for (const g of groupShapes(ALL_SHAPES)) {
+      expect(g.label, `"${g.label}" does not carry its count`).toContain(`(${g.rows.length})`)
+      expect(g.label[0], `"${g.label}" is not capitalised`).toBe(g.label[0]!.toUpperCase())
+    }
+    const boxes = ALL_SHAPES.filter(r => r.form === 'box').length
+    expect(groupShapes(ALL_SHAPES).map(g => g.label)).toContain(`Boxes (${boxes})`)
+    /* One row of a form is one row, and the header says so rather than "1 Boxs". */
+    const one = ALL_SHAPES.filter(r => r.form === 'box').slice(0, 1)
+    expect(groupShapes(one)[0]!.label).toBe('Box (1)')
+  })
+
+  it('sorts within a group by id NUMERICALLY: box-9 before box-10', () => {
+    for (const g of groupShapes(ALL_SHAPES)) {
+      const ids = g.rows.map(r => r.id)
+      expect(ids, `"${g.label}" is out of order`).toEqual(ids.slice().sort())
+    }
+
+    /* The ids are zero-padded today, so the assertion above passes under a plain
+     * string sort as well. Unpadded is where the two disagree, and the picker
+     * must survive the day one is authored. */
+    const box = ALL_SHAPES.find(r => r.form === 'box')!
+    const unpadded = ['box-10', 'box-1', 'box-9'].map(id => ({ ...box, id }))
+    expect(groupShapes(unpadded)[0]!.rows.map(r => r.id)).toEqual(['box-1', 'box-9', 'box-10'])
+    expect(unpadded.map(r => r.id).sort(),
+      'a plain string sort would have agreed, so this case proves nothing')
+      .not.toEqual(['box-1', 'box-9', 'box-10'])
   })
 })
 
