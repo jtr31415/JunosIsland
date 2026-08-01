@@ -804,10 +804,51 @@ export interface PropField {
   update(dt: number, t: number): void
 }
 
+/**
+ * A 1x1 transparent PNG, and the whole of PB-014's fix.
+ *
+ * All 37 `props/*.gltf` declare `hexagons_medieval.png`, and the props folder
+ * ships only the `_Summer` variant, so every one of them 404s on load. It has
+ * never been a rendering bug — `model()` and `forestModel()` overwrite
+ * `material.map` immediately after load — but a console full of red is a
+ * debugging tool blunted, and this one has already cost two agents their time.
+ *
+ * WHY NOT JUST DELETE THE IMAGE FROM THE 37 FILES, which is the obvious fix and
+ * is wrong. GLTFLoader decides a material's shader defines from what the file
+ * declares. Declaring a `baseColorTexture` is what compiles the map define in,
+ * and NOTHING in this file calls `needsUpdate` after assigning `.map`. Strip the
+ * declaration and the later assignment lands on a material whose shader has no
+ * map — every prop on the island renders untextured. The broken reference is
+ * load-bearing, which is exactly why it survived two agents noticing it.
+ *
+ * WHY NOT POINT IT AT THE _SUMMER FILE that does exist: correct, but it makes
+ * GLTFLoader fetch and decode a full atlas 37 times to build textures that are
+ * thrown away on the next line. A 1x1 costs nothing and is discarded just the
+ * same.
+ *
+ * So: satisfy the declaration, keep the define, skip the network. The texture
+ * this creates is replaced by `sharedAtlas()` or `stoneAtlas()` before anything
+ * is drawn, so the render is byte-for-byte what it was.
+ */
+const BLANK_PNG =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
+
+/**
+ * Exported only so a test can hold it. The suffix is matched exactly: the
+ * `_Summer` atlas beside it is a real file that must still be fetched, and so
+ * is `tiles/hexagons_medieval.png`, which exists and is a different texture on
+ * a different loader.
+ */
+export function resolvePropTextureUrl(url: string): string {
+  return url.endsWith('props/hexagons_medieval.png') ? BLANK_PNG : url
+}
+
 export function createPropField(base = ''): PropField {
   const group = new THREE.Group()
   group.name = 'props'
-  const loader = new GLTFLoader()
+  const manager = new THREE.LoadingManager()
+  manager.setURLModifier(resolvePropTextureUrl)
+  const loader = new GLTFLoader(manager)
   const cache = new Map<string, THREE.Object3D>()
   const placed = new Set<string>()
   const blocks: Array<{ x: number; z: number; r: number }> = []
