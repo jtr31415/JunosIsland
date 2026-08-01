@@ -929,8 +929,17 @@ export function createPropField(base = ''): PropField {
        * `sync()`, which is a loop over every tile, so ONE unloadable model left
        * every remaining hex bare. `increments.ts` already has this rule in as
        * many words — "a missing piece leaves a gap, never a broken build" — and
-       * this is the path that did not. Not marked placed, so a tile that lost a
-       * piece to a flaky fetch is dressed properly on the next sync.
+       * this is the path that did not.
+       *
+       * A LOST PIECE IS LOST FOR THAT SAVE, and this is deliberate. Every one of
+       * the three callers marks the hex `placed` BEFORE it calls scatter, so the
+       * next sync skips the tile and the gap stays a gap. Do not "fix" that by
+       * moving the `placed.add` after the await: scatter has no memory of what it
+       * already grew, so a re-dressed tile would re-run the whole loop and stack
+       * a second copy of every piece that DID load, each with its own blob shadow
+       * and its own entry in `blocks`. One missing tuft is invisible; a doubled
+       * hex is not. The tile-level retry that IS safe is the one above it — a hex
+       * whose ground has not arrived yet is never marked placed at all.
        */
       const bit = await forestModel(name).catch(() => null)
       if (!bit) continue
@@ -1004,8 +1013,22 @@ export function createPropField(base = ''): PropField {
          * straight through them and the island vanished behind a wall of
          * white. Clouds belong in the distance, above the camera's reach.
          */
+        /*
+         * A cloud that will not load costs a cloud, not the island.
+         *
+         * Same rule as the cover and the features below, and the same reason:
+         * this loop is the FIRST thing `sync()` does, so a rejection here took
+         * every tile with it — an island dressed in nothing because a decoration
+         * in the sky 34 units away failed to fetch. Six is already an arbitrary
+         * number; five is a sky, and the child cannot count them.
+         *
+         * No retry, deliberately. `clouds.length` above is the once-only guard,
+         * so a partial sky stays partial rather than growing a new cloud on
+         * every sync until the ring is double-stacked.
+         */
         for (let i = 0; i < 6; i++) {
-          const c = await model(i % 2 ? 'cloud_big' : 'cloud_small')
+          const c = await model(i % 2 ? 'cloud_big' : 'cloud_small').catch(() => null)
+          if (!c) continue
           const a = (i / 6) * Math.PI * 2
           const r = 34 + (i % 3) * 7
           c.position.set(Math.cos(a) * r, 15 + (i % 3) * 3.5, Math.sin(a) * r)
@@ -1035,7 +1058,11 @@ export function createPropField(base = ''): PropField {
           for (let i = 0; i < count; i++) {
             const ih = hash({ q: parts0(k) * 13 + i, r: parts1(k) * 7 - i })
             const name = WATER_PIECES[ih % WATER_PIECES.length] as string
-            const bit = await model(name)
+            // A lily that will not load costs a lily, not the rest of the
+            // island. The hex is still marked dressed below — see `scatter` for
+            // why a half-dressed tile is left alone rather than re-dressed.
+            const bit = await model(name).catch(() => null)
+            if (!bit) continue
             const ang = ((ih >> 4) % 360) * Math.PI / 180
             const rad = hexSize * (0.15 + ((ih >> 7) % 45) / 100)
             bit.position.set(w.x + Math.cos(ang) * rad, 0, w.z + Math.sin(ang) * rad)

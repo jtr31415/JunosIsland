@@ -631,7 +631,21 @@ export function createPetField(base = ''): PetField {
     async sync(pets, island, hexSize) {
       for (const pet of pets) {
         if (live.has(pet.id)) continue
-        const root = await model(pet.species)
+        /*
+         * A friend who will not load costs THAT friend, not the rest of them.
+         *
+         * `void pets.sync(...)` is how main.ts calls this, so a rejection here
+         * was both an unhandled rejection and an abandoned loop: one flaky fetch
+         * and every pet after it in the list simply did not appear on the island
+         * — including, on the worst ordering, the one she had just hatched.
+         *
+         * And unlike the scenery, this one RETRIES for free. Nothing has been
+         * added to the group or to `live` at this point, so the pet is still
+         * unbuilt by every test in this module and the next sync builds it
+         * properly. `bounce` already knows how to wait for a late arrival.
+         */
+        const root = await model(pet.species).catch(() => null)
+        if (!root) continue
         const holder = new THREE.Group()
         // Kenney pets stand ~1.5 units tall against a 2.0-wide hex, which
         // reads as a monument rather than a pet. Scale so one comfortably

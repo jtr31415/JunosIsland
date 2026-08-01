@@ -561,7 +561,21 @@ export function createAlbum(
         cell.onclick = () => popOpen(pet)
 
         grid.append(cell)
-        void portraits.shoot(pet.species).then(url => { if (url) img.src = url })
+        /*
+         * Each portrait is fired on its own and CAUGHT on its own.
+         *
+         * `shoot` fetches a .glb, so it can reject — and this runs once per
+         * friend in the grid, so one bad species used to raise one unhandled
+         * rejection per open of the album. The cell is already complete without
+         * it: the name is under the picture and the alt text is the name, so a
+         * friend whose portrait never arrives is a blank square with her name on
+         * it rather than a hole in the grid. Nothing here abandons the loop —
+         * the sibling cells are already built — this is only about the console
+         * staying readable, which is how the last three of these were found.
+         */
+        void portraits.shoot(pet.species)
+          .then(url => { if (url) img.src = url })
+          .catch(() => { /* no picture of this one; her name is still there */ })
       }
       layer.classList.remove('hide')
     },
