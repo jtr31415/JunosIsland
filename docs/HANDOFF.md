@@ -744,3 +744,31 @@ Any brief §19 argument about pets recovering on their own is false.
 - **`flow.pets[].at` is hatch history, not position**, and `sync` skips pets
   already live. Together those two facts are why a pet fix needs two call sites:
   one for the pet being put down, one for the pet already out walking.
+
+## Landmines added 1 August (PB-054 / PB-009)
+
+- **Resetting a pet's position is not resetting the pet.** `goal`, `restFor`,
+  `phase` and `stuckFor` live in the `live` map in `pets.ts` and all survive a
+  write to `root.position`. A test that "replays a frame" by putting the position
+  back is comparing two different simulations unless it also controls the rng —
+  that was the whole of PB-054's one-run-in-six flake. `createPetField` now takes
+  an `Rng` (`createPetField(base = '', rng = defaultRng)`); seed it in any test
+  that asserts on where a pet ends up. Never a retry loop and never a tolerance:
+  both hide a real degenerate case at the obstacle centre.
+- **`setObstacles` mutates pets; it does not only publish geometry.** It zeroes
+  `restFor` for every pet whose goal the new obstacle covers (`pets.ts:885`), so
+  calling it in a test arms a goal re-draw on the very next frame. It reads like
+  a pure setter and is not one.
+- **`min` in a `{min, span}` pair is a CENTRE, not a floor**, wherever the term
+  added to it is `(h >> n) % span` — a signed shift on an unsigned hash, so the
+  term runs `-(span-1) .. span-1`. `varyMax` had existed for years and nothing
+  did the same job for the floor, so the shadow threshold's lower edge was
+  justified against `VARY.cover.min` (0.560) when the truth is 0.252. `varyMin`
+  (`props.ts`) now derives it. Audit any `.min` used as a lower bound before
+  trusting it.
+- **PB-009 was a test defect, and the render is deliberately unchanged.** 24.5%
+  of dead trunks genuinely earn no blob, and that is correct: `shadowUnder` is a
+  rule about SIZE, not kind, and the smallest trunk (0.252 tall, 0.081 across) is
+  shorter than the reed and narrower than the tuft that the rule excludes on
+  purpose. Shadowing by kind is still available but it adds blobs to islands that
+  already exist, so it needs Joe's ruling, not a manager's judgement.
