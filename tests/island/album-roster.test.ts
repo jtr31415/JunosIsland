@@ -62,6 +62,9 @@ function setup() {
   const album = createAlbum(root, speech, world)
   const all = (sel: string): HTMLElement[] =>
     [...root.querySelectorAll(sel)] as HTMLElement[]
+  /** The two page turns, in the order they sit on the card. */
+  const turns = (): HTMLButtonElement[] =>
+    all('.album-page-turn') as HTMLButtonElement[]
   return {
     root, album,
     sections: () => all('.album-set'),
@@ -69,6 +72,12 @@ function setup() {
     blanks: () => all('.album-blank'),
     owned: () => all('.album-cell:not(.album-blank)'),
     headings: () => all('.album-set-title'),
+    dots: () => all('.album-dot'),
+    here: () => all('.album-dot-here'),
+    back: () => turns()[0] as HTMLButtonElement,
+    on: () => turns()[1] as HTMLButtonElement,
+    /** Turn forward `n` times. The album is a book now, not a scroll. */
+    forward: (n = 1) => { for (let i = 0; i < n; i++) (turns()[1] as HTMLButtonElement).click() },
   }
 }
 
@@ -96,13 +105,19 @@ describe('a slot for every animal in the album', () => {
     expect(filled.map(c => c.name)).toEqual(['Vusp', 'Gachap'])
   })
 
-  it('shows four albums at once, each with its own count', () => {
-    const { album, sections, headings } = setup()
+  it('shows ONE album at a time, with its own count', () => {
+    // One page per album — see the pager in album.ts. Four rosters stacked was
+    // sixty-six slots down a single column, and three of the four counts were
+    // off the bottom of the card.
+    const { album, sections, headings, forward } = setup()
     album.open([FOX], ['base', 'garden', 'home-pets', 'birds'])
-    expect(sections()).toHaveLength(4)
+    expect(sections()).toHaveLength(1)
     expect(headings()[0]?.textContent)
       .toBe(`Base Set1 of ${BASE?.members.length ?? 0}`)
-    expect(headings()[1]?.textContent)
+
+    forward()
+    expect(sections()).toHaveLength(1)
+    expect(headings()[0]?.textContent)
       .toBe(`Garden0 of ${GARDEN?.members.length ?? 0}`)
   })
 
@@ -110,6 +125,73 @@ describe('a slot for every animal in the album', () => {
     const { album, sections } = setup()
     album.open([FOX], ['base', 'atlantis'])
     expect(sections()).toHaveLength(1)
+  })
+})
+
+describe('turning the pages', () => {
+  const FOUR = ['base', 'garden', 'home-pets', 'birds']
+
+  it('gives one dot per page and marks where she is', () => {
+    const { album, dots, here, forward } = setup()
+    album.open([FOX], FOUR)
+    expect(dots()).toHaveLength(4)
+    expect(here()).toHaveLength(1)
+    forward(2)
+    expect(dots()).toHaveLength(4)
+    expect(here()).toHaveLength(1)
+  })
+
+  it('cannot go back off the front or forward off the end', () => {
+    /*
+     * Dimmed rather than removed: a control that vanishes moves the one beside
+     * it, so the forward arrow would slide under her finger on the last page.
+     */
+    const { album, back, on, forward } = setup()
+    album.open([FOX], FOUR)
+    expect(back().disabled).toBe(true)
+    expect(on().disabled).toBe(false)
+    forward(3)
+    expect(back().disabled).toBe(false)
+    expect(on().disabled).toBe(true)
+    // Clicking a dead end changes nothing rather than running off the end.
+    forward(2)
+    expect(on().disabled).toBe(true)
+  })
+
+  it('goes back to where it came from', () => {
+    const { album, headings, back, forward } = setup()
+    album.open([FOX], FOUR)
+    forward(2)
+    const there = headings()[0]?.textContent
+    forward()
+    back().click()
+    expect(headings()[0]?.textContent).toBe(there)
+  })
+
+  it('hides the pager when there is only one album', () => {
+    // One page is not a book. Nothing to turn, so nothing to turn it with.
+    const { album, root } = setup()
+    album.open([FOX], ['base'])
+    expect(root.querySelector('.album-pager')?.classList.contains('hide')).toBe(true)
+  })
+
+  it('opens on the first page every time, not where she left off', () => {
+    const { album, headings, forward } = setup()
+    album.open([FOX], FOUR)
+    forward(3)
+    album.open([FOX], FOUR)
+    expect(headings()[0]?.textContent).toContain('Base Set')
+  })
+
+  it('builds only the page she is looking at', () => {
+    /*
+     * Every cell asks the portrait renderer for a picture, so rendering all
+     * five pages to show one of them is the cost the stacked version paid on
+     * every open. The base set is the only page in the DOM until she turns.
+     */
+    const { album, slots } = setup()
+    album.open([FOX], FOUR)
+    expect(slots()).toHaveLength(BASE?.members.length ?? 0)
   })
 })
 
@@ -158,24 +240,27 @@ describe('nobody she owns is ever lost', () => {
      * repeats again the moment a pack is exhausted, so this is reachable rather
      * than theoretical.
      */
-    const { album, sections, owned } = setup()
+    const { album, sections, owned, dots, forward } = setup()
     album.open([FOX, FOX2], ['base'])
-    expect(sections()).toHaveLength(2)
-    expect(sections()[1]?.textContent).toContain('More friends')
+    // A page of their own, at the end of the book.
+    expect(dots()).toHaveLength(2)
+    forward()
+    expect(sections()[0]?.textContent).toContain('More friends')
     expect(owned().map(c => c.textContent)).toContain('Rellow')
   })
 
   it('keeps a species no open album lists', () => {
-    const { album, sections, owned } = setup()
+    const { album, sections, owned, forward } = setup()
     album.open([FOX, STRANGER], ['base'])
-    expect(sections()[1]?.textContent).toContain('More friends')
+    forward()
+    expect(sections()[0]?.textContent).toContain('More friends')
     expect(owned().map(c => c.textContent)).toContain('Moth')
   })
 
-  it('adds no such section when every friend has a slot', () => {
-    const { album, sections } = setup()
+  it('adds no such page when every friend has a slot', () => {
+    const { album, dots } = setup()
     album.open([FOX, BEE], ['base'])
-    expect(sections()).toHaveLength(1)
+    expect(dots()).toHaveLength(1)
   })
 
   it('shows the FIRST of a species in the slot, so it never changes hands', () => {

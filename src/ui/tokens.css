@@ -302,8 +302,15 @@ body:has(.overlay:not(.hide)) .album-button { display: none; }
 
 .album-card {
   position: relative;
-  width: min(94vw, 62rem);
-  max-height: 88vh;
+  /*
+   * WIDER AND TALLER since the album became a book (Joe, 1 Aug: "make the modal
+   * a bit bigger for less scrolling"). The biggest page is the base set at
+   * twenty-four, and at this width that is three rows of eight rather than four
+   * of six — which, with one album per page instead of four stacked, is the
+   * difference between a card you read and a card you scroll.
+   */
+  width: min(96vw, 76rem);
+  max-height: 92vh;
   overflow-y: auto;
   background: var(--paper);
 }
@@ -316,8 +323,70 @@ body:has(.overlay:not(.hide)) .album-button { display: none; }
 
 .album-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
-  gap: 1rem;
+  /* 6.6rem rather than 7.5: eight to a row on the wider card, so the base set's
+     twenty-four fit in three rows and the count stays on screen with them. */
+  grid-template-columns: repeat(auto-fill, minmax(6.6rem, 1fr));
+  gap: .8rem;
+}
+
+/* ---- turning the pages ---- */
+
+.album-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.2rem;
+  /*
+   * STUCK TO THE BOTTOM OF THE CARD, because the pages are not all the same
+   * length — twelve for a conservation tier, twenty-four for the base set — and
+   * on a short window the longest of them pushed the turns below the fold. A
+   * page-turn you have to scroll to find is a page-turn a six-year-old does not
+   * know is there. Sticky rather than fixed, so it sits inside the paper and
+   * scrolls with the card on a tall screen where there is room for it.
+   */
+  position: sticky;
+  bottom: 0;
+  margin-top: 1rem;
+  padding: .7rem 0 .2rem;
+  background: var(--paper);
+}
+
+.album-page-turn {
+  width: 3rem;
+  height: 3rem;
+  padding: 0;
+  border-radius: 999px;
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+/*
+ * A turn that would go nowhere is DIMMED, not hidden. A control that vanishes
+ * moves the one beside it, so the forward arrow would slide under her finger
+ * the moment she reached the last page.
+ */
+.album-page-turn:disabled {
+  opacity: .3;
+  cursor: default;
+}
+
+.album-dots {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+}
+
+.album-dot {
+  width: .7rem;
+  height: .7rem;
+  border-radius: 999px;
+  background: var(--ink);
+  opacity: .22;
+}
+
+.album-dot-here {
+  opacity: .8;
+  transform: scale(1.35);
 }
 
 /* ---- one album: a heading with its count, then its roster ---- */

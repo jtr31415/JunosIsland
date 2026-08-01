@@ -383,7 +383,47 @@ export function createAlbum(
   shut.textContent = '✕'
   shut.setAttribute('aria-label', 'close the album')
 
-  card.append(shut, title, grid)
+  /*
+   * ONE ALBUM PER PAGE, turned by hand.
+   *
+   * Joe, 1 Aug: *"change the album to click through pages and make the modal a
+   * bit bigger for less scrolling."* Four rosters stacked came to sixty-six
+   * slots down one column, which is a scroll rather than a book — and the count
+   * beside each heading, which is the whole motivation device, was off the
+   * bottom of the card for three albums out of four.
+   *
+   * A page is an ALBUM, not a fixed number of cells. That is what makes the
+   * back-and-forward meaningful: every turn lands on a heading, a count and a
+   * complete collection, so "how am I doing on the Garden" is one tap and never
+   * a scroll. It also means a page's length is the collection's — twelve to
+   * twenty-four — and the card is sized for the largest of them.
+   */
+  const pager = document.createElement('div')
+  pager.className = 'album-pager'
+
+  const back = document.createElement('button')
+  back.className = 'chunk chunk-button album-page-turn'
+  back.textContent = '‹'
+  back.setAttribute('aria-label', 'the album before this one')
+
+  const on = document.createElement('button')
+  on.className = 'chunk chunk-button album-page-turn'
+  on.textContent = '›'
+  on.setAttribute('aria-label', 'the next album')
+
+  /**
+   * Which page she is on, as dots rather than as "3 of 5".
+   *
+   * There is already a number on this card — the `2 of 14` beside the heading,
+   * which counts ANIMALS — and a second x-of-y three centimetres away counting
+   * pages is the kind of collision a six-year-old reads as one broken number.
+   * Dots say the same thing without competing with it.
+   */
+  const dots = document.createElement('div')
+  dots.className = 'album-dots'
+
+  pager.append(back, dots, on)
+  card.append(shut, title, grid, pager)
   layer.append(card)
 
   /* ---------- the pop-out ---------- */
@@ -742,17 +782,21 @@ export function createAlbum(
       const mine = new Map<string, Pet>()
       for (const pet of pets) if (!mine.has(pet.species)) mine.set(pet.species, pet)
 
-      grid.replaceChildren()
+      /*
+       * The pages are DECIDED here and BUILT one at a time below.
+       *
+       * Deciding up front is what lets the dots be drawn before she has turned
+       * to anything, and building lazily is what keeps a turn cheap: a page is
+       * up to twenty-four cells, each of which asks the portrait renderer for a
+       * picture, and rendering all five pages to show one of them was the cost
+       * the stacked version was paying on every open.
+       */
+      const pages = albums.filter(id => collection(id) !== undefined)
       const shown = new Set<string>()
-      for (const id of albums) {
-        const section = sectionFor(id, mine)
-        if (!section) continue
-        for (const m of collection(id)?.members ?? []) shown.add(m)
-        grid.append(section)
-      }
+      for (const id of pages) for (const m of collection(id)?.members ?? []) shown.add(m)
 
       /*
-       * Anybody the four albums did not account for.
+       * Anybody the albums did not account for, on a last page of their own.
        *
        * Two ways in, and both are real: a duplicate species once a pack is
        * exhausted (`collection.ts` starts dealing repeats again at that point),
@@ -762,7 +806,11 @@ export function createAlbum(
        */
       const orphans = pets.filter(
         p => !(shown.has(p.species) && mine.get(p.species) === p))
-      if (orphans.length > 0) {
+
+      const count = pages.length + (orphans.length > 0 ? 1 : 0)
+      let at = 0
+
+      const spare = (): HTMLElement => {
         const section = document.createElement('section')
         section.className = 'album-set'
         const head = document.createElement('h3')
@@ -772,8 +820,41 @@ export function createAlbum(
         row.className = 'album-grid'
         for (const pet of orphans) row.append(cellFor(pet))
         section.append(head, row)
-        grid.append(section)
+        return section
       }
+
+      /**
+       * Turn to a page.
+       *
+       * The scroll goes back to the top on every turn. A page turned while
+       * halfway down the last one starts halfway down this one, which reads as
+       * the card having jumped — and on a shorter collection there may be
+       * nothing there at all.
+       */
+      const turn = (to: number): void => {
+        at = Math.max(0, Math.min(count - 1, to))
+        const page = at < pages.length
+          ? sectionFor(pages[at] as string, mine)
+          : spare()
+        grid.replaceChildren(...(page ? [page] : []))
+        card.scrollTop = 0
+
+        back.disabled = at === 0
+        on.disabled = at >= count - 1
+        // One page is not a book: nothing to turn, so nothing to turn it with.
+        pager.classList.toggle('hide', count <= 1)
+
+        dots.replaceChildren()
+        for (let i = 0; i < count; i++) {
+          const dot = document.createElement('span')
+          dot.className = i === at ? 'album-dot album-dot-here' : 'album-dot'
+          dots.append(dot)
+        }
+      }
+
+      back.onclick = () => turn(at - 1)
+      on.onclick = () => turn(at + 1)
+      turn(0)
       layer.classList.remove('hide')
     },
 
