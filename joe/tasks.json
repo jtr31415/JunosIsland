@@ -521,6 +521,20 @@
       "check": "",
       "note": "",
       "state": "open"
+    },
+    {
+      "id": "JT-040",
+      "type": "ruling",
+      "title": "Does the lion's tail read as a goldfish's fin? (PB-036)",
+      "detail": "The goldfish is built and Home Pets is now 16 of 16. Everything on it is the pack's own fish — box-20 is the hull the fish donated, box-19 is the fish's own shell-ring worn upright as a dorsal and ventral fin, plate-08 is the fish's round eye and plate-03 its mouth card. One part is NOT: the tail. The bank has no fin, no flipper and no fluke at all — that is measured, and docs/how-the-animals-are-made.md section 14 names the same absence as the reason the whole Ocean collection cannot be built. So the caudal fin is wedge-15, the LION's tail, and it is the only one of the pack's seven tails nothing else had spent. Numerically it is a good fit: 0.280 across, 1.0824 tall, 0.5552 long, tapering to half along its length, mounted at the body's own centre pointing straight back — a thin vertical blade, which is the right shape. Whether it READS as a goldfish's fan at tablet distance is a look, and looks are yours. FABLE WAS NOT ASKED, deliberately: the orders say a decision that changes what a child sees is not Fable's to settle. NOTHING ELSE DEPENDS ON THIS. If you say no, the fallback is not another shape, because there is not one — it is either authored geometry under rule 1's escape clause (which you have invoked exactly once, for the hedgehog's nose) or the goldfish keeps a stub tail and finds its 114 vertices somewhere else, since rule 9's VERTEX floor is what that part is really carrying. Reversing it changes one commit, the feat(PB-036) that added animal-goldfish.ts, and no other species. Two other things on these two animals are also unreviewed and are called out in their own flags: both palettes (neither species was ever in its collection file to be given colours) and the crocodile's deliberate absence of teeth, which brief 19's 'bright, never scary' is the reason for. And nobody has LOOKED at either animal in the viewer yet — port 4173 was bound by another worktree's server during the run.",
+      "blocks": [
+        "PB-036"
+      ],
+      "artefact": "src/island/species/parts/assembled/animal-goldfish.ts",
+      "doneRule": "manual",
+      "check": "",
+      "note": "",
+      "state": "open"
     }
   ],
   "archive": []
