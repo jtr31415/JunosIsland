@@ -25,6 +25,37 @@
  * The four albums come from `species/unlock.ts` by way of `species/opened.ts`.
  * This file is handed the list and does not decide it.
  *
+ * ## A SLOT MEANS SOMEBODY BUILT THE ANIMAL — the roster is not the view
+ *
+ * Joe, 2 August: *"i can still see all the empty slots from the blocky animals
+ * in the albums by the way. we should remove them all and they get built up as
+ * soon as i push new animals to the game."*
+ *
+ * This page used to draw one frame per ROSTER member, so PB-036 deleting the
+ * fifty-nine kit-built species left fifty-nine frames with nothing behind them —
+ * Africa was sixteen frames and one crocodile. The roster did not change and was
+ * not meant to: it says what a collection WILL hold, and `naming.ts` allocates
+ * given names across all 320 of it precisely so that building a new animal
+ * cannot rename one a child already owns. **So the album filters its VIEW and
+ * never the roster.** Editing roster membership or order renames creatures.
+ *
+ * The filter is `species/built.ts`, and it is ONE predicate used by the count,
+ * the frames, the page list and the prefetch — they were four separate reads of
+ * `set.members` before, which is exactly the drift `docs/HANDOFF.md` means by
+ * "the offer is DERIVED from the choke point, not kept in step with it". A
+ * collection with nothing built in it is not a page at all: no name, no count,
+ * no "coming soon". The album grows as the animals do.
+ *
+ * Two consequences worth knowing before you touch it:
+ *
+ *   - **Built, not signed off.** Joe chose this knowing what it costs: the album
+ *     shows animals the child cannot yet hatch, because `pool.ts`'s sign-off gate
+ *     still decides what is DEALT. A silhouette here is "this one exists", not
+ *     "this one is coming to you next".
+ *   - **Nothing owned is lost by it.** A pet whose species no longer has a frame
+ *     falls through to the "More friends" page below, because `shown` is built
+ *     from the same filtered lists — brief §19, and see the note on `orphans`.
+ *
  * Portraits are RENDERED from the live models rather than drawn: hand-drawn
  * art for a ~1,000-variant space is impossible and would drift from the models
  * the moment either changed. Same code path will feed the Pet-o-matic.
@@ -72,6 +103,7 @@ import { speciesRecord } from './species/registry'
 import { buildSpecies } from './species/kit'
 import { buildAssembly } from './species/parts/assembly'
 import { collection, SPECIES_COLLECTION } from './species/roster'
+import { builtIn } from './species/built'
 import type { Pet } from './flow'
 import type { Speaker } from '../platform/speech'
 
@@ -130,11 +162,18 @@ function createPortraitRenderer(
   /**
    * Species -> portrait, cached as a PROMISE, and INCLUDING the misses.
    *
-   * `null` is cached as hard as a hit. The roster has 320 species and only 98 of
-   * them can be drawn at all, so an album full of blank slots asks this renderer
-   * for the same two hundred impossible portraits every single time it is
-   * opened; without the negative entry that is a fresh `buildSpecies` traverse,
-   * or a fresh 404, per slot per open.
+   * `null` is cached as hard as a hit. This mattered enormously when the album
+   * drew a frame per roster member: 320 slots, of which only the built ones can
+   * be drawn, meant asking for the same two hundred impossible portraits on
+   * every open — a fresh `buildSpecies` traverse, or a fresh 404, per slot per
+   * open. The grid now asks only for species `built.ts` says exist, so that
+   * traffic is gone rather than merely cached.
+   *
+   * KEEP THE NEGATIVE ENTRY ANYWAY. The orphans page still holds pets from a
+   * save this build does not fully understand, `shapeOf` still guesses at the
+   * pack for an id it has never heard of, and a `buildAssembly` that throws
+   * still lands here — so the misses did not stop happening, they stopped being
+   * the majority.
    *
    * The PROMISE rather than the finished data URL, exactly as `pets.ts:526` does
    * and for the same reason. A cache of finished results is only consulted once
@@ -807,16 +846,23 @@ export function createAlbum(
   }
 
   /**
-   * One album: a heading, a count, and a slot for every species in it.
+   * One album: a heading, a count, and a slot for every BUILT species in it.
    *
    * IN ROSTER ORDER, never in the order they were found. The roster order is the
    * same on every island, which is what makes the shape of a half-finished album
    * something two children can talk about — roster §3's "playground currency"
-   * applied to the page rather than to the names on it.
+   * applied to the page rather than to the names on it. `builtIn` filters that
+   * order and never reorders it, so a new animal only ever INSERTS a frame.
+   *
+   * THE COUNT AND THE FRAMES COME FROM THE SAME LIST, read once. They were two
+   * separate walks of `set.members` three lines apart, which is how a heading
+   * ends up promising a number the grid below it does not show.
    */
   function sectionFor(id: string, mine: ReadonlyMap<string, Pet>): HTMLElement | null {
     const set = collection(id)
     if (!set) return null
+
+    const members = builtIn(id)
 
     const section = document.createElement('section')
     section.className = 'album-set'
@@ -825,15 +871,15 @@ export function createAlbum(
     head.className = 'album-set-title'
     head.textContent = set.name
 
-    const have = set.members.filter(m => mine.has(m)).length
+    const have = members.filter(m => mine.has(m)).length
     const count = document.createElement('span')
     count.className = 'album-set-count'
-    count.textContent = `${have} of ${set.members.length}`
+    count.textContent = `${have} of ${members.length}`
     head.append(count)
 
     const row = document.createElement('div')
     row.className = 'album-grid'
-    for (const species of set.members) {
+    for (const species of members) {
       const pet = mine.get(species)
       row.append(pet ? cellFor(pet) : blankFor(species))
     }
@@ -871,18 +917,37 @@ export function createAlbum(
        * for a picture, and rendering all five pages to show one of them was the
        * cost the stacked version was paying on every open.
        */
-      const pages = albums.filter(id => collection(id) !== undefined)
+      /*
+       * A COLLECTION WITH NOTHING BUILT IS NOT A PAGE. Joe's second ruling, and
+       * it subsumes the filter that was here before: `builtIn` answers with an
+       * empty list for an id this build cannot resolve as well as for one whose
+       * animals nobody has made yet, so "can I draw this album" and "is there
+       * anything in it" are one question with one answer.
+       */
+      const pages = albums.filter(id => builtIn(id).length > 0)
       const shown = new Set<string>()
-      for (const id of pages) for (const m of collection(id)?.members ?? []) shown.add(m)
+      for (const id of pages) for (const m of builtIn(id)) shown.add(m)
 
       /*
        * Anybody the albums did not account for, on a last page of their own.
        *
-       * Two ways in, and both are real: a duplicate species once a pack is
-       * exhausted (`collection.ts` starts dealing repeats again at that point),
-       * and a species belonging to an album that is not open on this island —
-       * which a save from a later build can carry. Neither has a slot, and
-       * neither may vanish.
+       * THREE ways in now, and all of them are real:
+       *
+       *   - a duplicate species once a pack is exhausted (`collection.ts` starts
+       *     dealing repeats again at that point);
+       *   - a species belonging to an album that is not open on this island,
+       *     which a save from a later build can carry;
+       *   - **a species that no longer has a frame**, because the animal behind
+       *     it was never built or was deleted after she met one. PB-036 deleted
+       *     fifty-nine, so this is a live case rather than a defensive one.
+       *
+       * The third is why `shown` is built from `builtIn` and not from the roster,
+       * and it is the whole of the brief §19 argument for this change: a pet
+       * whose frame went away is not dropped, it is gathered here — with its
+       * name, its portrait, its pop-out and "find on the map", exactly as it had
+       * on the page it fell off. Filtering the cells without filtering `shown`
+       * would have lost her a friend silently, which is the failure this file's
+       * own note at `orphans` was already written to prevent.
        */
       const orphans = pets.filter(
         p => !(shown.has(p.species) && mine.get(p.species) === p))
@@ -930,8 +995,16 @@ export function createAlbum(
        * simply cold again when the child gets there.
        */
       const warmNext = (): void => {
+        /*
+         * THE SAME FILTERED LIST THE NEXT PAGE WILL DRAW. `pages` has already
+         * had the empty collections taken out of it, so `at + 1` still means the
+         * page the child is one tap away from — but the members must come from
+         * `builtIn` too, or this warms portraits for species that page will not
+         * show and skips none of the ones it will. It is also what stops the
+         * prefetch asking the renderer for two hundred shapes that do not exist.
+         */
         const members = at + 1 < pages.length
-          ? collection(pages[at + 1] as string)?.members
+          ? builtIn(pages[at + 1] as string)
           : undefined
         if (!members?.length) return
         const soon = (): void => {

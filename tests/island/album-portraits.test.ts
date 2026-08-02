@@ -33,7 +33,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import * as THREE from 'three'
 import { createAlbum } from '../../src/island/album'
 import type { AlbumWorld } from '../../src/island/album'
-import { collection } from '../../src/island/species/roster'
+import { builtIn } from '../../src/island/species/built'
 import type { Pet } from '../../src/island/flow'
 
 /** What reached the fake GPU: one entry per portrait, and what was in the scene. */
@@ -86,7 +86,17 @@ vi.mock('three/examples/jsm/loaders/GLTFLoader.js', async () => {
   return { GLTFLoader }
 })
 
-const BASE = collection('base')
+/**
+ * How many portraits one open of the base page is WORTH — the built animals, not
+ * the rostered ones.
+ *
+ * Since Joe's 2 Aug ruling the album draws a frame only where somebody has built
+ * the animal, and this file's counts are all "one request per frame" claims: ask
+ * `collection('base').members` for the number and the assertions stop being about
+ * the page and start being about the roster that page is filtered from. The two
+ * are both 24 today, which is exactly why the wrong one would go unnoticed.
+ */
+const BASE_BUILT = builtIn('base')
 const FOX = 'animal-fox'
 
 const pet = (id: string, name: string, species: string): Pet =>
@@ -188,15 +198,22 @@ describe('the portraits are the island\'s own models', () => {
     album.open([GACHAP], ['base'])
     await settle()
     expect(portraits().filter(src => src === PORTRAIT).length)
-      .toBe(BASE?.members.length ?? 0)
+      .toBe(BASE_BUILT.length)
   })
 
   it('asks the island once per species on the page, and no more', async () => {
+    /*
+     * Once per FRAME, and there is a frame only where an animal was built — so a
+     * page never asks the island for a species it is not going to show. That is
+     * the second half of `shapeOf`'s "no request is made for a species the roster
+     * knows and cannot build": before the filter, opening the album put a request
+     * behind every blank on it.
+     */
     const { album, asked, times } = setup()
     album.open([GACHAP], ['base'])
     await settle()
     expect(times(FOX)).toBe(1)
-    expect(asked).toHaveLength(BASE?.members.length ?? 0)
+    expect(asked).toHaveLength(BASE_BUILT.length)
   })
 
   it('hands the model back without disposing anything it shares', async () => {
@@ -245,7 +262,7 @@ describe('two requests for one species do the work once', () => {
     held.open()
     await settle()
     expect(times(FOX)).toBe(1)
-    expect(gpu.encodes).toBe(BASE?.members.length ?? 0)
+    expect(gpu.encodes).toBe(BASE_BUILT.length)
   })
 
   it('lets a page they have already seen come back with no work at all', async () => {
@@ -263,7 +280,15 @@ describe('two requests for one species do the work once', () => {
 /* ------------------------------------------------------------------ */
 
 describe('a turn warms the page they are about to reach', () => {
-  /** Fox lives only in the base set, so a count of it names the page exactly. */
+  /**
+   * Fox lives only in the base set, so a count of it names the page exactly.
+   *
+   * Every collection named in this suite must have something BUILT in it, or the
+   * album drops it and the page the fox is on is not the page these tests think
+   * it is. Garden (14 of 14), Home Pets (16 of 16) and Night Time (13 of 16) all
+   * qualify; Birds, which used to pad the book out below, is 0 of 18 and no
+   * longer exists as a page at all.
+   */
   const AFTER = ['garden', 'base']
 
   it('takes the next page\'s portraits while they are looking at this one', async () => {
@@ -292,9 +317,15 @@ describe('a turn warms the page they are about to reach', () => {
      * removed. A child who never turns past the first page must not pay for four
      * rosters they are not looking at — so the base set, three pages away, is
      * still untouched here.
+     *
+     * The third page is `night-time` rather than `birds` for the reason on
+     * `AFTER` above: Birds is built-empty, so the old fixture laid out three
+     * pages and stood the base set two away instead of three. It still passed,
+     * which is the trouble — it was no longer testing a warm that stops one page
+     * short of a book's worth.
      */
     const { album, times } = setup()
-    album.open([GACHAP], ['garden', 'home-pets', 'birds', 'base'])
+    album.open([GACHAP], ['garden', 'home-pets', 'night-time', 'base'])
     await settle()
     expect(times(FOX)).toBe(0)
   })

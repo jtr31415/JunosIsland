@@ -18,7 +18,26 @@
  *      so a duplicate, or an animal from an album that is not open, has to go
  *      somewhere. Brief §19 is that nothing they own is ever lost, and this is
  *      exactly the sort of change that loses somebody quietly.
- *   3. THE SLOTS ARE THE ROSTER'S, in the roster's order, on every island.
+ *   3. THE SLOTS ARE THE BUILT ANIMALS, in roster order, on every island.
+ *
+ * ## A SLOT IS AN ANIMAL SOMEBODY BUILT — why nothing here counts `members`
+ *
+ * Joe, 2 August, after PB-036 deleted fifty-nine kit-built species and left
+ * fifty-nine empty frames behind: *"i can still see all the empty slots from the
+ * blocky animals in the albums... we should remove them all and they get built up
+ * as soon as i push new animals to the game."*
+ *
+ * So the album filters its VIEW through `species/built.ts` — the roster itself is
+ * untouched, and must be, because `naming.ts` allocates given names across all
+ * 320 of it. Every length assertion below therefore derives from `builtIn(id)`
+ * rather than from `collection(id).members`. That is not cosmetic: base happens
+ * to be 24 built of 24 rostered, so counting members would still pass here today
+ * and would quietly stop meaning anything the first time Joe pushes an animal
+ * into a half-finished collection. Deriving keeps each one saying the thing the
+ * album actually promises.
+ *
+ * The other half of the rule — a collection with NOTHING built gets no page at
+ * all — is why the four-page fixture below is `night-time` and not `birds`.
  *
  * jsdom has no WebGL, so no portrait is ever taken here — which is the honest
  * environment for these assertions anyway: every one of them is about the DOM
@@ -28,11 +47,32 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import * as THREE from 'three'
 import { createAlbum } from '../../src/island/album'
 import type { AlbumWorld } from '../../src/island/album'
-import { collection } from '../../src/island/species/roster'
+import { builtIn } from '../../src/island/species/built'
 import type { Pet } from '../../src/island/flow'
 
-const BASE = collection('base')
-const GARDEN = collection('garden')
+/**
+ * The pages the album will actually draw, not the collections' membership.
+ *
+ * `builtIn` is the album's own filter, so a count taken from it cannot drift from
+ * the number of frames on the page — see the header. Base is whole (24 of 24) and
+ * Garden is whole (14 of 14) today; that is a fact about this week rather than a
+ * property, which is exactly why neither number is written down here.
+ */
+const BASE_BUILT = builtIn('base')
+const GARDEN_BUILT = builtIn('garden')
+
+/**
+ * FOUR PAGES, and every one of them has to have something built in it.
+ *
+ * This used to end in `birds`, which is 0 built of 18 and so is no longer a page
+ * at all — a four-album fixture that quietly laid out three, taking every dot,
+ * arrow-edge and page-turn assertion below off by one. `night-time` is the
+ * replacement because it is the opposite case and worth exercising: 13 built of
+ * 16 rostered, so it is a real page that is nonetheless smaller than its
+ * collection. Shared with the heading test above, so there is one place to change
+ * when Joe finishes a set.
+ */
+const FOUR = ['base', 'garden', 'home-pets', 'night-time']
 
 const pet = (id: string, name: string, species: string): Pet =>
   ({ id, name, species, at: { q: 0, r: 0 } })
@@ -43,6 +83,12 @@ const BEE = pet('p2', 'Vusp', 'animal-bee')
 const FOX2 = pet('p3', 'Rellow', 'animal-fox')
 /** A species no open album lists — what a save from a later build can carry. */
 const STRANGER = pet('p4', 'Moth', 'animal-from-the-future')
+/**
+ * A friend whose SPECIES no longer has a frame. Africa is an open page (the
+ * crocodile is built) but the zebra is one of the fifty-nine PB-036 deleted, so
+ * this pet's album exists and its slot does not. See the orphans suite.
+ */
+const ZEBRA = pet('p5', 'Pilm', 'animal-zebra')
 
 function setup() {
   const root = document.createElement('div')
@@ -84,10 +130,16 @@ function setup() {
 afterEach(() => { document.body.innerHTML = '' })
 
 describe('a slot for every animal in the album', () => {
-  it('draws the whole roster, not just the ones they have', () => {
+  it('draws every animal that has been built, not just the ones they have', () => {
+    /*
+     * The blanks are the point: one frame per BUILT species, whether or not the
+     * child has met it. It was one frame per rostered species until Joe's 2 Aug
+     * ruling, and the two numbers are still the same for the base set — so this
+     * asks `builtIn` rather than `members` to keep saying the former.
+     */
     const { album, slots, owned } = setup()
     album.open([FOX], ['base'])
-    expect(slots()).toHaveLength(BASE?.members.length ?? 0)
+    expect(slots()).toHaveLength(BASE_BUILT.length)
     expect(owned()).toHaveLength(1)
   })
 
@@ -110,15 +162,15 @@ describe('a slot for every animal in the album', () => {
     // sixty-six slots down a single column, and three of the four counts were
     // off the bottom of the card.
     const { album, sections, headings, forward } = setup()
-    album.open([FOX], ['base', 'garden', 'home-pets', 'birds'])
+    album.open([FOX], FOUR)
     expect(sections()).toHaveLength(1)
     expect(headings()[0]?.textContent)
-      .toBe(`Base Set1 of ${BASE?.members.length ?? 0}`)
+      .toBe(`Base Set1 of ${BASE_BUILT.length}`)
 
     forward()
     expect(sections()).toHaveLength(1)
     expect(headings()[0]?.textContent)
-      .toBe(`Garden0 of ${GARDEN?.members.length ?? 0}`)
+      .toBe(`Garden0 of ${GARDEN_BUILT.length}`)
   })
 
   it('skips an album this build cannot resolve rather than drawing it empty', () => {
@@ -126,11 +178,25 @@ describe('a slot for every animal in the album', () => {
     album.open([FOX], ['base', 'atlantis'])
     expect(sections()).toHaveLength(1)
   })
+
+  it('skips an album nobody has built an animal for yet, for the same reason', () => {
+    /*
+     * Joe's second ruling, and the reason the test above still passes without a
+     * resolvability check of its own: `builtIn` answers with an empty list for a
+     * collection id this build has never heard of AND for one whose animals are
+     * all still to come, so "can the album draw this" and "is there anything in
+     * it" became one question with one answer. Birds is 0 built of 18 rostered —
+     * a perfectly real collection with no page. No heading, no count, no "coming
+     * soon"; the album grows as the animals do.
+     */
+    const { album, sections, headings } = setup()
+    album.open([FOX], ['base', 'birds'])
+    expect(sections()).toHaveLength(1)
+    expect(headings()[0]?.textContent).toContain('Base Set')
+  })
 })
 
 describe('turning the pages', () => {
-  const FOUR = ['base', 'garden', 'home-pets', 'birds']
-
   it('gives one dot per page and marks where they are', () => {
     const { album, dots, here, forward } = setup()
     album.open([FOX], FOUR)
@@ -191,7 +257,7 @@ describe('turning the pages', () => {
      */
     const { album, slots } = setup()
     album.open([FOX], FOUR)
-    expect(slots()).toHaveLength(BASE?.members.length ?? 0)
+    expect(slots()).toHaveLength(BASE_BUILT.length)
   })
 })
 
@@ -257,6 +323,24 @@ describe('nobody they own is ever lost', () => {
     expect(owned().map(c => c.textContent)).toContain('Moth')
   })
 
+  it('keeps a friend whose species no longer has a frame', () => {
+    /*
+     * THE THIRD WAY IN, and the one Joe's 2 Aug ruling opened. Africa is an open
+     * page — the crocodile is built — so this is not the case above: the child's
+     * album IS listed and her friend still has no slot in it, because the zebra
+     * is one of the fifty-nine PB-036 deleted. Filtering the cells without also
+     * filtering `shown` would have dropped her silently, which is the one thing
+     * brief §19 forbids. She keeps her name, her portrait and her pop-out; she
+     * just keeps them on the page at the back.
+     */
+    const { album, sections, owned, dots, forward } = setup()
+    album.open([ZEBRA], ['africa'])
+    expect(dots(), 'the crocodile page, and one for her').toHaveLength(2)
+    forward()
+    expect(sections()[0]?.textContent).toContain('More friends')
+    expect(owned().map(c => c.textContent)).toContain('Pilm')
+  })
+
   it('adds no such page when every friend has a slot', () => {
     const { album, dots } = setup()
     album.open([FOX, BEE], ['base'])
@@ -264,9 +348,15 @@ describe('nobody they own is ever lost', () => {
   })
 
   it('shows the FIRST of a species in the slot, so it never changes hands', () => {
+    /*
+     * The index is the fox's place among the BUILT animals, which is where the
+     * album puts its frame. It is 12 in the roster too, because the base set is
+     * whole — take this from `members` and it would silently start pointing at
+     * the wrong cell the first time a base animal went missing.
+     */
     const { album, slots } = setup()
     album.open([FOX, FOX2], ['base'])
-    const at = BASE?.members.indexOf('animal-fox') ?? -1
+    const at = BASE_BUILT.indexOf('animal-fox')
     expect(slots()[at]?.textContent).toBe('Gachap')
   })
 })
@@ -276,7 +366,7 @@ describe('an empty album', () => {
     const { album, blanks, owned, root } = setup()
     album.open([], ['base'])
     expect(owned()).toHaveLength(0)
-    expect(blanks()).toHaveLength(BASE?.members.length ?? 0)
+    expect(blanks()).toHaveLength(BASE_BUILT.length)
     expect(root.querySelector('.album-title')?.textContent)
       .toBe('Your friends will appear here')
   })
