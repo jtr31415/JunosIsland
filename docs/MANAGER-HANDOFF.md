@@ -1,10 +1,136 @@
 # Manager handoff
 
-> ## ⚠ START HERE — state at handover, 3 Aug 2026 (early hours)
+> ## ⚠ START HERE — state at handover, 3 Aug 2026 (PB-062, the hedgehog's nose)
 >
-> *Written by the manager that built Home Pets. **This block is the current one.**
-> Everything below it is history, including the two that call themselves current
-> — they were, last night.*
+> ***This block is the current one.** Everything below it is history, including
+> every block that calls itself current — each one was, at the time.*
+>
+> ### What this run did, in one line
+>
+> **The six tests `382e9a9` left red are green, and the hedgehog's flag no longer
+> describes geometry that does not exist.** Branch
+> **`worktree-agent-a93924107db779e82`**, branched at `382e9a9`, two commits,
+> **nothing pushed and nothing merged**. All five gates green plus `npm run
+> channel`.
+>
+> ### THE THING THE NEXT MANAGER MUST NOT UNDO
+>
+> Joe changed the hedgehog's nose himself on 2 August, **through the editor**, and
+> pushed it into the game — the first animal ever to make that trip. The nose was
+> `bespoke-sphere-01`, authored geometry he had overruled rule 1 for on 29 July.
+> It is now **`box-09`, and `box-09` is the BUNNY'S OWN NOSE** from the pack
+> (`roles: ['nose']`, `provenance: ['bunny']`, `sunkFractionMean` 0 — so its sink
+> of 0 is the pack's own burial for the shape, not a preference).
+>
+> **Its colour is byte-identical to `coat`. That is intended.** Asked directly:
+> *"yes i have used the same colour."* Asked whether the sphere had gone by
+> accident: *"yes, i changed the nose to something more fitting."* From inside the
+> code a deliberate deletion and a regression look identical, which is why
+> `assembly-hedgehog.test.ts` now pins `palette['box-09'] === palette['coat']` as
+> an EQUALITY with his words in the comment. **Do not repaint it pink. Do not
+> restore the sphere.**
+>
+> ### Test arithmetic, stated so nobody has to guess
+>
+> Baseline at `382e9a9`: **4001 tests, 6 failing.** Now: **4003 tests, 0 failing**
+> (`4002 passed | 1 skipped`, 172 files). The change is **+2**, made of:
+> - **2 deleted outright** — `builds the authored sphere at the authored radius,
+>   to its own count`, and `sits with its CENTRE on the snout's own measured
+>   apex`. Deleted, not mended, because the decision they pinned was overturned by
+>   its own author. Both deletions leave a comment in the file saying so.
+> - **1 rehomed** — `is a real sphere, generated rather than typed, and small`
+>   moved to `tests/island/authored-primitives.test.ts`. The sphere still exists;
+>   no species wears it; a test of a part no species wears belongs there.
+> - **1 rewritten in place** — the PINK test became `is the SAME TAN as the coat,
+>   and that is Joe's answer, not a mistake`.
+> - **4 added**, describing the nose that IS there: the bank part in the nose
+>   role, the geometry unaltered, the pack's own burial, and standing proud of the
+>   beak without floating.
+>
+> Counts moved **754 verts / 1,046 tris -> 744 / 1,021**. RULE 9 STRAINED still
+> holds (1,021 against the pack's 422-951), so the declaration stays and its
+> number was corrected rather than the budget relaxed.
+>
+> **The fingerprint was re-pinned deliberately**: `a839dd97acf556e9` ->
+> `1d26c188381e9eba`, with the reason written beside the entry.
+>
+> ### `bespoke-sphere-01` IS NOT DEAD — do not delete it
+>
+> Checked properly, because the obvious answer is wrong:
+> - **No shipped species uses it.** The hedgehog was its only consumer.
+> - **It is still a selectable row in Joe's editor** —
+>   `tools/workbench/public/editor/library.ts:145` spreads `AUTHORED_PARTS` into
+>   `ALL_SHAPES`. He can still reach for it for another animal.
+> - **The RULE 1 guard is NOT guarding nothing.** `creature.ts:623` still throws,
+>   and **two tests exercise it** using the sphere as their fake:
+>   `authored-primitives-assembly.test.ts:151` and `assembly-creature.test.ts:299`.
+>   Both build throwaway defs, so they hold the guard independent of the roster.
+> - Deleting it would be **zero TypeScript errors** and about five runtime test
+>   failures. **It is Joe's part to retire, not ours.**
+>
+> ### The orphaned `nose: 0xe792bd` slot — PROVEN safe, and LEFT IN PLACE
+>
+> Nothing paints it. It costs one atlas row. I did not remove it, and the answer
+> is Joe's — but the claim is now **measured rather than assumed**, so he can
+> decide cheaply. Built the animal twice, with and without the slot, and sampled
+> the material's map at every mesh's own UV:
+>
+> ```
+> ATLAS with nose: 4x112   without: 4x96
+> MESHES IDENTICAL: 29/29
+> NO COLOUR DIFFERENCES
+> ```
+>
+> So for THIS species the `palette-order` axiom's scare story does not bite: the
+> name-to-row map is rebuilt from the same palette object in the same call that
+> bakes the texture (`assembly.ts:504` -> `:361`, `texture.ts:167`), so dropping a
+> slot renumbers rows consistently. **UVs DO move** (every one — `n` goes 7 to 6),
+> so removing it costs a SECOND deliberate fingerprint re-pin. Colours do not
+> move at all. The reasoning is now written into `animal-hedgehog.ts` beside the
+> palette so the next reader does not have to re-derive it.
+>
+> **I did not raise this as a `JT-0xx`.** One texture row on one species is too
+> small to spend his attention on alone, and `joe/` is live tonight with four id
+> collisions already. The version that IS worth his time is the general one —
+> *when an editor edit orphans a palette slot, should it be swept?* — because it
+> will recur on every editor edit from here. A future manager should raise THAT,
+> not this.
+>
+> ### A landmine that cost me a gate, and will cost the next person too
+>
+> **`tests/copy/pronouns.test.ts` (PB-056) checks EVERY STRING LITERAL
+> SEPARATELY**, and excuses one literal in `animal-hedgehog.ts` by the exact text
+> `His words,`. A species `flag` is a `+`-concatenation of many literals, so:
+> re-wrapping a line can split `His words,` across two chunks and fail the gate
+> TWICE — once for the new unexcused offence and once for *"every excuse is still
+> earning its place"*, which asserts the allowlisted text is still present. **When
+> you edit a `flag` containing a quotation attributed to Joe, keep `His words,`
+> intact inside a single literal, and put no second gendered pronoun in any other
+> chunk.** The allowlist is at `tests/copy/pronouns.test.ts:113`.
+>
+> ### The editor names a feature after its SHAPE, and it shows
+>
+> Worth a card, not fixed here because it is Joe's pushed data. The extras entry
+> the editor wrote is `{ part: 'box-09', name: 'box-09', paint: 'box-09' }`, so
+> the animal now has a feature called `box-09`, a mesh called `box-09` and a
+> palette slot called `box-09` where the old one said `nose-tip` and `nose`.
+> It builds correctly and reads badly — the file no longer says what the part IS
+> FOR. Renaming it would change the fingerprint again, so it wants his nod.
+>
+> ### Where the next manager starts
+>
+> **Not here.** This item is closed. The queue's real front is still what the Home
+> Pets block below says: **JT-040/JT-045 are OPEN and Farm should not be built
+> until they are answered**, and **PB-075** (the `box-31` open shell showing sky
+> through the shrew's and newt's heads) is a live defect on two signed-off
+> animals awaiting his call.
+>
+> ---
+>
+> ## Previous block — state at handover, 3 Aug 2026 (early hours)
+>
+> *Written by the manager that built Home Pets. It was the current one until the
+> block above.*
 >
 > ### What this run did
 >
