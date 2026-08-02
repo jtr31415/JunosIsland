@@ -35,6 +35,7 @@ import { creatureSpec } from '../../../../src/island/species/parts/creature'
 import { COLLECTIONS } from '../../../../src/island/species/roster'
 import { assemblyConstName, defToModuleSource } from './def'
 import { auditRowFor, factRowFor, type SignoffView } from './signoff'
+import { APPROVED } from '../approver'
 import type { CreatureDef } from '../../../../src/island/species/parts'
 
 /** One of the nine places, and what happened to it. */
@@ -167,6 +168,78 @@ export function pushOutcome(reply: PushVerdictInput, speciesId: string): PushOut
     sayText: `${id} is in the game — read the list below before you close this`,
     sayBad: false,
   }
+}
+
+/**
+ * The save that a push makes to Joe's own file — or `null`, which is most of the
+ * time.
+ *
+ * ## Pressing the button IS the sign-off
+ *
+ * Joe, 2 August 2026: *"there is no way for me to change it to status 'sign-off'
+ * when i hit the 'push to game' button, that is me signing it off. get those
+ * animals onto the game please once the unlocker has landed."*
+ *
+ * That closes a gap that had quietly stopped every animal. His earlier ruling is
+ * *"only animals that i have signed off in the editor end up on the game, local
+ * or live"*, and the egg pool was correctly wired to `signoff === 'ok'` — but the
+ * field lived on `approver.ts`, a different page, and the editor could not write
+ * it. The gate was real, the wiring was right, and the button that opens it was
+ * not in the tool he uses. He does not want a second tick to go and find. The
+ * push is the gesture.
+ *
+ * ## ONLY A PUSH THAT ACTUALLY WROTE MAY SIGN ANYTHING OFF
+ *
+ * This is the whole reason the function takes a `PushOutcome` and not a
+ * `PushReply`. PB-076 was a push that returned a perfectly well-formed 200 having
+ * written nothing at all, and told him in green that the animal was in the game.
+ * If sign-off hung off the absence of an `error` key it would have signed off an
+ * animal that never reached `src/` — and a false sign-off does not merely mislead
+ * him, it puts an unreviewed animal in front of his daughter, which is the one
+ * thing this gate exists to prevent.
+ *
+ * So the judgement is not made here and CANNOT be made here. `pushOutcome` above
+ * owns it — place 1 in `wrote`, or the animal did not change — and this function
+ * is handed its verdict already formed. There is exactly one `ok` test below and
+ * no other input from which success could be re-derived, so the two can never
+ * drift apart or disagree. Making it structurally impossible was the point;
+ * asserting that two copies of a rule agree is how they stop agreeing.
+ *
+ * ## Why a separate write, and not a field on the push payload
+ *
+ * `auditRowFor` in `signoff.ts` still leaves `signoff` empty and MUST keep doing
+ * so — `tests/tools/species-signoff.test.ts` holds it to that. The row travels in
+ * the push REQUEST, which is built before the server has been asked to do
+ * anything, and at that moment nothing has been written and there is nothing to
+ * sign off. Only the reply knows whether the animal moved. That is the honest
+ * ordering and it is what makes a failed push safe: the sign-off is a second act
+ * that a failure never reaches.
+ *
+ * It goes through `/api/save`, which MERGES rather than overwrites (so his notes
+ * and verdicts survive it) and which already calls `regenerateSignoffs` — so
+ * `src/island/species/signed-off.json` is rewritten by his press of the button
+ * and the animal joins the egg pool with no further ceremony. That is the
+ * standing order in `MANAGER-ORDERS.md` working as written.
+ */
+export interface SignoffSave {
+  what: 'names'
+  patch: { id: string; signoff: string }
+}
+
+/**
+ * The sign-off a successful push writes, or `null` if it did not succeed.
+ *
+ * `APPROVED` is imported from `approver.ts` rather than spelled again here. It is
+ * the same field, on the same row, meaning the same thing, and a second copy of
+ * `'ok'` in this file would be a second definition of what shipping means.
+ */
+export function signoffPatch(outcome: PushOutcome, speciesId: string): SignoffSave | null {
+  /* THE one gate. Never `!reply.error`, never a re-reading of `wrote`. */
+  if (!outcome.ok) return null
+  const id = speciesId.trim()
+  /* No id, no row to sign — and never a patch aimed at `natural/`. */
+  if (!id) return null
+  return { what: 'names', patch: { id: `natural/${id}`, signoff: APPROVED } }
 }
 
 /** Everything the server needs, and nothing it could use to name a file. */

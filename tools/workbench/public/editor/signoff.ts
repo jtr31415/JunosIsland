@@ -8,21 +8,34 @@
  * the fact line and then with one button push it to the game thats where we
  * need to get to."*
  *
- * ## This is the DRAFTING gesture. The gate is still the bench
+ * ## This is the DRAFTING gesture. THE GATE IS THE PUSH — overruled, 2 August
  *
- * There is already exactly one approval per creature and it lives in
- * `approver.ts` — `signoff`, with `verdict` and `factVerdict` beside it, one
- * click writing all three (JT-031, and the "ONE ACTION, THREE VERDICTS" note in
- * that file). A second tick in this page would be a rival gate: a name settled
- * in an editor is not the same claim as an animal looked at whole, and letting
- * the first count as the second is precisely the confusion `merge.mjs` refused
- * to allow between `verdict` and `signoff`.
+ * This section used to argue that the bench in `approver.ts` was the only gate
+ * and that a second tick in the editor would be a rival to it. **Joe has ruled
+ * otherwise and his ruling is the one that counts:** *"there is no way for me to
+ * change it to status 'sign-off' when i hit the 'push to game' button, that is me
+ * signing it off."*
  *
- * So nothing here writes `signoff`. What this file does is fill the draft's four
- * empty fields — `collection`, `givenName`, `fact`, `factSource` — so that the
- * animal reaches that bench COMPLETE rather than reaching it nameless and
- * factless and unapprovable. The bench's own count already names the failure it
- * prevents: `unsignable`, "benched but with no row in `joe/names-audit.json`".
+ * The old argument was not wrong about the risk, it was wrong about the gesture.
+ * A rival TICK would indeed have been a second, weaker claim sitting beside the
+ * bench's. But the push is not a tick. It is the act of putting the animal into
+ * the game, taken by the only person allowed to take it, after looking at the
+ * animal whole on the screen in front of him — which is precisely the claim the
+ * bench's `signoff` was ever standing for. He should not have to go to another
+ * page to say a second time what pressing the button already said.
+ *
+ * **So nothing in THIS FILE writes `signoff`, and that part is unchanged.** The
+ * write lives in `push.ts` (`signoffPatch`) and fires from the tail of `push()`
+ * in `main.ts`, gated on the push having actually written the animal. The
+ * ordering is the point: the row this file builds travels in the push REQUEST,
+ * before the server has been asked to do anything, so at the moment it is built
+ * there is nothing to sign off. Only the reply knows whether the animal moved.
+ *
+ * What this file does is fill the draft's four empty fields — `collection`,
+ * `givenName`, `fact`, `factSource` — so that the animal reaches the game
+ * COMPLETE rather than reaching it nameless and factless and unapprovable. The
+ * bench's own count already names the failure it prevents: `unsignable`,
+ * "benched but with no row in `joe/names-audit.json`".
  *
  * ## Almost none of this is typed
  *
@@ -312,9 +325,14 @@ export function signoffView(speciesId: string, fields: SignoffFields): SignoffVi
  * id, and both spell the species and the collection the roster's way, which is
  * asserted by `tests/island/species-facts.test.ts`.
  *
- * The judgement fields are left EMPTY on purpose. `verdict`, `note`, `signoff`,
- * `factVerdict` and `factNote` are Joe's, and a push that pre-ticked any of them
- * would be this page signing off on his behalf.
+ * The judgement fields are left EMPTY on purpose, and `signoff` STAYS empty here
+ * even though a successful push now writes it. `verdict`, `note`, `factVerdict`
+ * and `factNote` are Joe's. `signoff` is his too — the difference is only WHEN.
+ * This row is built to be SENT, before the server has written a byte, so a
+ * `signoff` parked in it would be a sign-off issued in advance of the thing it
+ * signs off, and it would survive a push that turned out to write nothing at
+ * all. That is PB-076 exactly. The sign-off is therefore a SECOND write, made
+ * after the reply has been judged, by `signoffPatch` in `push.ts`.
  *
  * `replacement` IS written, and it is the one that is not a judgement: it is
  * defined as "the name he wants instead of the generated one" (`merge.mjs`), so
