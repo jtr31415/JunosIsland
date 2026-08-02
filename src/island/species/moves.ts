@@ -139,6 +139,7 @@ export const DEFAULT_LOCOMOTION: Locomotion = 'land'
  * gate once already. */
 export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-bee': 'air',
+  'animal-hedgehog': 'land',
   'animal-parrot': 'air',
 }
 /* <<< WORKBENCH-OWNED TABLE */
