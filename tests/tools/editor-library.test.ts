@@ -25,7 +25,7 @@ import {
   type ShapeRow,
 } from '../../tools/workbench/public/editor/library'
 import { PARTS_BANK } from '../../src/island/species/parts/bank.generated'
-import { AUTHORED_PARTS } from '../../src/island/species/parts/authored'
+import { AUTHORED_PARTS, PRIMITIVE_IDS } from '../../src/island/species/parts/authored'
 import { OTHER_HULLS } from '../../src/island/species/parts/hulls'
 
 describe('ALL_SHAPES is exhaustive over its union', () => {
@@ -234,7 +234,17 @@ describe('groupShapes gives the dropdown headers without losing a row', () => {
         JSON.stringify(g.rows.map(r => r.id).slice().sort()) === JSON.stringify(want))
       expect(matching.length, `role "${role}" has ${matching.length} groups, not 1`).toBe(1)
     }
-    expect(groups.length, 'one group per role the data actually has').toBe(roles.length)
+    /* One group per role, PLUS the roleless buckets the data actually needs — and
+     * that number is derived here for the same reason the roles are. A roleless row
+     * is bucketed by whether it is authored: the three base shapes carry no role and
+     * no provenance and head their own `Primitives`, and anything roleless that is
+     * NOT authored still falls to `unsorted`, which is the guard. Typing `11` would
+     * pin today's count and would have to be edited by hand the day a fourth base
+     * shape lands, which is exactly the literal this file's header forbids. */
+    const buckets = new Set(ALL_SHAPES.filter(r => r.roles.length === 0)
+      .map(r => (r.authored ? 'primitive' : 'unsorted')))
+    expect(groups.length, 'one group per role the data has, plus its roleless buckets')
+      .toBe(roles.length + buckets.size)
   })
 
   it('emits no empty group — a header over nothing is a drawer he cannot open', () => {
@@ -277,6 +287,87 @@ describe('groupShapes gives the dropdown headers without losing a row', () => {
     expect(unpadded.map(r => r.id).sort(),
       'a plain string sort would have agreed, so this case proves nothing')
       .not.toEqual(['box-1', 'box-9', 'box-10'])
+  })
+})
+
+/**
+ * THE THREE BASE SHAPES GET A DRAWER, NOT AN ACCIDENT.
+ *
+ * Joe asked for a triangle, a circle and a square he can resize, and they are the
+ * first things ever to reach `groupShapes`' roleless bucket — which was written as
+ * a guard and whose header reads `Unsorteds`. That word is a statement that
+ * something went wrong, and nothing did: a shape with no provenance and no role is
+ * exactly what a primitive is, so the bucket key is `primitive` when the row is
+ * AUTHORED and `unsorted` when it is not.
+ *
+ * `primitive` is a UI label and NOT a `PartRole` — no assertion below reads it off
+ * the data, because the data does not claim it. The pivot is `authored`, and the
+ * last test here is the one that keeps `unsorted` honest: it feeds in a roleless
+ * row that is not authored and watches it land under the guard.
+ */
+describe('the three base shapes head their own drawer', () => {
+  const roleless = ALL_SHAPES.filter(r => r.roles.length === 0)
+
+  it('lists all three, flagged authored, with no role and no donor', () => {
+    for (const id of PRIMITIVE_IDS) {
+      const row = shapeRow(id)
+      expect(row, `${id} is not in the picker at all`).not.toBeNull()
+      expect(row!.authored, `${id} is not flagged authored`).toBe(true)
+      expect(row!.roles, `${id} claims a role the pack never gave it`).toEqual([])
+      expect(row!.usedBy, `${id} claims a donor species`).toEqual([])
+    }
+  })
+
+  /* Derived, never typed: a fourth base shape lands in the header and in this
+   * expectation at the same time. */
+  it('heads them Primitives with their count, not Unsorteds', () => {
+    const labels = groupShapes(ALL_SHAPES).map(g => g.label)
+    const authoredRoleless = roleless.filter(r => r.authored)
+    expect(authoredRoleless.length, 'no roleless authored shape to group')
+      .toBe(PRIMITIVE_IDS.length)
+    expect(labels).toContain(`Primitives (${authoredRoleless.length})`)
+    expect(labels.some(l => l.startsWith('Unsorted')),
+      `an authored shape fell to the guard bucket: ${labels.join(', ')}`).toBe(false)
+  })
+
+  it('puts every one of them under that header and under no other', () => {
+    const groups = groupShapes(ALL_SHAPES)
+    for (const id of PRIMITIVE_IDS) {
+      const holding = groups.filter(g => g.rows.some(r => r.id === id)).map(g => g.label)
+      expect(holding, `${id} is filed under ${holding.join(', ') || 'nothing'}`)
+        .toEqual([`Primitives (${roleless.filter(r => r.authored).length})`])
+    }
+  })
+
+  /**
+   * `HULL_SHAPES` folds in every authored part whose `roles` include `hull`, and
+   * `roles: []` must keep all three out. It is not cosmetic: the sink test above
+   * asserts `zeroed.length === HULL_SHAPES.length - 1` — nine hulls the pack never
+   * buried, plus `box-03` which it did — and a primitive arriving with no
+   * attachment of the pack's own would make that arithmetic wrong.
+   */
+  it('offers none of them as a torso', () => {
+    const ids = new Set(HULL_SHAPES.map(r => r.id))
+    for (const id of PRIMITIVE_IDS) {
+      expect(ids.has(id), `${id} is being offered as a hull`).toBe(false)
+    }
+  })
+
+  /**
+   * `unsorted` stays alive as the guard it was written to be. Nothing in the bank
+   * is roleless today, so this row is constructed rather than found — which the
+   * `ShapeRow` interface allows, and which is the point: the bucket must still
+   * catch a bank shape that arrives one day with no role, instead of the whole
+   * roleless arm having quietly become "authored".
+   */
+  it('still sends a roleless NON-authored row to the guard', () => {
+    const base = shapeRow('box-03')!
+    const orphan: ShapeRow = { ...base, id: 'ghost-01', roles: [], isHull: false, authored: false }
+    expect(groupShapes([orphan]).map(g => g.label)).toEqual(['Unsorted (1)'])
+
+    /* The same row, authored — the ONLY difference — goes the other way. */
+    const authored: ShapeRow = { ...orphan, authored: true }
+    expect(groupShapes([authored]).map(g => g.label)).toEqual(['Primitive (1)'])
   })
 })
 

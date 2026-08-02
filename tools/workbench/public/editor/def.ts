@@ -54,6 +54,9 @@
  * does, at definition time, which is the right place for a hard rule.
  */
 import { PARTS_BANK } from '../../../../src/island/species/parts/bank.generated'
+/* `authored.ts` imports nothing but TYPES from the bank, so it does not reach
+ * three.js and this file stays runnable in a node test. See its own header. */
+import { isPrimitive } from '../../../../src/island/species/parts/authored'
 import { EYE_CARD_Z, LEG_ROW } from '../../../../src/island/species/parts/hulls'
 import { assemblyFor } from '../../../../src/island/species/parts/assembled/register'
 import type {
@@ -979,14 +982,15 @@ export function warningsFor(
    */
 
   /* --- scale. Rule 4 is placement by translation; a stretch is notable --- */
-  const scaled: { path: DefPath; label: string; stretch: Vec3; safe: boolean }[] = []
+  const scaled: { path: DefPath; label: string; part: string; stretch: Vec3; safe: boolean }[] = []
   for (const role of FEATURE_ROLES) {
     const v = def[role]
     if (v === undefined) continue
     const d = asDef(v)
     if (isStretched(d.stretch)) {
       scaled.push({
-        path: { role } as DefPath, label: `"${d.name ?? ROLE_MESH_NAME[role]}"`, stretch: d.stretch!,
+        path: { role } as DefPath, label: `"${d.name ?? ROLE_MESH_NAME[role]}"`, part: d.part,
+        stretch: d.stretch!,
         safe: role === 'ears' || role === 'snout',
       })
     }
@@ -994,10 +998,49 @@ export function warningsFor(
   for (let i = 0; i < (def.extras?.length ?? 0); i++) {
     const e = def.extras![i]!
     if (isStretched(e.stretch)) {
-      scaled.push({ path: { role: 'extras', index: i }, label: `"${e.name}"`, stretch: e.stretch!, safe: false })
+      scaled.push({
+        path: { role: 'extras', index: i }, label: `"${e.name}"`, part: e.part,
+        stretch: e.stretch!, safe: false,
+      })
     }
   }
   for (const s of scaled) {
+    /*
+     * A PRIMITIVE IS NOT A LIFTED PART, and the warning below is about lifted
+     * parts.
+     *
+     * Everything the sentences underneath say — rule 4's one scaled node in 133,
+     * §3's measured 2.97x and 2.90x, and above all "the authored proportions of
+     * the shape itself are changed" — is true because a bank shape's proportions
+     * are KENNEY'S and are evidence. The three base shapes have none to violate:
+     * a square has no proportion a stretch could betray, and Joe asked for them
+     * by name with "ability for me to resize". Telling him a resize departs from
+     * something would be false, and it would be the specific falsehood of
+     * invoking the hedgehog's hull — his own ruling about a SHARED AUTHORED HULL
+     * losing its cube — against the one case that ruling has nothing to do with.
+     *
+     * So it is a `note`, never a `warn`, and it says the true and useful thing
+     * instead: `primitiveStretched` re-cuts the solid from a box of the new size
+     * rather than multiplying baked positions, so the chamfer is regenerated and
+     * is still 0.25 of the smallest dimension at 45°. Not silence, because that
+     * regeneration is worth knowing and nothing else in the editor says it.
+     *
+     * The lifted arm below is untouched by this — same text, same `safe`, same
+     * `peakFactor`, same `uniform()`.
+     */
+    if (isPrimitive(s.part)) {
+      out.push({
+        axiom: 'scale',
+        severity: 'note',
+        path: s.path,
+        text: `${s.label} carries a stretch, ${shownAs(s.stretch)}. ${s.part} is a PRIMITIVE — `
+          + 'no donor, no role, and none of the pack\'s proportions to depart from — so resizing '
+          + 'it is what it is for. The solid is RE-CUT at the new size rather than scaled, so its '
+          + 'chamfer is regenerated with it and stays a 45° cut of a quarter of the smallest '
+          + 'dimension, which is `box-03`\'s own.',
+      })
+      continue
+    }
     const peak = peakFactor(s.stretch)
     const note = s.safe && peak < 3
     out.push({
