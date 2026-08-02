@@ -6,6 +6,34 @@
  * teacher has a female voice but otherwise their gender is irrelevant. the owl
  * later shall be female, if we ever use her"*.
  *
+ * HE CLARIFIED THE SCOPE ON 2 AUGUST, and it is two-tier rather than one rule:
+ *
+ * > *"children are referred to as they in the parent set up, but only 'you' in
+ * > the game as it talks to them. both are gender agnostic."*
+ *
+ * So there are two registers, and "they" is correct in only one of them:
+ *
+ * - **The grown-ups panel talks ABOUT the child, to an adult** — third person,
+ *   and that third person is "they". This is what the six corrected strings
+ *   are: "Their island and their animals", "What they are working on".
+ * - **The game talks TO the child** — second person, "you", always. Never
+ *   "they", because the game is not discussing her with somebody else. The
+ *   shipped copy already reads this way and always has: "Will you read to it",
+ *   "can you find us some land?", "You are doing really well!"
+ *
+ * Both registers are gender agnostic, which is the point — the second person
+ * simply never needed fixing, so this card's sweep left it alone correctly
+ * rather than by luck.
+ *
+ * THIS HALF IS NOT MECHANICALLY ENFORCED, deliberately. Child-facing copy is
+ * full of legitimate "they": the eggs ("they only hatch for someone who reads
+ * to them"), the animals ("They need homes!"), the questions ("They will get
+ * you eggs and tiles faster"). Telling those apart from a "they" that means
+ * the child needs to know what the sentence is about, which a scanner cannot.
+ * A guard that tried would either miss the real fault or ban the eggs. So the
+ * rule is written here for the person writing the next sentence, and the
+ * scanner below keeps to what it can decide: gendered pronouns, anywhere.
+ *
  * Fixing today's copy is the small half of that card. The large half is that it
  * STAYS fixed: the next person to write a sentence for the grown-ups panel has
  * no way of knowing the rule exists, and the six strings this card corrected had
