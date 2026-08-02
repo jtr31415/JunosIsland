@@ -63,6 +63,18 @@ export class Conflict extends Error {
 export class Refused extends Error {}
 
 /**
+ * The four words `src/island/species/moves.ts`'s `Locomotion` union allows,
+ * repeated here rather than imported: this file is `.mjs` and runs under bare
+ * node, and `src/island/species/moves.ts` is TypeScript this server cannot
+ * import (the same limit `push.mjs`'s own header states, which repeats this
+ * same list for the same reason). `tests/tools/species-push.test.ts` asserts
+ * that this array, `push.mjs`'s own copy, and `moves.ts`'s `LOCOMOTIONS` all
+ * say the same four words, so a fifth added to one and not the others three is
+ * a failing test rather than a value nobody notices has drifted.
+ */
+const LOCOMOTIONS = ['land', 'air', 'water', 'amphibian']
+
+/**
  * Per mergeable file: where the records live, what identifies one, and what the
  * page is allowed to change about it.
  *
@@ -79,6 +91,13 @@ export class Refused extends Error {}
  *         guessed at — but compared by CONTENT rather than by identity, because
  *         two parses of the same bytes are never `===` and a re-ordered key is
  *         not a change. See `stable` and `nothing` for the two halves of that.
+ *
+ * A field may also carry `values`, a fixed list of the only strings it may
+ * hold — see `assertAllowedValues`. Nothing needed this until `moves` (PB-068):
+ * every other owned field is either free text or a flag whose one meaningful
+ * value the page itself controls, but `moves` is one of four fixed words that
+ * this server then splices straight into a TypeScript source file, so a typo
+ * here is a typo written into `src/`, not just a wrong string in a JSON file.
  */
 const MERGEABLE = {
   tasks: {
@@ -220,6 +239,14 @@ const MERGEABLE = {
    *   state       `flag`, idle `'draft'`. 'draft' is what every record is born
    *               as, so a stale page carrying it can never un-ready a draft Joe
    *               marked ready; marking it back down is a patch, said out loud.
+   *   moves       `flag` too, and idle on absence rather than on a named value —
+   *               there is no word that means "not decided" the way `'draft'`
+   *               does for `state`, only the field being missing. Joe's own
+   *               judgement (PB-068), one word, and it must reach a species even
+   *               after it is pushed: `LOCOMOTIONS` below is checked against it
+   *               before anything is written, because a typo saved here is a
+   *               typo `push.mjs` would otherwise splice straight into
+   *               `src/island/species/moves.ts`.
    *   everything
    *   else        `text`. `givenName` and `fact` are his own words in the most
    *               literal sense — the fact is the sentence a six-year-old will
@@ -267,6 +294,7 @@ const MERGEABLE = {
       warnings: { kind: 'json' },
       state: { kind: 'flag', idle: 'draft' },
       note: { kind: 'text' },
+      moves: { kind: 'flag', idle: '', values: LOCOMOTIONS },
     },
   },
 }
@@ -510,6 +538,30 @@ function needsAnId(spec, onDisk, incoming, now) {
 }
 
 /**
+ * A field that only accepts one of a fixed list of words (`values` on its
+ * spec), checked against the INCOMING value before a single field is folded.
+ *
+ * Nothing on disk is ever checked here — whatever is already there passed this
+ * same test the day it was written, or predates the field having one at all,
+ * and re-litigating it on every save would 409 a file for a value that was
+ * never this save's to answer for. Refuses rather than guesses, the choice
+ * every check in this file makes: a typo caught here costs Joe a rejected
+ * save; a typo let through costs `push.mjs` a wrong word spliced straight into
+ * a TypeScript source file, for a field like `moves`.
+ */
+function assertAllowedValues(what, owns, record) {
+  for (const [name, field] of Object.entries(owns)) {
+    if (!field.values) continue
+    const v = record?.[name]
+    if (v === undefined || v === null || v === '') continue      // said nothing: nothing to check
+    if (!field.values.includes(v)) {
+      throw new Refused(
+        `"${v}" is not a value ${what}.${name} accepts — it has to be one of ${field.values.join(', ')}`)
+    }
+  }
+}
+
+/**
  * Merge a whole-file payload onto the copy the server just read from disk.
  *
  * `disk` is the truth about everything the page does not own. `incoming` is
@@ -526,6 +578,7 @@ export function mergeWhole(what, disk, incoming) {
   if (!incoming || !Array.isArray(incoming[list])) {
     throw new Refused(`a ${what} save needs a ${list} array`)
   }
+  for (const record of incoming[list]) assertAllowedValues(what, owns, record)
 
   const onDisk = new Map(disk[list].map(r => [r?.[key], r]))
   /* Classified before a single field is folded: a card that needs an id is not
@@ -589,6 +642,7 @@ export function applyPatch(what, disk, patch) {
   const stray = fields.filter(f => !Object.hasOwn(owns, f))
   if (stray.length) throw new Refused(`the page does not own ${stray.join(', ')} on a ${what} record`)
   if (!fields.length) throw new Refused(`a ${what} patch changes nothing`)
+  assertAllowedValues(what, owns, patch)
 
   const rows = Array.isArray(disk?.[list]) ? disk[list] : []
   if (!rows.some(r => r?.[key] === id)) throw new Refused(`no such ${key} in ${what}: ${id}`)

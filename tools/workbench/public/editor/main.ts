@@ -86,6 +86,7 @@ import { loadBuiltDefs } from './capture'
 import { createStage, type GizmoMode } from './stage'
 import type { CreatureDef } from '../../../../src/island/species/parts'
 import type { Vec3 } from '../../../../src/island/species/parts/assembly'
+import { LOCOMOTIONS, LOCOMOTION_LABELS, type Locomotion } from '../../../../src/island/species/moves'
 
 /* ------------------------------------------------------------------ the DOM */
 
@@ -118,6 +119,7 @@ const newName = el<HTMLInputElement>('#new-name')
 const saveNote = el<HTMLParagraphElement>('#save-note')
 const signoffWho = el<HTMLParagraphElement>('#signoff-who')
 const signoffName = el<HTMLInputElement>('#signoff-name')
+const signoffMoves = el<HTMLSelectElement>('#signoff-moves')
 const signoffFact = el<HTMLTextAreaElement>('#signoff-fact')
 const signoffProblems = el<HTMLUListElement>('#signoff-problems')
 const signoffNote = el<HTMLParagraphElement>('#signoff-note')
@@ -128,6 +130,17 @@ function say(text: string, bad = false): void {
   saySpan.textContent = text
   saySpan.className = bad ? 'say bad' : 'say good'
 }
+
+/*
+ * The four options, read off `moves.ts` rather than retyped — a label written a
+ * second time here is a label that can drift from the value it sets, which is
+ * exactly what `LOCOMOTION_LABELS` exists to stop. Filled once: the four words
+ * do not change while the page is open.
+ */
+signoffMoves.append(
+  new Option('not decided yet', ''),
+  ...LOCOMOTIONS.map(loc => new Option(LOCOMOTION_LABELS[loc], loc)),
+)
 
 /**
  * Fill a `<select>` with the shape library, grouped and sorted.
@@ -202,6 +215,8 @@ interface Draft {
   warnings: readonly Warning[]
   state: string
   note: string
+  /** How it gets about, Joe's own word. Absent means he has not ruled on it yet. */
+  moves?: Locomotion
 }
 
 let drafts: readonly Draft[] = []
@@ -229,6 +244,8 @@ let saved = true
 let nameOverride = ''
 /** The sentence that goes under the animal's name. Joe's own words. */
 let fact = ''
+/** How it gets about, Joe's own word — `''` while he has not ruled on it yet. */
+let moves: Locomotion | '' = ''
 
 const stage = createStage(el<HTMLCanvasElement>('#stage'), {
   onPick(path) { select(path) },
@@ -463,7 +480,8 @@ function drawWarnings(): void {
  * nothing when the panel is hidden.
  */
 function drawSignoff(): SignoffView {
-  const view = signoffView(speciesId, { givenName: nameOverride, fact })
+  const view = signoffView(speciesId, { givenName: nameOverride, fact, moves })
+  signoffMoves.value = moves
 
   signoffWho.textContent = speciesId === ''
     ? 'no animal open'
@@ -569,6 +587,7 @@ function open(id: string): void {
   isMine = false
   nameOverride = ''
   fact = ''
+  moves = ''
   saved = true
   show(id, found, found, `opened ${id}`)
 }
@@ -578,6 +597,7 @@ function openDraft(draft: Draft): void {
   isMine = true
   nameOverride = draft.givenName
   fact = draft.fact
+  moves = draft.moves ?? ''
   saved = true
   show(
     draft.speciesId, draft.def, defs.get(draft.from) ?? draft.def,
@@ -839,6 +859,10 @@ async function save(): Promise<void> {
     warnings: opened ? warningsFor(def, opened) : [],
     state: 'draft',
     note: mine?.note ?? '',
+    /* Absent rather than '' when he has not ruled: `''` is not a `Locomotion`,
+     * and an absent key is what `merge.mjs`'s idle check already treats a stale
+     * page's echo of "not decided" as, so this says the same thing either way. */
+    moves: moves === '' ? undefined : moves,
   }
   const reply = mine
     ? await api('/api/save', { what: 'edits', patch: fields })
@@ -992,6 +1016,7 @@ el<HTMLButtonElement>('#new-animal').addEventListener('click', () => {
    * and the given name is a different word that `naming.ts` already draws. */
   nameOverride = mine?.givenName ?? ''
   fact = mine?.fact ?? ''
+  moves = mine?.moves ?? ''
   saved = false
   show(id, blank, blank, `started ${name} — ${id}`)
   drawSubjects()
@@ -999,6 +1024,13 @@ el<HTMLButtonElement>('#new-animal').addEventListener('click', () => {
 
 signoffName.addEventListener('input', () => {
   nameOverride = signoffName.value
+  saved = false
+  drawSignoff()
+  drawSaveNote()
+})
+
+signoffMoves.addEventListener('change', () => {
+  moves = signoffMoves.value as Locomotion | ''
   saved = false
   drawSignoff()
   drawSaveNote()

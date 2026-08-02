@@ -207,9 +207,10 @@ describe('the built group survives what pets.ts does to it', () => {
      *      first animated frame. So none is authored, and the wings' lean lives
      *      in `rotation.x`.
      *
-     * None of it fires today: flapping is gated on `FLYERS` (`pets.ts:47`), an
-     * explicit list of two species ids, and no songbird is in it. This is the
-     * kit being ready for the day one is, rather than the kit relying on never
+     * None of it fires today: flapping is gated on `species/moves.ts`, where
+     * whether an animal flies is set per species in the workbench editor, and
+     * no songbird is marked as flying. This is the kit being ready for the day
+     * one is, rather than the kit relying on never
      * being asked.
      */
     const g = buildSongbird(spec({ wings: 'broad', extras: ['wing-bar', 'plume', 'tail-streamer'] }))

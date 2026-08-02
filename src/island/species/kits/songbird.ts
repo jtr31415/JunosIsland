@@ -41,9 +41,10 @@
  *     for a third wing and break the index parity. Two consequences follow and
  *     both are honoured below: the wing meshes carry no authored `rotation.z`,
  *     because it would be thrown away; and no songbird flaps today, because
- *     flapping is gated on `FLYERS` (`pets.ts:47`), an explicit two-entry list
- *     of species ids. A perching robin is therefore still, which is correct,
- *     and the day a swallow is added to `FLYERS` its wings already move.
+ *     flapping is gated on `species/moves.ts`, where whether an animal flies is
+ *     set per species in the workbench editor. A perching robin is therefore
+ *     still, which is correct, and the day a swallow is marked as flying its
+ *     wings already move.
  *
  * NOTHING BUILT HERE IS EVER DISPOSED PER PET — `pets.ts:592` hands out
  * `.clone(true)` and a clone shares geometry and materials. See the quadruped

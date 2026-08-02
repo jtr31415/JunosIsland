@@ -19,6 +19,7 @@ import { defaultRng } from '../core/rng'
 import type { Rng } from '../core/rng'
 import type { Island } from './world/grid'
 import type { Pet } from './flow'
+import { flies } from './species/moves'
 
 /** The 24 Kenney species, by GLB basename. */
 export const SPECIES = [
@@ -32,23 +33,12 @@ export const SPECIES = [
 /**
  * Who flies, and therefore who hovers instead of bobbing along the grass.
  *
- * Joe: "all the animals that can fly should hover at tree height and not bob
- * over the ground."
- *
- * The models do not answer this on their own. Exactly FIVE of the 24 carry
- * `wing-left`/`wing-right` nodes — bee, chick, fish, parrot, penguin — and
- * three of those cannot fly and would look absurd at the top of a tree. A
- * penguin's wings are flippers and a fish's are fins; a chick has wings and
- * spends its whole life on the ground, which is a thing six-year-olds know
- * better than most adults. So the wing nodes are evidence, not the answer, and
- * the list is the judgement: a bee and a parrot fly, and nothing else in the
- * pack does.
- *
- * Deliberately a list rather than a rule derived from the mesh. A rule that
- * said "has wings" would put a penguin in the canopy, and every rule anyone
- * could write to exclude it is this list wearing a disguise.
+ * The judgement itself now lives in `species/moves.ts`, not here: it is Joe's
+ * call, one species at a time, set in the workbench editor — and it cannot be
+ * read off the mesh, because a penguin carries the same wing nodes as a
+ * parrot and does not fly. See that file's header for the reasoning; `flies()`
+ * is the predicate this module asks.
  */
-export const FLYERS: ReadonlySet<string> = new Set(['animal-bee', 'animal-parrot'])
 
 /**
  * How high "tree height" is.
@@ -273,7 +263,7 @@ interface Live {
    * scenery rather than merely its centre.
    */
   radius: number
-  /** Does it fly? Settled once, at load, from FLYERS. */
+  /** Does it fly? Settled once, at load, from `species/moves.ts`. */
   flying: boolean
   /** The wing nodes, if this one has any, so a hover looks like flying. */
   wings: THREE.Object3D[]
@@ -848,7 +838,7 @@ export function createPetField(base = '', rng: Rng = defaultRng): PetField {
          * flying, and the models come with the parts already separated out —
          * so the wings are found once, here, and flapped in update().
          */
-        const flying = FLYERS.has(pet.species)
+        const flying = flies(pet.species)
         const wings: THREE.Object3D[] = []
         if (flying) {
           root.traverse(n => { if (/^wing-/.test(n.name)) wings.push(n) })

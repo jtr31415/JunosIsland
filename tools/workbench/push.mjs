@@ -8,13 +8,17 @@
  * the fact line and then with one button push it to the game thats where we
  * need to get to."*
  *
- * ## A species costs NINE places, and this writes SIX of them
+ * ## A species costs TEN places, and this writes SEVEN of them
  *
- * `docs/handoffs/PB-036-goldfish-crocodile.md` counted them, and the count is
- * the whole design of this file. A push that did eight would leave a species
- * that builds as a bare hull; a push that CLAIMED nine and generated the three
- * it cannot honestly write would be worse, because a test that asserts whatever
- * the code currently does is not a test, it is a screenshot with a green tick.
+ * `docs/handoffs/PB-036-goldfish-crocodile.md` counted the first nine, and the
+ * count is the whole design of this file. A push that did eight would leave a
+ * species that builds as a bare hull; a push that CLAIMED nine and generated
+ * the three it cannot honestly write would be worse, because a test that
+ * asserts whatever the code currently does is not a test, it is a screenshot
+ * with a green tick. PB-068 added the tenth — Joe's locomotion ruling — and it
+ * is the one place on this list that must ALSO be reachable for a species
+ * already pushed; see `withMovesEntry`, and `src/island/species/moves.ts`'s own
+ * header for why it cannot live among the other nine.
  *
  * So the split is deliberate and it is reported back to Joe in full:
  *
@@ -26,6 +30,10 @@
  *               '../parts/assembled'`, the ninth place and the easy one to miss
  *            8  `joe/names-audit.json` — one row
  *            9  `joe/species-facts.json` — one fact
+ *           10  `src/island/species/moves.ts` — the `MOVES` table entry, IF Joe
+ *               has ruled on it. Absent from the payload, this is silently
+ *               skipped rather than forced — nothing about locomotion is
+ *               invented on his behalf.
  *
  *   LEFT     5  `tests/island/species-<c>.test.ts` — a rework, not an edit
  *            6  `tests/island/assembly-<id>.test.ts` — the species' own
@@ -270,6 +278,81 @@ export function withCoveredCollection(doc, collection) {
   return { ...doc, coveredCollections: [...covered, collection] }
 }
 
+/* ------------------------------------------------------- 10. the MOVES table --- */
+
+/**
+ * The four words `src/island/species/moves.ts`'s `Locomotion` union allows,
+ * repeated here because this plain-`.mjs` server cannot import a line of that
+ * TypeScript module — the same limit this file's own header states about
+ * `creatureSpec`. `merge.mjs` keeps its own copy for the same reason, and
+ * `tests/tools/species-push.test.ts` asserts all three agree, so a fifth word
+ * added to one and not the others two is a failing test rather than a value
+ * nobody notices has drifted.
+ */
+export const LOCOMOTIONS = ['land', 'air', 'water', 'amphibian']
+
+const MOVES_START = '/* >>> WORKBENCH-OWNED TABLE'
+const MOVES_END = '/* <<< WORKBENCH-OWNED TABLE */'
+
+/**
+ * Upsert one `'<id>': '<value>',` line into `moves.ts`'s `MOVES` table, between
+ * its two markers.
+ *
+ * DELIBERATELY THE OPPOSITE SHAPE OF `withRecord`. `withRecord` returns `null`
+ * — a no-op — the instant `speciesId` is already in the file, because a
+ * `defineSpecies` record is prose nobody wants silently rewritten. `MOVES` is
+ * the other thing entirely: it is DATA, one word per animal, and REPLACING an
+ * id already there is the whole point of it — `moves.ts`'s own header explains
+ * why at length, but the short version is that thirty species are already
+ * pushed and a table that only ever appended would never let Joe rule on a
+ * single one of them. So: absent → inserted, present → its value REPLACED,
+ * never removed, never duplicated.
+ *
+ * Returns `null` when the id is already recorded with exactly this value —
+ * still a no-op, so a re-push reports "already there" the way every other step
+ * here does. Throws `PushRefused` for a value that is not one of the four
+ * words above (checked BEFORE either marker is even looked for, so a rubbish
+ * value never gets as far as being a filesystem question) or when either
+ * marker is missing — this never guesses where the table is.
+ */
+export function withMovesEntry(source, speciesId, value) {
+  if (!LOCOMOTIONS.includes(value)) {
+    throw new PushRefused(
+      `"${value}" is not a locomotion moves.ts accepts — it has to be one of ${LOCOMOTIONS.join(', ')}. `
+      + 'Nothing was written.')
+  }
+  const start = source.indexOf(MOVES_START)
+  const end = source.indexOf(MOVES_END)
+  if (start === -1 || end === -1 || end < start) {
+    throw new PushRefused(
+      'src/island/species/moves.ts no longer carries both "WORKBENCH-OWNED TABLE" markers, so this '
+      + 'cannot tell where the table starts and ends. Nothing was written.')
+  }
+  const between = source.slice(start, end)
+  const braceOpen = between.indexOf('{')
+  const braceClose = between.lastIndexOf('}')
+  if (braceOpen === -1 || braceClose === -1 || braceClose < braceOpen) {
+    throw new PushRefused(
+      'the MOVES table between the markers is not the shape this expected — no `{ ... }` to edit. '
+      + 'Nothing was written.')
+  }
+
+  const entryLine = /^\s*'([^']+)':\s*'([^']+)',?\s*$/
+  const entries = new Map()
+  for (const line of between.slice(braceOpen + 1, braceClose).split('\n')) {
+    const m = entryLine.exec(line)
+    if (m) entries.set(m[1], m[2])
+  }
+
+  if (entries.get(speciesId) === value) return null   // already exactly right — a true no-op
+
+  entries.set(speciesId, value)
+  const sorted = [...entries.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+  const body = sorted.map(([id, v]) => `  '${id}': '${v}',`).join('\n')
+
+  return source.slice(0, start + braceOpen + 1) + '\n' + body + '\n' + source.slice(start + braceClose)
+}
+
 /* ----------------------------------------------------------- the button --- */
 
 const str = (v) => (typeof v === 'string' ? v : '')
@@ -332,6 +415,9 @@ export function pushSpecies(root, body) {
   const module = str(body.module)
   const record = str(body.record)
   const after = Array.isArray(body.after) ? body.after.filter(a => typeof a === 'string') : []
+  /* Absent means "Joe has not ruled on it yet" and is never treated as a value
+   * — `undefined`, never `''`, is what says that all the way down to `withMovesEntry`. */
+  const moves = body.moves === undefined ? undefined : str(body.moves)
 
   /* ---- what the payload has to be, before anything is read off the disk ---- */
 
@@ -389,19 +475,72 @@ export function pushSpecies(root, body) {
   const modulePath = `src/island/species/parts/assembled/${speciesId}.ts`
   const indexPath = 'src/island/species/parts/assembled/index.ts'
   const collectionPath = `src/island/species/collections/${collection}.ts`
+  const movesPath = 'src/island/species/moves.ts'
+
+  const alreadyBuilt = exists(root, modulePath)
 
   /*
-   * THE ONE THAT MATTERS. The live twenty-four are frozen and the Garden
-   * fourteen are Joe's approved work; a push that quietly wrote over
+   * THE ONE THAT MATTERS, MOSTLY UNCHANGED. The live twenty-four are frozen and
+   * the Garden fourteen are Joe's approved work; a push that quietly wrote over
    * `animal-hedgehog.ts` because an id collided is unrecoverable in a way a
    * draft is not. There is deliberately no force flag: replacing a species is a
    * thing to do on purpose, in an editor, with git watching.
+   *
+   * The one exception is `moves`, and it is narrow on purpose: thirty species
+   * are ALREADY built, and they are precisely the ones PB-068 exists for Joe to
+   * rule on. Refusing this push wholesale the moment a module file exists would
+   * make locomotion permanently unreachable for exactly the animals it is for —
+   * see `moves.ts`'s own header. So a payload that names a species already
+   * built is refused UNLESS it is asking only about locomotion, in which case
+   * `alreadyBuilt` below skips straight to that and nothing else is touched.
    */
-  if (exists(root, modulePath)) {
+  if (alreadyBuilt && moves === undefined) {
     throw new PushRefused(
       `${modulePath} already exists, and this will not write over a species that is already built. `
       + 'Nothing was written. If you meant to replace it, delete it yourself first.')
   }
+
+  if (alreadyBuilt) {
+    if (!exists(root, movesPath)) {
+      throw new PushRefused(`${movesPath} is missing, so there is nowhere to record how ${speciesId} gets about. Nothing was written.`)
+    }
+    const movesWas = readText(root, movesPath)
+    assertLf(movesPath, movesWas)
+    const movesNext = withMovesEntry(movesWas, speciesId, moves)
+
+    const wrote = []
+    const skipped = []
+    const note = (list, place, path, what) => { list.push({ place, path, what }) }
+
+    if (movesNext === null) {
+      note(skipped, 10, movesPath, `${speciesId} already carries this locomotion`)
+    } else {
+      writeText(root, movesPath, movesNext)
+      note(wrote, 10, movesPath, `moves: '${moves}'`)
+    }
+    /* Everything else about an already-built species is untouched, and said so
+     * — a push that silently did nothing about the other nine places would
+     * read as a bug rather than the deliberate refusal it is. */
+    for (const [place, path] of [
+      [1, modulePath], [2, indexPath], [3, collectionPath], [4, collectionPath],
+      [8, 'joe/names-audit.json'], [9, 'joe/species-facts.json'],
+    ]) {
+      note(skipped, place, path, `${speciesId} is already built — an existing species is never written over`)
+    }
+
+    return {
+      speciesId,
+      collection,
+      wrote,
+      skipped,
+      left: [],
+      say: movesNext === null
+        ? `${speciesId} is already built, and already carries this locomotion. Nothing was written.`
+        : `${speciesId} is already built, so only the MOVES table was touched: it now reads '${moves}'. `
+          + 'Nothing else about an existing species is ever written over.',
+    }
+  }
+
   if (!exists(root, collectionPath)) {
     throw new PushRefused(
       `there is no ${collectionPath}, so "${collection}" is a collection the game has not started yet. `
@@ -416,6 +555,21 @@ export function pushSpecies(root, body) {
   assertLf(indexPath, indexWas)
   assertLf(collectionPath, collectionWas)
   assertLf(modulePath, module)
+
+  /*
+   * The moves splice is prepared here, alongside index/collection, so a bad
+   * value or a missing marker refuses BEFORE anything is written — same rule
+   * as everything else in this plan.
+   */
+  let movesNext = null
+  if (moves !== undefined) {
+    if (!exists(root, movesPath)) {
+      throw new PushRefused(`${movesPath} is missing, so there is nowhere to record how ${speciesId} gets about. Nothing was written.`)
+    }
+    const movesWas = readText(root, movesPath)
+    assertLf(movesPath, movesWas)
+    movesNext = withMovesEntry(movesWas, speciesId, moves)
+  }
 
   /* ----------------------------------- the whole plan, built before any write --- */
 
@@ -486,8 +640,13 @@ export function pushSpecies(root, body) {
     note(wrote, 9, 'joe/species-facts.json', `"${collection}" added to coveredCollections, so the fact gate covers it`)
   }
 
+  if (moves !== undefined) {
+    if (movesNext === null) note(skipped, 10, movesPath, `${speciesId} already carries this locomotion`)
+    else { writeText(root, movesPath, movesNext); note(wrote, 10, movesPath, `moves: '${moves}'`) }
+  }
+
   const left = whatIsLeft(speciesId, collection)
-  /* Distinct PLACES, not lines: one file can carry two of the nine (the
+  /* Distinct PLACES, not lines: one file can carry two of the ten (the
    * collection holds both the record and the import), and one line is not a
    * place at all (the `coveredCollections` claim rides along with the fact). */
   const places = new Set(wrote.map(w => w.place)).size
@@ -503,7 +662,7 @@ export function pushSpecies(root, body) {
      * them — which is the correct state to be in and a surprising one to
      * discover from a gate an hour later.
      */
-    say: `${speciesId} is in the game. ${places} of the nine places written`
+    say: `${speciesId} is in the game. ${places} of the ten places written`
       + `${skipped.length ? `, ${skipped.length} already there` : ''}, and three plus the two shared `
       + 'counts are yours. `npm test` is RED until those are written, and that is on purpose.',
   }

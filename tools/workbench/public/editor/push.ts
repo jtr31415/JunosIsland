@@ -71,6 +71,14 @@ export interface PushRequest {
   after: readonly string[]
   auditRow: ReturnType<typeof auditRowFor>
   factRow: ReturnType<typeof factRowFor>
+  /**
+   * How it gets about, Joe's own word — absent when he has not ruled on it.
+   * Deliberately NOT sent inside `record`: `withRecord` skips a `defineSpecies`
+   * call that already exists, and thirty species are already pushed, so a value
+   * living there would be unreachable for exactly the animals it is for. This
+   * travels on its own and is upserted straight into `moves.ts`'s table instead.
+   */
+  moves?: string
 }
 
 /**
@@ -148,5 +156,6 @@ export function pushRequest(
     after: membersAfter(speciesId, view.collection),
     auditRow: auditRowFor(view),
     factRow: factRowFor(view),
+    moves: view.moves === '' ? undefined : view.moves,
   }
 }

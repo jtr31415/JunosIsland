@@ -372,6 +372,9 @@ export type BuildSpec = QuadrupedBuild | SongbirdBuild | RaptorBuild | PendingBu
  * `build` is absent exactly when `kit` is `'kenney'`, and present otherwise —
  * enforced by `tests/island/species-roster.test.ts` rather than by the type,
  * because the roster is data and the check has to run against the data.
+ *
+ * How it MOVES is deliberately not a field here. `species/moves.ts` looks it
+ * up by `id` instead, for the reasons that file's header gives.
  */
 export interface Species {
   /**

@@ -33,7 +33,8 @@ import { fileURLToPath } from 'node:url'
  * decision `voice-script.test.ts` records at its own imports.
  */
 // @ts-expect-error — see above; `push.mjs` ships no types.
-import { withExportLine, withRecord, withAssembledImport, withRow, assertLf, PushRefused } from '../../tools/workbench/push.mjs'
+import { withExportLine, withRecord, withAssembledImport, withRow, withMovesEntry, assertLf, PushRefused, LOCOMOTIONS as PUSH_LOCOMOTIONS } from '../../tools/workbench/push.mjs'
+import { LOCOMOTIONS } from '../../src/island/species/moves'
 import { defToModuleSource } from '../../tools/workbench/public/editor/def'
 import type { CreatureDef } from '../../src/island/species/parts'
 
@@ -44,6 +45,7 @@ const COLLECTION = 'src/island/species/collections/home-pets.ts'
 const MODULE = 'src/island/species/parts/assembled/animal-corn-snake.ts'
 const AUDIT = 'joe/names-audit.json'
 const FACTS = 'joe/species-facts.json'
+const MOVES = 'src/island/species/moves.ts'
 
 const SENTINEL = "/* -- append the next species' line directly above this one -- */"
 const ASSEMBLED_IMPORT = "import '../parts/assembled'"
@@ -128,6 +130,18 @@ const RECORD_TEXT = [
   '   * kit, and `parts/assembled/animal-corn-snake.ts` carries every measurement.',
   '   */',
   "  defineSpecies('animal-corn-snake', 'bespoke'),",
+].join('\n')
+
+/** `src/island/species/moves.ts`, cut down to the table the push edits. */
+const MOVES_TEXT = [
+  '/* >>> WORKBENCH-OWNED TABLE — entries below are written by tools/workbench/push.mjs.',
+  " * Keep one `'id': 'value',` per line, sorted, and keep these two markers. */",
+  'export const MOVES: Readonly<Record<string, Locomotion>> = {',
+  "  'animal-bee': 'air',",
+  "  'animal-parrot': 'air',",
+  '}',
+  '/* <<< WORKBENCH-OWNED TABLE */',
+  '',
 ].join('\n')
 
 const AUDIT_ROW = {
@@ -226,6 +240,7 @@ const seedTree = () => {
   rmSync(join(root, 'src'), { recursive: true, force: true })
   write(INDEX, INDEX_TEXT)
   write(COLLECTION, COLLECTION_TEXT)
+  write(MOVES, MOVES_TEXT)
   write(AUDIT, JSON.stringify(AUDIT_SEED, null, 2) + '\n')
   write(FACTS, JSON.stringify(FACTS_SEED, null, 2) + '\n')
 }
@@ -399,6 +414,80 @@ describe('a species that is already built is never written over', () => {
     expect(read(COLLECTION)).toBe(COLLECTION_TEXT)
     expect(jsonAt<Ledger>(AUDIT)).toEqual(AUDIT_SEED)
     expect(jsonAt<Ledger>(FACTS)).toEqual(FACTS_SEED)
+  })
+
+  /*
+   * THE WHOLE REASON `moves` DOES NOT LIVE ON THE `defineSpecies` RECORD. Thirty
+   * species are already built, and they are exactly the ones Joe needs to rule
+   * on — `moves.ts`'s own header makes the argument in full. So a push naming an
+   * already-built species is refused for everything EXCEPT this one field.
+   */
+  it('an already-built species accepts a moves-only push, and touches nothing else', async () => {
+    const rel = 'src/island/species/parts/assembled/animal-x.ts'
+    const built = [
+      '/** The animal that is already in the game, and Joe has approved it. */',
+      "export const X_ASSEMBLY = defineCreature('animal-x', { parts: [] })",
+      '',
+    ].join('\n')
+    write(rel, built)
+
+    const r = await push(payload({
+      speciesId: 'animal-x',
+      exportName: 'X_ASSEMBLY',
+      module: [
+        "import { defineCreature } from '../creature'",
+        '',
+        "export const X_ASSEMBLY = defineCreature('animal-x', { parts: ['something else'] })",
+        '',
+      ].join('\n'),
+      record: "  defineSpecies('animal-x', 'bespoke'),",
+      after: [],
+      auditRow: { ...AUDIT_ROW, id: 'natural/animal-x', speciesId: 'animal-x' },
+      factRow: { ...FACT_ROW, speciesId: 'animal-x' },
+      moves: 'air',
+    }))
+
+    expect(r.code).toBe(200)
+    expect(places(r.body.wrote)).toEqual([10])
+    expect(places(r.body.skipped)).toEqual([1, 2, 3, 4, 8, 9])
+
+    /* The one thing that landed. */
+    expect(read(MOVES)).toContain("'animal-x': 'air',")
+    /* Nothing else about the already-built species moved at all — the module
+     * text sent along for the ride is not even the same as what is on disk,
+     * and it stays that way. */
+    expect(read(rel)).toBe(built)
+    expect(read(INDEX)).toBe(INDEX_TEXT)
+    expect(read(COLLECTION)).toBe(COLLECTION_TEXT)
+    expect(jsonAt<Ledger>(AUDIT)).toEqual(AUDIT_SEED)
+    expect(jsonAt<Ledger>(FACTS)).toEqual(FACTS_SEED)
+  })
+
+  it('a second moves-only push of the same value is "already there", and writes nothing at all', async () => {
+    const rel = 'src/island/species/parts/assembled/animal-x.ts'
+    write(rel, "export const X_ASSEMBLY = defineCreature('animal-x', { parts: [] })\n")
+
+    const body = payload({
+      speciesId: 'animal-x',
+      exportName: 'X_ASSEMBLY',
+      module: [
+        "import { defineCreature } from '../creature'", '',
+        "export const X_ASSEMBLY = defineCreature('animal-x', { parts: [] })", '',
+      ].join('\n'),
+      record: "  defineSpecies('animal-x', 'bespoke'),",
+      after: [],
+      auditRow: { ...AUDIT_ROW, id: 'natural/animal-x', speciesId: 'animal-x' },
+      factRow: { ...FACT_ROW, speciesId: 'animal-x' },
+      moves: 'air',
+    })
+    expect((await push(body)).code).toBe(200)
+    const settled = read(MOVES)
+
+    const again = await push(body)
+    expect(again.code).toBe(200)
+    expect(places(again.body.wrote)).toEqual([])
+    expect(places(again.body.skipped).sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 8, 9, 10])
+    expect(read(MOVES)).toBe(settled)
   })
 })
 
@@ -721,5 +810,79 @@ describe('the text surgery, one function at a time', () => {
     expect(() => assertLf(INDEX, 'one line\r\ntwo lines\n')).toThrow(PushRefused)
     expect(() => assertLf(INDEX, 'one line\r\ntwo lines\n')).toThrow(/CRLF/)
     expect(() => assertLf(INDEX, INDEX_TEXT)).not.toThrow()
+  })
+})
+
+/**
+ * `withMovesEntry`: the one splice here that REPLACES rather than skips.
+ *
+ * Deliberately the opposite shape to `withRecord` above, and that difference
+ * is the whole reason `moves` was never folded into the `defineSpecies` record
+ * — see `src/island/species/moves.ts`'s own header. `withRecord` treats an id
+ * already present as done; this treats it as the common case, because ruling
+ * on an animal that is ALREADY BUILT is the entire point of the field.
+ */
+describe('withMovesEntry: upserts the MOVES table, and never skips an id already there', () => {
+  it('adds a new id in sorted position', () => {
+    const next = withMovesEntry(MOVES_TEXT, 'animal-aardvark', 'land') as string
+    const lines = next.split('\n').map(l => l.trim())
+    const at = lines.findIndex(l => l === "'animal-aardvark': 'land',")
+    const bee = lines.findIndex(l => l === "'animal-bee': 'air',")
+    const parrot = lines.findIndex(l => l === "'animal-parrot': 'air',")
+    expect(at).toBeGreaterThan(-1)
+    /* Sorted: "aardvark" precedes "bee" and "parrot" alphabetically. */
+    expect(at).toBeLessThan(bee)
+    expect(at).toBeLessThan(parrot)
+    /* Nobody already there lost their line. */
+    expect(lines.filter(l => l.includes("'animal-"))).toHaveLength(3)
+  })
+
+  /*
+   * THE REGRESSION THAT WOULD OTHERWISE MAKE THIS FIELD USELESS FOR THE THIRTY
+   * ALREADY-PUSHED ANIMALS. If this appended instead of replacing, ruling on an
+   * id already in the table would leave TWO conflicting entries for it, and
+   * `MOVES[id]` would silently answer with whichever one a duplicate object key
+   * happens to keep — not a crash, a wrong and confusing answer, for exactly the
+   * thirty species PB-068 exists to let Joe rule on.
+   */
+  it('REPLACES an existing id\'s value — it does not append a duplicate line beside it', () => {
+    const next = withMovesEntry(MOVES_TEXT, 'animal-bee', 'land') as string
+    const lines = next.split('\n').map(l => l.trim()).filter(l => l.startsWith("'animal-bee':"))
+    expect(lines).toEqual(["'animal-bee': 'land',"])
+    expect(next).not.toContain("'animal-bee': 'air',")
+  })
+
+  it('never touches animal-bee or animal-parrot when asked about a different id', () => {
+    const next = withMovesEntry(MOVES_TEXT, 'animal-newt', 'water') as string
+    expect(next).toContain("'animal-bee': 'air',")
+    expect(next).toContain("'animal-parrot': 'air',")
+  })
+
+  it('is a true no-op — returns null — when the id already carries exactly this value', () => {
+    expect(withMovesEntry(MOVES_TEXT, 'animal-bee', 'air')).toBeNull()
+  })
+
+  it('throws when either marker is missing, and never guesses where the table is', () => {
+    const noStart = MOVES_TEXT.replace('/* >>> WORKBENCH-OWNED TABLE', '/* nothing to see here')
+    expect(() => withMovesEntry(noStart, 'animal-newt', 'water')).toThrow(PushRefused)
+    expect(() => withMovesEntry(noStart, 'animal-newt', 'water')).toThrow(/WORKBENCH-OWNED TABLE/)
+
+    const noEnd = MOVES_TEXT.replace('/* <<< WORKBENCH-OWNED TABLE */', '/* nothing to see here */')
+    expect(() => withMovesEntry(noEnd, 'animal-newt', 'water')).toThrow(PushRefused)
+  })
+
+  it('rejects a rubbish locomotion value before it can be written', () => {
+    expect(() => withMovesEntry(MOVES_TEXT, 'animal-newt', 'levitate')).toThrow(PushRefused)
+    expect(() => withMovesEntry(MOVES_TEXT, 'animal-newt', 'levitate')).toThrow(/land, air, water, amphibian/)
+    /* And it never got as far as being a filesystem question: the same rubbish
+     * value on a source with no markers at all still fails on the VALUE. */
+    expect(() => withMovesEntry('nothing like the real file', 'animal-newt', 'levitate')).toThrow(PushRefused)
+  })
+
+  it('mirrors moves.ts\'s own Locomotion union, word for word', () => {
+    /* The agreement `push.mjs`'s own header promises. A fifth word added to
+     * `moves.ts` and not repeated here is a mismatch this catches immediately,
+     * rather than a typo that reaches a real push months later. */
+    expect([...PUSH_LOCOMOTIONS].sort()).toEqual([...LOCOMOTIONS].sort())
   })
 })

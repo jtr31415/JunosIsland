@@ -60,6 +60,7 @@
  */
 import { SPECIES_NAMES, SPECIES_COLLECTION, collection } from '../../../../src/island/species/roster'
 import { NAME_PINS, _allocate, givenName, nameBandOf } from '../../../../src/island/species/naming'
+import type { Locomotion } from '../../../../src/island/species/moves'
 
 /** What the drafting side may record about how a fact was checked. */
 export type FactCheck = 'verified' | 'flagged'
@@ -73,7 +74,7 @@ export type FactCheck = 'verified' | 'flagged'
  * reason that does not matter.
  */
 export interface Problem {
-  field: 'species' | 'collection' | 'name' | 'fact'
+  field: 'species' | 'collection' | 'name' | 'fact' | 'moves'
   say: string
   /** True when a push must refuse until this is fixed. */
   blocks: boolean
@@ -85,10 +86,21 @@ export interface Problem {
  * `collection` and `factSource` are not here because neither is typed:
  * `collection` is the roster's answer and `factSource` is always `joe`, which is
  * what the field was added to record. The push writes both from the view.
+ *
+ * `moves` IS here, and typed with its own absence (`''`) rather than left out
+ * the way `collection` is: unlike the collection, nothing can derive it — it is
+ * Joe's own judgement, one word, and `''` is the one honest way to say he has
+ * not made it yet. See `src/island/species/moves.ts` for the whole argument.
+ *
+ * Optional, and defaulted to `''` inside `signoffView` rather than demanded of
+ * every caller: `status.ts` only ever asks this file about `ready`, which
+ * `moves` never changes (the problem it adds never blocks), so a caller that
+ * has no opinion about locomotion should not have to state one.
  */
 export interface SignoffFields {
   givenName: string
   fact: string
+  moves?: Locomotion | ''
 }
 
 /** Everything the panel draws, derived once so the DOM half has no arithmetic. */
@@ -113,6 +125,8 @@ export interface SignoffView {
   factSource: string
   /** What the fact row would record. `flagged` until something checks it. */
   factCheck: FactCheck
+  /** How it gets about, or `''` when Joe has not ruled on it yet. */
+  moves: Locomotion | ''
   problems: readonly Problem[]
   /** No blocking problem left. The push may be offered. */
   ready: boolean
@@ -221,6 +235,7 @@ export function signoffView(speciesId: string, fields: SignoffFields): SignoffVi
   const generated = speciesId === '' ? '' : givenName(speciesId)
   const override = fields.givenName.trim()
   const name = override === '' ? generated : override
+  const moves = fields.moves ?? ''
   const problems: Problem[] = []
 
   if (speciesId === '') {
@@ -249,6 +264,23 @@ export function signoffView(speciesId: string, fields: SignoffFields): SignoffVi
 
   problems.push(...factProblems(fields.fact))
 
+  /*
+   * Joe must make this call BEFORE sign-off — that is the whole point of the
+   * field — but it does not BLOCK a push. The thirty species already in the
+   * tree are exactly the ones with no ruling yet, and a hard block here would
+   * stop him pushing anything else about them (a name fix, a fact rewrite)
+   * until he had also settled locomotion, which is a second decision wearing
+   * the first one's gate. Stated, not enforced — the same shape `clashesWith`
+   * already takes.
+   */
+  if (moves === '') {
+    problems.push({
+      field: 'moves',
+      say: 'moves: not decided yet — walks on land, flies, or lives in water?',
+      blocks: false,
+    })
+  }
+
   return {
     speciesId,
     inRoster,
@@ -265,6 +297,7 @@ export function signoffView(speciesId: string, fields: SignoffFields): SignoffVi
      * small lie that a later reader has no way to spot. */
     factSource: fields.fact.trim() === '' ? '' : JOE,
     factCheck: 'flagged',
+    moves,
     problems,
     ready: !problems.some(p => p.blocks),
   }

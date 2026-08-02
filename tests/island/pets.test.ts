@@ -42,10 +42,11 @@ vi.mock('three/examples/jsm/loaders/GLTFLoader.js', async () => {
 })
 
 import {
-  createPetField, clearOf, FLYERS, TREE_HEIGHT, WINGBEAT,
+  createPetField, clearOf, TREE_HEIGHT, WINGBEAT,
 } from '../../src/island/pets'
 import { createLighting } from '../../src/island/lighting'
 import { FITS } from '../../src/island/world/props'
+import { mulberry32 } from '../../src/core/rng'
 import meadowDay from '../../src/island/lighting/presets/meadow-day.json'
 import type { Island } from '../../src/island/world/grid'
 import type { Pet } from '../../src/island/flow'
@@ -86,8 +87,18 @@ function run(field: Field, frames: number, from = 0): void {
   for (let i = 0; i < frames; i++) field.update(1 / 60, from + i / 60, ISLAND, HEX)
 }
 
+/*
+ * Seeded rather than `Math.random`, per PB-054: a field's goal, rest and
+ * phase are drawn from an `Rng`, and a test that asserts on the real
+ * `update()` loop without controlling that draw is asserting on a coin
+ * toss. Every assertion in this file is a threshold rather than an exact
+ * position, so any seed is fine — what matters is that it is fixed rather
+ * than reached for a retry or a wider tolerance if it ever flakes.
+ */
+const SEED = 3
+
 async function fieldWith(...pets: Pet[]): Promise<Field> {
-  const field = createPetField()
+  const field = createPetField('', mulberry32(SEED))
   await field.sync(pets, ISLAND, HEX)
   return field
 }
@@ -271,27 +282,36 @@ describe('two keep-outs that overlap', () => {
 })
 
 describe('who flies', () => {
-  it('flies the bee and the parrot', () => {
-    expect(FLYERS.has('animal-bee')).toBe(true)
-    expect(FLYERS.has('animal-parrot')).toBe(true)
+  /*
+   * The judgement itself — exactly which two of the 24 species fly — now
+   * lives in `species/moves.ts`, and its membership pin lives beside it in
+   * `moves.test.ts`'s migration guard. What belongs HERE is the behaviour
+   * `pets.ts` actually produces from that judgement: a real field, run for
+   * real frames, either hovers a creature at `TREE_HEIGHT` or leaves it
+   * bobbing on the grass. Asserting a constant's contents proves nothing
+   * about the wiring between the table and the update loop; running the
+   * loop does.
+   */
+  it('hovers a bee and a parrot at tree height', async () => {
+    const field = await fieldWith(pet('b', 'animal-bee'), pet('p', 'animal-parrot'))
+    run(field, 30)
+    expect(petAt(field, 'b').position.y).toBeCloseTo(TREE_HEIGHT, 1)
+    expect(petAt(field, 'p').position.y).toBeCloseTo(TREE_HEIGHT, 1)
   })
 
-  it('does NOT fly the penguin, the fish or the chick', () => {
+  it('bobs a species with no table entry along the ground, wings or not', async () => {
     /*
-     * The judgement, pinned. All three carry `wing-left`/`wing-right` nodes —
-     * which is why "has wings" is evidence and not the rule. A penguin's are
-     * flippers, a fish's are fins, and a chick spends its whole life on the
-     * ground. A penguin hovering over the treetops is the failure this test
-     * exists to prevent, and it is the one a rule derived from the mesh would
-     * have shipped.
+     * The penguin, the fish and the chick all carry `wing-left`/`wing-right`
+     * nodes in the real pack — the stub above gives them to every species —
+     * which is why "has wings" was always evidence and never the rule. None
+     * of the three has an entry in `MOVES`, so all three walk.
      */
-    expect(FLYERS.has('animal-penguin')).toBe(false)
-    expect(FLYERS.has('animal-fish')).toBe(false)
-    expect(FLYERS.has('animal-chick')).toBe(false)
-  })
-
-  it('flies nothing else in the pack', () => {
-    expect([...FLYERS].sort()).toEqual(['animal-bee', 'animal-parrot'])
+    const field = await fieldWith(
+      pet('n', 'animal-penguin'), pet('f', 'animal-fish'), pet('c', 'animal-chick'))
+    run(field, 30)
+    expect(petAt(field, 'n').position.y).toBeLessThan(0.2)
+    expect(petAt(field, 'f').position.y).toBeLessThan(0.2)
+    expect(petAt(field, 'c').position.y).toBeLessThan(0.2)
   })
 })
 

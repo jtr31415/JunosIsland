@@ -343,6 +343,56 @@ describe('ready is a decision, and draft is the absence of one', () => {
   })
 })
 
+/**
+ * `moves` (PB-068) — Joe's locomotion ruling, added to the allowlist alongside
+ * everything else this file already owns. The interesting failure this guards
+ * against is not "the page cannot set it at all" (that is every other field's
+ * test, already above) but "a typo reaches the file, and from there
+ * `push.mjs` splices it straight into `src/island/species/moves.ts`" — so a
+ * value outside the four words `Locomotion` allows is refused here, before it
+ * is ever written to disk at all.
+ */
+describe('moves is Joe\'s own judgement, one word, checked against the four moves.ts allows', () => {
+  it('the allowlist accepts moves — a patch naming it lands like any other owned field', async () => {
+    const r = await status({ what: 'edits', patch: { speciesId: 'animal-fawn', moves: 'air' } })
+    expect(r.code).toBe(200)
+    expect(draftOf('animal-fawn').moves).toBe('air')
+  })
+
+  it('still refuses a field that is not in owns, moves having been added beside it', async () => {
+    const r = await status({ what: 'edits', patch: { speciesId: 'animal-fawn', notAField: 'x' } })
+    expect(r.code).toBe(400)
+    expect(r.body.error).toContain('notAField')
+    /* And moves, set a moment ago, is untouched by the refusal. */
+    expect(draftOf('animal-fawn').moves).toBe('air')
+  })
+
+  it('refuses a word Locomotion does not allow, on a patch and on a whole-file save alike', async () => {
+    const patched = await status({ what: 'edits', patch: { speciesId: 'animal-fawn', moves: 'levitates' } })
+    expect(patched.code).toBe(400)
+    expect(patched.body.error).toContain('levitates')
+    expect(patched.body.error).toContain('land')
+    /* Refused, not half-applied. */
+    expect(draftOf('animal-fawn').moves).toBe('air')
+
+    const page = onDisk()
+    page.drafts.find((d: any) => d.speciesId === 'animal-fawn').moves = 'swims'
+    const whole = await status({ what: 'edits', value: page })
+    expect(whole.code).toBe(400)
+    expect(whole.body.error).toContain('swims')
+    expect(draftOf('animal-fawn').moves).toBe('air')
+  })
+
+  it('an absent moves is idle, exactly like every other field born unset — it never blanks a ruling already made', async () => {
+    const stale = onDisk()                                     // this copy has no opinion about moves
+    agentWrites(f => {
+      f.drafts.find((d: any) => d.speciesId === 'animal-kit').moves = 'water'
+    })
+    expect((await status({ what: 'edits', value: stale })).code).toBe(200)
+    expect(draftOf('animal-kit').moves).toBe('water')
+  })
+})
+
 describe('the file is a file like the others', () => {
   it('keeps its own order and its own formatting — two spaces, LF, trailing newline', async () => {
     /* Disk order, not the page's. The editor lists animals however it likes and

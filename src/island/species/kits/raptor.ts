@@ -56,9 +56,10 @@
  *     and `wing-right`, in that order, and nothing else in the file carries the
  *     `wing-` prefix. The wing meshes therefore author no `rotation.z`, because
  *     it would be thrown away, and their lean lives in `rotation.x`. Nothing
- *     flaps today — flapping is gated on `FLYERS` (`pets.ts:47`), a two-entry
- *     list of species ids — but the day an eagle joins it, its wings move and
- *     the correct one leads.
+ *     flaps today — flapping is gated on `species/moves.ts`, where whether an
+ *     animal flies is set per species in the workbench editor, not a constant
+ *     anyone edits here — but the day an eagle is marked as flying, its wings
+ *     move and the correct one leads.
  *
  * NOTHING BUILT HERE IS EVER DISPOSED PER PET — `pets.ts:592` hands out
  * `.clone(true)` and a clone shares geometry and materials. See the quadruped

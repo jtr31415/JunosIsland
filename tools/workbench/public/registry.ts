@@ -15,7 +15,8 @@
  * and it is most of the value: "this rock is in COVER.rocky and PALETTE.grass"
  * tells Joe where a change would land before he asks for one.
  */
-import { SPECIES, FLYERS } from '../../../src/island/pets'
+import { SPECIES } from '../../../src/island/pets'
+import { movesFor } from '../../../src/island/species/moves'
 import {
   FEATURES, COVER, MOUNTAIN_HEXES, LEAFY_TREES, BARE_TREES, WATER_PIECES,
 } from '../../../src/island/world/props'
@@ -181,7 +182,9 @@ export function buildCatalogue(): Entry[] {
     m.set(id, {
       id, gallery: 'species', group: 'creatures', pack: 'pets',
       file: fileOf(id, 'pets'),
-      used: FLYERS.has(id) ? ['SPECIES', 'FLYERS'] : ['SPECIES'],
+      // The actual locomotion word, not a yes/no: `moves.ts` now holds a
+      // four-way judgement rather than a two-entry flying/not-flying set.
+      used: ['SPECIES', `moves.ts: ${movesFor(id)}`],
     })
   }
 
