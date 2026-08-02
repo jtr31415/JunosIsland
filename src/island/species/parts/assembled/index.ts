@@ -82,6 +82,7 @@ export { CHINCHILLA_ASSEMBLY } from './animal-chinchilla'
 export { GUINEA_PIG_ASSEMBLY } from './animal-guinea-pig'
 export { PONY_ASSEMBLY } from './animal-pony'
 export { HAMSTER_ASSEMBLY } from './animal-hamster'
+export { DEGU_ASSEMBLY } from './animal-degu'
 /* -- append the next species' line directly above this one -- */
 
 import { assembledBuilds } from './register'
