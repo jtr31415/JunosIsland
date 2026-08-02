@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "nextId": 76,
+  "nextId": 77,
   "cards": [
     {
       "id": "PB-001",
@@ -538,6 +538,13 @@
       "run": "",
       "title": "A save's pet list is the one field read back without sanitising",
       "detail": "Measured under PB-070: fromSave does `Array.isArray(save.pets) ? save.pets : []` and trusts every record inside, while readPlot, readOnceFlags, readOpened and readAttainment all sanitise what they read. It was harmless while a species could only be one of 24 known ids; now that the deal pool grows with sign-off, a stale or hand-edited save can carry a species nothing can build. pets.ts now says so loudly rather than silently, which is the safety net — but the read is still the asymmetry."
+    },
+    {
+      "id": "PB-076",
+      "state": "done",
+      "run": "",
+      "title": "A pet's name came off an unfiltered coin toss, and one in 678 was obscene",
+      "detail": "Joe's six-year-old was dealt a rabbit called Defuck. The live hatch used petName(defaultRng) - unseeded Math.random - and src/core/names.ts's FORBIDDEN list carries shit, cock, dick, piss and arse but not fuck and not cunt, so 640 distinct obscene names were reachable at one hatch in 678. Fixed per Joe's ruling (\"no dont change the generator, we hard fix the first 24 animals instead\") by wiring the hatch to the frozen per-species allocation, which screened clean on all 320 names, plus a standing screen gate in the island layer. Forward-only: a pet already in a save keeps its name, which is JT-045."
     }
   ]
 }
