@@ -351,11 +351,11 @@
 
 ---
 
-> ## ⚠ START HERE — state at handover, 2 Aug 2026
+> ## Superseded — state at handover, 2 Aug 2026 (morning)
 >
-> *Written by the drumbeat at Joe's request, for a FRESH SESSION. Read this
-> block, then Run 15 below for the detail. Everything else in this file is
-> history.*
+> *Written by the drumbeat at Joe's request, for a FRESH SESSION. HISTORY: two
+> handovers have replaced this one — see the block at the top of this file. Read
+> this block, then Run 15 below for the detail.*
 >
 > ### Where the tree is
 >
