@@ -132,8 +132,15 @@ const COIL_ACROSS = 1.335
  * cube's 1.953, a ratio of 2.4, and rule 3 wants a feature to be a detail on the
  * mass rather than a second one. At 1.000 the ratio is 4.3 and the ring is
  * inside the hull's own width, so it costs no keep-out either.
+ *
+ * REDEFINED, and the six decimal places are the point. This was `1 / COIL_ACROSS`
+ * until a workbench editor push flattened it to its evaluated value — and the
+ * editor round-trips at SIX PLACES, so what came back was 0.749064 rather than
+ * 1/1.335 = 0.7490636704119851. Those are different numbers. The pushed one is
+ * the one the animal renders and it is left alone; the name is restored over it
+ * at the editor's own precision, so this is bit-for-bit 0.749064.
  */
-const COIL_STRETCH = 1 / COIL_ACROSS
+const COIL_STRETCH = Math.round(1e6 / COIL_ACROSS) / 1e6
 
 /**
  * Sunk so the coil's underside lands on y = 0 — where the feet would have been.
@@ -161,11 +168,14 @@ export const SLOW_WORM_ASSEMBLY = defineCreature('animal-slow-worm', {
       part: 'box-04',
       paint: 'belly',
       spin: [{ axis: 'x', deg: 90 }, { axis: 'x', deg: 90 }],
-      stretch: [0.749064, 0.749064, 1.1],
+      /* `COIL_STRETCH` and `COIL_SINK` were flattened to their evaluated values
+       * by a workbench editor push; the names are restored, the numbers are
+       * not touched. The z stretch and `at` are the editor's own and stay bare. */
+      stretch: [COIL_STRETCH, COIL_STRETCH, 1.1],
       axis: 'z',
       dir: 1,
       at: [0, 0.7875, -0.575],
-      sink: 0.6025219298245615,
+      sink: COIL_SINK,
     },
   ],
   flag: 'NEW PALETTE, UNREVIEWED — the first slow worm ever built, and the first '

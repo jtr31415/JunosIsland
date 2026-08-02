@@ -109,30 +109,53 @@ describe('animal-terrapin: IT IS NOT THE TORTOISE, and here is the measurement',
     for (const id of ['box-11', 'box-31', 'tube-06', 'tube-08', 'cone-01', 'plate-08']) {
       expect(theirs.has(id), `the tortoise already wears ${id}`).toBe(false)
     }
-    // What they share is the pack's universal leg and ONE shape, inverted below.
-    expect([...mine].filter(p => theirs.has(p)).sort()).toEqual(['box-01', 'box-18'])
+    /* What they share is the pack's universal leg, and NOW ONLY THAT.
+     *
+     * It used to be the leg and `box-18` — the elephant's trunk, which the two
+     * species wore at opposite ends facing opposite ways, and which the next block
+     * was built around. Joe opened the tortoise in the workbench editor and pushed
+     * it back at 84cd17a with that stub replaced by `tube-03`, the deer's nose,
+     * worn backwards. Nothing about THIS animal moved: it still wears `box-18` as
+     * its neck, exactly as before. The overlap shrank from the tortoise's side.
+     *
+     * The separation this test exists to measure therefore got wider, not
+     * narrower, which is the direction that keeps the claim in the title true. */
+    expect([...mine].filter(p => theirs.has(p)).sort()).toEqual(['box-01'])
   })
 
-  it('wears the ONE shared shape at the opposite end, facing the opposite way', () => {
-    // §3.1: a part's identity is where you put it. `box-18` is the elephant's
-    // TRUNK under Kenney's wrong name; the tortoise spins it 180 degrees to make a
-    // stub tail off its rump, and this animal leaves it alone so it points FORWARD
-    // as a neck. Same shape, opposite end, opposite facing — which is the cheapest
-    // and most complete divergence two shelled animals can have.
-    const theirs = TORTOISE_ASSEMBLY.features.find(f => f.part === 'box-18')!
+  it('wears the elephant\'s TRUNK forwards, where the tortoise wore it backwards', () => {
+    /*
+     * §3.1: a part's identity is where you put it. `box-18` is the elephant's
+     * TRUNK under Kenney's wrong name, and this animal leaves it alone so it
+     * points FORWARD as a neck.
+     *
+     * HALF OF THIS COMPARISON WENT AWAY AT 84cd17a, AND IT WAS THE TORTOISE'S
+     * HALF. The block used to read: same shape, opposite end, opposite facing —
+     * the tortoise spinning `box-18` 180 about y into a stub tail off its rump
+     * while this animal wore it unspun off its face, which was the cheapest and
+     * most complete divergence two shelled animals could have. Joe opened the
+     * tortoise in the workbench editor and pushed it back with that feature gone
+     * and `tube-03`, the deer's nose, worn backwards in its place, so there is no
+     * `box-18` on that species and no feature called `tail` on it either.
+     *
+     * What survives is the half that was ever about THIS animal — the trunk worn
+     * forwards, unspun, in front of the hull — plus the tortoise's departure,
+     * asserted rather than assumed so this block goes red again if the stub comes
+     * back and the opposition above can be restored word for word.
+     */
+    expect(TORTOISE_ASSEMBLY.features.some(f => f.part === 'box-18'),
+      'the tortoise wears box-18 again — the opposition above can be restored').toBe(false)
     const mine = feature('neck')
     expect(mine.part).toBe('box-18')
-    expect(theirs.name).toBe('tail')
-    expect(theirs.spin).toEqual([{ axis: 'y', deg: 180 }])
     expect(mine.spin, 'the neck is spun — it must not be').toBeUndefined()
-    if (theirs.placement.kind === 'single') expect(theirs.placement.at[2]).toBe(-0.625)
     if (mine.placement.kind === 'single') expect(mine.placement.at[2]).toBe(0.5)
-    // Measured off the built animals rather than off the specs: one is behind its
-    // hull and one is in front of it.
-    const t = build('animal-tortoise')
-    expect(box(t, 'tail').max.z).toBeLessThan(box(t, 'hull').min.z + 1e-6)
+    // Measured off the built animals rather than off the specs. The two ends are
+    // still opposite even though the shape no longer is: this one's neck is in
+    // FRONT of its hull, and the tortoise's replacement reaches out behind its.
     const g = build()
     expect(box(g, 'neck').min.z).toBeGreaterThanOrEqual(box(g, 'hull').max.z - 1e-6)
+    const t = build('animal-tortoise')
+    expect(box(t, 'tube-03').min.z).toBeLessThan(box(t, 'hull').min.z)
   })
 
   it('reaches 0.765 in front of its own hull where the tortoise reaches nothing', () => {
@@ -574,9 +597,19 @@ describe('animal-terrapin: the feet, the tail and the room it takes up', () => {
     const g = build()
     const reach = box(g, 'hull').min.z - box(g, 'tail').min.z
     expect(reach).toBeCloseTo(0.275356, 4)
-    // Short against the tortoise's stub, which is itself the bank's shortest tail.
+    /* THIS COMPARISON REVERSED AT 84cd17a AND NOTHING ON THIS ANIMAL MOVED.
+     *
+     * It used to read 0.648 — short against the tortoise's stub, which was itself
+     * `box-18`, the bank's shortest tail, reaching 0.425211 behind its hull. Joe's
+     * editor push replaced that stub with `tube-03`, the deer's nose at 0.6 scale,
+     * which reaches 0.101340. So this animal's unchanged 0.275386 is now 2.72
+     * TIMES the tortoise's rather than two thirds of it.
+     *
+     * The number below is a measurement of the pair and not a claim about this
+     * species; the claim about this species is the absolute 0.275356 above, which
+     * has not moved by so much as the bank's last digit. */
     const t = build('animal-tortoise')
-    expect(reach / (box(t, 'hull').min.z - box(t, 'tail').min.z)).toBeCloseTo(0.648, 2)
+    expect(reach / (box(t, 'hull').min.z - box(t, 'tube-03').min.z)).toBeCloseTo(2.717, 2)
     // Its height is derived off this hull's flat REAR face, not chosen: the tail's
     // underside sits exactly on the lowest line that face reaches.
     expect(box(g, 'tail').min.y).toBeCloseTo(0.80625 - 0.3125, 4)

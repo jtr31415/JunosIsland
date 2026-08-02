@@ -82,7 +82,7 @@ import {
   STATUSES, STATUS_LABEL, rowLabel, subjectGroups,
   type AuditRow, type Status,
 } from './status'
-import { pushOutcome, pushRequest, type PushReply } from './push'
+import { pushOutcome, pushRequest, signoffPatch, type PushReply } from './push'
 import { loadBuiltDefs } from './capture'
 import { createStage, type GizmoMode } from './stage'
 import type { CreatureDef } from '../../../../src/island/species/parts'
@@ -223,7 +223,14 @@ interface Draft {
 let drafts: readonly Draft[] = []
 /**
  * `joe/names-audit.json`'s rows — the only thing that knows what Joe has signed
- * off, and therefore what may reach the game at all. Read, never written here.
+ * off, and therefore what may reach the game at all.
+ *
+ * Read here, and written in exactly ONE place: the tail of `push()`, where a
+ * push that actually reached the game writes `signoff` because pressing that
+ * button is Joe signing off (his ruling, 2 August). Never written anywhere else
+ * on this page, and never patched locally — after that one write the rows are
+ * re-read through `refreshDrafts`, so the page cannot come to believe an animal
+ * is signed off that the file does not say is.
  */
 let audit: readonly AuditRow[] = []
 /** Which status the Animal list is narrowed to, or `'all'`. His choice, not saved. */
@@ -1050,6 +1057,44 @@ async function push(): Promise<void> {
   pushNote.textContent = outcome.note
   pushNote.className = outcome.noteClass
   say(outcome.sayText, outcome.sayBad)
+
+  /*
+   * PRESSING THE BUTTON IS THE SIGN-OFF. Joe, 2 August: *"there is no way for me
+   * to change it to status 'sign-off' when i hit the 'push to game' button, that
+   * is me signing it off."* So a push that actually reached the game writes
+   * `signoff` into `joe/names-audit.json`, `/api/save` re-mirrors it into
+   * `src/island/species/signed-off.json`, and the animal is in the egg pool.
+   *
+   * `signoffPatch` returns `null` for every failure, judging by the OUTCOME
+   * above and nothing else, so a push that wrote nothing cannot sign anything
+   * off. See `push.ts` for why it takes the verdict rather than the reply.
+   */
+  const signoff = signoffPatch(outcome, speciesId)
+  if (!signoff) return
+  const signed = await api('/api/save', signoff)
+  if (signed['error'] !== undefined) {
+    /*
+     * The animal IS in the game — place 1 was written — but it is not signed
+     * off, so it will not hatch. Saying nothing would leave him with a success
+     * and an animal Juno never meets: the PB-076 shape of failure through a
+     * different door. `api` never throws; it puts the server's own words in
+     * `error`, so that is what is checked and that is what he is shown. The push
+     * itself is NOT undone and must not be described as though it were.
+     */
+    /* Worded to open with "reached", NOT "is in the game": `species-push.test.ts`
+     * pins that the old unconditional green sentence `${speciesId} is in the
+     * game` has left this page, and that pin is a text match that cannot tell a
+     * red warning from the green lie it was written to catch. Keeping the pin
+     * exact and rewording here is the right way round — the guarantee is worth
+     * more than the phrasing. */
+    say(`${speciesId} reached the game but was NOT signed off — ${String(signed['error'])}. `
+      + 'Push it again, or tick it on the approver page.', true)
+    return
+  }
+  /* Re-read rather than patch the local copy: `refreshDrafts` is the one route
+   * by which this page learns what Joe has signed, and the Animal list's status
+   * column has to move with it. The page never keeps its own copy warm. */
+  await refreshDrafts()
 }
 
 /** A push that did not happen, said in both places Joe can see. */

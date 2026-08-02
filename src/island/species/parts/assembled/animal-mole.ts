@@ -123,21 +123,24 @@ export const MOLE_ASSEMBLY = defineCreature('animal-mole', {
   tail: { part: 'box-18', spin: [{ axis: 'y', deg: 180 }], at: [0, 0.80625, -0.625] },
   snout: { part: 'cone-06', paint: 'snout' },
   extras: [
+    /* Both leg pairs are the pack's leg row. A workbench editor push flattened
+     * `LEG_ROW.sink` / `LEG_ROW.y` to their evaluated 0.408163 / 0.18125; the
+     * names are restored here and the numbers are unchanged. */
     {
       name: 'leg-back',
       part: 'box-01',
       paint: 'leg-back',
       kind: 'pair',
-      sink: 0.408163,
-      at: [0.27, 0.18125, -0.25],
+      sink: LEG_ROW.sink,
+      at: [0.27, LEG_ROW.y, -0.25],
     },
     {
       name: 'leg-front',
       part: 'box-01',
       paint: 'paw',
       kind: 'pair',
-      sink: 0.408163,
-      at: [0.27, 0.18125, 0.25],
+      sink: LEG_ROW.sink,
+      at: [0.27, LEG_ROW.y, 0.25],
     },
     {
       name: 'claw-inner',

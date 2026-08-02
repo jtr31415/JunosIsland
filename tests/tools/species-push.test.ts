@@ -36,7 +36,10 @@ import { fileURLToPath } from 'node:url'
 import { withExportLine, withRecord, withAssembledImport, withRow, withMovesEntry, withUpdatedDefinition, withRestoredConstants, definitionLiteral, staleBindings, assertLf, PushRefused, LOCOMOTIONS as PUSH_LOCOMOTIONS } from '../../tools/workbench/push.mjs'
 import { LOCOMOTIONS } from '../../src/island/species/moves'
 import { defToModuleSource } from '../../tools/workbench/public/editor/def'
-import { pushOutcome, speciesModulePath } from '../../tools/workbench/public/editor/push'
+import { pushOutcome, signoffPatch, speciesModulePath } from '../../tools/workbench/public/editor/push'
+import { APPROVED } from '../../tools/workbench/public/approver'
+import { SIGNED_OFF as LIST_SIGNED_OFF, signedOff } from '../../tools/workbench/public/editor/status'
+import { SIGNED_OFF, MIRROR, signedOffFrom } from '../../tools/species/signoffs.mjs'
 import type { CreatureDef } from '../../src/island/species/parts'
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
@@ -1608,6 +1611,284 @@ describe('the page reads a reply by what it WROTE, not by the absence of an erro
 })
 
 /**
+ * **A push that did not write may not sign anything off.**
+ *
+ * Joe, 2 August: *"there is no way for me to change it to status 'sign-off' when
+ * i hit the 'push to game' button, that is me signing it off."* So a successful
+ * push now writes `signoff` into `joe/names-audit.json`, and the animal joins
+ * the egg pool with no second tick to go and find.
+ *
+ * That makes the button's honesty a CHILD-FACING question rather than a
+ * cosmetic one. PB-076 was a push that returned a clean 200 having written
+ * nothing at all; if sign-off hung off the absence of an `error` key, that reply
+ * would have signed off an animal that never reached `src/` — an unreviewed
+ * creature in front of Juno, which is the one thing the gate exists to prevent.
+ *
+ * So `signoffPatch` is handed `pushOutcome`'s verdict and has exactly one test
+ * in it. Every reply below is a REAL one off the real server, judged by the same
+ * pair of calls `main.ts` makes, in the same order; the invariant near the end is
+ * what makes the two rules structurally incapable of disagreeing. The wiring that
+ * proves the page actually calls them in that order is pinned in the next block,
+ * beside the pin it is modelled on.
+ */
+describe('a push that did not reach the game cannot sign the animal off', () => {
+  /** The pair exactly as `push()` in `main.ts` runs it: verdict first, then the sign-off. */
+  const signoffFor = (reply: Reply, id: string) => signoffPatch(pushOutcome(reply, id), id)
+
+  it('signs nothing off when the server refused outright', async () => {
+    /* A real 400 off the real route — the already-built refusal. */
+    write('src/island/species/parts/assembled/animal-x.ts',
+      "export const X_ASSEMBLY = defineCreature('animal-x', { parts: [] })\n")
+    const r = await push(payload({
+      speciesId: 'animal-x',
+      exportName: 'X_ASSEMBLY',
+      module: [
+        "import { defineCreature } from '../creature'", '',
+        "export const X_ASSEMBLY = defineCreature('animal-x', { parts: [] })", '',
+      ].join('\n'),
+      record: "  defineSpecies('animal-x', 'bespoke'),",
+      after: [],
+      auditRow: { ...AUDIT_ROW, id: 'natural/animal-x', speciesId: 'animal-x' },
+      factRow: { ...FACT_ROW, speciesId: 'animal-x' },
+    }))
+    expect(r.code).toBe(400)
+    expect(r.body.error).toBeTruthy()
+
+    expect(signoffFor(r.body, 'animal-x')).toBeNull()
+    /* And nothing reached the ledger by any other route: the audit is as seeded. */
+    expect(jsonAt<Ledger>(AUDIT)).toEqual(AUDIT_SEED)
+  })
+
+  it('signs nothing off when the reply wrote nothing at all', async () => {
+    write('src/island/species/parts/assembled/animal-x.ts',
+      "export const X_ASSEMBLY = defineCreature('animal-x', { parts: [] })\n")
+    const body = payload({
+      speciesId: 'animal-x',
+      exportName: 'X_ASSEMBLY',
+      module: [
+        "import { defineCreature } from '../creature'", '',
+        "export const X_ASSEMBLY = defineCreature('animal-x', { parts: [] })", '',
+      ].join('\n'),
+      record: "  defineSpecies('animal-x', 'bespoke'),",
+      after: [],
+      auditRow: { ...AUDIT_ROW, id: 'natural/animal-x', speciesId: 'animal-x' },
+      factRow: { ...FACT_ROW, speciesId: 'animal-x' },
+      moves: 'air',
+    })
+    expect((await push(body)).code).toBe(200)
+
+    /* Second time round every place is already taken, so `wrote` is empty. */
+    const again = await push(body)
+    expect(again.code).toBe(200)
+    expect(again.body.error).toBeUndefined()
+    expect(places(again.body.wrote)).toEqual([])
+
+    expect(signoffFor(again.body, 'animal-x')).toBeNull()
+  })
+
+  /*
+   * ***THE PB-076 REPLY.*** The one this whole gate is for.
+   *
+   * An animal that is already built, pushed again with a locomotion ruling. The
+   * server answers 200, there is no `error` key anywhere in it, and the only
+   * thing it wrote is the MOVES table — place 1, the file that IS the animal,
+   * is in `skipped`. The old page put "is in the game" on screen in green for
+   * exactly this reply, and a sign-off rule that read `!reply.error` would have
+   * ticked it and put an unreviewed creature into the egg pool.
+   */
+  it('signs nothing off for a moves-only push on an already-built species', async () => {
+    const rel = 'src/island/species/parts/assembled/animal-x.ts'
+    write(rel, "export const X_ASSEMBLY = defineCreature('animal-x', { parts: [] })\n")
+    const r = await push(payload({
+      speciesId: 'animal-x',
+      exportName: 'X_ASSEMBLY',
+      module: [
+        "import { defineCreature } from '../creature'", '',
+        "export const X_ASSEMBLY = defineCreature('animal-x', { parts: ['something else'] })", '',
+      ].join('\n'),
+      record: "  defineSpecies('animal-x', 'bespoke'),",
+      after: [],
+      auditRow: { ...AUDIT_ROW, id: 'natural/animal-x', speciesId: 'animal-x' },
+      factRow: { ...FACT_ROW, speciesId: 'animal-x' },
+      moves: 'air',
+    }))
+    /* The reply is a success by every measure the old code had. */
+    expect(r.code).toBe(200)
+    expect(r.body.error).toBeUndefined()
+    expect(places(r.body.wrote).length).toBeGreaterThan(0)
+    expect(places(r.body.wrote)).not.toContain(1)
+    expect(places(r.body.skipped)).toContain(1)
+    /* The file on disk is still the one-line stub — the shape never changed. */
+    expect(read(rel)).not.toContain('something else')
+
+    expect(signoffFor(r.body, 'animal-x')).toBeNull()
+  })
+
+  /*
+   * The other half of the claim, without which "returns null" would be satisfied
+   * by a function that returned null always: a push that really did write place 1
+   * produces a patch, and the patch names the row the push itself just appended.
+   */
+  it('signs the animal off when place 1 really was written, naming the row the push wrote', async () => {
+    const r = await push(payload())
+    expect(r.code).toBe(200)
+    expect(places(r.body.wrote)).toContain(1)
+
+    const patch = signoffFor(r.body, 'animal-corn-snake')
+    expect(patch).not.toBeNull()
+    expect(patch!.what).toBe('names')
+    expect(patch!.patch.id).toBe('natural/animal-corn-snake')
+    expect(patch!.patch.signoff).toBe(APPROVED)
+
+    /* The id is the audit ROW's id, not the species id, and it is the very row
+     * place 8 of this push appended — checked against the bytes rather than
+     * against the string this test would otherwise be spelling twice. */
+    const rows = (jsonAt<Ledger>(AUDIT).names ?? []) as { id: string }[]
+    expect(rows.map(row => row.id)).toContain(patch!.patch.id)
+
+    /* `natural/` is load-bearing and not decoration: the real server refuses a
+     * patch aimed at the bare species id, so getting it wrong is a save that
+     * fails rather than a sign-off that lands on the wrong creature. */
+    const wrong = await save({ what: 'names', patch: { id: 'animal-corn-snake', signoff: APPROVED } })
+    expect(wrong.code).toBe(400)
+    expect(wrong.body.error).toContain('no such id')
+  })
+
+  it('never aims a patch at a bare `natural/`, however successful the push was', async () => {
+    const r = await push(payload())
+    const out = pushOutcome(r.body, 'animal-corn-snake')
+    expect(out.ok, 'the outcome under test has to be a real success').toBe(true)
+
+    /* Only the id is missing, and it is the only thing standing between this and
+     * a patch naming `natural/` — a row id no creature has, which `applyPatch`
+     * would refuse, and which is a save Joe would have to be told about for no
+     * reason. Blank, and whitespace, which `trim()` is there to catch. */
+    for (const id of ['', ' ', '   ', '\t', '\n']) {
+      expect(signoffPatch(out, id), JSON.stringify(id)).toBeNull()
+    }
+  })
+
+  /*
+   * ***THE INVARIANT.***
+   *
+   * Over every reply shape that can be constructed, real and made up:
+   *
+   *     signoffPatch(pushOutcome(reply, id), id) !== null   ⟺   pushOutcome(reply, id).ok
+   *
+   * This is the thing that makes the two rules structurally incapable of
+   * disagreeing, and it is why `signoffPatch` takes the OUTCOME rather than
+   * re-reading `wrote` for itself. A second reading of the reply would be a
+   * second definition of "the animal reached the game", and two definitions
+   * drift: the day somebody taught one of them about place 2, or about a reply
+   * that carries `skipped` but no `error`, the other would not have heard, and
+   * the failure mode of that disagreement is a tick on an animal nobody built.
+   * There is exactly one `ok` test in the function and no other input from which
+   * success could be re-derived, so the biconditional below is not a coincidence
+   * this test happens to observe — it is the shape of the code, asserted.
+   */
+  it('produces a patch if and only if the outcome says the animal reached the game', async () => {
+    const p = (place: number) => ({ place, path: 'p', what: 'w' })
+    const ID = 'animal-corn-snake'
+
+    /* Real replies first, off the real server: a fresh success, and the two
+     * shapes of clean-200 failure the server actually produces. */
+    const fresh = (await push(payload())).body
+    rmSync(join(root, MODULE))
+    const placeOneOnly = (await push(payload())).body
+    const repeat = (await push(payload())).body
+    const refused = (await push(payload({ collection: 'aquarium' }))).body
+    expect(refused.error, 'the refusal under test stopped being one').toBeTruthy()
+
+    const shapes: readonly Reply[] = [
+      fresh, placeOneOnly, repeat, refused,
+      /* And every shape a reply could take that the server does not happen to
+       * produce today, so the rule is stated over the space and not over the
+       * sample. */
+      {},
+      { wrote: [] },
+      { wrote: [], skipped: [], left: [] },
+      { say: 'Nothing was written' },
+      { error: 'refused' },
+      { error: '' },
+      { skipped: [p(1)] },
+      { wrote: [p(2)] },
+      { wrote: [p(10)] },
+      { wrote: [p(2), p(3), p(4), p(8), p(9)] },
+      { wrote: [p(1)] },
+      { wrote: [p(1)], skipped: [p(2)] },
+      { wrote: [p(1), p(2), p(3), p(4), p(8), p(9)], say: 'all of it' },
+      /* The one that matters most in the made-up half: an error BESIDE a written
+       * place 1. `pushOutcome` refuses it, so the sign-off must refuse it too —
+       * neither may take the reply's word from a different field than the other. */
+      { error: 'refused', wrote: [p(1)] },
+      { speciesId: ID, wrote: [p(1)] },
+      { speciesId: ID, skipped: [p(1)], wrote: [p(6)], say: 'moves only' },
+    ]
+
+    /* Both sides of the biconditional are exercised, so a function that always
+     * returned null and a rule that always said ok would both fail here. */
+    let signed = 0
+    for (const reply of shapes) {
+      const outcome = pushOutcome(reply, ID)
+      const patch = signoffPatch(outcome, ID)
+      expect(patch !== null, JSON.stringify(reply)).toBe(outcome.ok)
+      if (outcome.ok) signed++
+    }
+    expect(signed, 'every shape failed — the invariant proved nothing').toBeGreaterThan(0)
+    expect(signed, 'every shape succeeded — the invariant proved nothing').toBeLessThan(shapes.length)
+
+    /* A blank id can only ever REMOVE a sign-off, never add one: the id gate is
+     * strictly narrower than the verdict and may not widen it. */
+    for (const reply of shapes) {
+      expect(signoffPatch(pushOutcome(reply, ID), ''), JSON.stringify(reply)).toBeNull()
+    }
+  })
+
+  /*
+   * ONE STRING, FOUR MODULES, AND THE MIRROR THE GAME SHIPS.
+   *
+   * The value the push writes has to be the value everything downstream gates
+   * on. `approver.ts` spells it for the bench, `editor/status.ts` for the Animal
+   * list's `signed` badge, `tools/species/signoffs.mjs` for the generated mirror
+   * — and drift between any two of them ships an unreviewed animal or withholds
+   * an approved one, silently, with every test still green.
+   *
+   * So the last half of this is not an assertion about strings at all: the patch
+   * is POSTed to the real `/api/save`, which merges it and re-runs the real
+   * generator, and the claim is that the animal is in the file the game reads.
+   */
+  it('writes the one value the whole system gates on, all the way to the shipped mirror', async () => {
+    /* The three spellings, held against each other. */
+    expect(APPROVED, 'approver.ts and signoffs.mjs disagree about what shipping means').toBe(SIGNED_OFF)
+    expect(APPROVED, 'the Animal list gates on a different word than the push writes').toBe(LIST_SIGNED_OFF)
+
+    const r = await push(payload())
+    expect(places(r.body.wrote)).toContain(1)
+    const patch = signoffPatch(pushOutcome(r.body, 'animal-corn-snake'), 'animal-corn-snake')
+    expect(patch).not.toBeNull()
+
+    const saved = await save(patch!)
+    expect(saved.code, JSON.stringify(saved.body)).toBe(200)
+
+    /* The row on disk carries it — this is the string the audit rows use. */
+    const audit = jsonAt<Ledger>(AUDIT)
+    const row = (audit.names ?? []).find(
+      (n): n is { id: string, speciesId: string, signoff?: string } =>
+        (n as { id?: string }).id === 'natural/animal-corn-snake')
+    expect(row?.signoff).toBe(APPROVED)
+    /* The seeded row is untouched — a sign-off patches one creature, not a file. */
+    expect(audit.names?.[0]).toEqual(AUDIT_SEED.names[0])
+
+    /* The generator's OWN rule, run over that file rather than restated. */
+    expect(signedOffFrom(audit)).toEqual(['animal-corn-snake'])
+    /* The editor's own reader, over the same rows. */
+    expect(signedOff(audit.names as { speciesId?: string, signoff?: string }[], 'animal-corn-snake')).toBe(true)
+    /* And the file the GAME reads, regenerated by the save itself. */
+    expect(jsonAt<{ species: string[] }>(MIRROR).species).toEqual(['animal-corn-snake'])
+  })
+})
+
+/**
  * The wiring, pinned the way `editor-own-colour.test.ts` pins its panel.
  *
  * `main.ts` cannot be imported — it builds a WebGL stage at module scope — so
@@ -1653,6 +1934,71 @@ describe('the editor page actually uses the verdict, and has a colour for it', (
   it('stops a push when the save it depends on failed', () => {
     expect(main).toContain('async function save(): Promise<boolean>')
     expect(main).toContain('if (!await save())')
+  })
+
+  /*
+   * The same technique, for the sign-off. Everything asserted about
+   * `signoffPatch` above would still hold with `push()` never calling it, or
+   * calling it and posting the result whatever it was — and the second of those
+   * is the PB-076 shape again, a false tick on an animal that never moved. Three
+   * separate claims, because the ORDER is the whole guarantee.
+   */
+  it('asks signoffPatch for the sign-off, and hands it the VERDICT rather than the reply', () => {
+    expect(main).toMatch(/signoffPatch[\s\S]{0,300}?from '\.\/push'/)
+    const verdictAt = main.indexOf('const outcome = pushOutcome(reply, speciesId)')
+    const at = main.indexOf('signoffPatch(outcome, speciesId)')
+    expect(verdictAt, 'push() no longer computes the verdict the way it did').toBeGreaterThan(-1)
+    expect(at, 'push() never asks for the sign-off').toBeGreaterThan(-1)
+    /* Judged AFTER the verdict exists, and out of the verdict itself. Passing
+     * the reply would be a second reading of `wrote` — the thing `push.ts` is
+     * built to make impossible. */
+    expect(at).toBeGreaterThan(verdictAt)
+    expect(main).not.toContain('signoffPatch(reply')
+  })
+
+  it('returns on a falsy patch BEFORE it can post anything to /api/save', () => {
+    const at = main.indexOf('signoffPatch(outcome, speciesId)')
+    const after = main.slice(at, at + 500)
+    /* The gate. A `null` from `signoffPatch` ends `push()` — there is no branch
+     * in which a failed push reaches a save. */
+    const gate = after.search(/if \(!\w+\) return\b/)
+    expect(gate, 'the sign-off is used without checking there is one').toBeGreaterThan(-1)
+    const post = after.indexOf("api('/api/save'")
+    expect(post, 'the sign-off is never sent anywhere').toBeGreaterThan(-1)
+    expect(gate, 'the save happens before the null check').toBeLessThan(post)
+    /* And what it posts is the patch itself, not a hand-built body beside it. */
+    expect(after).toMatch(/api\('\/api\/save', (\w+)\)/)
+    expect(after.slice(gate, post)).not.toContain('signoff:')
+  })
+
+  it('does not call an unsigned animal signed off when the save fails', () => {
+    /* The push is NOT undone and must not be described as though it were: the
+     * animal is in the game, and the thing that failed is the tick.
+     *
+     * The sentence says "REACHED the game", not "is in the game", and the
+     * difference is load-bearing rather than stylistic. The test above pins that
+     * the old unconditional green `${speciesId} is in the game` has left this
+     * page, and it is a text match — it cannot tell that lie from this warning.
+     * So the warning is worded around it. Two assertions on the same page must
+     * not be able to be satisfied by the same words. */
+    expect(main).toContain('reached the game but was NOT signed off')
+    const warn = main.indexOf('reached the game but was NOT signed off')
+
+    /* Asserted by ORDER, not by a character window. A window that merely looks
+     * back N characters for the word "error" is satisfied by a comment
+     * mentioning errors, and it breaks the moment someone writes a paragraph
+     * above the line — which is exactly what happened to the first version of
+     * this test. What has to be true is structural: the save is posted, its
+     * reply is tested, and only then is the warning reachable. */
+    const post = main.indexOf("api('/api/save'")
+    const guard = main.indexOf("signed['error'] !== undefined")
+    expect(post, 'the sign-off is never posted').toBeGreaterThan(-1)
+    expect(guard, 'the reply to the sign-off save is never tested').toBeGreaterThan(post)
+    expect(warn, 'the warning is not inside the failure branch').toBeGreaterThan(guard)
+
+    /* And the success path does not run through the warning: the re-read that
+     * follows a good save sits after it, so the two are separate branches. */
+    expect(main.indexOf('await refreshDrafts()', guard)).toBeGreaterThan(warn)
   })
 
   it('does not let a non-2xx reply arrive looking like a success', () => {

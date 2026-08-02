@@ -1310,8 +1310,29 @@ export function cloneAs(def: CreatureDef, newSpeciesId: string): CreatureDef {
  * is consulted only so the answer distinguishes a species this kit does not build
  * from one it builds and whose definition is simply not kept.
  *
- * If this needs to return something, the fix is upstream and small: have
- * `defineCreature` register the `def` beside the build it returns.
+ * THE SENTENCE THAT USED TO BE HERE WAS WRONG AND COST A RUN. It read: *"if this
+ * needs to return something, the fix is upstream and small: have `defineCreature`
+ * register the `def` beside the build it returns."* PB-077 was filed against that
+ * sentence and named this line as the route. Both facts have since changed:
+ *
+ *   1. **It is already done.** `defineCreature` has written every definition into
+ *      `CREATURE_DEFS` (`src/island/species/parts/creature.ts:947,961`) since
+ *      `2b320ab`, and `capture.ts` is what the editor actually opens a species
+ *      through. This function stays `null` for the reason above it — this module
+ *      is deliberately three.js-free so the edit model runs under node — and it
+ *      is not the editor's read path at all.
+ *   2. **It could never have fixed PB-077.** Registering the def hands the editor
+ *      a JAVASCRIPT OBJECT, and a JavaScript object cannot carry source text.
+ *      `sink: LEG_ROW.sink` has already been evaluated to `0.408163` by the
+ *      engine before `defineCreature` is called, so the map is exactly as
+ *      flattened as the reconstruction it replaced. The loss happens at
+ *      evaluation time, upstream of every register.
+ *
+ * So do not come here to fix the flattening. What is lost is TEXT, and the only
+ * place the text still exists is the `.ts` file on disk. PB-077 carries the three
+ * costed routes; the cheap one restores an expression by text when the pushed
+ * number is unchanged, which needs no arithmetic evaluated and so does not cross
+ * the line `push.mjs` may not cross.
  */
 export function defFrom(speciesId: string): CreatureDef | null {
   const built = assemblyFor(speciesId)

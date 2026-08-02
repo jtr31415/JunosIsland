@@ -65,7 +65,28 @@ const PINNED: Readonly<Record<string, string>> = {
    * whole creature. Re-captured from `creatureFingerprint('animal-hedgehog')` in
    * the same commit as the tests that describe the new nose. */
   'animal-hedgehog': '1d26c188381e9eba',
-  'animal-squirrel': '6a9ea9c7855c48c5',
+  /* EIGHT RE-PINNED ON PURPOSE, 2 August — squirrel, dormouse, vole, tortoise,
+   * salamander, badger, mole and slow-worm. Same reason as the hedgehog above and
+   * no weaker: Joe opened each one in the editor, changed the animal, and pushed
+   * it into the game. `84cd17a` is that push, ten animals in one sitting, and it
+   * carries the diff. The hashes moved because the ANIMALS moved — his geometry,
+   * his call — which is the only reason a hash here is ever allowed to move.
+   *
+   * THE TWO THAT DID NOT MOVE ARE THE EVIDENCE THIS IS NOT A BLANKET RE-CAPTURE.
+   * `animal-mouse` and `animal-toad` were pushed in the same sitting and their
+   * hashes below are untouched, because those two pushes cost only their inline
+   * comments. A push that changes nothing about the creature moves nothing here.
+   * If all ten had moved together that would have pointed at `creature.ts` or the
+   * bank rather than at ten species edits, and would have needed a different
+   * answer.
+   *
+   * Re-captured from `npm run pets:creature` in the same commit as the `tsc`
+   * repair that restored `LEG_ROW`, `COIL_STRETCH` and `COIL_SINK`. That repair is
+   * PROVEN geometry-neutral rather than assumed: the mole and the slow-worm build
+   * `5afff2f188fa68eb` and `4f5ed56470baf766` both from the files exactly as Joe
+   * pushed them and from the repaired files. Restoring a binding puts a NAME back
+   * over a number; it must never move one, and here it did not. */
+  'animal-squirrel': '697157c363b2bf21',
   'animal-mouse': '896afcc9e7c39067',
   /* Moved once, on purpose, and this is the pin doing its job: `c54d4a52d6fce328`
    * was the shrew with its mouth EXACTLY IN its own front face — a zero-thickness
@@ -74,16 +95,16 @@ const PINNED: Readonly<Record<string, string>> = {
    * pack's own 0.010 proud, so the only thing that changed on this animal is the
    * mouth's z, 0.500 to 0.510. Nothing else on it has a zero extent. */
   'animal-shrew': '41947a98c5ff27be',
-  'animal-dormouse': 'e1819320d0649b66',
-  'animal-vole': '1a861003a11a28c9',
+  'animal-dormouse': '52d83f4a01e6fef8',
+  'animal-vole': '932d3471f595df83',
   'animal-frog': '95cc009b85563d69',
   'animal-toad': 'e6cd7840215fcda2',
-  'animal-tortoise': '5d963604a4b492ba',
-  'animal-salamander': 'bfd5d6d3faeb517d',
+  'animal-tortoise': '0f8342c92e3cbc4f',
+  'animal-salamander': '4e09e9b8f24bbf92',
   'animal-newt': 'f6c36bd7e766cf11',
-  'animal-badger': '394a0415661ac7af',
-  'animal-mole': '51fa9409a320915b',
-  'animal-slow-worm': 'b93b77ddd7fb4e23',
+  'animal-badger': 'cb67c11fbe570f09',
+  'animal-mole': '5afff2f188fa68eb',
+  'animal-slow-worm': '4f5ed56470baf766',
   // Home Pets' first assembled member, and the first pin here that is not a
   // Garden animal. Read off the built model on 2 Aug.
   'animal-corn-snake': '5c3ad79166c9e4d7',

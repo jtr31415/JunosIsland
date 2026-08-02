@@ -23,17 +23,36 @@ import {
 import { PARTS_BANK, partById } from '../../src/island/species/parts/bank.generated'
 import { assertAssembly } from './assembly-assert'
 
+/*
+ * A SIXTH SHAPE ARRIVED AT 84cd17a AND EVERY NUMBER BELOW MOVED WITH IT. Joe
+ * opened this animal in the workbench editor and pushed it back carrying two
+ * copies of `box-04` — the BEE's abdomen shell-ring, roled `band` — standing on
+ * the rump at x = -0.2 and +0.2, y = 0.975, z = -0.6, each spun 90 about y,
+ * stretched [0.95, 0.75, 0.45], sunk the bee's own recorded 0.968165 and painted
+ * `mark`, the badger's own black. They are 168 vertices and 92 triangles apiece.
+ *
+ * The species' three claims — the fused ear lugs, the trunk-as-tail, the marking
+ * that cannot be drawn — are all untouched by them. What they cost is the numbers:
+ * the animal is 0.044 taller, its second-biggest mesh is no longer the tail, and
+ * it has 96 more vertices and 184 more triangles.
+ */
 assertAssembly({
   id: 'animal-badger',
-  parts: ['box-01', 'box-12', 'box-18', 'box-26', 'plate-01', 'tube-06'],
-  height: 1.4312,
-  verts: 412,
-  tris: 568,
-  // The hull is the animal here in a way it is on no other Garden species: the
-  // next biggest mesh is the stub tail, at a twenty-sixth of it.
-  massRatio: 20,
+  parts: ['box-01', 'box-04', 'box-12', 'box-18', 'box-26', 'plate-01', 'tube-06'],
+  // 1.4756, was 1.4312. The bare hull on standard legs is 1.43125 and NOTHING on
+  // this animal used to reach above it; the rings clear its crown by 0.0444.
+  height: 1.4756,
+  verts: 508,
+  tris: 752,
+  // Was 20, when the next biggest mesh was the stub tail at a twenty-sixth of the
+  // hull. It is now one of the two rings, at 0.2606 against the hull's 2.4053.
+  // The generic floor rule 3 enforces is 3 and this clears it three times over,
+  // so the hull is still plainly the animal — but it is no longer true that
+  // nothing else on it has any size at all, and this is the honest number.
+  massRatio: 9,
   // One: the trunk, turned to face backwards. Said as a number, because rule 4's
-  // "no node carries a rotation" passes vacuously on an animal with none.
+  // "no node carries a rotation" passes vacuously on an animal with none. (The
+  // two rings each carry one as well, so the true count is three.)
   spinsAtLeast: 1,
 })
 
@@ -263,11 +282,19 @@ describe('animal-badger: the marking, and the part of it that cannot be drawn', 
     expect(flag).toMatch(/CANNOT BE EXPRESSED/)
     expect(flag).toMatch(/stripe/i)
     expect(flag).toMatch(/patch/i)
-    // Flagged for the marking and for nothing else: no bespoke shape, no stretch,
-    // and no budget declared, because none is over.
+    // Flagged for the marking and for nothing else: no bespoke shape and no
+    // budget declared, because none is over. Both of those still hold.
     expect(flag).not.toMatch(/RULE 1|RULE 9/i)
     expect(BADGER_ASSEMBLY.features.some(f => f.part.startsWith('bespoke-'))).toBe(false)
-    expect(BADGER_ASSEMBLY.features.some(f => f.stretch !== undefined)).toBe(false)
+    /* THE THIRD ITEM IN THAT LIST WAS "AND NO STRETCH", AND IT STOPPED BEING TRUE
+     * AT 84cd17a. Joe's editor push put two `box-04` rings on the rump, each at
+     * [0.95, 0.75, 0.45]. Nothing is broken by that: `Feature.stretch` is a legal
+     * field, rule 1's note on it is a caution ("think twice") and not a
+     * declaration, and neither rule 1 nor rule 9 is strained — which is what the
+     * two assertions above check. So this NAMES the two features that carry one
+     * rather than forbidding any, and it still goes red if a third appears. */
+    expect(BADGER_ASSEMBLY.features.filter(f => f.stretch !== undefined).map(f => f.name))
+      .toEqual(['box-04', 'box-04-2'])
   })
 
   it('fits between two trees, and it is the DEPTH that costs, not the width', () => {
