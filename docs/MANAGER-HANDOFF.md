@@ -1,10 +1,159 @@
 # Manager handoff
 
-> ## ⚠ START HERE — state at handover, 2 Aug 2026 (evening)
+> ## ⚠ START HERE — state at handover, 2 Aug 2026 (late evening)
+>
+> *Written by the manager that shipped PB-068. Read this block first. Everything
+> below it, including the block that used to be the START HERE, is history and is
+> kept only for its reasoning.*
+>
+> ### What this project is, in four lines
+>
+> A 3D island game for Joe's six-year-old daughter Juno. She does maths and
+> reading challenges, hatches animals, builds tiles. Joe writes the specs and
+> judges by playing; agents build. `docs/MANAGER-ORDERS.md` is the manager job
+> description and does not change — read it before this file.
+>
+> ### What this run shipped
+>
+> **PB-068 — `45c4f8b`.** Whether an animal flies was a hardcoded `Set` of two
+> ids (`FLYERS`, `pets.ts:51`). It is now one word per species that Joe sets in
+> the workbench editor. `FLYERS` is gone.
+>
+> - The field lives in **`src/island/species/moves.ts`**, a leaf module importing
+>   nothing. `Locomotion` is `'land' | 'air' | 'water' | 'amphibian'`, absent
+>   means `land`. Predicates `flies`, `mayEnterWater`, `mustStayInWater`.
+> - **It is a lookup table by id, NOT a field on the species record.** This was
+>   forced, not chosen: `push.mjs`'s `withRecord` refuses by design to touch a
+>   `defineSpecies(...)` record that already exists, and thirty animals are
+>   already pushed. On a record, Joe could have marked the nightjar a flyer,
+>   pressed push and watched nothing happen. `push.mjs` now has a moves-only
+>   bypass so an already-built species accepts the value.
+> - **PB-069 (water) is NOT built** — Joe said later. But it reads this same
+>   field; `mayEnterWater`/`mustStayInWater` are stated and consulted by nothing.
+>   No migration will be needed.
+> - Bee and parrot carry over unchanged, pinned by a test named as the migration
+>   guard. **Nothing else is seeded** — goldfish, crocodile, nightjar and kiwi are
+>   Joe's to rule on, and guessing would invent the judgement the file protects.
+>
+> **`0cbbc55`** updates the backlog: PB-068 done, PB-067 amended, PB-070 raised.
+>
+> ### The discovery that matters more than the card that found it
+>
+> **No hand-assembled animal can be a live pet on the island today.** Measured
+> twice, not inferred:
+>
+> - `pets.ts` `prototype()` (~line 658) builds a pet ONLY from
+>   `${base}pets/<id>.glb`. There is no assembly path. An assembled species 404s,
+>   and `sync()` at **`pets.ts:777`** does `.catch(() => null); if (!root)
+>   continue` — so the pet is never added to `live`, never gets a proxy or a
+>   shadow, and silently never appears. Not a crash, not a blocky cube. Nothing.
+> - Dealing draws from `SPECIES`, the 24 Kenney ids, at **`src/island/main.ts:481`**
+>   — never from the 54-record registry. **No test asserts the two pools agree.**
+> - Only `src/island/album.ts:179` renders an assembled species, via
+>   `buildAssembly(record.assembly)`.
+>
+> So the thirty animals awaiting Joe's sign-off have never wandered anywhere, and
+> **signing them off will not by itself put them in the game.** The standing order
+> — a signed-off animal ships with the next push, always — cannot currently be
+> honoured. That is PB-070, and Joe should be told plainly rather than discovering
+> it after he spends an evening signing off thirty animals.
+>
+> ### Where the next manager starts: PB-067, and it is two halves
+>
+> PB-067 is Joe's sign-off preview: *"i need to see the animals in the game
+> environment, so in the editor i need to see it on like 7 hex tiles bouncing
+> around like it would in the game. the it gets signed off."* It GATES sign-off.
+>
+> **Do the halves in this order and do not skip the first.**
+>
+> **Half one — give `pets.ts` an assembly path.** Until this exists there is
+> nothing true to preview. The seam is narrow and already isolated: `prototype()`
+> is the ONLY thing that turns a species id into a model, and `model()` just
+> clones it. It needs to try the assembly first and fall back to the GLB — the
+> fallback order `album.ts:176-186` already uses (assembly → kit → GLB) is the
+> precedent, so copy that rather than inventing one. Note `buildAssembly` pulls
+> `texture.ts` and therefore three.js, which `pets.ts` already imports, so there
+> is no new weight — but check for an import cycle, because `pets.ts` deliberately
+> imported nothing from `species/` until this run.
+>
+> **Half two — the editor preview.** This is far cheaper than it sounds and the
+> plumbing all exists:
+>
+> - The editor **already imports from `src/` by plain relative path** — no alias,
+>   no build step. `tools/workbench/public/editor/stage.ts:29` imports
+>   `buildAssembly`/`creatureSpec`; `viewer.ts:59-60` already calls
+>   `loadTileModels` and `createPropField`. Vite serves the workbench's TypeScript
+>   raw (`npm run workbench`).
+> - **`Island` is trivial to fake**: `src/island/world/grid.ts:46` is just
+>   `{ tiles: ReadonlyMap<string, TileType> }`. Seven entries is a seven-hex
+>   island. `createTileField` (`src/island/world/tiles.ts:146`) renders it
+>   standalone — `viewer.ts` already does exactly this.
+> - **The wander loop needs no extraction.** `createPetField(base, rng)`
+>   (`pets.ts:607`) already takes `island`, `hexSize`, `dt` and `t` *injected* per
+>   call — `sync(pets, island, hexSize)` and `update(dt, t, island, hexSize)`. The
+>   editor just drives it. **Do not write a second loop**, and you should not need
+>   ports either; if you think you do, say why in the commit.
+> - The one real problem: the editor shows an UNSAVED draft (`def` in
+>   `joe/species-edits.json`), not a registered species, so `prototype()`'s id
+>   lookup will not find the draft geometry. Expect to need a "build this exact
+>   spec" injection point beside the id lookup. That is the actual design work of
+>   half two.
+>
+> **Direction of dependency is fixed:** the workbench may import `src/`; `src/`
+> may never import the workbench.
+>
+> ### Landmines paid for this run
+>
+> - **`npm run channel` greps `src/` for the workbench's directory name
+>   TEXTUALLY.** A mention in a *comment* fails the gate exactly as an import
+>   would. My marker comment tripped it. The note is now in `moves.ts` itself.
+> - **The base SHA in a brief can be a stale amend.** I was given `46b6a5c`; HEAD
+>   was `657802a` — same message, same parent, different object. Check ancestry
+>   before believing you are on the wrong tree.
+> - **Two managers shared this worktree all evening.** Staging by explicit path
+>   is what kept the commits clean; `git status` showed 22 modified files of which
+>   only 17 were mine. Do not `git add -A`, and do not assume a modified file is
+>   yours because you expected to touch it.
+> - `push.mjs` `withRecord` **skips rather than updates** an existing record. Any
+>   future per-species value authored in the editor hits this same wall. A
+>   workbench-owned lookup table is the way round it.
+>
+> ### Gate results, on the full tree, before both commits
+>
+> ```
+> tsc      0 errors
+> npm test 150 files, 3339 tests passing   (baseline was 3310)
+> build    PWA generateSW, precache 50 entries, 1844.65 KiB
+> smoke    all boot checks passed
+> parity   every step renders identically
+> channel  channel check passed
+> ```
+>
+> ### What is blocked on Joe
+>
+> - **Signing off the thirty** (Garden 14, Night Time 13, corn snake, goldfish,
+>   crocodile) — still blocked, because PB-067's preview is the gate and it is not
+>   built. He can now set each animal's `moves` in the editor, which was the other
+>   half of what he asked for.
+> - **PB-070**: tell him that sign-off alone will not make an animal appear.
+> - Everything in the previous block's "blocked on Joe" list still stands: JT-040
+>   the goldfish tail, the five non-uniform stretches, ostrich/vulture wings,
+>   Oliver's −8%, JT-030 Night Time's three unfillable frames.
+>
+> ### Decisions
+>
+> - **RAISED into `joe/tasks.json`: none.** The one design fork this run (union
+>   vs. boolean bag) was put to Fable, which judged it an engineering call rather
+>   than Joe's, on the grounds that his judgement is *which word per animal* and
+>   the union preserves that exactly. Made it, recorded the reasoning in `45c4f8b`.
+> - **PICKED UP: none.** No `type: "ruling"` task was newly `done` with a note.
+
+> ## Superseded — state at handover, 2 Aug 2026 (evening)
 >
 > *Written by the drumbeat for a FRESH SESSION, at Joe's request, immediately
-> before a context clear. Read this block first. The block below it is the
-> morning's handover and is now history; everything under that is older still.*
+> before a context clear. HISTORY as of the late-evening block above; kept for its
+> reasoning. The block below it is the morning's handover, and everything under
+> that is older still.*
 >
 > ### Where the tree is
 >
