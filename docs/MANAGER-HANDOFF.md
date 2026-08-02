@@ -108,6 +108,27 @@
 > single skip is deliberate — the byte-fidelity case, kept un-weakened with its
 > 0/30 finding written above it, because that measurement is *why* push splices.
 >
+> ### PB-077 — the finding that will matter more than the one I was sent to fix
+>
+> **The editor round-trips through EVALUATED numbers, so any expression in a
+> definition is lost on any edit — splice or regenerate, it makes no
+> difference.** 14 of the 30 files bind file-local constants to expressions:
+> `const EAR_SINK = 0.125 / 0.359219`, `const COIL_SINK = (COIL_THICK -
+> HULL_BOTTOM_Y) / COIL_THICK`, `at: [0, HULL_MID_Y + 0.1, 0.5]`. A push flattens
+> them to literals and leaves the locals unread, so the *derivation* — the thing
+> that says why a number is that number — is gone even though the geometry is
+> perfect. The 14: **bushbaby, civet, corn-snake, crocodile, firefly, glow-worm,
+> goldfish, kiwi, mole, nightjar, opossum, raccoon, slow-worm, tarsier.** The
+> other 16 are clean.
+>
+> `staleBindings` **names the exact dead lines** rather than deleting them, and
+> that mitigation is what made turning the push on safe tonight. It is not a fix.
+> The route is **`def.ts:1313`**: have `defineCreature` register the `def` beside
+> the build it returns, so the editor opens the SOURCE definition rather than a
+> reconstruction — that closes all 14 at once. **Do not start it on your own
+> authority.** It changes what an edit *means* and the blast radius is different
+> from PB-076; it is Joe's to begin.
+>
 > ### Where the next manager starts
 >
 > **Joe can now push, so the next thing he hits is the loop around it.** Two
