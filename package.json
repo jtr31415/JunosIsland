@@ -28,7 +28,8 @@
     "pets:parts": "node --experimental-strip-types tools/pets/parts-bank.ts",
     "pets:creature": "node --experimental-strip-types --import ./tools/pets/resolve-src.mjs tools/pets/creature.ts",
     "pets:reserve": "node tools/pets/reserve.mjs",
-    "pets:reserve:check": "node tools/pets/reserve.mjs --check"
+    "pets:reserve:check": "node tools/pets/reserve.mjs --check",
+    "signoffs": "node tools/species/signoffs.mjs"
   },
   "devDependencies": {
     "@fontsource/andika": "^5.3.0",

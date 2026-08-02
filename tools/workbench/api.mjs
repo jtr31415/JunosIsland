@@ -21,6 +21,7 @@ import { checkTask, blocking } from './checks.mjs'
 import { mergeWhole, applyPatch, mergeable, migrate, keyOf, Conflict, Refused } from './merge.mjs'
 import { PushRefused, pushSpecies } from './push.mjs'
 import { REPO } from './seed.mjs'
+import { regenerateSignoffs } from '../species/signoffs.mjs'
 
 /** The only files the API may write, by name. An allowlist, not a path parameter. */
 const WRITABLE = {
@@ -220,6 +221,36 @@ async function voiceCatalogue(root, fetchImpl = fetch) {
   }
 }
 
+/**
+ * A tick, and nothing else, puts an animal in the egg pool.
+ *
+ * THE STANDING ORDER (PB-070, and Joe has given it twice): an unsigned animal
+ * never ships and a signed one always does, and a newly signed-off animal joins
+ * the pool with NO further ceremony. There is deliberately no approval step
+ * after his tick — so his tick alone has to move the file the game reads, or
+ * the ceremony he ruled out reappears as "and then someone runs the script".
+ *
+ * The game cannot read `joe/names-audit.json` (it is outside the vite root), so
+ * `src/island/species/signed-off.json` is a generated mirror of it. This is
+ * where the mirror is kept honest: the audit has just been written, so
+ * regenerate from disk and the working tree now says what he decided.
+ *
+ * HIS SAVE IS NEVER AT RISK. This runs strictly AFTER the write and its outcome
+ * is never allowed to change the reply. A mirror that fails to regenerate is a
+ * stale generated file, recoverable with `npm run signoffs` and caught by
+ * `tests/island/signed-off.test.ts`; a throw here would cost him a judgement
+ * only he can make, and he would be told his save had failed when it had not.
+ */
+function remirrorSignoffs(root, what) {
+  if (what !== 'names') return
+  try {
+    regenerateSignoffs(root)
+  } catch (err) {
+    console.error(`signed-off mirror not regenerated: ${String(err?.message ?? err)}`)
+    console.error('joe/names-audit.json IS saved. Run `npm run signoffs` to catch it up.')
+  }
+}
+
 export function createApi(root) {
   return async function api(req, res, next) {
     const url = new URL(req.url, 'http://127.0.0.1')
@@ -275,12 +306,14 @@ export function createApi(root) {
             }
             if (!disk) return json(res, 404, { error: `${rel} is not there to patch` })
             writeJson(root, rel, applyPatch(body.what, disk, body.patch))
+            remirrorSignoffs(root, body.what)
             /* The record's own key, whatever the file calls it — `edits` is keyed
              * by `speciesId` and reporting `.id` there answered `undefined`. */
             return json(res, 200, { saved: rel, patched: body.patch[keyOf(body.what)] })
           }
           if (body.value === undefined) return json(res, 400, { error: 'a save needs a value or a patch' })
           writeJson(root, rel, disk ? mergeWhole(body.what, disk, body.value) : body.value)
+          remirrorSignoffs(root, body.what)
           return json(res, 200, { saved: rel })
         } catch (err) {
           if (err instanceof Conflict) return json(res, 409, { error: err.message, clashes: err.clashes })
