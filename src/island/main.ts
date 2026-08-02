@@ -74,7 +74,7 @@ import type { ReadState } from '../core/generators/read'
 import type { BuildState } from '../core/generators/build'
 import type { SumState } from '../core/generators/sums'
 import { dealReading, dealSum } from './deal'
-import { petName } from '../core/names'
+import { givenName } from './species/naming'
 
 /** Injected at build time by Vite (see vite.island.config.ts). */
 declare const __BUILD_STAMP__: string
@@ -1276,8 +1276,44 @@ async function boot(): Promise<void> {
    */
   async function passed(more: boolean): Promise<void> {
     if (flow.challenge === 'read') {
-      const name = petName(defaultRng)
+      /*
+       * THE NAME COMES FROM THE SPECIES, NOT FROM A COIN TOSS.
+       *
+       * This line used to be `petName(defaultRng)` — an UNSEEDED draw straight
+       * off `Math.random`, a fresh name every hatch, answerable to nobody. On
+       * 2 August 2026 it dealt a six-year-old a rabbit called *Defuck*, and Joe
+       * ruled: *"nothing that contains the letter combination fuck, cunt or
+       * shit, or homophones thereof"*, and then on how to fix it: *"no dont
+       * change the generator, we hard fix the first 24 animals instead"*.
+       *
+       * This is that fix, and it is the whole of it. `src/core/names.ts` has a
+       * `FORBIDDEN` list — but it carries `shit`, `cock`, `dick`, `piss` and
+       * `arse` and NOT `fuck`, NOT `cunt`. Enumerating the generator exactly:
+       * 2,108 of its 1,429,287 accepted draws contain a banned root, 640
+       * distinct names, **one hatch in 678**. `Defuck` was not bad luck, it was
+       * the table design — `d`+`e` then `f`+`u`+`ck`, concatenated.
+       *
+       * We do not filter the generator, for the reason Joe gave and for the one
+       * `species/naming.ts` gives: `src/core/` is pinned byte-for-byte by
+       * `tools/golden/golden.json` and guarded by `npm run parity`, and
+       * filtering the seeded stream would cascade renames through animals
+       * children already own (brief §19). Instead the name is now the FROZEN,
+       * SCREENED, per-species name the roster already allocated — all 320 of
+       * them audited clean by `tests/island/name-screen.test.ts`, which is the
+       * standing gate that stops this recurring.
+       *
+       * Roster §3 wanted this anyway: *"every child's blue-set hedgehog is the
+       * same Bimo, forever"*, so a name is playground currency rather than a
+       * private accident. This is the one-line switch `naming.ts` has been
+       * waiting to make.
+       *
+       * ORDER MATTERS. `nextSpecies` is drawn a whole egg AHEAD for preloading
+       * and is re-armed below at `nextSpecies = drawSpecies()`. Read the
+       * species first and name THAT — naming after the re-arm would give this
+       * friend the next friend's name.
+       */
       const species = nextSpecies
+      const name = givenName(species)
       const petsBefore = flow.pets.length
 
       flow = handleChallengePassed(flow, { name, species })
