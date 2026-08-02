@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "nextId": 63,
+  "nextId": 66,
   "cards": [
     {
       "id": "PB-001",
@@ -444,7 +444,28 @@
     {
       "id": "PB-062",
       "title": "The editor becomes the tool: add/swap parts, exact placement, refloor, sign-off, one-button push to the game",
-      "detail": "Joe, 2 Aug: \"the editor is currently a good start, but its far off what i need it to be.\" Seven pieces, and he wants them in SMALL STEPS with check-ins, not an autonomous build loop. (1) Add components to an animal or swap them out. (2) Exact placement — \"i cannot easily move any object to exactly where i want it, some of them snap even with snap off\", which is the phase-7 snap bug not fully dead. (3) Move the legs UP, and the model then REFLOORS to that new height. (4) Base shapes: triangle, circle, square, same chamfer as the game, resizable (JT-041 — primitives only). (5) Parts library sorted with headers, by ROLE (JT-038). (6) Sign off the name and the fact line in the editor. (7) One button that pushes the finished animal into the game — today Save only writes a draft to joe/species-edits.json and never touches a shipped species, so promotion does not exist yet and that is the real destination.",
+      "detail": "Joe, 2 Aug: \"the editor is currently a good start, but its far off what i need it to be.\" Seven pieces, and he wants them in SMALL STEPS with check-ins, not an autonomous build loop. (1) Add components to an animal or swap them out. (2) Exact placement — \"i cannot easily move any object to exactly where i want it, some of them snap even with snap off\", which is the phase-7 snap bug not fully dead. (3) Move the legs UP, and the model then REFLOORS to that new height. (4) Base shapes: triangle, circle, square, same chamfer as the game, resizable (JT-041 — primitives only). (5) Parts library sorted with headers, by ROLE (JT-038). (6) Sign off the name and the fact line in the editor. (7) One button that pushes the finished animal into the game — today Save only writes a draft to joe/species-edits.json and never touches a shipped species, so promotion does not exist yet and that is the real destination. SHIPPED 2 Aug 2026, six of the seven pieces. Exact placement (legs take a y and the model refloors; ridge rows are hand-placeable per row over the solve), the dropdown grouped by role, and the three chamfered primitives with a resize that RE-CUTS rather than scaling baked positions. Add and swap already worked — what made them feel broken was the placement. Sign-off fills the four fields the draft always carried; the push writes six of the nine places and names the other three by path. Left: the three test files and the two shared counts stay a human’s, deliberately.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-063",
+      "title": "building-animals-from-parts.md is wrong about box-03’s chamfer, and every species build reads it",
+      "detail": "§791 says box-03 \"cuts every edge AND every corner\". The points it lists are right; the topology is not. Measured off bank.generated.ts while building the primitives: 30 faces are 6 flat plus 24 bevel quads, TWO per edge at 56.31 degrees rather than one at 45, and there are ZERO corner facets — the eight (0.5, 0.5, 0.5) points are vertices where six quads meet. The cause is a grid snap: three exact 45-degree planes meet at 0.46875, which is 7.5/16 and off the pack’s own 1/16 grid, so Kenney rounded to 0.5. The doc should be corrected in place, because it is the file every future species build is told to read.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-064",
+      "title": "The parts bank is generated at a precision that makes two eye cards unwearable",
+      "detail": "bank.generated.ts stores size to 6dp and positions to 4dp. The drift is enough to fail assembly-assert §3, which compares built size against part.size at 5e-5: plate-14/15 drifts 7.2e-5 and plate-06/07 drifts 5.8e-5. Every eye card that passes today is exactly 0.400 wide, which is why nobody hit it sooner. The fix is regenerating at finer position precision in tools/pets/parts-bank.ts — NOT weakening the assertion, which is the one rule a fit-to-height would break without a bounding box noticing.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-065",
+      "title": "Three exhaustive tests fail only when the suite competes with a build for CPU",
+      "detail": "coast \"never walls their island in\", sealing, and facedecals each pass alone in seconds and time out during a full run with an agent building in parallel. They failed and re-ran green four times on 2 Aug. Measured: the coast test is 8.8s alone against a 30s budget. The suite has grown 128 to 152 files in a day, so this will get worse. Two honest options — cap vitest’s worker count so the suite stops starving its own slowest test, or give the three a real budget with the measurement recorded. Widening a budget silently to absorb load is the thing to avoid.",
       "state": "open",
       "run": ""
     }
