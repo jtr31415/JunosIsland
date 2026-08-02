@@ -80,6 +80,7 @@ export { AYE_AYE_ASSEMBLY } from './animal-aye-aye'
 export { GLOW_WORM_ASSEMBLY } from './animal-glow-worm'
 export { CHINCHILLA_ASSEMBLY } from './animal-chinchilla'
 export { GUINEA_PIG_ASSEMBLY } from './animal-guinea-pig'
+export { PONY_ASSEMBLY } from './animal-pony'
 /* -- append the next species' line directly above this one -- */
 
 import { assembledBuilds } from './register'
