@@ -113,6 +113,17 @@ const PINNED: Readonly<Record<string, string>> = {
   'animal-kiwi': '01a430e204093614',
   'animal-kinkajou': '07ed048ed805402c',
   'animal-glow-worm': 'ba579cc94d23eee3',
+
+  /* HOME PETS (PB-073), ship 2 — the collection Juno meets straight after
+   * Garden. Every one of these is a FIRST PIN: the hash of the animal as it was
+   * built, recorded rather than chosen, so none is evidence of anything yet.
+   * What they buy is the second run, exactly as the Garden fan-out's did.
+   *
+   * These animals are UNSIGNED. Joe reviews in the editor and that is his gate
+   * alone, so a pin moving here before he has ever seen the animal is not a
+   * regression — it is a build still being worked on. After his sign-off it is a
+   * regression, and the pin is what makes the difference detectable at all. */
+  'animal-chinchilla': '3005052c8bf1096a',
 }
 
 describe('every assembled species has a pinned fingerprint', () => {
