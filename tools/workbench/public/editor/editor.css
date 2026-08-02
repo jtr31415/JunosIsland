@@ -116,6 +116,11 @@ optgroup option { font-weight: 400; color: var(--ink, inherit); }
 .note { color: var(--dim); font-size: 11px; margin: 6px 0 0; }
 .note.warn { color: var(--warn); }
 .count { color: var(--dim); font-weight: 400; font-size: 11px; }
+/* A blocking problem is loud; an advisory one is not. Same list, two weights,
+   so "you may not push" never looks like "you may want to know". */
+#signoff-problems li { font-size: 11px; margin-top: 6px; color: var(--loud); }
+#signoff-problems li.soft { color: var(--warn); }
+#signoff textarea { margin-top: 8px; }
 .selected { margin-left: auto; color: var(--dim); }
 .hint { margin: 0; padding: 4px 10px; color: var(--dim); font-size: 11px; border-top: 1px solid var(--line); flex: none; }
 
