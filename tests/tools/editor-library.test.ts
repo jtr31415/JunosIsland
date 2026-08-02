@@ -222,16 +222,19 @@ describe('groupShapes gives the dropdown headers without losing a row', () => {
       .toEqual(HULL_SHAPES.map(r => r.id).slice().sort())
   })
 
-  it('puts every row of a role in that role\'s one group', () => {
-    for (const g of groupShapes(ALL_SHAPES)) {
-      const role = g.label.split(' (')[0]!.toLowerCase()
-      for (const r of g.rows) {
-        expect(r.roles.some(x => role.startsWith(x)), `${r.id} is not a ${role}`).toBe(true)
-      }
+  /* Asserted against the ROWS, never by parsing the label — a header is prose
+   * ("Teeth", not "Tooths") and prose is not a key. Deriving the expectation
+   * from the data means a role added to the bank is covered automatically. */
+  it('gives each role exactly one group holding exactly that role\'s rows', () => {
+    const groups = groupShapes(ALL_SHAPES)
+    const roles = [...new Set(ALL_SHAPES.flatMap(r => r.roles))]
+    for (const role of roles) {
+      const want = ALL_SHAPES.filter(r => r.roles.includes(role)).map(r => r.id).sort()
+      const matching = groups.filter(g =>
+        JSON.stringify(g.rows.map(r => r.id).slice().sort()) === JSON.stringify(want))
+      expect(matching.length, `role "${role}" has ${matching.length} groups, not 1`).toBe(1)
     }
-    const labelled = groupShapes(ALL_SHAPES).length
-    expect(labelled, 'one group per role the data actually has')
-      .toBe(new Set(ALL_SHAPES.flatMap(r => r.roles)).size)
+    expect(groups.length, 'one group per role the data actually has').toBe(roles.length)
   })
 
   it('emits no empty group — a header over nothing is a drawer he cannot open', () => {
@@ -335,5 +338,35 @@ describe('summarise', () => {
   it('says an authored shape has no donor', () => {
     const line = summarise(shapeRow('bespoke-sphere-01')!)
     expect(line).toContain('authored')
+  })
+})
+
+/**
+ * Headers became ROLES on JT-038, and the bank has a `tooth` role, so the
+ * dropdown read "Tooths (8)" the moment the ruling shipped. This project's
+ * whole subject is a child learning to read words; an invented plural on the
+ * screen she is taught from is worse here than it would be anywhere else.
+ */
+describe('the headers are spelled the way a reading child would be taught', () => {
+  it('says Teeth, not Tooths', () => {
+    const labels = groupShapes(ALL_SHAPES).map(g => g.label)
+    expect(labels.some(l => l.startsWith('Teeth ('))).toBe(true)
+    expect(labels.some(l => l.startsWith('Tooths'))).toBe(false)
+  })
+
+  /* A shape whose ONLY role is tooth, so the single group is the tooth group.
+   * Picking any shape with `tooth` among its roles is not enough: three of the
+   * ninety-five carry two, and `ear` sorts first. */
+  it('still says Tooth for exactly one', () => {
+    const one = ALL_SHAPES.filter(r => r.roles.length === 1 && r.roles[0] === 'tooth').slice(0, 1)
+    expect(one.length, 'no single-role tooth to test with').toBe(1)
+    expect(groupShapes(one)[0]!.label).toBe('Tooth (1)')
+  })
+
+  it('leaves the regular spellings alone', () => {
+    const labels = groupShapes(ALL_SHAPES).map(g => g.label.split(' (')[0])
+    expect(labels).toContain('Noses')
+    expect(labels).toContain('Ears')
+    expect(labels).toContain('Tails')
   })
 })

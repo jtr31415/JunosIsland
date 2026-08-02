@@ -293,14 +293,27 @@ export type ShapeGroup = { readonly label: string; readonly rows: readonly Shape
 /**
  * `box` -> `Boxes`, and `blade` at a count of one -> `Blade`.
  *
- * A pure function of the form string and the count, so a form the bank grows
+ * A pure function of the word and the count, so a role or form the bank grows
  * later gets a header without anyone editing a table. English's four spelling
  * cases and nothing clever: a sibilant takes `-es`, a consonant before a final
  * `y` takes `-ies`, everything else takes `-s`.
+ *
+ * IRREGULARS are a table because they have to be — no rule derives them. It has
+ * one entry and it earned its place the moment headers became roles (JT-038):
+ * the bank has a `tooth` role, and the dropdown read **"Tooths (8)"**. This is a
+ * UK-English project whose whole subject is a child learning to read words, and
+ * a made-up plural on the screen she is being taught from is worse here than it
+ * would be almost anywhere else. Add to the table rather than complicating the
+ * rules; irregular plurals are a list in every language that has them.
  */
+const IRREGULAR: Readonly<Record<string, string>> = { tooth: 'teeth' }
+
 const plural = (form: string, count: number): string => {
-  const one = form.charAt(0).toUpperCase() + form.slice(1)
-  if (count === 1) return one
+  const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1)
+  if (count === 1) return cap(form)
+  const irregular = IRREGULAR[form]
+  if (irregular !== undefined) return cap(irregular)
+  const one = cap(form)
   if (/(?:s|x|z|ch|sh)$/.test(form)) return `${one}es`
   if (/[^aeiou]y$/.test(form)) return `${one.slice(0, -1)}ies`
   return `${one}s`
