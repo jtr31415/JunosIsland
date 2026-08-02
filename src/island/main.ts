@@ -67,6 +67,7 @@ import { createSfx } from '../platform/audio'
 import { defaultRng } from '../core/rng'
 import { makeDeck } from '../core/decks'
 import { makeCollectionDeck } from './collection'
+import { dealPool } from './species/pool'
 import { GREEN, RED } from '../core/wordlists'
 import { buildPool, buildNeighbours } from '../core/neighbours'
 import type { ReadState } from '../core/generators/read'
@@ -478,8 +479,14 @@ async function boot(): Promise<void> {
   // Plain `string` in, plain `string` out: a species read back out of a save is
   // a string rather than the literal union SPECIES infers, and priming must be
   // able to take it as read.
+  //
+  // AND NOT `SPECIES` ANY MORE. That was the 24 Kenney basenames and nothing
+  // else, so no hand-assembled animal could ever be dealt however finished it
+  // was — the sign-off gate had no other side (PB-070). `dealPool` adds every
+  // species Joe has signed off, which today is none and tomorrow is whatever
+  // he ticked tonight; nothing here changes when he does.
   const drawSpecies = makeCollectionDeck(
-    defaultRng, SPECIES, balance.pets.speciesMemory)
+    defaultRng, dealPool(SPECIES), balance.pets.speciesMemory)
   drawSpecies.remember(flow.pets.map(p => p.species))
 
   /**

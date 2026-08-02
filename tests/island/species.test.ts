@@ -226,7 +226,10 @@ describe('main.ts draws the species with a memory', () => {
      * island's own numbers, never a second mechanism inline.
      */
     expect(code).toContain("import { makeCollectionDeck } from './collection'")
-    expect(code).toMatch(/const drawSpecies = makeCollectionDeck\(\s*defaultRng, SPECIES,/)
+    // `dealPool(SPECIES)` since PB-070: the pack is the base of the pool, not
+    // the whole of it, because a species Joe has signed off is dealt too.
+    expect(code).toMatch(
+      /const drawSpecies = makeCollectionDeck\(\s*defaultRng, dealPool\(SPECIES\),/)
     // Tuned in balance.json with everything else about pacing, never inline.
     expect(code).toContain('balance.pets.speciesMemory')
   })

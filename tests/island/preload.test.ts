@@ -247,7 +247,10 @@ describe('main.ts decides the species early enough to preload it', () => {
      * named function, defined outside `passed`, whose result is seated in
      * `nextSpecies` where the preload can reach it.
      */
-    expect(code).toMatch(/const drawSpecies = makeCollectionDeck\(\s*defaultRng, SPECIES,/)
+    // `dealPool(SPECIES)` since PB-070: the pack is the base of the pool, not
+    // the whole of it, because a species Joe has signed off is dealt too.
+    expect(code).toMatch(
+      /const drawSpecies = makeCollectionDeck\(\s*defaultRng, dealPool\(SPECIES\),/)
     expect(code).toContain('let nextSpecies = drawSpecies()')
   })
 

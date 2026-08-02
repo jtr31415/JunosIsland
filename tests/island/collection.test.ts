@@ -216,7 +216,14 @@ const code = source
 describe('main.ts deals from the collection, not from a window', () => {
   it('uses the island dealer rather than the bare memory deck', () => {
     expect(code).toContain("import { makeCollectionDeck } from './collection'")
-    expect(code).toMatch(/const drawSpecies = makeCollectionDeck\(\s*defaultRng, SPECIES,/)
+    // `dealPool(SPECIES)`, not the bare `SPECIES` this used to pin. The pack
+    // is the base of the pool rather than the whole of it, because a species
+    // Joe has signed off is dealt too — PB-070, and `species/pool.ts` carries
+    // the reasoning. Pinning the bare pack here is what would let that quietly
+    // regress, since main.ts is untested glue and this line is its only guard.
+    expect(code).toMatch(
+      /const drawSpecies = makeCollectionDeck\(\s*defaultRng, dealPool\(SPECIES\),/)
+    expect(code).toContain("import { dealPool } from './species/pool'")
     // The window survives as the fallback only, and is still tuned in
     // balance.json with everything else about pacing, never inline.
     expect(code).toContain('balance.pets.speciesMemory')
