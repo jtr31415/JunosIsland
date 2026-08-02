@@ -96,6 +96,10 @@ const DEFAULT_EYE_PART = 'plate-01'
  * file on every re-save and bury the one number that actually changed. `-0` is
  * normalised to `0` for the same reason — it serialises differently and means
  * the same thing.
+ *
+ * It is a TIDIER and not a truth: the emitter (`numLit`) keeps this result only
+ * when it reads back as the same double, and widens when it does not. Rounding a
+ * number the editor solved would move the animal.
  */
 export const round6 = (n: number): number => {
   const r = Math.round(n * 1e6) / 1e6
@@ -1326,7 +1330,33 @@ const quote = (s: string): string =>
 
 const key = (k: string): string => (IDENT.test(k) || INDEX.test(k) ? k : quote(k))
 
-const numLit = (n: number): string => String(round6(n))
+/**
+ * A number as source: the SHORTEST decimal that parses back to exactly `n`.
+ *
+ * Tidiness where it is free, exactness always. `round6` is tried first and kept
+ * whenever it reads back as the same double — which is most numbers a species
+ * carries, so the tidy `0.635` and `1.25` in every file on disk are unchanged and
+ * a re-save still churns nothing. But a number that six decimals cannot say —
+ * `0.7490636704119851`, a stretch solved from two part extents, or
+ * `0.34797713929385693`, a sink — is NOT ours to round off: it is geometry Joe
+ * authored in the editor, and truncating it on the way out silently moved his
+ * animal. Nine of the thirty shipped species carried at least one such number and
+ * did not survive their own round trip.
+ *
+ * So: widen until it round-trips. `toFixed(7..17)` covers every double that a
+ * fixed-point decimal can state, and `String(n)` — which JavaScript guarantees
+ * round-trips — is the backstop for the rest (very small or very large
+ * magnitudes, where the shortest exact form is exponential).
+ */
+const numLit = (n: number): string => {
+  const tidy = String(round6(n))
+  if (Number(tidy) === n) return tidy
+  for (let p = 7; p <= 17; p++) {
+    const wider = n.toFixed(p)
+    if (Number(wider) === n) return wider
+  }
+  return String(n)
+}
 
 const hexLit = (n: number): string => `0x${rgb24(n).toString(16).padStart(6, '0')}`
 
@@ -1384,10 +1414,25 @@ function wrappedString(k: string, s: string, indent: string): string {
     .join('\n') + ','
 }
 
-/** `CreatureDef`'s own field order, so an emitted file reads like a written one. */
+/**
+ * `CreatureDef`'s own field order, so an emitted file reads like a written one.
+ *
+ * **THIS LIST MUST TRACK `CreatureDef`'S FIELDS.** It is what the emitter walks,
+ * so a field of the definition that is not named here is not written down — and
+ * nothing anywhere reports it. The editor says "saved", the file is valid, and
+ * the field is gone.
+ *
+ * `motion` was missing for exactly that reason: it was added to `CreatureDef`
+ * after this list was written, no shipped species used one yet, so no test that
+ * walks the register could see it. The first animal given a wingbeat would have
+ * lost it on the first save. If you add a field to `CreatureDef`, add it here, in
+ * its declaration order — `tests/tools/editor-round-trip.test.ts` checks that a
+ * definition carrying a field emits it, but it can only check the fields it knows
+ * to build one with.
+ */
 const DEF_KEYS = [
   'palette', 'coat', 'under', 'limb', 'hull', 'belly', 'legs', 'eyes',
-  'ears', 'tail', 'snout', 'nose', 'ridge', 'extras', 'flag',
+  'ears', 'tail', 'snout', 'nose', 'ridge', 'extras', 'motion', 'flag',
 ] as const
 
 /** `animal-hedgehog` -> `HEDGEHOG_ASSEMBLY`. The convention every species file uses. */
