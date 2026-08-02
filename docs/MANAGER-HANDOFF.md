@@ -1,5 +1,207 @@
 # Manager handoff
 
+> ## ⚠ START HERE — state at handover, 2 Aug 2026 (evening)
+>
+> *Written by the drumbeat for a FRESH SESSION, at Joe's request, immediately
+> before a context clear. Read this block first. The block below it is the
+> morning's handover and is now history; everything under that is older still.*
+>
+> ### Where the tree is
+>
+> **`main` at the tip, PUSHED, `origin/main` level.** Deployed and verified live:
+> bundle `index-32T4lIwv.js`. All five gates green on the pushed tree — `tsc` 0,
+> **3310 tests**, build, smoke, parity.
+>
+> **This is the first push in a while that made the game SMALLER, on purpose.**
+>
+> ```
+>   Base Set    24/24   Kenney's own pack, never ours
+>   Garden      14/14   hand-assembled — the only complete collection
+>   Night Time  13/16   bat, sugar glider, scorpion want shapes the bank lacks
+>   Home Pets    2/16   corn snake, goldfish
+>   Africa       1/16   crocodile
+>   Farm         0/16   all sixteen were kit-built
+>   Woodland     0/16   all sixteen were kit-built
+> ```
+>
+> Registry went **113 -> 54**. The 59 kit-built species are deleted. `roster.ts`
+> is UNTOUCHED and must stay so: it says what a collection WILL hold, the
+> collection files say what is BUILT, and "rostered but not built" is the
+> ordinary state. A deleted species renders as an unmet frame, NOT as a blocky
+> model — verified against the live bundle, not assumed.
+>
+> **The kit machinery is now dead code.** `src/island/species/kit.ts` and
+> `kits/*` still exist and nothing uses them. Removing them was deliberately not
+> done in the same change as the deletion; it is a clean follow-up.
+>
+> ### The one thing that changes everything else
+>
+> **Joe retired the KIT route and set a SIGN-OFF GATE.** Two rulings, both made
+> today, and together they mean the game's animal roster is deliberately about to
+> shrink to almost nothing so it can be rebuilt properly:
+>
+> 1. **JT-034 / JT-042 — the kit-built species are rejected work.** *"only the
+>    garden animals have been built to spec. the ones i can see in outline in the
+>    album for africa and home pets are the old blocky ones that can be deleted to
+>    be honest. do not build any more of them."* Then, explicitly: *"remove all the
+>    blocky ones from the game completely, including the album. get that shipped"*,
+>    and — the reason deletion became safe — *"delete, the blocky ones, she has not
+>    collected any of them yet."*
+> 2. **The sign-off gate, RETROACTIVE.** *"only animals that i have signed off in
+>    the editor end up on the game, local or live."* Asked whether that binds the
+>    30 already built, he chose retroactive: unsigned means not in the game.
+>
+> **He confirmed the resulting empty album is INTENTIONAL:** *"noted on the album
+> state after all the pushes. that is intentional. it needs a clean baseline so i
+> can get on with building and deploying all the new animals."* Do not treat the
+> shrunken roster as a regression and do not "restore" anything.
+>
+> ### What counts as a real animal now
+>
+> **Only the hand-assembled ones**, in `src/island/species/parts/assembled/`.
+> The Garden fourteen are the exemplars — match those. The corn snake, goldfish
+> and crocodile are also on the assembly route but are newer and less reviewed,
+> and all three carry a non-uniform stretch Joe has flagged, so do NOT copy them
+> as a standard.
+>
+> **Beware `shippedIn()`.** It counts REGISTERED species and cannot tell a
+> hand-assembled animal from a kit-built one. It reported 100 of 320 this morning
+> and the true figure to spec was 17. That mistake was made and corrected in this
+> session; do not make it again.
+>
+> ### The other rulings made today
+>
+> - **JT-038 — the shape dropdown groups by ROLE**, not form. Shipped.
+> - **JT-041 — primitives only.** Triangle, circle and square are authorised and
+>   shipped; nobody authors a named fin, wing, talon, frill, hoof or trunk. So
+>   Ocean, Critters, Dinosaurs and Raptors stay unbuildable (64 species) and
+>   Birds, Outback and Legendary stay partial. A species run meeting one of those
+>   **stops and names the missing part** rather than substituting.
+> - **Fred does not splice a name.** *"fred doesnt splice, kids names are just not
+>   mentioned, just shown via text."* The child's name is print-only.
+>   **UNRESOLVED and worth asking:** whether a PET's name is still spoken by the
+>   teacher as its own chained clip (which `voice/scripts.json`'s law 3 says) or
+>   is also print-only. This was never put to him.
+> - **The owl is PARKED.** PB-056 says she is female, `joe/voices.json` casts
+>   Thomas. Joe: *"owl is parked."* Leave the contradiction alone.
+>
+> ### Where the work stands
+>
+> **Two managers were in flight at the clear and MUST be checked first:**
+> deleting the 59 kit-built species, and the editor's save/status/grouping work.
+> If their branches are unmerged, merge, gate and push them — that is the
+> outstanding work, and Joe expects it shipped.
+>
+> **The sign-off gate is NOT BUILT.** It is the next real piece. Joe's rule is
+> retroactive, but §19 says nothing a child owns can be lost, and she very likely
+> owns Garden pets. The resolution agreed with him: **gate the point where a
+> species is DEALT** — nothing unsigned can arrive — **while a pet she already
+> owns stays visible and hers.** He was told this and did not object; if he wants
+> owned pets to vanish too he will say so.
+>
+> **Thirty animals need Joe's sign-off** before they are back in the game:
+> Garden 14, Night Time 13, corn snake, goldfish, crocodile.
+>
+> ### STANDING ORDER — a signed-off animal ships with the next push, always
+>
+> Joe, 2 Aug: *"as a standing order, if there is a new animal that is signed off
+> by me, it goes live with the next push, always."* Now written into
+> `docs/MANAGER-ORDERS.md`, which is the permanent file — but repeated here
+> because it is the half of the sign-off gate that is easy to forget.
+>
+> **Check for newly signed-off animals before every push and include them.** Not
+> to be asked about, deferred, or held back because the rest of a collection is
+> unfinished. Unsigned animals never ship; signed ones always do. Sitting on one
+> spends the scarcest thing in the project — his attention — and returns nothing.
+>
+> ### What the editor still needs before sign-off means anything — Joe, 2 Aug
+>
+> > *"i need to see the animals in the game environment, so in the editor i need
+> > to see it on like 7 hex tiles bouncing around like it would in the game. the
+> > it gets signed off. editor also needs to let me decide if it flys or bounces
+> > on land. later we will confine sea creatures to water tiles only and stop
+> > land animals from going into the water."*
+>
+> Three things, and the first two gate his sign-off rather than following it.
+>
+> **1. A preview IN THE GAME ENVIRONMENT, not on the stage.** About seven hex
+> tiles, the animal wandering and bouncing exactly as it does on the island.
+> **This is part of the sign-off flow** — "then it gets signed off" — so it is not
+> a separate viewer to be built later and bolted on. He cannot judge an animal
+> standing still on a grey turntable; he judges it moving, at distance, on
+> ground. The behaviour already exists in `src/island/pets.ts` (`goal`,
+> `restFor`, `bounce`, the hover for flyers); the editor stage is
+> `tools/workbench/public/editor/stage.ts`. The work is bringing the island's own
+> wander loop to the editor rather than writing a second one — a second one would
+> drift, and then he would be signing off a thing that does not exist.
+>
+> **2. Fly or bounce, as HIS decision per species.** Today this is
+> `FLYERS` at `pets.ts:51`, a hardcoded `Set` of exactly two ids — `animal-bee`
+> and `animal-parrot`. Read the comment above it before touching it: it argues,
+> correctly, that this must be a LIST and not a rule, because *"a rule that said
+> 'has wings' would put a penguin in the canopy, and every rule anyone could
+> write to exclude it is this list wearing a disguise."* That reasoning is
+> exactly why it should be a field Joe sets, not a constant a builder edits — it
+> is a judgement, and he is the judge.
+>
+> **The immediate consequence, which is already biting:** no hand-assembled
+> species can be marked as flying at all, because the set names only two Base Set
+> ids. Night Time's **nightjar** is a bird that cannot fly, and the **kiwi**
+> correctly should not — but nothing can currently express the difference.
+>
+> **3. LATER, explicitly his word: water.** Sea creatures confined to water
+> tiles, land animals kept out of the water. Not now. It belongs with habitats
+> (PB-017) and the biome ladder (PB-022), and it will want the same per-species
+> field the fly/bounce decision creates — so design that field with this coming,
+> rather than as a boolean that has to be widened later.
+>
+> ### What is blocked on Joe
+>
+> - Signing off those 30, in the editor.
+> - **JT-040** — the goldfish's tail is `wedge-15`, the LION's tail, because the
+>   bank has no fin, flipper or fluke at all. Whether it reads as a fan is a look.
+> - **Five non-uniform stretches, not three.** Goldfish fin, crocodile snout, corn
+>   snake coil, firefly lantern ring — and the **Garden tortoise**, which has
+>   carried the identical `[1, 1, 0.5]` since long before the others. Rule on the
+>   set.
+> - **Ostrich and vulture** need a look decision: `wing`, `horn` and `claw` occur
+>   **zero** times in the bank, measured, and the pack's own birds have no wings.
+> - Whether **−8%** is still the right rate for Oliver (155wpm, against Ryan's 161
+>   that it was tuned for).
+> - **JT-030** — Night Time ships 13 of 16 and can never complete, so it holds an
+>   album slot with three unfillable frames.
+>
+> ### Operational, and each of these cost real time today
+>
+> - **Agent worktrees branch from `origin/main`, not local `main`**, and local
+>   main runs far ahead because Joe does not push. Fixed by
+>   `worktree.baseRef: "head"` in `.claude/settings.local.json`, which applies at
+>   SESSION START — so it should be live for you. **Still tell every agent to
+>   fast-forward onto local `main` before its first edit**, and give it the SHA
+>   and the test baseline. When an agent disputes a baseline, check its branch
+>   point before assuming either of you is wrong.
+> - **Ban `git stash`, `git checkout <path>` and `git reset --hard` in worker
+>   briefs.** Two workers wiped siblings' uncommitted work this way today.
+> - **The subagent and web-search caps are session-scoped**; raised to 2000/1000
+>   in the same settings file.
+> - **Three exhaustive tests flake under CPU contention** — `coast`, `sealing`,
+>   `facedecals`. Measured: the coast test is 8.8s alone against a 30s budget and
+>   fails past 34s only when the suite competes with a build. **Re-run; do not
+>   widen a budget.** PB-065 carries the two honest options.
+> - **Joe's LAPTOP cannot play the game's audio** — its Web Audio output is dead
+>   while media elements work. The game is fine; the tablet plays both synth and
+>   baked. Do not debug the game from his laptop. The two review pages
+>   (`fred-voice.html`, `voice-auditions.html`) use media elements and DO work
+>   there.
+>
+> ### Cards raised today, none of them built
+>
+> **PB-063** the chamfer doc is wrong · **PB-064** bank precision makes two eye
+> cards unwearable · **PB-065** the flaky exhaustive tests · **PB-066** one broken
+> audio path silences the whole game with no error.
+
+---
+
 > ## ⚠ START HERE — state at handover, 2 Aug 2026
 >
 > *Written by the drumbeat at Joe's request, for a FRESH SESSION. Read this
