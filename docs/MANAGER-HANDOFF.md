@@ -1,5 +1,136 @@
 # Manager handoff
 
+> ## ⚠ START HERE — the push button is now Joe's sign-off, and the push tool is damaging his animals, 3 Aug 2026
+>
+> *Written by the manager that wired sign-off to the push. **This block is the
+> current one.** Everything below it is history, including the ones that call
+> themselves current — they were.*
+>
+> Branch **`worktree-agent-ae4fae222d5966016`**, branched at **`84cd17a`** (local
+> `main`, correctly — not `origin/main`). Eight commits; this block is the ninth.
+> **Nothing pushed, nothing merged** — that is the drumbeat's job.
+>
+> ### THE ONE THING TO READ IF YOU READ NOTHING ELSE
+>
+> **Six of the eleven animals Joe pushed are DAMAGED, by the push TOOL and not by
+> him, and two of them cannot ship.** The slow-worm measures **1.3312 against
+> `PACK_HEIGHT_MIN` 1.43** — shorter than anything the pack has ever shipped — and
+> no longer stands on the ground. The mole is **389 verts against rule 9's floor
+> of 405**, having lost `box-24`, the spade hands its own header calls "the
+> animal". **19 tests are red and every one is a RULE, not a measurement.** They
+> are left red ON PURPOSE; that red suite is what stops a 1.33-tall slow-worm
+> reaching Juno. **Do not go green by re-pinning them.**
+>
+> The question is **`JT-048`**, raised in the workbench with the measured numbers,
+> the one-line fix for each, and four options. **It needs Joe before those two
+> animals can ship.** Do not answer it for him — telling a tool artefact from a
+> deliberate edit is the guess that destroys his work.
+>
+> ### What this run did
+>
+> Joe: *"there is no way for me to change it to status 'sign-off' when i hit the
+> 'push to game' button, that is me signing it off. get those animals onto the
+> game please once the unlocker has landed."*
+>
+> **1. The push now writes the sign-off.** `signoffPatch` in
+> `tools/workbench/public/editor/push.ts`, fired from the tail of `push()` in
+> `main.ts`. It closes a gap that had silently stopped every animal: the gate was
+> real, PB-070's wiring to `signoff === 'ok'` was right, and the button that opens
+> it lived on `approver.ts`, a page Joe does not use.
+>
+> **`signoffPatch` takes a `PushOutcome`, never a `PushReply`, and that is the
+> whole design.** PB-076 was a well-formed 200 that wrote nothing and said "in the
+> game" in green. There is exactly ONE `if (!outcome.ok) return null` and no other
+> input from which success could be recomputed, so the two rules cannot drift —
+> there is only one of them. Seven tests over REAL server replies prove it,
+> including the PB-076 reply itself, plus an **if-and-only-if invariant over 19
+> reply shapes** that also asserts both branches occur, so neither "always null"
+> nor "always ok" could pass.
+>
+> **2. Eleven animals backfilled**, established from git and not from a brief:
+> hedgehog (`382e9a9`), badger, dormouse, mole, mouse, salamander, slow-worm,
+> squirrel, toad, tortoise, vole (`84cd17a`). **frog, newt and shrew are NOT
+> signed** — one commit each, `b4f24da`, the PB-036 hand build. Outside Garden no
+> `animal-*.ts` has ever been rewritten after its creation commit, so nothing else
+> can have been pushed and nothing else is signed.
+>
+> **3. `84cd17a` repaired.** `tsc` is 0. Eight fingerprints re-pinned deliberately;
+> mouse and toad did NOT move, which is the evidence it was not a blanket
+> re-capture.
+>
+> ### PB-077: THE NAMED FIX WAS A NO-OP. Do not spend a run on it.
+>
+> The card said the route was `def.ts:1313` — have `defineCreature` register the
+> def. **It is already done** (`creature.ts:947,961`, since `2b320ab`) **and it
+> could never have helped**: registration hands the editor a JavaScript OBJECT,
+> and `sink: LEG_ROW.sink` was evaluated to `0.408163` by the engine before
+> `defineCreature` was called. The loss happens at evaluation time, upstream of
+> every register. The stale comment is corrected in place and the card is
+> rewritten; a card pointing at a no-op costs a whole run to disprove.
+>
+> **What is actually lost is TEXT, and it is worse than constants.** Three kinds:
+> constants flattened (`tsc` catches it); **precision lost** — the round-trip is
+> SIX DECIMAL PLACES, so `1/1.335` returns `0.749064`, and the naive repair of
+> putting the identifier back **silently moves the animal**; and **solver flags
+> resolved** — `chamfer: true` became a literal `at` and put the squirrel's tail
+> 0.1375 inside its body; a single 90° spin came back DUPLICATED and stood the
+> slow-worm's coil on end. None of that strands a binding, so `tsc` is silent.
+>
+> **NOT STARTED, deliberately.** The real fix sends the def AS LOADED beside the
+> emitted module so `push.mjs` restores expressions BY TEXT when the pushed number
+> is unchanged — no arithmetic evaluated, so it never crosses the line `push.mjs`
+> may not cross. ~150–250 lines. It changes the push wire format, which is the
+> path Joe is using right now, so it wants a run of its own and should not ride
+> alongside a change to what a push writes. **Do not widen `withRestoredConstants`
+> to evaluate arithmetic — that refusal is correct.**
+>
+> ### Gate results
+>
+> `npx tsc --noEmit` **0 errors**. `npm run build`, `npm run smoke`,
+> `npm run parity`, `npm run channel` — **all pass** (`channel`: 363 files,
+> workbench absent from production, as it must be).
+>
+> `npm test`: **19 failed | 4048 passed | 1 skipped (4068), 7 files** — squirrel 7,
+> dormouse 4, slow-worm 3, vole 2, mole 1, corn-snake 1, gallery-source 1. **All
+> nineteen are JT-048**, and none is a flake. `editor-round-trip` (PB-082) PASSED
+> this run, as did `coast`, `sealing` and `facedecals`.
+>
+> ### Where the next manager starts
+>
+> **Read `JT-048` and see whether Joe has answered it.** If he has, his note says
+> which of the six animals to repair and how, and that work turns the 19 red tests
+> green — `gallery-source.test.ts:417` and `assembly-corn-snake.test.ts:136` go
+> green on their own the moment the slow-worm's coil is fixed, because both are
+> that one fault surfacing elsewhere. If he has NOT answered, do **not** start
+> PB-077 route 1 on top of unrepaired animals; take an unrelated queue item.
+>
+> ### What I learned that is not in the code
+>
+> - **A pushed animal is not a reviewed animal.** Sign-off records that Joe looked
+>   at it; it never claimed the tool wrote down what he saw. Sign-off and the
+>   harness are INDEPENDENT gates and both must pass. That is why signing off a
+>   broken slow-worm is safe: the red suite stops it shipping.
+> - **The per-species suites are the only thing that caught any of this.** `tsc`
+>   saw 3 errors; the real damage was 19 rules across 7 files. Anyone tempted to
+>   thin those suites should read this paragraph twice.
+> - **The inherited brief said the baseline was "8 fingerprint failures plus
+>   `editor-round-trip`". It was 51.** Measure the tree you inherit; never take a
+>   failure count on trust.
+> - **Restoring a flattened binding is not always safe.** One of the three —
+>   `COIL_STRETCH` — did not match its expression to the bit, and substituting the
+>   identifier would have moved the coil by 3.3e-7. Check the arithmetic against
+>   the pushed decimal EVERY time; where it differs, redefine the constant to Joe's
+>   number rather than putting the name back.
+>
+> ### Decisions
+>
+> - **RAISED `JT-048`** — what to do about six animals the push tool damaged.
+>   Blocks PB-077 and PB-062. Two signed-off animals cannot ship until he answers.
+> - **PICKED UP: none.** No `type: "ruling"` task was newly `done` with a note this
+>   run. Joe's sign-off ruling arrived through the run brief, not the workbench,
+>   and is fully built.
+
+
 > ## ⚠ START HERE — the album stops showing animals nobody built, 3 Aug 2026
 >
 > *Written by the manager that fixed the empty slots. **This block is the current
