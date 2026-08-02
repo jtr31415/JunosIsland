@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "nextId": 77,
+  "nextId": 78,
   "cards": [
     {
       "id": "PB-001",
@@ -545,6 +545,13 @@
       "run": "",
       "title": "Push it to the game wrote nothing, and said it worked",
       "detail": "Joe edited the hedgehog, pressed Push, and was told in green that it was in the game; nothing reached src/. push.mjs refuses to write a species module that already exists, and all thirty assembled species already exist, so the only file any push ever wrote was the MOVES table — and the client judged success by the absence of an error key rather than by whether the species file was written, so a 200 whose own say field read \"Nothing was written\" printed as success. Fixed three ways: an explicit replace intent on the request lets an edit SPLICE its definition block back into the existing file, preserving every byte outside it (the hedgehog carries 222 lines of argued prose above its definition, and regenerating the file would have eaten all of it); pushOutcome now calls any push that did not write place 1 a failure, in red, naming the file that did not change; and the emitter was itself lossy — nine of the thirty species lost authored precision to a 6dp rounder on a round trip, and CreatureDef.motion was silently dropped from DEF_KEYS. Round trip is now provably lossless 30/30, guarded by tests/tools/editor-round-trip.test.ts."
+    },
+    {
+      "id": "PB-077",
+      "state": "open",
+      "run": "",
+      "title": "The editor round-trips through evaluated numbers, so an edit flattens every expression",
+      "detail": "THE SENTENCE THAT MATTERS: the editor loads a species as EVALUATED numbers, so any expression in a definition is lost on any edit — splice or regenerate, it makes no difference. 14 of the 30 files bind file-local constants to expressions (const EAR_SINK = 0.125 / 0.359219; const COIL_SINK = (COIL_THICK - HULL_BOTTOM_Y) / COIL_THICK; at: [0, HULL_MID_Y + 0.1, 0.5]) and a push flattens them to literals, leaving those locals unread and the derivation unreadable: bushbaby, civet, corn-snake, crocodile, firefly, glow-worm, goldfish, kiwi, mole, nightjar, opossum, raccoon, slow-worm, tarsier. PB-076 ships staleBindings, which NAMES the exact dead lines for Joe — that is mitigation, not a fix, and it is why pushing was safe to turn on. The route is def.ts:1313: have defineCreature register the def beside the build it returns, so the editor opens the SOURCE definition rather than a reconstruction, which closes all 14 at once. Different blast radius from PB-076 and it changes what an edit means, so it is Joe's call to start it, not ours."
     }
   ]
 }
