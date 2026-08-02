@@ -20,6 +20,8 @@ import type { Rng } from '../core/rng'
 import type { Island } from './world/grid'
 import type { Pet } from './flow'
 import { flies } from './species/moves'
+import { speciesRecord } from './species/registry'
+import { buildAssembly } from './species/parts/assembly'
 
 /** The 24 Kenney species, by GLB basename. */
 export const SPECIES = [
@@ -577,6 +579,65 @@ export interface PetField {
 }
 
 /**
+ * A species that is BUILT rather than fetched, or null if this is not one.
+ *
+ * The second route out of `prototype()`, and the seam `species/kit.ts:195` wrote
+ * down and deliberately left unwired until a built collection shipped. Thirty
+ * have now shipped: they have no GLB beside `pets/`, so before this every one of
+ * them 404'd, `sync`'s `.catch(() => null)` swallowed it, and the pet simply
+ * never appeared.
+ *
+ * Assembly FIRST and no fallback, which is `album.ts:176 shapeOf`'s order — a
+ * record that carries an `assembly` is answered here and `loader.loadAsync` is
+ * never reached for it, so a built species puts no request on the wire at all.
+ * `flattenImported` and `wearFaceUVs` are skipped for the reason the seam note
+ * gives: both are no-ops on assembled geometry (its material is already the flat
+ * Standard this rig wants, and `facedecals` returns 0 for a species with no
+ * atlas UVs), so running them would cost a traverse and buy nothing. `dress()`
+ * must never be applied to one and is not called from this module.
+ *
+ * ## THE WRAPPER GROUP IS LOAD-BEARING. It looks removable. It is not.
+ *
+ * `buildAssembly` grounds its animal by setting `group.position.y = -box.min.y`
+ * ON THE GROUP IT RETURNS (`parts/assembly.ts:617-619`) — a translation on that
+ * node itself rather than on its children. A node's local matrix is T·R·S, so
+ * its own `position` is NOT scaled by its own `scale`: `sync` doing
+ * `root.scale.setScalar(0.16)` on that same group shrinks the geometry to 16%
+ * and leaves the lift at full size, so the two stop cancelling and the feet come
+ * off the ground by `lift * (1 - 0.16)`.
+ *
+ * Putting the assembly INSIDE a plain wrapper fixes it exactly: the 0.16 lands
+ * on the wrapper, so the child's position is scaled with the child's geometry
+ * and the feet stay on y = 0. No `fitInto` and no rescale — an assembly is
+ * authored at the pack's own scale (height band 1.43-2.02,
+ * `parts/hulls.ts:131`), which is the same units as a Kenney pet GLB, so 0.16 is
+ * already the right number for it.
+ *
+ * HOW BIG IS THE ERROR TODAY? Tiny, and that is worth writing down rather than
+ * overstating. Measured over all thirty shipped assemblies, the largest lift any
+ * of them carries is -2.951e-5: they are authored with their feet on zero
+ * already, so `-box.min.y` is correcting float dust and not lifting an animal.
+ * Unwrapped, a hedgehog's feet sit 2.479e-5 below the grass — wrong, and
+ * invisible. The wrapper is kept anyway because the lift's SIZE is the accident
+ * and the cancellation is the contract: a species whose geometry does not happen
+ * to start at zero would sink or float by the whole of it, and one node costs
+ * nothing. `tests/island/pets-assembly.test.ts` asserts the cancellation
+ * exactly, at 1e-9, so the day that lift grows this is already red.
+ *
+ * Throws rather than falling back if the build fails. A rejection is not cached
+ * (see `prototype`), and `sync` now says so out loud instead of dropping the pet
+ * in silence.
+ */
+function assembledPrototype(species: string): THREE.Group | null {
+  const spec = speciesRecord(species)?.assembly
+  if (!spec) return null
+  const wrapper = new THREE.Group()
+  wrapper.name = `assembled:${species}`
+  wrapper.add(buildAssembly(spec))
+  return wrapper
+}
+
+/**
  * A field of pets.
  *
  * `rng` is the repo's ordinary injection (`src/core/rng.ts`), and it is here
@@ -626,6 +687,33 @@ export function createPetField(base = '', rng: Rng = defaultRng): PetField {
   let cameraDistance: number = TAP_TARGET.distance
   /** Bounces asked for before their pet finished loading. */
   const pendingBounce = new Set<string>()
+  /**
+   * Species whose failure to build or load has already been said out loud.
+   *
+   * ONCE PER SPECIES, and both halves of that matter. Once, because `sync` is
+   * called from the frame loop's own `void pets.sync(...)` and a `console.error`
+   * per pet per frame at 60fps is a second bug wearing the first one's clothes.
+   * Per SPECIES rather than per pet, because the fact being reported is about
+   * the species — thirty of them had no GLB and nobody noticed for weeks, since
+   * the catch below threw the reason away rather than printing it.
+   *
+   * Reporting is all it does. Nothing is added to `live` and nothing is
+   * remembered as unbuildable, so the retry the comment below describes is
+   * untouched: the next sync tries the same species again, and a friend that
+   * fails once on flaky wifi still arrives on the second attempt.
+   */
+  const reported = new Set<string>()
+
+  function reportDrop(species: string, why: unknown): null {
+    if (!reported.has(species)) {
+      reported.add(species)
+      console.error(
+        `pets: could not build or load species "${species}" — no pet of it will `
+        + 'appear on the island until this is fixed.', why,
+      )
+    }
+    return null
+  }
 
   /** The solid world this frame: scenery that stays put, plus Fred. */
   function solidNow(): readonly Obstacle[] {
@@ -644,6 +732,28 @@ export function createPetField(base = '', rng: Rng = defaultRng): PetField {
   function prototype(species: string): Promise<THREE.Group> {
     const hit = cache.get(species)
     if (hit) return hit
+    /*
+     * BUILT, not fetched — and cached in the same map, as an already-resolved
+     * promise.
+     *
+     * The cache is a map of PROMISES on purpose (see its own comment above), and
+     * an assembled species joins it as one rather than getting a second cache of
+     * its own. That is what makes `preview`, `warm` and `sync` share a single
+     * prototype per species: `model()` clones whatever comes out of here, so the
+     * animal is assembled ONCE however many of it a child owns, exactly as a GLB
+     * is fetched once.
+     *
+     * Above the `loadAsync` line and returning before it, so a built species
+     * never puts a request on the wire. `assembledPrototype` explains the
+     * wrapper it hands back, which is the difference between a pet on its tile
+     * and a pet floating over it.
+     */
+    const built = assembledPrototype(species)
+    if (built) {
+      const ready = Promise.resolve(built)
+      cache.set(species, ready)
+      return ready
+    }
     // NOTE: these GLBs are NOT self-contained — each references an external
     // Textures/colormap.png beside it. Without that file every pet renders
     // pure white, which looks like a material bug rather than a missing asset.
@@ -763,8 +873,15 @@ export function createPetField(base = '', rng: Rng = defaultRng): PetField {
          * added to the group or to `live` at this point, so the pet is still
          * unbuilt by every test in this module and the next sync builds it
          * properly. `bounce` already knows how to wait for a late arrival.
+         *
+         * It is no longer SILENT, though, and that was the whole of PB-070's
+         * second half. `.catch(() => null)` threw the reason away as well as the
+         * pet, so thirty species that had no model at all looked exactly like
+         * thirty species that were still loading, from every console and every
+         * log, for as long as it took somebody to go looking. `reportDrop` says
+         * which species and why, once, and changes nothing else.
          */
-        const root = await model(pet.species).catch(() => null)
+        const root = await model(pet.species).catch(why => reportDrop(pet.species, why))
         if (!root) continue
         const holder = new THREE.Group()
         // Kenney pets stand ~1.5 units tall against a 2.0-wide hex, which
