@@ -136,6 +136,7 @@ const PINNED: Readonly<Record<string, string>> = {
   'animal-terrapin': '1e74d030e89f620e',
   'animal-cockatiel': 'eeb079e979377997',
   'animal-lovebird': 'fc65a4b555597a9f',
+  'animal-canary': '0bd1e23f74d0038d',
 }
 
 describe('every assembled species has a pinned fingerprint', () => {

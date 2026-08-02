@@ -91,6 +91,7 @@ export { RAT_ASSEMBLY } from './animal-rat'
 export { TERRAPIN_ASSEMBLY } from './animal-terrapin'
 export { COCKATIEL_ASSEMBLY } from './animal-cockatiel'
 export { LOVEBIRD_ASSEMBLY } from './animal-lovebird'
+export { CANARY_ASSEMBLY } from './animal-canary'
 /* -- append the next species' line directly above this one -- */
 
 import { assembledBuilds } from './register'
