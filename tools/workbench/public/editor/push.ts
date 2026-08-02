@@ -97,11 +97,10 @@ export function membersAfter(speciesId: string, collectionId: string): string[] 
  * this can honestly say is where the record came from and what has not been
  * looked at, so that is all it says.
  */
-export function recordFor(speciesId: string, species: string, draftId: string, today: string): string {
-  const from = draftId === '' ? 'the species editor' : `the species editor as ${draftId}`
+export function recordFor(speciesId: string, species: string, today: string): string {
   return [
     '  /*',
-    `   * ${species}. Pushed from ${from} on ${today}.`,
+    `   * ${species}. Pushed from the species editor on ${today}.`,
     '   *',
     '   * `bespoke` sends it to the ASSEMBLY kit, and every measurement lives in',
     `   * \`parts/assembled/${speciesId}.ts\`. Its proportions and its palette are Joe's`,
@@ -121,8 +120,14 @@ export function recordFor(speciesId: string, species: string, draftId: string, t
  * re-deciding it here would be a second opinion that could disagree with the one
  * the panel is showing him.
  */
+/*
+ * There is no `draftId` here any more, and there is nothing to replace it with.
+ * A draft used to carry a dealt `SD-nnn` and the record said "pushed from the
+ * species editor as SD-003"; a draft is now keyed by its `speciesId`, so the
+ * sentence would have read "as animal-fennec-fox" two lines above the id itself.
+ */
 export function pushRequest(
-  speciesId: string, def: CreatureDef, view: SignoffView, draftId: string, today: string,
+  speciesId: string, def: CreatureDef, view: SignoffView, today: string,
 ): PushRequest {
   if (!view.ready) {
     throw new Error('the name-and-fact panel still has something in it that has to be fixed first')
@@ -139,7 +144,7 @@ export function pushRequest(
     collection: view.collection,
     exportName: assemblyConstName(speciesId),
     module: defToModuleSource(speciesId, def),
-    record: recordFor(speciesId, view.species, draftId, today),
+    record: recordFor(speciesId, view.species, today),
     after: membersAfter(speciesId, view.collection),
     auditRow: auditRowFor(view),
     factRow: factRowFor(view),

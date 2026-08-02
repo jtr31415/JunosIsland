@@ -24,6 +24,11 @@
       <section id="open">
         <h2>Animal</h2>
         <select id="subject"></select>
+        <!-- The filter sits UNDER the list it narrows, not above it: the list is
+             what he came for, and a control above it reads as the thing to use
+             first. `status.ts` fills both, and the note says what was hidden. -->
+        <select id="subject-filter"></select>
+        <p id="subject-note" class="note"></p>
         <div class="row">
           <button id="revert" type="button" class="quiet">Start again from the original</button>
         </div>

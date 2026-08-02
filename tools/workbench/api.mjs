@@ -18,7 +18,7 @@ import { inside, readJson, writeJson, writeText, readText, readEnv, OutsideRepo 
 import { allLessons, loadLesson, saveLesson, exportPlan, STATUSES } from './lessons.mjs'
 import { bakeOne, bakeState, loadManifest, BakeError } from './bake.mjs'
 import { checkTask, blocking } from './checks.mjs'
-import { mergeWhole, applyPatch, mergeable, Conflict, Refused } from './merge.mjs'
+import { mergeWhole, applyPatch, mergeable, migrate, keyOf, Conflict, Refused } from './merge.mjs'
 import { PushRefused, pushSpecies } from './push.mjs'
 import { REPO } from './seed.mjs'
 
@@ -34,8 +34,12 @@ const WRITABLE = {
    * The visual editor's draft store: species DEFINITIONS Joe is making in the
    * page, not geometry. Two writers again — he edits drafts here while the facts
    * pipeline fills in a `fact` on the other side — so it is merged on the same
-   * terms as everything above it, and its ids are dealt server-side. See
-   * `merge.mjs MERGEABLE.edits`.
+   * terms as everything above it.
+   *
+   * No ids are dealt for it, here or anywhere: a record is keyed by its
+   * `speciesId`, one animal to one record, so a save OVERWRITES rather than
+   * appending. See `merge.mjs MERGEABLE.edits`, which argues why that also ends
+   * the id race the old `SD-nnn` counter existed to manage.
    */
   edits: 'joe/species-edits.json',
 }
@@ -130,10 +134,15 @@ function state(root) {
      * tab — "need to be able to save my edits" was the first of his five notes
      * on the editor and this line is the half that was missing. `.drafts` is
      * unwrapped the way `primitives` and `names` are unwrapped, because the page
-     * wants the rows; the envelope (`schemaVersion`, `nextId`) is the server's
-     * business and the page must never send its own id.
+     * wants the rows; the envelope (`schemaVersion`) is the server's business.
+     *
+     * ONE ROW PER ANIMAL, keyed by `speciesId` — a save overwrites rather than
+     * appending, which is Joe's instruction of 2 August. `migrate` folds the
+     * dealt `SD-nnn` ids a previous server wrote, on the way out as well as on
+     * the way in, so a file that has not been saved since still reads correctly
+     * on screen the first time the page asks for it.
      */
-    edits: readJson(root, 'joe/species-edits.json', { schemaVersion: 1, nextId: 1, drafts: [] }).drafts ?? [],
+    edits: migrate('edits', readJson(root, 'joe/species-edits.json', { schemaVersion: 1, drafts: [] })).drafts ?? [],
     voices,
     statuses: STATUSES,
     /*
@@ -252,15 +261,23 @@ export function createApi(root) {
         if (!rel) return json(res, 400, { error: `not a writable file: ${body.what}` })
         try {
           /* Null only when the file is genuinely not there yet, or when this is
-           * one of the files that is not merged at all — see `merge.mjs`. */
-          const disk = mergeable(body.what) ? readJson(root, rel, null) : null
+           * one of the files that is not merged at all — see `merge.mjs`.
+           *
+           * `migrate` runs on the copy just read, INSIDE the request, so a file
+           * written by an older server is brought to the current shape before
+           * anything merges onto it and is written back in that shape. A save is
+           * the only moment the file is provably not being edited by anyone
+           * else, which is why the healing lives here rather than in a script. */
+          const disk = mergeable(body.what) ? migrate(body.what, readJson(root, rel, null)) : null
           if (body.patch) {
             if (!mergeable(body.what)) {
               return json(res, 400, { error: `${body.what} is not patchable — send the whole file` })
             }
             if (!disk) return json(res, 404, { error: `${rel} is not there to patch` })
             writeJson(root, rel, applyPatch(body.what, disk, body.patch))
-            return json(res, 200, { saved: rel, patched: body.patch.id })
+            /* The record's own key, whatever the file calls it — `edits` is keyed
+             * by `speciesId` and reporting `.id` there answered `undefined`. */
+            return json(res, 200, { saved: rel, patched: body.patch[keyOf(body.what)] })
           }
           if (body.value === undefined) return json(res, 400, { error: 'a save needs a value or a patch' })
           writeJson(root, rel, disk ? mergeWhole(body.what, disk, body.value) : body.value)

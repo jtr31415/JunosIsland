@@ -407,12 +407,16 @@ export function seed(root, { force = false } = {}) {
    * something Joe makes in the editor and a seeded draft would be an animal
    * nobody designed. What the seed guarantees is the SHAPE: the file exists, so
    * the editor opens and a patch has somewhere to land before he has saved his
-   * first draft, and `nextId` starts where the ids start.
+   * first draft.
+   *
+   * No `nextId`, and no counter behind it. A record is keyed by its `speciesId`
+   * — one animal, one record, overwritten on save — so there is no pool of
+   * numbers to start anywhere; see `merge.mjs MERGEABLE.edits`.
    *
    * Create-if-absent, like everything else here: re-running the server after an
    * evening of drafting must never walk over the evening.
    */
-  put('joe/species-edits.json', { schemaVersion: 1, nextId: 1, drafts: [] })
+  put('joe/species-edits.json', { schemaVersion: 1, drafts: [] })
 
   /* Lessons come from the spec, and only if the spec is where we expect it. */
   const specPath = inside(REPO, 'docs/pet-island-runA.md')
