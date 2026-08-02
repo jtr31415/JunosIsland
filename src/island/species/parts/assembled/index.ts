@@ -86,6 +86,7 @@ export { DEGU_ASSEMBLY } from './animal-degu'
 export { GECKO_ASSEMBLY } from './animal-gecko'
 export { GERBIL_ASSEMBLY } from './animal-gerbil'
 export { FERRET_ASSEMBLY } from './animal-ferret'
+export { BUDGIE_ASSEMBLY } from './animal-budgie'
 /* -- append the next species' line directly above this one -- */
 
 import { assembledBuilds } from './register'
