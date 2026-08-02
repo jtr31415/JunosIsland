@@ -222,64 +222,30 @@ import { PACK_PUPIL } from '../texture'
 
 export const HEDGEHOG_ASSEMBLY = defineCreature('animal-hedgehog', {
   palette: {
-    coat: 0xb2946c,   // buff face
-    spine: 0x53412c,  // dark spines
-    limb: 0x6b533a,   // legs and snout
-    eye: 0xf4e6cc,    // the eye card's light region
-    pupil: PACK_PUPIL, // measured off 544 real eye texels; see texture.ts
-    nose: 0xe792bd,   // the dog and monkey nose-tip's own pink, area-weighted
+    coat: 0xb2946c,
+    spine: 0x53412c,
+    limb: 0x6b533a,
+    eye: 0xf4e6cc,
+    pupil: PACK_PUPIL,  // the pack's own measured pupil; see texture.ts
+    nose: 0xe792bd,
+    'box-09': 0xb2946c,
   },
 
-  /* No `hull` line: the builder's default IS the authored 1.250 cube at the
-   * pack's own centre for it. Joe: "body cubic." */
-
-  /* Joe's twenty spikes, in two lines. Five rows of four — the top face, both
-   * side faces, and the two chamfers between them — same shape, same depth, same
-   * four z stations, facings stepping 45 degrees a row so the back reads round.
-   * The 180-degree turn sweeps every quill back over the rump. */
-  ridge: {
-    part: 'cone-01',
-    paint: 'spine',
-    count: 4,
-    spin: [{ axis: 'y', deg: 180 }],
-  },
-
-  /* 0.95, not the card's own 0.933646: this face carries its eyes a little high
-   * over a pointed snout. z, size and sink are not sayable — rule 5. */
   eyes: { y: 0.95, paint: 'eye' },
-
-  /* The parrot's beak, on the parrot's own numbers, by the donor transfer. Its
-   * upper mandible (band 15) is painted with the spines so the snout reads as
-   * one dark point rather than as a bill. */
   snout: { part: 'cone-06', paint: { base: 'limb', byBand: { 15: 'spine' } } },
-
-  extras: [
-    /* Joe's pink element, on the snout's own measured APEX. AUTHORED — the one
-     * piece of geometry in this method the pack did not give us, and it is here
-     * because he looked at the lifted alternative and rejected it by name. See
-     * `authored.ts`; the `flag` below says so where he reads, and the builder
-     * refuses a bespoke part without it. */
-    {
-      name: 'nose-tip',
-      part: 'bespoke-sphere-01',
-      paint: 'nose',
-      sink: 0.5,
-      at: [0, 0.830236, 0.808311],
-    },
-  ],
-
+  ridge: { part: 'cone-01', paint: 'spine', count: 4, spin: [{ axis: 'y', deg: 180 }] },
+  extras: [{ part: 'box-09', name: 'box-09', at: [0, 0.775, 0.7625], paint: 'box-09' }],
   flag: 'RULE 1 OVERRULED, BY JOE: the nose is AUTHORED geometry — a bespoke 0.125 '
-    + 'sphere, the only shape in this method the pack did not give us. His words, '
-    + '29 July: "all good but the pink tongue as the nose. create a bespoke sphere for '
+    + 'sphere, the only shape in this method the pack did not give us. His words, 29 '
+    + 'July: "all good but the pink tongue as the nose. create a bespoke sphere for '
     + 'that." The bank\'s own answer was wedge-10, the dog and monkey nose-tip, right '
     + 'size and measurably the right pink — and it reads as a TONGUE, which no '
-    + 'measurement catches. See authored.ts. '
-    + 'Spines are cone-01 — the bee and caterpillar antenna — not the hog ear. '
-    + 'The query returns the hog ear and the hog tusk too; the measurements chose '
-    + 'against both. cone-01 tapers to a true point, stands 0.400 tall and costs 34 '
-    + 'triangles against the hog ear\'s 62. Joe\'s call to overturn. '
-    + 'RULE 9 STRAINED: twenty spikes is 680 triangles, and the whole animal comes to '
-    + '1,046 against the pack\'s measured 422-951. Rule 9\'s own budget is vertices and '
-    + 'this is well inside it; no pack animal wears twenty protrusions, so the triangle '
-    + 'envelope is the one Joe\'s count leaves.',
+    + 'measurement catches. See authored.ts. Spines are cone-01 — the bee and '
+    + 'caterpillar antenna — not the hog ear. The query returns the hog ear and the hog '
+    + 'tusk too; the measurements chose against both. cone-01 tapers to a true point, '
+    + 'stands 0.400 tall and costs 34 triangles against the hog ear\'s 62. Joe\'s call to '
+    + 'overturn. RULE 9 STRAINED: twenty spikes is 680 triangles, and the whole animal '
+    + 'comes to 1,046 against the pack\'s measured 422-951. Rule 9\'s own budget is '
+    + 'vertices and this is well inside it; no pack animal wears twenty protrusions, so '
+    + 'the triangle envelope is the one Joe\'s count leaves.',
 })
