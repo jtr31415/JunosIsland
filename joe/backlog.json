@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "nextId": 67,
+  "nextId": 70,
   "cards": [
     {
       "id": "PB-001",
@@ -473,6 +473,27 @@
       "id": "PB-066",
       "title": "One broken audio path silences the whole game, with no error and nothing on screen",
       "detail": "Every sound the game makes goes through Web Audio — the voice player, the baked clips and the sound effects all build an AudioContext, and nothing in src/ uses an <audio> element. Found 2 Aug when Joe got total silence on his laptop while YouTube played fine: media elements and Web Audio are different output paths in Chrome, and only the media one worked. The game is fine (confirmed on the tablet, synth and baked both working), but a child in the same state would get a silent game with no error, no fallback and no indication anything is wrong — the ceremonies would still run, because speech.ts backstops onend at 2500ms whatever happens. Worth deciding whether the game should notice its own silence: an AudioContext that never leaves suspended, or a decode that yields no audible output, is detectable.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-067",
+      "title": "Sign-off needs the animal moving on hex tiles, not standing on a turntable",
+      "detail": "Joe, 2 Aug: \"i need to see the animals in the game environment, so in the editor i need to see it on like 7 hex tiles bouncing around like it would in the game. the it gets signed off.\" So this GATES sign-off rather than following it — he judges an animal moving, at distance, on ground, not still on a grey stage. The behaviour already exists in pets.ts (goal, restFor, bounce, and the hover for flyers) and the editor stage is tools/workbench/public/editor/stage.ts. Bring the island’s own wander loop to the editor rather than writing a second one; a second one drifts, and then he is signing off a thing that does not exist.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-068",
+      "title": "Whether an animal flies is a hardcoded set of two ids, and it should be Joe’s field",
+      "detail": "Joe: \"editor also needs to let me decide if it flys or bounces on land.\" Today it is FLYERS at pets.ts:51 — a Set holding animal-bee and animal-parrot. Its own comment argues it must be a LIST and not a rule, because a rule saying \"has wings\" would put a penguin in the canopy; that reasoning is exactly why it belongs to Joe rather than to a constant. Already biting: no hand-assembled species can be marked flying at all, so Night Time’s nightjar cannot fly while the kiwi correctly should not, and nothing can express the difference. Design the field knowing water is coming (PB-069) rather than as a boolean to be widened later.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-069",
+      "title": "Confine sea creatures to water, and keep land animals out of it",
+      "detail": "Joe, 2 Aug, explicitly LATER: \"later we will confine sea creatures to water tiles only and stop land animals from going into the water.\" Both directions, not one. Belongs with habitats (PB-017) and the biome ladder (PB-022), and it should read the same per-species field that PB-068 creates rather than a second one beside it.",
       "state": "open",
       "run": ""
     }
