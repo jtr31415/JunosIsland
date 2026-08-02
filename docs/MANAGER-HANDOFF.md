@@ -1,5 +1,255 @@
 # Manager handoff
 
+> ## ⚠ START HERE — state at handover, 3 Aug 2026
+>
+> *Written by the manager that built Farm. **This block is the current one.**
+> Everything below it is history, including the ones that call themselves
+> current — they were, earlier.*
+>
+> ### What this run did
+>
+> **PB-074 is DONE: Farm is 16 of 16**, every member hand-assembled on the parts
+> route. Branch **`worktree-agent-ab284976d3cdaf177`**, branched at `382e9a9`.
+> **Nothing is pushed and nothing is merged** — that is the drumbeat's job.
+>
+> sheep · goat · horse · donkey · goose · turkey · llama · alpaca · rooster · ox ·
+> mule · chicken · guinea fowl · quail · water buffalo · pigeon
+>
+> The roster goes **44 → 60 built species**, and Farm is the **third complete
+> collection** after Garden and Home Pets.
+>
+> ### Gate results, on the final tree, working tree clean
+>
+> ```
+> npm test    Test Files 2 failed | 186 passed (188)
+>             Tests      7 failed | 4427 passed | 1 skipped (4435)
+> tsc         TSC_EXIT=0
+> build       BUILD_EXIT=0   PWA precache 50 entries (1922.61 KiB)
+> smoke       all boot checks passed
+> parity      every step renders identically
+> ```
+>
+> **The 7 reds are accounted for and NONE is Farm's.** Six are the stale
+> hedgehog six that were already red at `382e9a9` and belong to another manager
+> (5 in `assembly-hedgehog.test.ts`, plus the `animal-hedgehog` pin, which now
+> builds `1d26c188381e9eba` against a pinned `a839dd97acf556e9`). The seventh is
+> the one below, and it is the one thing I owe you.
+>
+> ### ⚠ THE ONE THING YOU MUST DO: paste sixteen fingerprint pins
+>
+> `assembly-fingerprint.test.ts:145` asserts `assembledSpecies()` equals
+> `Object.keys(PINNED)` **exactly**, so sixteen new species make it red. **My
+> brief forbade me from touching that file — two other managers held it — so I
+> did not.** The values are computed and verified off `npm run pets:creature`;
+> 43 of the other 44 pins agree with the tool exactly, so the pipeline is sound.
+> **Paste this after `'animal-canary': '0bd1e23f74d0038d',` and the seventh red
+> goes green.**
+>
+> ```ts
+>   /* FARM (PB-074), 16 of 16 — the first collection to arrive whole in a single
+>    * run on the parts route, where Home Pets needed two earlier assembly passes
+>    * before PB-073 closed it. Read off `npm run pets:creature` in one pass on
+>    * 3 Aug once every species file existed.
+>    *
+>    * Every one of these is a FIRST PIN: the hash of the animal as it was built,
+>    * recorded rather than chosen, so none is evidence of anything yet. What they
+>    * buy is the second run.
+>    *
+>    * These animals are UNSIGNED. Joe reviews in the editor and that gate is his
+>    * alone, so a pin moving here before he has ever seen the animal is not a
+>    * regression — it is a build still being worked on. After his sign-off it is a
+>    * regression, and the pin is what makes the difference detectable at all. */
+>   'animal-sheep': '5f1fefecf7c5f032',
+>   'animal-goat': 'ea8ac91fe1c45d1d',
+>   'animal-horse': 'e833919f2c6e5fb1',
+>   'animal-donkey': '3e3e33680bb1fe06',
+>   'animal-goose': '5a2c31673b14dc99',
+>   'animal-turkey': 'c9e10147a68d4655',
+>   'animal-llama': '172901245825fdb2',
+>   'animal-alpaca': '17f8669554583993',
+>   'animal-rooster': 'bb77a76cf94ea1de',
+>   'animal-ox': '35423cfe21a9d770',
+>   'animal-mule': 'ea1c9d9fb2ce2445',
+>   'animal-chicken': '770e38cf0aa4a57d',
+>   'animal-guinea-fowl': 'a4c6a14f9e298169',
+>   'animal-quail': '8a6ff2e001f60872',
+>   'animal-water-buffalo': 'ae7b17cefb787da8',
+>   'animal-pigeon': 'c5a8365d6074be93',
+> ```
+>
+> ### SPEED: 132 minutes for 16, and the honest lesson is NOT "fan out wider"
+>
+> My brief said Home Pets' 119 minutes for 14 was too slow and told me to
+> measure. Farm: **132 minutes for 16 plus full integration** — 8.25 min/animal
+> against Home Pets' 8.5. **A marginal win, and the four changes I was told to
+> make did not do what was expected.** The breakdown:
+>
+> | phase | wall | note |
+> |---|---|---|
+> | orientation (2 agents, parallel) | 7.5 min | **this worked — do it again** |
+> | `farm.ts` + writing the digest | 5 min | |
+> | **wave 1 — 4 exemplars** | **45 min** | |
+> | digest update from wave 1 | 2 min | |
+> | **wave 2 — 12 siblings** | **46 min** | |
+> | integration data (registry, names-audit) | 6 min | |
+> | first gate + diagnosis | 3 min | |
+> | fixing 5 real regressions (2 agents) | 13 min | |
+> | final five gates | 5 min | |
+>
+> **What actually worked: measuring once.** One digest written to a scratchpad
+> file and handed to all sixteen builders removed the single biggest cost of the
+> last run — fourteen agents each independently reading the spec, the exemplars
+> and the parts bank. Every builder started from measured numbers. **Do this
+> every time; it is the whole of the improvement.**
+>
+> **What did NOT work: two waves.** The exemplar-then-sibling structure cost a
+> full extra wave — 45 minutes — and by then the digest was already carrying
+> most of what an exemplar provides. **A wave costs whatever its SLOWEST agent
+> costs**, and individual builds ran 10–46 min no matter how many ran beside
+> them. Sixteen at once would have finished in roughly one wave.
+>
+> **So the recommendation for the next collection is: orientation digest, then
+> ONE wave of all sixteen. Expect ~60 minutes.** Batching was never the
+> bottleneck; single-agent depth is, and that depth is the quality Joe praised,
+> so do not cut it.
+>
+> **Gating once at the end was right** and cost 8 minutes total against Home
+> Pets' ~16 in repeated cycles. `editor-round-trip.test.ts` did NOT time out
+> this run, because nothing competed with it for CPU.
+>
+> ### THE IMPROVISED PARTS — the thing Joe inspects first
+>
+> Every one of these is a bank shape worn as something it was never named for.
+> Under his 3 Aug ruling (*"we can continue building the collections just like
+> that"*) none was queried mid-run.
+>
+> - **HORN — there is no horn in the bank at all.** `wedge-11`, the ELEPHANT'S
+>   TUSK, becomes the ox's horn (one a side, stretched `[1.125, 1.125, 1.5]`)
+>   and the water buffalo's (**three segments a side, six meshes**, rolled `z
+>   +135` so the tusk's own −43.99° centreline bend does the curving). The goat
+>   instead takes `wedge-13`, the HOG'S TUSK, splayed 25°.
+> - **COMB — none in the bank.** `cone-01`, the BEE'S ANTENNA: the hen stands
+>   three on her crown buried 8/16 and spaced 2/16 so the points MEET into one
+>   serrated blade; the rooster stands **five**, unburied, for 2.571× the blade.
+> - **WATTLE / SNOOD** — the same `cone-01`, spun `{x, 180}` so it hangs
+>   point-down. The turkey hangs one off the bill tip as a snood; the hen
+>   REFUSED one with arithmetic and left it to the rooster.
+> - **CASQUE** — the guinea fowl's helmet is one `cone-01` buried 12/16, exactly
+>   half the hen's proud height.
+> - **TOPKNOT** — the quail's is one `cone-01` spun `{x, 60}` so it curls
+>   forward rather than standing up. That spin is the whole difference from a comb.
+> - **WING — there is no wing in the bank.** `box-06`, the BUNNY'S EAR, worn as
+>   a SOLID along the flank on all five birds, never a card.
+> - **NECK — there is no neck.** `box-18`, the ELEPHANT'S TRUNK, stood on end.
+>   The goose leans it 60°, the llama 30°.
+> - **HEAD** — `tube-06`, the FOX'S MUZZLE, worn `on: 'neck'` (goose, llama).
+> - **BEAK** — `tube-02`, the CHICK'S BILL, on every bird.
+> - **FAN** — `box-38`, the PARROT'S TAIL, spun `{x, +30}` to stand exactly
+>   vertical for the turkey. The horse wears the same part flipped 180° as a
+>   hanging switch.
+> - **SICKLE TAIL** — `wedge-15`, the LION'S TAIL, facing overridden to `y +1`
+>   and spun `{x, −45}` up the rooster's rear chamfer.
+> - **TAIL** — `box-18` again, spun `y 180`, on six animals. The donkey instead
+>   spins `wedge-07`, the CAT'S TAIL, 180° on z so it hangs instead of curling up.
+> - **BEARD** — the goat's chin tuft is `cone-01` spun `{x, 135}`; its raised
+>   tail is the SAME part spun `{x, −45}`, 180° opposite.
+> - **EARS** — `box-06`, the bunny's, as the donkey's and mule's long pair (the
+>   ear `animal-pony.ts` refused by name for reading as *"a donkey's silhouette
+>   on a Shetland"*). `cone-02`/`cone-04`, the DOG'S and HOG'S ears, worn on
+>   their X axis so they point OUT. `tube-04`, the ELEPHANT'S SIDE FLAP, stood on
+>   end and spun 90° for the llama.
+> - **CERE** — the pigeon's is `box-09`, the BUNNY'S NOSE-TIP, as a pair above
+>   the bill.
+> - **NO EARS AT ALL** on the ox and water buffalo: `box-12`'s extra 0.289 of
+>   width **already is two fused ear lugs**, and band 5 is Kenney's own inner-ear
+>   cut, so a painted band gives them ears for zero triangles.
+> - **HOOVES, per JT-044**, are a painted two-tone leg on every ungulate — no
+>   part at all.
+> - **FLEECE cannot be built.** No bumped or relief shape exists and JT-041
+>   forbids authoring one, so the sheep and alpaca carry wool in PALETTE and
+>   silhouette alone. This is stated plainly in both files rather than faked.
+> - **Two authored JT-041 primitives**, both allowed without a flag: the horse's
+>   mane and forelock (`bespoke-square-01` re-cut) and the donkey's dorsal stripe.
+>
+> ### What I learned that is not in the code
+>
+> - **`box-03` has exactly ONE band; `box-41` is cut 3/7/15.** The horse's and
+>   sheep's "band 3 is the muzzle AND the underline in one free entry" trick is
+>   **`box-41`-only**. A species on the plain cube has **no head colour at all**
+>   and must buy its markings with geometry. This caught the donkey mid-build.
+> - **`byBand` cannot draw spots, and now we know why.** Most parts carry a
+>   single band across every triangle — `box-06` is one band over all 60
+>   triangles, so the pigeon's wing bars are **impossible**, not merely awkward.
+>   `box-41` gives three regions and no more, so the guinea fowl's "spots" are
+>   two contiguous patches. Both said so honestly in prose and in a `flag`.
+>   **Do not promise a speckled animal on this pack.**
+> - **The kit WELDS.** Never price an animal off `bank.generated.ts`'s `verts`
+>   field — the goose's raw part sum was 1253 and it built as 541. **Triangles
+>   are the binding budget**, and `box-41` alone is 262 against `box-03`'s 60.
+> - **`PACK_HEIGHT_MAX` is 2.02 and it binds hard on tall animals.** The goose
+>   could not stand its neck upright (2.2626) and leans 60°. The mule and donkey
+>   both land at 2.0100 — 0.0100 of margin — because the bunny's ear is tall
+>   enough that joining at `box-41`'s crown rather than its flat top plate puts
+>   the animal over. **The ear against the ceiling is the constraint, not the body.**
+> - **`box-41`'s recorded centre 0.83125 is NOT its flank plate's centre
+>   0.80625.** Copy the cage-birds' wing line onto `box-41` unmodified and the
+>   wing is wrong. The guinea fowl hit this exactly.
+> - **`box-41` IS available to animals with eyes** — the pony's, degu's and
+>   ferret's refusal was measured off `offset + size/2` and is wrong. The boss
+>   stops 0.039896 below the eye card and occludes 3.61% of `plate-01`.
+> - **`creature.ts:440`'s `chamXY` solve is wrong on `box-12`**: `half[0]` is the
+>   ear lug, so it returns a point 0.065761 clear of the mass and anything on the
+>   `chamfer` ridge row floats. **Unraised as a card — worth one.**
+> - **`assembly-assert.ts`'s thousandth-snap is fragile**: `wedge-11` has two
+>   points at x = 0.1215, exactly a snap boundary, so at cross-section 16/16 the
+>   lineage check fails on a provably correct shape.
+> - **Sixteen agents sharing one git index WILL commingle commits.** Three pairs
+>   of files landed under a sibling's commit message because `git add` and `git
+>   commit` are not atomic across agents. Nothing was lost and the tree is
+>   coherent, but **one species / one commit did not fully hold** — the guinea
+>   fowl rides in the ox's commit and the pigeon in the donkey's. If that matters,
+>   commit centrally; if it does not, ignore it.
+> - **PB-056 bites species prose.** `pronouns.test.ts` scans **string literals**,
+>   so a `flag:` field calling the hen "she" is a shipped-copy violation. Fifteen
+>   offences across four Farm files. Comments are not scanned; `flag` is.
+>
+> ### Where the next manager starts
+>
+> **Paste the sixteen pins above** — that is five minutes and it takes the tree
+> to 6 red, which is the untouched hedgehog baseline. Then the queue is the next
+> collection, and the method is now proven: **write the orientation digest, then
+> fan out all sixteen in ONE wave.** Read this run's digest structure before
+> writing the next one; it is the artefact that made the difference.
+>
+> **These sixteen are UNSIGNED and must stay so.** No `signoff` field was
+> written anywhere, nothing was added to a deal pool, and `joe/names-audit.json`'s
+> signoff fields were not touched. Joe signs off in the editor; that gate is his.
+>
+> **Every palette in these sixteen is NEW and UNREVIEWED.**
+>
+> ### Decisions
+>
+> **Raised:** `JT-047` — is the water buffalo / Cape buffalo pair acceptable, or
+> must Africa's buffalo move off `box-12`? (Free to answer: Africa's buffalo is
+> unbuilt, so no commit changes either way.) `JT-048` — should a long-necked
+> animal be able to carry its eyes on its head? (Not blocking; reversing it would
+> change the builder and re-pin every fingerprint.)
+>
+> **Picked up:** Joe's ruling on the Home Pets improvisations — *"all the animals
+> are great so far, needing only minor adjustments at best. some more, some none.
+> we can continue building the collections just like that."* **That closed JT-046
+> and JT-040's anxiety**, and Farm was built on it without stopping to ask once.
+> `JT-044` (*"just use a two tone leg for hooves"*) was applied throughout, and
+> the sheep extended it into a general derivation: **only `k` in 4..9 draws
+> anything** — below 4 the boundary sits inside the foot bevel, at 10 it is
+> inside the hull.
+
+---
+
+> ## Previous block — state at handover, 3 Aug 2026 (early hours)
+>
+> *Written by the manager that built Home Pets. **Superseded by the block above**,
+> but its measurements are still good and Farm relied on them heavily.*
 > ## ⚠ START HERE — the push button is now Joe's sign-off, and the push tool is damaging his animals, 3 Aug 2026
 >
 > *Written by the manager that wired sign-off to the push. **This block is the

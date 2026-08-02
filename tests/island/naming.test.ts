@@ -488,7 +488,13 @@ describe('joe/names-audit.json', () => {
     // three. They have no row here BECAUSE they have no build, which is this
     // test's own rule working — a row for an unbuildable species would ask Joe to
     // audit and voice-bake a name for a creature that cannot exist.
-    expect(audit.names).toHaveLength(44)
+    // 44 after the kit route was retired, its 59 species deleted and Home Pets
+    // rebuilt by hand (PB-073). 60 SINCE 3 AUG, and the +16 is FARM (PB-074),
+    // 16 of 16 on the parts route. All sixteen rows are born with
+    // Joe's three fields empty, which is what an unaudited name looks like —
+    // the bench grew, the review did not happen, and this file is careful to
+    // keep those two facts separate.
+    expect(audit.names).toHaveLength(60)
   })
 
   it('gives every creature its own name, so the playground question works', () => {

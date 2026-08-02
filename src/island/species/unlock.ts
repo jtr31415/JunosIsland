@@ -535,6 +535,18 @@ function draw(state: UnlockState, rng: Rng): string | null {
  * >>> case the derivation exists for: nobody has to remember to delete a string
  * >>> for the cadence to start offering it.
  * >>>
+ * >>> THE TWO PARAGRAPHS ABOVE ARE OUT OF DATE AND ARE KEPT FOR THE REASONING,
+ * >>> NOT THE COUNT. `woodland` and `farm` were both named there as part of the
+ * >>> six; both then went back into `NOT_BUILT_YET` when Joe retired the
+ * >>> kit-built route, taking the pool down to four. Farm returned on 3 August
+ * >>> (PB-074) with all sixteen rebuilt on the assembly route, so the pool is
+ * >>> FIVE today — `garden`, `home-pets`, `africa`, `night-time` and `farm` —
+ * >>> and `woodland` is the only one of the original six still missing. A fresh
+ * >>> island still opens `base` plus three, so the reserve is two rather than
+ * >>> three, and Farm is the first of those two that a child can actually
+ * >>> finish: it is sixteen of sixteen and frees its slot on completion, which
+ * >>> `night-time` cannot do.
+ * >>>
  * >>> A POOL SMALLER THAN THE CAP DEGRADES SILENTLY, ON PURPOSE. It neither
  * >>> throws nor spins: `draw` returns null the instant `candidates` is empty
  * >>> (the `pool.length === 0` guard), and the `room--` bound below caps the loop
