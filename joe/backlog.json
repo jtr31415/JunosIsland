@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "nextId": 83,
+  "nextId": 84,
   "cards": [
     {
       "id": "PB-001",
@@ -585,6 +585,13 @@
       "id": "PB-082",
       "title": "The round-trip guard times out under load, because its cost scales with the species count",
       "detail": "tests/tools/editor-round-trip.test.ts round-trips EVERY registered species through emit, write and dynamic import. Home Pets took that set from 30 to 44 and it now exceeds vitest's default 5s under full-suite load, while passing alone in ~2s. Farm makes it 60. Deliberately not fixed by raising the timeout: the standing rule here is that moving a constant to make a gate green buries real faults. Wants a measurement and a decision — per-species cases, a longer budget justified by data, or the trip proved once and sampled thereafter.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-083",
+      "title": "Three more places still count the roster where they now mean the built animals",
+      "detail": "The album was fixed to show a frame only for a species somebody has built (species/built.ts, one predicate). Three siblings were deliberately left alone. unlock.ts:292 completion() still divides by the roster, so Night Time is \"13 of 13\" in the album and 81% to the unlocker and the next collection never arrives — that one is a ruling, JT-047. unlock.ts's NOT_BUILT_YET is still a hand-written list where built.ts is now derivable, and it cannot import it because unlock.ts is deliberately three.js-free. Two headers are also stale: collections/africa.ts says \"ships PARTIAL, FOURTEEN of sixteen\" when it is one, and unlock.ts's fillToCap note says the pool is six collections wide when it is four.",
       "state": "open",
       "run": ""
     }
