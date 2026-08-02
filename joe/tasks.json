@@ -493,8 +493,8 @@
       "artefact": "branch pb-051-sassoon-font, docs/handoffs/PB-051.md",
       "doneRule": "manual",
       "check": "",
-      "note": "",
-      "state": "open"
+      "note": "ANSWERED 2 Aug 2026 by dismissing the font, not by resolving the licence: \"lets dismiss the sassoon idea and we keep fonts as they are.\" No licence was ever produced, so the question is closed as moot rather than settled. Fonts stay Edu SA Beginner + Andika (OFL-1.1).",
+      "state": "done"
     },
     {
       "id": "JT-038",
