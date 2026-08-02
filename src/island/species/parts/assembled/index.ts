@@ -62,6 +62,7 @@ export { NEWT_ASSEMBLY } from './animal-newt'
 export { BADGER_ASSEMBLY } from './animal-badger'
 export { MOLE_ASSEMBLY } from './animal-mole'
 export { SLOW_WORM_ASSEMBLY } from './animal-slow-worm'
+export { CORN_SNAKE_ASSEMBLY } from './animal-corn-snake'
 /* -- append the next species' line directly above this one -- */
 
 import { assembledBuilds } from './register'

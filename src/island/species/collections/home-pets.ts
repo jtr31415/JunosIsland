@@ -126,6 +126,14 @@
  *     for; it is the one bird here whose depth, not width, sets its radius.
  */
 import { defineSpecies } from '../define'
+/*
+ * Evaluated for its SIDE EFFECT, not for a name: each species module under
+ * `parts/assembled/` registers its own build as it defines it, and
+ * `defineSpecies` picks that up by id. Without this line the corn snake below
+ * would find no assembly and would build as a bare hull.
+ * `tests/island/assembly-constants.test.ts` fails loudly if it is ever dropped.
+ */
+import '../parts/assembled'
 import type { Species } from '../types'
 
 export const HOME_PETS_SPECIES: readonly Species[] = [
@@ -444,6 +452,22 @@ export const HOME_PETS_SPECIES: readonly Species[] = [
    * Red-eared-slider colouring, which is the terrapin a child meets: olive skin,
    * a yellow-striped underside, a yellow shell rim and a darker olive dome.
    */
+  /*
+   * THE CORN SNAKE — the fifteenth, and the collection's first legless member.
+   *
+   * It has no `build` and no numbers here at all, which is the whole point: the
+   * quadruped kit builds four legs unconditionally and clamps them at 0.25, so
+   * it cannot say "snake" without lying about the animal, exactly as it could
+   * not say "slow worm" for Garden. `bespoke` sends it to the assembly kit, and
+   * `parts/assembled/animal-corn-snake.ts` carries every measurement with the
+   * reason beside it — including why the coil is the slow worm's own transform
+   * and why the saddles are not.
+   *
+   * Its palette is proposed there rather than agreed here, because this species
+   * was never in this file to be given one. It is FLAGGED and Joe has not seen it.
+   */
+  defineSpecies('animal-corn-snake', 'bespoke'),
+
   defineSpecies('animal-terrapin', 'quadruped', {
     build: {
       kit: 'quadruped',

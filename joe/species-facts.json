@@ -601,6 +601,19 @@
       "note": ""
     },
     {
+      "speciesId": "animal-corn-snake",
+      "species": "Corn Snake",
+      "collection": "home-pets",
+      "fact": "A corn snake's tummy is checked black and white, like a tiny chessboard.",
+      "check": "flagged",
+      "source": "",
+      "sourceNote": "WRITTEN 2 Aug ALONGSIDE THE MODEL AND NOT YET CHECKED BY ANYONE — flagged for that reason alone, not because the claim is doubted. The black-and-white chequered ventral pattern is the standard description of the species and is one of the two usual explanations for the name (the other being that they were found around stored maize). NO SOURCE WAS FETCHED, so the field is deliberately empty rather than filled with a plausible-looking URL. It wants the same fact-checking pass every other entry here had before it goes to Joe. The fact was chosen to obey the guardrails: a snake's obvious fact is how it catches food, and predation framing is banned, so this one points at a marking a child can see on the model — the pale belly the assembly paints from its own `belly` slot.",
+      "proposedRewrite": "",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
+    },
+    {
       "speciesId": "animal-terrapin",
       "species": "Terrapin",
       "collection": "home-pets",

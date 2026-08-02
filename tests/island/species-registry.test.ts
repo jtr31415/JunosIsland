@@ -59,25 +59,34 @@ describe('the species registry', () => {
     // (§9.2 of `docs/building-animals-from-parts.md`), so the species has shipped
     // on the strength of an assembly alone. It is the first record in the repo
     // that is real without a `build`, and this is the number that says so.
-    expect(REGISTRY.size).toBe(97)
+    // 98 since 2 Aug, and the +1 is the CORN SNAKE — the assembly kit spent a
+    // second time, and the first time on something that is not a Garden animal.
+    // Same shape of record as the slow worm's: no `build`, an `assembly`, and
+    // `bespoke` naming the route rather than a kit that exists.
+    expect(REGISTRY.size).toBe(98)
     expect(shippedIn('base')).toHaveLength(24)
     expect(shippedIn('garden')).toHaveLength(14)      // COMPLETE — the slow worm is assembled
-    expect(shippedIn('home-pets')).toHaveLength(14)   // 16 rostered, 1 bespoke + 1 swim
+    expect(shippedIn('home-pets')).toHaveLength(15)   // 16 rostered, 1 swim left
     expect(shippedIn('woodland')).toHaveLength(16)    // COMPLETE
     expect(shippedIn('africa')).toHaveLength(13)      // 16 rostered, 2 bespoke + 1 raptor
     expect(shippedIn('farm')).toHaveLength(16)        // COMPLETE
   })
 
-  it('leaves 223 species rostered but unshipped, on purpose', () => {
+  it('leaves 222 species rostered but unshipped, on purpose', () => {
     // The gap is the point. Nobody should "finish" the registry — a species
     // without a built kit renders as nothing, which is worse than absent.
     //
     // 246 after phase 2; 224 after phase 3 built the songbird kit and spent it
     // on 22 more (woodland +2, home-pets +4, farm +16); 223 once the assembly
-    // kit built the slow worm, which is one animal and not a collection.
+    // kit built the slow worm, which is one animal and not a collection; 222
+    // once it built the corn snake, likewise.
+    //
+    // The rate is the thing to read here, not the number: the assembly kit
+    // closes ONE animal at a time, which is why it is the right tool for the
+    // members a kit cannot express and the wrong one for a collection.
     const rostered = COLLECTIONS.flatMap(c => c.members)
     expect(rostered).toHaveLength(320)
-    expect(rostered.filter(id => !speciesRecord(id))).toHaveLength(223)
+    expect(rostered.filter(id => !speciesRecord(id))).toHaveLength(222)
   })
 
   it('has THREE complete collections now — garden, woodland and farm', () => {

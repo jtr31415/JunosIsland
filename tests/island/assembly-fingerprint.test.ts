@@ -66,6 +66,9 @@ const PINNED: Readonly<Record<string, string>> = {
   'animal-badger': '394a0415661ac7af',
   'animal-mole': '51fa9409a320915b',
   'animal-slow-worm': 'b93b77ddd7fb4e23',
+  // Home Pets' first assembled member, and the first pin here that is not a
+  // Garden animal. Read off the built model on 2 Aug.
+  'animal-corn-snake': '5c3ad79166c9e4d7',
 }
 
 describe('every assembled species has a pinned fingerprint', () => {

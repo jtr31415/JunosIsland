@@ -290,6 +290,18 @@
       "note": ""
     },
     {
+      "id": "natural/animal-corn-snake",
+      "setId": "natural",
+      "speciesId": "animal-corn-snake",
+      "species": "Corn Snake",
+      "collection": "home-pets",
+      "band": "short",
+      "name": "Lisheg",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
+    },
+    {
       "id": "natural/animal-terrapin",
       "setId": "natural",
       "speciesId": "animal-terrapin",
