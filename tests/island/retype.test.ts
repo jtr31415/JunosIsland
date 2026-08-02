@@ -1,5 +1,5 @@
 /**
- * Changing her mind about a tile she has already sited.
+ * Changing their mind about a tile they have already sited.
  *
  * Joe, 27 July, relaying it live: *"while im writing I got a user complaint:
  * she'd like to change her mind if shes picked a wrong type of tile."* Folded in
@@ -8,8 +8,8 @@
  *
  * THE FACT THIS RESTS ON is that `sumProgress` lives on the Flow and not on the
  * plot, so changing what is being built keeps every sum already answered. That is
- * why this is allowed at any point in a build rather than only before she starts:
- * a girl nine sums into the wrong tile is the one who needs it most. If a future
+ * why this is allowed at any point in a build rather than only before they start:
+ * a child nine sums into the wrong tile is the one who needs it most. If a future
  * change moves progress onto the plot, these tests are what will notice.
  */
 import { describe, it, expect, vi } from 'vitest'
@@ -98,8 +98,8 @@ describe('tapping the plot re-opens the question', () => {
   })
 })
 
-describe('choosing again swaps the build without costing her anything', () => {
-  it('changes the type and hands her back to the island', () => {
+describe('choosing again swaps the build without costing them anything', () => {
+  it('changes the type and hands the child back to the island', () => {
     const asked = askToRetype(sited())
     const changed = chooseTile(asked, 'water')
     expect(changed.plot?.type).toBe('water')
@@ -111,7 +111,7 @@ describe('choosing again swaps the build without costing her anything', () => {
 
   it('KEEPS every sum already answered — the whole point', () => {
     /*
-     * The tile has to be EXPENSIVE for this test to mean anything. Her first
+     * The tile has to be EXPENSIVE for this test to mean anything. Their first
      * costs a single sum, so one correct answer pays it off, the plot commits and
      * progress resets — there would be nothing banked to preserve and the test
      * would pass whatever the code did. Eight tiles in, the curve asks about a
@@ -129,11 +129,11 @@ describe('choosing again swaps the build without costing her anything', () => {
     const changed = chooseTile(askToRetype(f), 'water')
     expect(changed.sumProgress).toBe(banked)
     expect(changed.plot?.type).toBe('water')
-    // ...and the price did not move under her either.
+    // ...and the price did not move under them either.
     expect(sumsForTile(changed)).toBe(sumsForTile(f))
   })
 
-  it('never moves the site she chose', () => {
+  it('never moves the site they chose', () => {
     let f = askForLand({ ...createFlow(), phase: 'free' })
     f = placeTile(chooseTile(f, 'grass'), { q: 0, r: 1 })
     const changed = chooseTile(askToRetype(f), 'water')
@@ -152,10 +152,10 @@ describe('choosing again swaps the build without costing her anything', () => {
     /*
      * Re-choosing goes through `tileTypeFor` exactly as the first choice did, so
      * it cannot be used to smuggle a tile past the coastline rules. Here water is
-     * impossible — the hex is ringed by her fields — and the answer is grass, not
-     * a broken pond and not a refusal.
+     * impossible — the hex is ringed by their fields — and the answer is grass,
+     * not a broken pond and not a refusal.
      */
-    // Five of her fields around the socket at (1,0), so a pond there could not
+    // Five of their fields around the socket at (1,0), so a pond there could not
     // carry its own beach — nineteen of sixty-four neighbourhoods are drawable
     // and this is not one of them.
     let island: Island = createFlow().island
@@ -167,7 +167,7 @@ describe('choosing again swaps the build without costing her anything', () => {
     expect(f.plot).not.toBeNull()
     const changed = chooseTile(askToRetype(f), 'water')
     expect(changed.plot?.type).toBe('grass')
-    // ...and the offer would not have shown her the water button either.
+    // ...and the offer would not have shown them the water button either.
     expect(tileOffer(askToRetype(f))).not.toContain('water')
   })
 
@@ -188,14 +188,14 @@ describe('choosing again swaps the build without costing her anything', () => {
  *
  * `stageFor('sum')` re-parents the plot onto the overlay's turntable, and the
  * turntable goes away with the panel. One `overlay.close()` in main.ts closed
- * without handing the plot back, so it stayed alive — still in `flow.plot`,
- * still holding her sums — parented to something no longer on screen. Her island
+ * without handing the plot back, so it stayed alive — still in `flow.plot`, still
+ * holding their sums — parented to something no longer on screen. Their island
  * showed an empty socket. Tapping any socket called `askForLand`, which resumes
  * a standing plot and re-staged it: "it only resumes when I pick a socket".
  *
  * It is asserted against the SOURCE because the fault is in the glue rather than
  * in any function: every unit here behaved correctly and the sequence still lost
- * her tile. That is the same class of bug, and the same kind of test, as the
+ * their tile. That is the same class of bug, and the same kind of test, as the
  * wiring assertions in stretch.test.ts.
  */
 describe('no overlay.close() strands the plot on the hidden stage', () => {
@@ -215,7 +215,7 @@ describe('no overlay.close() strands the plot on the hidden stage', () => {
       const window = lines.slice(Math.max(0, i - 3), i + 1).join('\n')
       if (!window.includes('stageFor(null)')) stranded.push(`${i + 1}: ${line.trim()}`)
     })
-    expect(stranded, 'these close the panel while it still holds her plot')
+    expect(stranded, 'these close the panel while it still holds their plot')
       .toEqual([])
   })
 

@@ -6,7 +6,7 @@ import { FITS } from '../../src/island/world/props'
  * Joe, twice: "trees are still inside the bigger rock pieces."
  *
  * The first fix went into props.ts, which dresses tiles the island grows on
- * its own — but the tiles she BUILDS come through the growing plot, which is a
+ * its own — but the tiles they BUILD come through the growing plot, which is a
  * second placement path and had no overlap check at all. It spread eight
  * pieces at fixed angles on a jittered radius and hoped; with features up to a
  * hex wide, that is not a spread, it is a pile.
@@ -92,8 +92,8 @@ describe('the growing plot lays its pieces out', () => {
   it('plants nearly all of a typical plot', () => {
     /*
      * Dropping a piece is allowed — a barer tile beats a tree in a boulder —
-     * but a rule that dropped a quarter of every plot would make her tiles
-     * look unfinished, which is the failure the sizing was measured to avoid.
+     * but a rule that dropped a quarter of every plot would make the child's
+     * tiles look unfinished, the failure the sizing was measured to avoid.
      */
     let planted = 0
     const plots = 400

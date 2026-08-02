@@ -42,12 +42,12 @@ export const VOICE_LINES: readonly VoiceLine[] = [
 
   /*
    * The two counted governor lines (JT-019). Neither has a whole clip to play:
-   * the number is a fact about her island at the moment Fred opens his mouth, so
+   * the number is a fact about the island at the moment Fred opens his mouth, so
    * the sentence is cut either side of the numeral and spoken as three clips.
    * The tail is baked BOTH ways rather than pluralised in code, because "1 more
    * friends will fill it up!" is a sentence a child learning to read must never
    * be shown, and an `s` rule is a rule that one day meets a word it is wrong
-   * about, in front of her.
+   * about, in front of the child.
    */
   { kind: 'template', id: 'gov.spaceSurplus', template: "Let's read with the egg — {n} more {friend|friends} will fill it up!" },
   { kind: 'template', id: 'gov.nurseryQueue', template: 'They need homes! {n} more {tile|tiles} will do it.' },
@@ -82,7 +82,7 @@ export const NOT_PLAYED: readonly { readonly id: string; readonly why: string }[
  * The numerals that were baked. A count outside this range has no clip.
  *
  * Twenty covers every count the corridor can ask for in ordinary play, but the
- * count is unbounded in principle — it is however far past the wall she has
+ * count is unbounded in principle — it is however far past the wall a child has
  * walked. A number with no clip is therefore an ordinary event and not an error:
  * `resolveLine` answers null and the whole sentence falls back to synthesis,
  * because half a spliced sentence with a hole where the number goes is the one

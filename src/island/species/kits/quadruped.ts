@@ -41,7 +41,7 @@
  * NOTHING BUILT HERE IS EVER DISPOSED PER PET. `pets.ts:592` hands out
  * `.clone(true)`, and a three.js clone SHARES geometry and materials with the
  * prototype. Disposing one pet's materials would blank every pet of that
- * species — including friends she already owns, which brief §19 forbids. The
+ * species — including friends they already own, which brief §19 forbids. The
  * prototype is built once and lives as long as the session.
  */
 import * as THREE from 'three'

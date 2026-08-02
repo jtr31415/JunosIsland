@@ -369,9 +369,9 @@ function draw(state: UnlockState, rng: Rng): string | null {
  * >>> Joe, on the album, 1 Aug: *"4 albums always on show, next one shows when
  * >>> one is completed."* Both halves of that sentence have to be true at once,
  * >>> and under `nextToOpen` alone the first one never is: a fresh island has
- * >>> only `base` open at 0%, nothing satisfies rule 2, and she would see ONE
- * >>> album until she owned twenty of the twenty-four — which is the opposite of
- * >>> the anticipation the whole feature is for.
+ * >>> only `base` open at 0%, nothing satisfies rule 2, and they would see ONE
+ * >>> album until they owned twenty of the twenty-four — which is the opposite
+ * >>> of the anticipation the whole feature is for.
  *
  * So the four are seeded AT THE CAP and the cadence takes over from there. That
  * is not a second policy fighting the first: starting full means `activeIds` is
@@ -389,21 +389,21 @@ function draw(state: UnlockState, rng: Rng): string | null {
  * >>> everything this function can ever draw is `garden`, `home-pets`,
  * >>> `woodland`, `africa` and `farm` — five. A fresh island opens `base` plus
  * >>> three of those to reach the cap of four, which leaves exactly TWO in
- * >>> reserve for the whole of the rest of the game: she completes an album, one
- * >>> of the two opens, she completes another, the last one opens, and after
- * >>> that the cadence has nothing left to give until a modeller ships a
- * >>> collection. That is not a fault in this function, it is the true state of
- * >>> the registry, and it is a great deal better than opening her an album of
- * >>> sixteen empty frames — but it is the number to look at first when someone
+ * >>> reserve for the whole of the rest of the game: the child completes an
+ * >>> album, one of the two opens, they complete another, the last one opens,
+ * >>> and after that the cadence has nothing left to give until a modeller ships
+ * >>> a collection. That is not a fault in this function, it is the true state of
+ * >>> the registry, and it is a great deal better than opening a child an album
+ * >>> of sixteen empty frames — but it is the number to look at first when someone
  * >>> asks why the album stopped growing.
  * >>>
  * >>> A POOL SMALLER THAN THE CAP DEGRADES SILENTLY, ON PURPOSE. It neither
  * >>> throws nor spins: `draw` returns null the instant `candidates` is empty
  * >>> (the `pool.length === 0` guard), and the `room--` bound below caps the loop
  * >>> at the pool's size however far off the cap we still are. A child on a build
- * >>> where nothing at all was buildable would simply see her own base album and
- * >>> no others. Fewer albums is a disappointment; a hang or a crash on the way
- * >>> to her island is not, and that is the trade being made.
+ * >>> where nothing at all was buildable would simply see their own base album
+ * >>> and no others. Fewer albums is a disappointment; a hang or a crash on the
+ * >>> way to their island is not, and that is the trade being made.
  *
  * TERMINATES BY CONSTRUCTION even though it is a loop with a draw in it: every
  * id drawn is added to `open`, `candidates` excludes anything open, so the pool

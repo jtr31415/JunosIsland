@@ -5,7 +5,7 @@
  * to run the story from it, the name prompt read it, `persist()` wrote whatever
  * copy of it happened to be current, and the story itself set it — on ONE of
  * its exits. The other exits are the ordinary ones. Fred hands over to the child
- * at beat six and returns; she can back out of that round (leaving costs
+ * at beat six and returns; they can back out of that round (leaving costs
  * nothing, brief §19); and a reload can land on any beat at all. Every one of
  * those left the flag false, so the profile was still "never seen" and the whole
  * twenty seconds played again on the next load, and the load after that.
@@ -16,9 +16,9 @@
  * Starting is the right moment, not finishing. Brief §3 asks for an opening that
  * plays once per profile, is skippable, and is replayable deliberately — which
  * is a description of something that has PLAYED as soon as Fred begins talking.
- * Tying the record to the last line instead makes "she watched most of it and
- * then wandered off" indistinguishable from "she has never seen it", and the
- * game resolves that by showing it to her again, forever.
+ * Tying the record to the last line instead makes "they watched most of it and
+ * then wandered off" indistinguishable from "they have never seen it", and the
+ * game resolves that by showing it to them again, forever.
  *
  * The claim is synchronous and the write is what it returns, deliberately — the
  * same shape as the revision claim in `durable.put`, and for the same reason.

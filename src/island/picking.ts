@@ -17,9 +17,9 @@ export type Hit =
   /**
    * The half-built plot. Its own kind rather than a `socket`, because it is not
    * one: `scene.setIsland` deliberately removes the socket outline underneath a
-   * standing plot (#19 — the outline and the plot clipped through one another),
-   * so nothing else answers for that hex and a tap there used to fall through to
-   * the sea. Tapping it is how she changes her mind about what she is building.
+   * standing plot (#19 — the outline and the plot clipped through one another), so
+   * nothing else answers for that hex and a tap there used to fall through to the
+   * sea. Tapping it is how they change their mind about what they are building.
    */
   | { kind: 'plot' }
   | { kind: 'pet'; id: string }
@@ -66,15 +66,15 @@ interface Candidate { hit: Hit; distance: number }
 /** The nearest pet, egg or Fred under the ray — skipping anything hidden. */
 function nearestPickable(ray: THREE.Raycaster, pickables: THREE.Object3D[]): Candidate | null {
   /**
-   * Anything she can SEE outranks a proxy, however near the proxy is.
+   * Anything they can SEE outranks a proxy, however near the proxy is.
    *
    * "Nearest the camera" is the right rule between objects, because whatever
-   * is nearest is what she is looking at and therefore what she aimed for. It
+   * is nearest is what they are looking at and therefore what they aimed for. It
    * is the wrong rule the moment one of them is invisible: every pet carries a
    * finger-wide sphere so a six-year-old can hit it (`pets.ts`, `pickProxy`),
    * and a pet standing beside the egg puts that sphere in front of the egg's
-   * rim. Nearest-wins hands her a bouncing pet where she tapped an egg — and
-   * the egg is the one thing she is always meant to be able to reach.
+   * rim. Nearest-wins hands them a bouncing pet where they tapped an egg — and
+   * the egg is the one thing they are always meant to be able to reach.
    *
    * It got worse, not better, when the proxy learned to hold its size on
    * screen: at the camera's 26-unit pull-back a finger is 1.7 world units
@@ -140,7 +140,7 @@ function nearestPlot(ray: THREE.Raycaster, t: PickTargets): Candidate | null {
  *
  * The precedence, and why:
  *
- * 1. **Sockets outrank the GROUND.** While she is placing, an invitation
+ * 1. **Sockets outrank the GROUND.** While they are placing, an invitation
  *    outranks the tile it is drawn over — a ghost hex you cannot tap is not an
  *    invitation, it is decoration.
  *
@@ -149,15 +149,15 @@ function nearestPlot(ray: THREE.Raycaster, t: PickTargets): Candidate | null {
  *    selection fires when tapping the egg. i think the egg can always be in the
  *    foreground, clickablility wise."
  *
- *    Sockets used to win outright, so an egg drawn over a socket was a lie: she
+ *    Sockets used to win outright, so an egg drawn over a socket was a lie: they
  *    tapped an egg and the island offered to put a tile behind it. The egg is
- *    the one thing on the island she is always meant to be able to reach.
+ *    the one thing on the island they are always meant to be able to reach.
  *
  *    So a socket only outranks a pickable that is BEHIND it. That is stricter
  *    than "the egg always wins" and better for the same reason: it answers with
- *    whatever is actually nearest the camera, which is whatever she can see and
- *    therefore whatever she aimed at. If a socket really is in front, tapping
- *    where it is drawn still offers the socket.
+ *    whatever is actually nearest the camera, which is whatever they can see
+ *    and therefore whatever they aimed at. If a socket really is in front,
+ *    tapping where it is drawn still offers the socket.
  *
  * 3. **The PLOT RANKS WITH THE SOCKETS**, nearest of the two winning.
  *
@@ -170,7 +170,7 @@ function nearestPlot(ray: THREE.Raycaster, t: PickTargets): Candidate | null {
  *    any socket under the cursor won outright and the plot could not be tapped at
  *    all — verified in the browser, where tapping the half-built hex opened a sum
  *    instead of the chooser. Distance is the honest test here for exactly the
- *    reason it is with the egg: it answers with whatever she can actually see.
+ *    reason it is with the egg: it answers with whatever they can actually see.
  *
  * 4. Then the island itself, then the sea.
  */

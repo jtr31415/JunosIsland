@@ -41,10 +41,10 @@ export const TAP_MAX_MS = 800
  *
  * A press that never really moved can only mean "I pressed this thing",
  * however long it lasted — so a still press is exempt from the time limit
- * entirely. A child who puts her finger on the egg and holds it while she
- * looks at it must not be met with silence; there is no long-press gesture
- * here for the hold to be confused with, and an unwanted round can be
- * dismissed whereas a dead egg cannot be explained.
+ * entirely. A child who puts their finger on the egg and holds it while
+ * they look at it must not be met with silence; there is no long-press
+ * gesture here for the hold to be confused with, and an unwanted round can
+ * be dismissed whereas a dead egg cannot be explained.
  */
 export const STILL_PX = 4
 
@@ -84,7 +84,7 @@ export interface TapTracker {
   move(id: number, x: number, y: number): void
   /** The press ended. Returns true only if it was a tap. */
   up(id: number, x: number, y: number, at: number): boolean
-  /** Where the press began — where she was aiming. Null between presses. */
+  /** Where the press began — where they were aiming. Null between presses. */
   origin(): { x: number; y: number } | null
   /** Cancelled by the browser. Without an id, forget everything. */
   cancel(id?: number): void
@@ -125,7 +125,7 @@ export function createTapTracker(): TapTracker {
       return isTap(started, { x, y, at }, travelled)
     },
 
-    /** Where the press BEGAN — where she was aiming. */
+    /** Where the press BEGAN — where they were aiming. */
     origin: () => (press ? { x: press.x, y: press.y } : null),
 
     cancel(id) {
@@ -143,7 +143,7 @@ export function createTapTracker(): TapTracker {
 }
 
 /**
- * Wire a tap tracker to an element, calling `onTap` at the point she AIMED.
+ * Wire a tap tracker to an element, calling `onTap` at the point they AIMED.
  *
  * The aim point is where the press began, not where it ended. Up to a
  * finger's worth of drift is forgiven on release, and a child's finger rolls

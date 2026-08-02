@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 /**
- * A4/A6 — the panel where a parent decides what his daughter is dealt.
+ * A4/A6 — the panel where a parent decides what their child is dealt.
  *
  * These tests drive the real DOM, because every rule worth having here is a
  * rule about what is ON SCREEN at a given moment: a tick that has not reached
@@ -126,6 +126,27 @@ function deferred(): { promise: Promise<void>; resolve: () => void; reject: () =
 }
 
 describe('what the panel puts on screen', () => {
+  it('talks about the child as "they" (PB-056)', () => {
+    /*
+     * This panel is the only screen in the game that talks ABOUT the child
+     * rather than to them, so it is the one place a pronoun can hide — and all
+     * six of the gendered strings PB-056 corrected were here or in the menu
+     * that opens it. Asserted over the whole rendered subtree rather than over
+     * the copy tables, because the heading, the note and the three mode
+     * descriptions are written in three different places and only the DOM sees
+     * all of them at once.
+     *
+     * `tests/copy/pronouns.test.ts` sweeps every string literal in src/; this
+     * one proves the strings that reach the screen are among the ones swept.
+     */
+    const { deps } = makeDeps()
+    const root = open(deps)
+    expect(root.querySelector('.grownups-title')?.textContent).toBe('What they are working on')
+    expect(root.querySelector('.grownups-note')?.textContent)
+      .toBe('Only you see this. Nothing on this page is shown to them.')
+    expect(root.textContent ?? '').not.toMatch(/\b(she|her|hers|herself|he|him|his)\b/i)
+  })
+
   it('gives every live path its own section, in the ladder’s order', () => {
     const { deps } = makeDeps()
     const root = open(deps)
@@ -187,7 +208,7 @@ describe('what the panel puts on screen', () => {
 
   it('changes the line the moment a parent takes the path off Auto', async () => {
     // The mode switch is six inches above this line. A line written once at
-    // open time would tell him his tap did nothing.
+    // open time would tell them their tap did nothing.
     const { deps } = makeDeps()
     const root = open(deps)
     expect(autoLine(root, 'sums')).toBe('What Auto would do: watching')
@@ -461,7 +482,7 @@ describe('colour comfort — the switch that repaints red words green', () => {
     expect(WORD_COLOUR_CHOICES.map(c => c.id)).toEqual(['mixed', 'green'])
     const words = WORD_COLOUR_CHOICES
       .flatMap(c => [c.label, c.detail ?? '']).join(' ').toLowerCase()
-    // Never framed as marking: this changes paint, not whether she is right.
+    // Never framed as marking: this changes paint, not whether they are right.
     for (const forbidden of ['wrong', 'correct', 'mistake', 'error']) {
       expect(words).not.toContain(forbidden)
     }
@@ -518,7 +539,7 @@ describe('the wipe screen', () => {
      * The anti-mis-tap guarantee, and the reason it is first. A wipe screen
      * that opened with anything already ticked would let one stray thumb on
      * the red button take a child's animals — which is the single thing brief
-     * §19 is most emphatic she cannot lose.
+     * §19 is most emphatic they cannot lose.
      */
     const { root, rows } = openWipe()
     expect(rows).toHaveLength(3)
@@ -603,7 +624,7 @@ describe('the wipe screen', () => {
     expect(body).toContain('cannot be undone')
   })
 
-  it('counts her friends and her land in the confirm, rather than saying "data"', async () => {
+  it('counts their friends and their land in the confirm, rather than saying "data"', async () => {
     const { root, rows } = openWipe()
     tap(tickOf(rows[0]))
     tap(dangerIn(root))
@@ -617,7 +638,7 @@ describe('the wipe screen', () => {
   it('names the child in the name row when there is a name to give back', () => {
     const { rows } = openWipe()
     expect(rows[2].textContent).toContain('Juno')
-    // And says nothing about a name she has not given yet.
+    // And says nothing about a name they have not given yet.
     document.body.innerHTML = ''
     const unnamed = openWipe({ pets: 0, tiles: 1, childName: '' })
     expect(unnamed.rows[2].textContent).not.toContain('called')
@@ -628,9 +649,9 @@ describe('the wipe screen', () => {
     // expected to infer it from the layout.
     const { rows } = openWipe()
     expect(rows[0].textContent?.toLowerCase())
-      .toContain('what she is working on stays')
+      .toContain('what they are working on stays')
     expect(rows[1].textContent?.toLowerCase())
-      .toContain('her island, her animals and her name all stay')
+      .toContain('their island, their animals and their name all stay')
     expect(rows[2].textContent?.toLowerCase()).toContain('nothing else changes')
   })
 

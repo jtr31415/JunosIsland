@@ -6,12 +6,12 @@
  *
  * That is Joe's call and it is a better game than the first version, which
  * revealed pieces one at a time out of nothing: seeing the finished tile from
- * the start means the work has a SHAPE. She can see there are four things
+ * the start means the work has a SHAPE. They can see there are four things
  * left, and which four, without being told a number — which is the same job
  * the progress dots do, done by the thing itself.
  *
  * A tile is not awarded finished. It is BUILT, in view, as sums land — so a
- * child watches her arithmetic turn into ground she owns. That continuous
+ * child watches their arithmetic turn into ground they own. That continuous
  * cause-and-effect is the entire pedagogical point of building it this way
  * rather than handing over a completed hex.
  *
@@ -96,7 +96,7 @@ export const PALETTE: Record<TileType, readonly string[]> = {
      * THE SECOND PLACEMENT PATH, and the one that gets forgotten — trees inside
      * rocks was reported twice because the first fix only touched `props.ts`
      * (HANDOFF §6). Joe's "more trees from the nature/forest kay pack" has to
-     * land here too, or the tiles she BUILDS stay as bare as they were while the
+     * land here too, or the tiles they BUILD stay as bare as they were while the
      * ones the island grows on its own fill up with woodland.
      *
      * Six of the pack's fifteen leafy trees rather than all of them: this list
@@ -117,7 +117,7 @@ export const PALETTE: Record<TileType, readonly string[]> = {
     'waterlily_A', 'waterlily_B',
   ],
   /*
-   * Stony ground, for the tile she picked mountains for.
+   * Stony ground, for the tile they picked mountains for.
    *
    * THE SAME TRAP AS ABOVE, and it is why this key exists at all: `PALETTE` is
    * keyed by `TileType`, so widening that union made TypeScript demand this
@@ -253,7 +253,7 @@ export interface GrowingPlot {
    *
    * "The connective payoff between abstract work and world position" — the
    * spec's own phrase, and the reason this exists rather than the tile simply
-   * being there when the stage clears. She did sums on one side of the
+   * being there when the stage clears. They did sums on one side of the
    * screen; the land arrives on the other; the arc is the sentence that joins
    * them.
    *
@@ -278,7 +278,7 @@ export interface GrowingPlot {
   /**
    * Give up the finished scenery, leaving the plot with nothing to dispose.
    *
-   * Returns the group holding everything she grew, minus the tile hex and the
+   * Returns the group holding everything they grew, minus the tile hex and the
    * flourish — the hex because the real island now draws that, the flourish
    * because it was a celebration and not a thing.
    */
@@ -373,7 +373,7 @@ export function createGrowingPlot(
    * at water level, not land level". Without this the plot built a flat water
    * slab and the finished tile arrived as a coast — a discontinuity at exactly
    * the moment §2 wants continuity, since the point of building in view is that
-   * what she watched become real is the thing she gets.
+   * what they watched become real is the thing they get.
    *
    * Optional, and defaulted rather than required, because a restored save can
    * site a plot before the island around it is known.
@@ -389,8 +389,8 @@ export function createGrowingPlot(
    *
    * Passed IN rather than derived here, from `props.mountainHexFor`, because the
    * finished hex is planted by the other placement path and the two must name the
-   * same model and the same facing — she watches one particular peak rise and
-   * that is the peak she must get (HANDOFF §6).
+   * same model and the same facing — they watch one particular peak rise and
+   * that is the peak they must get (HANDOFF §6).
    *
    * When set, the eight scattered pieces are skipped entirely: the mound covers
    * more than four fifths of the hex, so there is nowhere for cover to stand that
@@ -418,8 +418,8 @@ export function createGrowingPlot(
    * The look of a piece that is coming but is not here yet.
    *
    * Gold rather than grey, and glowing rather than faint, because this is a
-   * PROMISE and not an absence — the tile she is going to have, shown to her
-   * while she earns it. Depth-write off so the ghosts never occlude the real
+   * PROMISE and not an absence — the tile they are going to have, shown to them
+   * while they earn it. Depth-write off so the ghosts never occlude the real
    * pieces standing among them.
    */
   const ghostMaterial = new THREE.MeshBasicMaterial({
@@ -464,7 +464,7 @@ export function createGrowingPlot(
   const trailAge: number[] = new Array(10).fill(1)
   let landMs = 900
   let landReach = 1.6
-  /** Hovering above the socket while she builds it. */
+  /** Hovering above the socket while they build it. */
   let floating = false
   let hover = 0
 
@@ -479,7 +479,7 @@ export function createGrowingPlot(
      * `preview` is false for the completion flourish: it is an EVENT, not a
      * piece of the tile, and showing a golden outline of a burst of sparks
      * from the first moment promises something that will never be standing
-     * there — it just looks like eight more props she has not earned yet.
+     * there — it just looks like eight more props they have not earned yet.
      */
     const ghost = preview ? makeGhost(object) : null
     slot.ghost = ghost
@@ -509,7 +509,7 @@ export function createGrowingPlot(
    * soon" is easier to read than two.
    */
   /*
-   * The hex she is actually going to get, coast model and all — not a stand-in
+   * The hex they are actually going to get, coast model and all — not a stand-in
    * for it. `turns` is the same sixth-of-a-turn step the finished tile field
    * applies, so the plot and the tile it becomes are the same object in the same
    * orientation.
@@ -534,8 +534,8 @@ export function createGrowingPlot(
    * The mountain, centred and at its native size — the same treatment props.ts
    * gives it, and for the same reason: the pack already sized these to a hex, so
    * every scale factor applied on top is a shrink. It takes the FIRST scenery
-   * increment, so its golden ghost stands there from the moment she sites the
-   * plot and turns to stone on her first sum. That ghost is what makes the
+   * increment, so its golden ghost stands there from the moment they site the
+   * plot and turns to stone on their first sum. That ghost is what makes the
    * promise Joe is asking for — the mountain is set up there, visibly, and it is
    * what arrives.
    */
@@ -557,7 +557,7 @@ export function createGrowingPlot(
    * load. And a piece cannot avoid its neighbours if its neighbours have not
    * been decided yet, which is why Joe was still seeing trees inside rocks
    * after props.ts was fixed: this is a SECOND placement path, and the tiles
-   * she builds herself all come through here.
+   * they build themselves all come through here.
    *
    * The keep-out radius is nominal, from `fitFor`, rather than measured off
    * the loaded model — deliberately, because it is the only way to stay
@@ -781,7 +781,7 @@ export function createGrowingPlot(
       keep.name = 'grown-scenery'
       keep.position.copy(group.position)
       slots.forEach((slot, i) => {
-        // The hex and the flourish stay behind; everything between is hers.
+        // The hex and the flourish stay behind; everything between is theirs.
         if (i === 0 || i === slots.length - 1) return
         if (slot.object) keep.add(slot.object)
       })

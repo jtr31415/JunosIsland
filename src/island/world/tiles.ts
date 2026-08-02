@@ -46,7 +46,7 @@ export const TILE_URL: Record<RenderKind, string> = {
    * The WATERED coast models — full hexes carrying land, sand ramp and water.
    *
    * These now sit on the WATER cell, not the land one, so a coast hex is a
-   * pond edge: land at the rim where it meets her field, sloping down into
+   * pond edge: land at the rim where it meets their field, sloping down into
    * its own water. The waterless variants were right while the coast lived on
    * the land tile and had to let open sea show through the cut-away side;
    * here there is nothing to cut away, and a full hex is what closes the gap.

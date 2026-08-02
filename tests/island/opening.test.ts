@@ -78,9 +78,9 @@ describe('the opening is shown once per profile', () => {
   it('does not play again after a reload part-way through — the reported bug',
     async () => {
       /*
-       * The exact sequence Joe hit. She is asked her name, Fred starts talking,
-       * and the page is reloaded somewhere in the middle of the story: no pet,
-       * no tile, nothing earned, the flag's old write site never reached.
+       * The exact sequence Joe hit. The child is asked their name, Fred starts
+       * talking, and the page is reloaded somewhere in the middle of the story:
+       * no pet, no tile, nothing earned, the flag's old write site unreached.
        */
       const store = await bootStore()
       let flow: Flow = createFlow()
@@ -89,17 +89,17 @@ describe('the opening is shown once per profile', () => {
 
       await saveIsland(store, 'juno', flow, gate.seen(), 'Juno')   // boot's refresh()
       await gate.begin()                                           // Fred starts
-      // ...and she gets no further than that.
+      // ...and they get no further than that.
 
       const next = await bootStore()                               // the reload
       const loaded = await loadIsland(next, 'juno')
       expect(loaded.openingSeen).toBe(true)
       expect(loaded.childName).toBe('Juno')
-      // Nothing else was disturbed: the reload is still her island.
+      // Nothing else was disturbed: the reload is still their island.
       expect(loaded.flow.pets).toHaveLength(0)
     })
 
-  it('still counts when she backs out of the round the story hands her',
+  it('still counts when they back out of the round the story hands them',
     async () => {
       /*
        * Leaving a challenge costs nothing (brief §19), so this is an ordinary
@@ -113,7 +113,7 @@ describe('the opening is shown once per profile', () => {
         () => saveIsland(store, 'juno', flow, gate.seen(), 'Juno'))
 
       await gate.begin()
-      flow = { ...flow, phase: 'free', challenge: null }            // she left
+      flow = { ...flow, phase: 'free', challenge: null }           // they left
       await saveIsland(store, 'juno', flow, gate.seen(), 'Juno')
 
       const loaded = await loadIsland(await bootStore(), 'juno')

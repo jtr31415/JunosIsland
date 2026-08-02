@@ -17,7 +17,7 @@
  * no note (flagged for reasons nobody wrote down).
  *
  * The length bounds are the reading-age guardrail. Juno is six and learning to
- * read; a fact that grows to thirty words has stopped being for her.
+ * read; a fact that grows to thirty words has stopped being for them.
  */
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'

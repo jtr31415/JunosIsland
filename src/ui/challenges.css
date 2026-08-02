@@ -56,7 +56,7 @@
  * `red` is not a wrong answer here. It is the phonics CATEGORY "tricky word",
  * and `green` is its sibling "sound it out" (src/core/wordlists.ts:15). But a
  * five-year-old does not read it that way: Joe reports Juno avoids tapping the
- * red cards, because red means WRONG everywhere else in her life.
+ * red cards, because red means WRONG everywhere else in their life.
  *
  * So a grown-up may put the red cards into the green palette. The class is on
  * <body>, and the challenge DOM is untouched — .word.red is still emitted, so
@@ -204,7 +204,7 @@ body.calm-colours .word.red { color: #1d5c2a; background: #e8f8dd; }
 
 /* The controls under every challenge. Just "say it again" now: the way out
    moved to the corner X, because a leave button an inch from the button a
-   struggling child taps most is a leave button she presses by accident. */
+   struggling child taps most is a leave button they press by accident. */
 .overlay-controls {
   display: flex;
   gap: .8rem;
@@ -233,14 +233,14 @@ body.calm-colours .word.red { color: #1d5c2a; background: #e8f8dd; }
  * Four things it has to be at once, and each rules something out:
  *
  *   - READABLE BY A CHILD WHO CANNOT YET READ. So an ×, not "back to the
- *     island". It is the one control she has already met everywhere else.
+ *     island". It is the one control they have already met everywhere else.
  *   - HITTABLE ON PURPOSE. 3rem at the small end, well past the 44px finger
  *     target, because the pet tap target being too small is already a
  *     playtest note against this build.
  *   - NOT HITTABLE BY ACCIDENT. Fixed to the extreme corner of the SCREEN
  *     rather than the panel, so it never drifts under the tiles, the number
  *     pad or the word cards as a page changes shape.
- *   - NOT THE INVITING OPTION. Paper, not coral: leaving costs her nothing,
+ *   - NOT THE INVITING OPTION. Paper, not coral: leaving costs them nothing,
  *     but it is not a reward and must not look like one.
  *
  * The album button is HIDDEN while a round is open — `body:has(.overlay:not(.hide))
@@ -281,7 +281,7 @@ body.calm-colours .word.red { color: #1d5c2a; background: #e8f8dd; }
   opacity: .75;
 }
 
-/* Asking the child her name: the first thing the island ever says to her, so
+/* Asking the child their name: the first thing the island ever says to them, so
    it uses the same warm panel as a reading page rather than a system dialog. */
 .ask-name {
   display: grid;
@@ -313,7 +313,7 @@ body.calm-colours .word.red { color: #1d5c2a; background: #e8f8dd; }
 /* ---------------------------------------------------------- the stage (§6)
 
    The work and its reason side by side: challenge panel on one half, a live
-   3D vignette of her egg or her half-built tile on the other. CSS owns the
+   3D vignette of their egg or their half-built tile on the other. CSS owns the
    split entirely — the renderer only asks where .stage-slot ended up and
    scissors into that rect — so the responsive rules live here where they can
    be read, and the 3D code stays ignorant of layout. */
@@ -339,14 +339,14 @@ body.calm-colours .word.red { color: #1d5c2a; background: #e8f8dd; }
    It does not catch taps, and that fact is now what MOTIVATED removing
    tap-outside-to-leave rather than an argument for keeping it. This slot spans
    45% of a staged round, so while the backdrop dismissed, nearly half of what
-   she was looking at — including her own egg turning on the vignette — ended the
-   page when touched. Joe: "too many accidental hits." The way out is the corner
-   × now; the backdrop swallows taps and does nothing. */
+   they were looking at — including their own egg turning on the vignette —
+   ended the page when touched. Joe: "too many accidental hits." The way out is
+   the corner × now; the backdrop swallows taps and does nothing. */
 .stage-slot { display: none; position: relative; pointer-events: none; }
 .overlay.staged .stage-slot { display: block; }
 
 /* Portrait: vignette on TOP, work below — a tablet held upright wants the
-   reading under her thumbs, not above them. */
+   reading under their thumbs, not above them. */
 @media (orientation: portrait) {
   .overlay.staged {
     grid-template-columns: 1fr;
@@ -381,7 +381,7 @@ body.calm-colours .word.red { color: #1d5c2a; background: #e8f8dd; }
   transform: scale(1.18);
 }
 
-/* The album chip: the friend's name flying into the book she is kept in.
+/* The album chip: the friend's name flying into the book it is kept in.
    Starts where the name card was, so the eye can follow it (§3). */
 .album-chip {
   position: fixed;

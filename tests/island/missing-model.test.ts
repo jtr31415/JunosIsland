@@ -284,8 +284,8 @@ describe('a friend whose model will not load', () => {
   it('costs that friend only — the others still arrive', async () => {
     /*
      * The worst ordering is the one that matters: the pet that fails is FIRST
-     * in the list, so under the old code the friend she had just hatched was
-     * the one that never appeared.
+     * in the list, so under the old code the friend the child had just
+     * hatched was the one that never appeared.
      */
     dead.add('animal-cow')
     const pets = createPetField()
@@ -300,7 +300,7 @@ describe('a friend whose model will not load', () => {
      * Unlike the scenery, this one retries for free and MUST: `prototype`
      * evicts a rejected promise from the cache, and nothing has been added to
      * the group or to `live` at the point the load fails, so the pet is still
-     * unbuilt by every test in that module. Brief §19 — nothing she owns is
+     * unbuilt by every test in that module. Brief §19 — nothing they own is
      * lost — is the reason it cannot be left at "gone for this session".
      */
     dead.add('animal-cow')

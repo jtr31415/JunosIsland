@@ -1,5 +1,5 @@
 /**
- * Dealing a card — generate a new one, or hand back the one she is holding.
+ * Dealing a card — generate a new one, or hand back the one they are holding.
  *
  * This is the island's version of v0's `forward()` (v0:1320-1331), which only
  * ever calls a generator when `idx` sits at the end of history and otherwise
@@ -60,8 +60,8 @@ export type ReadingCard =
  * WHICH OF THE TWO IS NO LONGER DECIDED HERE (A3). It used to be `pageKind` of
  * the page index, read straight off this file; it is now the harness's, because
  * the choice has to answer to the tickboxes as well as to the mix — a parent
- * who says his daughter cannot build words yet outranks a data file that would
- * like her to. What is preserved is the property that made the index right in
+ * who says their child cannot build words yet outranks a data file that would
+ * like them to. What is preserved is the property that made the index right in
  * the first place: the harness is asked with the same stable page number, so
  * leaving a page and coming back asks for the same kind of card and finds it in
  * the same store. The alternation still cannot be re-rolled by an X.
@@ -82,9 +82,9 @@ export function dealReading(
  *
  * ONE STORE FOR BOTH, deliberately. `SumItem` carries its own `op`, the
  * anti-repeat guard reads the last entry whatever it was, and `held` +
- * `history[idx]` therefore hand back the very take-away she walked away from
+ * `history[idx]` therefore hand back the very take-away they walked away from
  * with no further machinery. Two stores would need two held bits and would let
- * an X flip a subtraction she did not fancy into an addition — which is the
+ * an X flip a subtraction they did not fancy into an addition — which is the
  * exact skip this file exists to prevent.
  */
 export function dealSum(

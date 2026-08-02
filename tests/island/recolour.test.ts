@@ -658,7 +658,7 @@ describe('the set list', () => {
   })
 
   it('keys a creature by set and species, not by index', () => {
-    // Inserting a set later must not renumber every creature she owns.
+    // Inserting a set later must not renumber every creature they own.
     expect(variantKey({ setId: 'cherry', speciesId: 'animal-fox' })).toBe('cherry/animal-fox')
   })
 })

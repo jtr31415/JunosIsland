@@ -4,7 +4,7 @@ import { eggCost, tileCost, itemsFor, pageKind, pagesRead, itemPay, balance } fr
 /*
  * These tables are in ITEMS — sums and pages, the things a child answers.
  * A7 re-denominated costs into units at 2 per item, so the prices moved and
- * the pacing did not; `itemsFor` is the conversion back to what she does.
+ * the pacing did not; `itemsFor` is the conversion back to what they do.
  */
 
 describe('the cost curve', () => {
@@ -86,7 +86,7 @@ describe('page kinds', () => {
   })
 
   it('still opens on a find, because the first egg is one scripted word', () => {
-    // §1 beat 2: the opening hands her a single word to FIND. Whatever the
+    // §1 beat 2: the opening hands the child one word to FIND. Whatever the
     // ratio becomes, page zero is the one page the script depends on.
     expect(pageKind(0)).toBe('find')
   })

@@ -55,13 +55,13 @@ repeats until exhausted.
 const n = Math.min(MAX, MIN + s.history.length)      // MIN 3, MAX 12
 ```
 
-Her first page has three words, the second four, up to twelve.
+The child's first page has three words, the second four, up to twelve.
 
 **It resets on every reload.** `readStore` is created fresh at
 `src/island/main.ts:158`, and `save.ts` deliberately does not persist generator
 history (see its note at `:129`). So the ramp is per-sitting and starts again
-from three words each time she opens the game. **Whether that is a bug or a
-feature is a spec decision, not an implementation detail.**
+from three words each time the child opens the game. **Whether that is a bug or
+a feature is a spec decision, not an implementation detail.**
 
 ### Pacing knobs that already exist in `balance.json`
 
@@ -96,7 +96,7 @@ deliberately short-lived:
   answer. Drives the rescue/hint only.
 - the break watch (`governors.ts`) — **cumulative per page**, in memory, lost on
   reload. Deliberately: a rough patch must not be persisted and served back to
-  her tomorrow.
+  the child tomorrow.
 
 Neither is a competence estimate and neither feeds difficulty. Note the two count
 *different things* — a detail that matters if the spec reuses either.
@@ -108,7 +108,7 @@ reset. No accuracy, no history, nothing for you to read.
 letters but selection is uniform, so "bigger words" is not modelled anywhere.
 The only length control in the game is how *many* words a page holds.
 
-**No persistence of anything about her performance.** Save schema is at
+**No persistence of anything about the child's performance.** Save schema is at
 version 2.
 
 ---
@@ -176,10 +176,10 @@ Listed as questions a spec has to answer, roughly in dependency order.
 
 4. **What promotes?** A threshold on accuracy, a run of clean pages, something
    else?
-5. **Does anything demote?** Brief §19 says nothing she has is taken away. A
-   visible drop in level is arguably a thing taken away. If the answer is yes,
-   the spec should say how it is framed so it cannot read as punishment.
-6. **Per-skill or global?** Can she be level 2 at reading and level 1 at maths?
+5. **Does anything demote?** Brief §19 says nothing the child has is taken
+   away. A visible drop in level is arguably a thing taken away. If the answer
+   is yes, the spec should say how it is framed so it cannot read as punishment.
+6. **Per-skill or global?** Can a child be level 2 at reading and level 1 at maths?
    (The generators already allow it — `dealReading` and `dealSum` take separate
    levels.)
 7. **Does it survive a reload?** This is the sharpest tension in the whole
@@ -194,7 +194,7 @@ Listed as questions a spec has to answer, roughly in dependency order.
    into the same deck as addition, or its own kind of page?
 9. **Alien / pseudo-words: yes or no?** They are a legitimate phonics assessment
    tool (they force decoding rather than recall) and they can also baffle a
-   six-year-old who thinks she has misread. Your call, and it is a judgement
+   six-year-old who thinks they have misread. Your call, and it is a judgement
    about Juno, not about software.
 10. **"Bigger words" needs defining.** Nothing currently grades word difficulty.
     Options: grade the existing 95 words by length or grapheme complexity; add
@@ -205,8 +205,8 @@ Listed as questions a spec has to answer, roughly in dependency order.
 
 ### The surface
 
-12. **Does she see her level?** Any visible ladder invites comparison and
-    failure-reading; hiding it entirely means she never feels promoted.
+12. **Does the child see their level?** Any visible ladder invites comparison
+    and failure-reading; hiding it entirely means they never feel promoted.
 13. **Do you see it?** A grown-ups report is new UI and needs its own thought
     about what is honest to show.
 14. **Do you get a manual override?** v0 has one. It is the cheapest possible
@@ -216,9 +216,9 @@ Listed as questions a spec has to answer, roughly in dependency order.
 ### The economy
 
 15. **Does price move with difficulty?** Right now a tile costs N sums regardless
-    of how hard a sum is. Promote her and land silently gets dearer in wall-clock
-    terms. Either the curve compensates, or it does not and that is a stated
-    choice. This interacts directly with the 3:2 ratio work just landed.
+    of how hard a sum is. Promote the child and land silently gets dearer in
+    wall-clock terms. Either the curve compensates, or it does not and that is a
+    stated choice. This interacts directly with the 3:2 ratio work just landed.
 
 ---
 
@@ -229,8 +229,8 @@ Listed as questions a spec has to answer, roughly in dependency order.
 Open card: **one found word banks the whole page.** So for a find page the game
 records "passed" after a single correct tap out of three targets. Any rule of the
 form *"promote at 80% correct"* would be reading a number that does not mean what
-it says, and it would over-promote her specifically on the page type that is
-easiest to get one lucky tap on.
+it says, and it would over-promote the child specifically on the page type
+that is easiest to get one lucky tap on.
 
 **This needs fixing before, or as part of, the measurement.** It is small work
 and it is a prerequisite, not a nicety.
@@ -267,8 +267,8 @@ arrives with a sensible default rather than at level 1 having earned better.
 ### 7.5 Difficulty must not become a lockout
 
 Brief §19 and the governors' own doctrine: invitations, never lockouts; nothing
-expires; nothing is taken back. A harness that decides she is "not ready" for
-something she was doing yesterday breaks that. The safest shape is that
+expires; nothing is taken back. A harness that decides the child is "not ready"
+for something they were doing yesterday breaks that. The safest shape is that
 difficulty changes what is *offered*, never what is *permitted*.
 
 ### 7.6 Harder reading leans on the voice, and the voice has a dead channel

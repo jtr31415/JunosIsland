@@ -8,7 +8,7 @@ import { seal } from '../../src/platform/envelope'
  * The only route off the device. Brief §19 permits no accounts and no network
  * calls beyond static hosting, so a file the grown-up keeps IS the off-device
  * copy — the difference between a lost tablet costing an afternoon and costing
- * everything she has built.
+ * everything the child has built.
  */
 
 describe('backupFilename', () => {
@@ -32,7 +32,7 @@ describe('backupFilename', () => {
     expect(backupFilename('🐱', june)).toBe('pet-island-save-island-2026-06-03.json')
   })
 
-  it('falls back when she never gave a name', () => {
+  it('falls back when they never gave a name', () => {
     expect(backupFilename('', june)).toBe('pet-island-save-island-2026-06-03.json')
   })
 })

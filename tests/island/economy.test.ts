@@ -87,7 +87,7 @@ describe('the A7 re-base is invisible', () => {
  * The per-n assertions above compare prices. This spends them: it answers
  * items one at a time exactly as the flow does — accrue `itemPay()`, and when
  * the total reaches the cost, take the thing and reset — and checks that the
- * child hands over the same number of answers for the same island she would
+ * child hands over the same number of answers for the same island they would
  * have before A7. A pricing table can be right at every n and still drift here
  * if the accrual and the reset disagree about the denomination.
  */
@@ -154,7 +154,7 @@ describe('the honeymoon rate is a sibling, not a replacement', () => {
   })
 
   it('never pays less than an ordinary item, however balance.json is tuned', () => {
-    // "Going easy on her" that charged MORE would be a punishment for saying
+    // "Going easy on them" that charged MORE would be a punishment for saying
     // yes, so the floor is part of the contract rather than a coincidence of
     // the shipped numbers.
     const saved = balance.pay.honeymoon

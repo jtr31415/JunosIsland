@@ -90,8 +90,8 @@ export interface World {
    */
   setIsland(i: Island, plotAt?: Axial | null): void
   /**
-   * Register the growing plot so a tap can reach it — how she changes her mind
-   * about what she is building.
+   * Register the growing plot so a tap can reach it — how they change their
+   * mind about what they are building.
    *
    * Needed precisely BECAUSE of `setIsland` above: with the socket outline
    * removed from under a standing plot, nothing answered for that hex and a tap
@@ -106,7 +106,7 @@ export interface World {
    * tile. Eased, and clamped to the island's own footprint by the camera.
    *
    * A capability rather than a tap handler: `interactions.ts` calls it through
-   * a port when she taps her own land, and Phase 4's album pop-out needs the
+   * a port when they tap their own land, and Phase 4's album pop-out needs the
    * identical thing for "find it on the map" — `focusOn(worldOf(pet.at))`.
    */
   focusOn(point: THREE.Vector3): void
@@ -124,11 +124,11 @@ export interface World {
    * The one number that says how big a world unit is on screen right now, and
    * the only thing anyone outside `camera.ts` needs in order to size something
    * in PIXELS. `pets.ts` sizes its tap proxies against it — a fixed world
-   * radius is a target that shrinks as `frame()` pulls back on her growing
-   * island, which is the state where she has most animals to go looking for.
+   * radius is a target that shrinks as `frame()` pulls back on their growing
+   * island, which is the state where they have most animals to go looking for.
    *
-   * Read off the live camera rather than the eased goal: what she can hit has
-   * to match what she can see, including mid-pinch.
+   * Read off the live camera rather than the eased goal: what they can hit has
+   * to match what they can see, including mid-pinch.
    */
   cameraDistance(): number
   showSockets(v: boolean): void
@@ -205,7 +205,7 @@ export async function createWorld(canvas: HTMLCanvasElement): Promise<World> {
     setIsland(i: Island, plotAt: Axial | null = null) {
       island = i
       tiles.sync(i)
-      // Only the sockets she can actually fill: an outline that cannot be
+      // Only the sockets they can actually fill: an outline that cannot be
       // filled is a promise the game breaks. And never the one a plot is
       // already standing on — see the note on the interface.
       const open = buildableSockets(i, sockets(i))
@@ -215,8 +215,8 @@ export async function createWorld(canvas: HTMLCanvasElement): Promise<World> {
        *
        * `setIsland` runs on every `refresh()` — a dozen call sites, several of
        * them mid-ceremony — and framing sets the wanted distance outright. So
-       * an unconditional call quietly undid her pinch every time anything at
-       * all happened, and would now yank the pivot back off whatever she had
+       * an unconditional call quietly undid their pinch every time anything at
+       * all happened, and would now yank the pivot back off whatever they had
        * asked to look at. Growth is the one moment re-framing is wanted, and
        * growth is exactly what this compares.
        */

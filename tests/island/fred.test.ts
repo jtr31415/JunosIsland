@@ -60,9 +60,9 @@ describe('Fred takes up room', () => {
 
   it('is not so wide that he owns the home tile', () => {
     /*
-     * A sanity ceiling. The home rock also carries her signpost, the egg and
-     * the first friend who arrives; a keep-out the size of the hex would leave
-     * a pet nowhere to stand. The hex's circumradius is 1.15.
+     * A sanity ceiling. The home rock also carries the child's signpost, the
+     * egg and the first friend who arrives; a keep-out the size of the hex
+     * would leave a pet nowhere to stand. The hex's circumradius is 1.15.
      */
     expect(createFred().obstacle().r).toBeLessThan(0.35)
   })
@@ -196,7 +196,7 @@ describe('no child is ever read a placeholder — JT-019', () => {
 
   it('says "1 more friend", never "1 more friends"', () => {
     // §19 is a reading game before it is anything else: a sentence Fred reads
-    // her must be a sentence, and the plural is the commonest way to break one.
+    // them must be a sentence, and the plural is the commonest way to break one.
     expect(governorLine('space-surplus', 1)).toContain('1 more friend will')
     expect(governorLine('space-surplus', 2)).toContain('2 more friends will')
     expect(governorLine('nursery-queue', 1)).toContain('1 more tile will')

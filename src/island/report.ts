@@ -7,14 +7,14 @@
  * the last ten rescues. None of that is a sentence a parent can read. This
  * module is the translation, and it is the whole of it: three measures per
  * stage, each of them a tier word and a count of filled dots, plus the two
- * plain facts (how many attempts, when she last worked on it) that stop the
+ * plain facts (how many attempts, when they last worked on it) that stop the
  * tiers from being the only thing on the page.
  *
  * IT IS PURE, AND THAT IS THE POINT. No DOM, no clock of its own, no storage —
  * it takes a `StageStats` and returns a `StageReport`. The panel that draws
  * this is being built alongside it against the exported shape, and the reason
  * the split is worth having is that the rules below decide what a parent is
- * told about his daughter. Rules that decide that should be testable as rules,
+ * told about their child. Rules that decide that should be testable as rules,
  * at the boundary, without a browser in the way.
  *
  * THE HONESTY RULES ARE LOAD-BEARING. A6 asks for dashes rather than a tier
@@ -27,7 +27,7 @@
  *
  * NO VERDICTS BEYOND THE THREE WORDS. The spec is explicit: no colours as
  * verdict, no child-visible anything, strictly local. Nothing in here ranks a
- * child against anything except her own earlier self on the same stage.
+ * child against anything except their own earlier self on the same stage.
  */
 import { reportRules } from './balance'
 import { dayKey } from '../platform/clock'
@@ -115,10 +115,10 @@ function accuracyOf(stats: StageStats): Measure {
 /**
  * Speed: the recent correct-median against the stage's OWN early baseline.
  *
- * Against her own beginning and against nothing else — not another child, not
+ * Against their own beginning and against nothing else — not another child, not
  * another stage, not a target time. A stage that is genuinely harder is slower
  * for everybody, and the only interesting question is whether the child is
- * pulling away from where she started on it.
+ * pulling away from where they started on it.
  *
  * MECHANICAL CALL. The spec names one threshold — *"settling until trend
  * flattens ≥ 15% below baseline"* — and a three-tier scale needs two, so
@@ -148,9 +148,9 @@ function speedOf(stats: StageStats): Measure {
  *
  * The spec's definition is *"last 3 sessions each ≥ .75 AND no rescue in them
  * AND ≥ 2 distinct days"* — three conditions, one boolean. The three matter for
- * different reasons: the sessions say she can do it, the distinct days say it
+ * different reasons: the sessions say they can do it, the distinct days say it
  * survived a night's sleep rather than being one lucky afternoon, and the
- * absence of a rescue says she did it without the game quietly helping.
+ * absence of a rescue says they did it without the game quietly helping.
  *
  * MECHANICAL CALL. That definition is a boolean and this scale has three rungs,
  * so the middle one is a reading rather than the spec's word: accurate across
@@ -216,12 +216,12 @@ export function stageReport(stats: StageStats): StageReport {
  * the harness is the single choke point for all of this policy. A line that
  * re-derived "is a probe wanted" from the stats would be a second copy of the
  * gate, and the day the two disagreed the panel would be telling a parent
- * something about his daughter that the island was not doing.
+ * something about their child that the island was not doing.
  *
  * MOST SPECIFIC FIRST, and the order is the point:
  *
  *   1. A standing offer, because it is the only branch that names something
- *      that will happen to HER, today, and which rung it is about.
+ *      that will happen to THEM, today, and which rung it is about.
  *   2. The honeymoon, which is above the mode check deliberately: it is a
  *      promise already made, and it goes on being kept for its two sessions
  *      even if a parent moves the path off Auto in the middle of it.
@@ -234,8 +234,8 @@ export function stageReport(stats: StageStats): StageReport {
  *      state on a fresh island is the one nothing about B has changed.
  *
  * The wording is for a PARENT and in the register of `TIER_WORDS`: lower case,
- * short, no exclamation. He is reading it to decide whether to leave the island
- * to it, and a line that shouted would be a line he stopped believing.
+ * short, no exclamation. They are reading it to decide whether to leave the
+ * island to it, and a line that shouted would be a line they stopped believing.
  *
  * `mode` is passed rather than read, because `Harness` exposes `setMode` and no
  * getter — the record is the panel's to read and the harness's to write.

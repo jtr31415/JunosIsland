@@ -83,7 +83,7 @@ describe('the increment sequence', () => {
  * The fly-back (§6): "the connective payoff between abstract work and world
  * position". The scaffolding that grew through every sum is the thing that
  * performs the landing, so its geometry is worth pinning — a tile that never
- * reaches the ground, or that lands 14% too wide, is a tile she cannot trust.
+ * reaches the ground, or that lands 14% too wide, is a tile they cannot trust.
  */
 describe('landing a finished plot', () => {
   const models = {
@@ -255,7 +255,7 @@ describe('landing a finished plot', () => {
  * turning real as a page is collected.
  *
  * Joe's shape for it, and a better game than revealing pieces out of nothing:
- * seeing the finished tile from the start means the work has a SHAPE. She can
+ * seeing the finished tile from the start means the work has a SHAPE. They can
  * see there are four things left, and which four, without being told a number.
  */
 describe('the golden outline', () => {
@@ -324,7 +324,7 @@ describe('the golden outline', () => {
     /*
      * A golden outline of a burst of sparks, hanging there from the first
      * moment, promises something that will never be standing on the tile. It
-     * just reads as eight more props she has not earned.
+     * just reads as eight more props they have not earned.
      */
     const plot = createGrowingPlot('grass', 1.1547, {
       models, prop: () => Promise.resolve(new THREE.Group()),
@@ -383,10 +383,10 @@ describe('a build is its own build', () => {
     expect(a.group.children.length).toBe(b.group.children.length)
   })
 
-  it('hands over what she grew, keeping back the hex and the flourish', () => {
+  it('hands over what they grew, keeping back the hex and the flourish', () => {
     /*
      * The hex because the real island draws that now, the flourish because it
-     * was a celebration and not a thing. Everything between is hers, and it
+     * was a celebration and not a thing. Everything between is theirs, and it
      * must arrive on the tile rather than being swapped for a different eight.
      */
     const plot = make(7)
@@ -406,12 +406,12 @@ describe('a build is its own build', () => {
  * tile is already set up there so it gets placed on completion."*
  *
  * The plot was growing eight scattered stones from `PALETTE.rock` while the
- * finished hex grew a peak — the two placement paths disagreeing about what she
- * was building (HANDOFF §6). The peak is passed in from `props.mountainHexFor`
- * so both paths name the same model; these tests pin what the plot then does
- * with it.
+ * finished hex grew a peak — the two placement paths disagreeing about what
+ * the child was building (HANDOFF §6). The peak is passed in from
+ * `props.mountainHexFor` so both paths name the same model; these tests pin
+ * what the plot then does with it.
  */
-describe('a mountain plot grows the peak she was promised', () => {
+describe('a mountain plot grows the peak the child was promised', () => {
   const models = {
     size: 1.1547,
     geometry: { grass: new THREE.BufferGeometry(), water: new THREE.BufferGeometry() },
@@ -460,11 +460,11 @@ describe('a mountain plot grows the peak she was promised', () => {
     expect(obj.rotation.y).toBeCloseTo((2 * Math.PI) / 3, 9)
   })
 
-  it('stands there as a golden ghost before she has earned it', async () => {
+  it('stands there as a golden ghost before the child has earned it', async () => {
     /*
      * "already set up there" — the promise is the point. A plot with no progress
      * shows the outline of the peak it will become, and the outline turns to
-     * stone on her first sum.
+     * stone on their first sum.
      */
     const obj = new THREE.Group()
     obj.add(new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshStandardMaterial()))

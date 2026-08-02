@@ -50,18 +50,18 @@ export interface InteractionPorts {
   eggsPaused(f: Flow): boolean
   landPaused(f: Flow): boolean
   /**
-   * Fred asks for the other thing instead — and she may say no.
+   * Fred asks for the other thing instead — and the child may say no.
    *
    * Returns `'asked'` the first time, when Fred has just spoken and the tap is
-   * spent on hearing him; `'again'` when she has tapped the same thing straight
-   * back, which is her overriding him, and the caller must then let the round
-   * open exactly as if no governor existed.
+   * spent on hearing him; `'again'` when they have tapped the same thing
+   * straight back, which is the child overriding him, and the caller must then
+   * let the round open exactly as if no governor existed.
    *
    * PB-042/JT-012: the ask is real, the refusal is not. Before this, both call
    * sites invited and returned the flow unchanged forever, so "the child may
-   * ignore him" was the one thing she could not do. Joe found it in the wild
+   * ignore him" was the one thing they could not do. Joe found it in the wild
    * with a six-year-old on it: *"erroneously forcing tile building"*. An
-   * invitation she cannot decline is a lockout with a warm line on it.
+   * invitation they cannot decline is a lockout with a warm line on it.
    *
    * On `'again'` Fred says NOTHING, deliberately: the round is about to speak
    * its own prompt, and speech cancels speech (HANDOFF §5).
@@ -97,7 +97,7 @@ export function handleWorldTap(flow: Flow, hit: Hit | null, p: InteractionPorts)
   switch (hit.kind) {
     case 'egg': {
       // Reading hatches eggs (brief section 4).
-      // Fred may ask her to build instead — once. Tap again and the egg opens.
+      // Fred may ask them to build instead — once. Tap again and the egg opens.
       if (p.eggsPaused(flow) && p.invite('nursery-queue') === 'asked') return flow
       const next = tapEgg(flow)
       if (next === flow) return flow          // wrong phase: do nothing, loudly
@@ -110,10 +110,10 @@ export function handleWorldTap(flow: Flow, hit: Hit | null, p: InteractionPorts)
        * He hops and says his name, exactly as every pet does.
        *
        * This used to replay the whole opening — brief §3's "tell me again?" —
-       * and Joe hit it mid-game: the intro restarted, walked her through a
+       * and Joe hit it mid-game: the intro restarted, walked them through a
        * challenge that handed over an animal and then another that handed over
-       * a tile, in the middle of a session she was already playing. A tap on a
-       * friendly character has to be the smallest thing in the game, not the
+       * a tile, in the middle of a session they were already playing. A tap on
+       * a friendly character has to be the smallest thing in the game, not the
        * largest.
        *
        * Replaying the story is not lost, it has moved behind the grown-ups PIN
@@ -125,7 +125,7 @@ export function handleWorldTap(flow: Flow, hit: Hit | null, p: InteractionPorts)
 
     case 'plot': {
       /*
-       * She taps what she is building to change what it is going to be.
+       * They tap what they are building to change what it is going to be.
        *
        * Joe, relaying the complaint: *"she'd like to change her mind if shes
        * picked a wrong type of tile."* Tapping the thing itself needs no new
@@ -133,10 +133,10 @@ export function handleWorldTap(flow: Flow, hit: Hit | null, p: InteractionPorts)
        * has no other meaning, since the socket beneath a standing plot is
        * removed (#19).
        *
-       * Nothing is spent and nothing is lost: `sumProgress` lives on the flow, so
-       * every sum she has already answered still counts toward whatever she picks
-       * instead. If the offer comes back with only one kind in it, that kind is
-       * what the rules allow here and the panel says so honestly.
+       * Nothing is spent and nothing is lost: `sumProgress` lives on the flow,
+       * so every sum they have already answered still counts toward whatever
+       * they pick instead. If the offer comes back with only one kind in it,
+       * that kind is what the rules allow here and the panel says so honestly.
        */
       const asked = askToRetype(flow)
       if (asked === flow) return flow
@@ -146,13 +146,13 @@ export function handleWorldTap(flow: Flow, hit: Hit | null, p: InteractionPorts)
 
     case 'socket': {
       /*
-       * A socket is now how she ASKS for land, as well as where it goes.
+       * A socket is now how they ASK for land, as well as where it goes.
        *
        * Any patch of grass used to start a maths round, which made simply
-       * looking round her own island a minefield — Joe: "annoying UX if you
+       * looking round their own island a minefield — Joe: "annoying UX if you
        * only want to look around". The glowing outlines are permanent for the
        * same reason: if they are the only thing that starts land, they have to
-       * be visible before she has already started.
+       * be visible before they have already started.
        */
       if (flow.phase !== 'placing' || !flow.chosen) {
         // As with the egg: Fred asks once, and a second tap builds anyway.
@@ -165,7 +165,7 @@ export function handleWorldTap(flow: Flow, hit: Hit | null, p: InteractionPorts)
          * Always the question, never a sum. `askForLand` opened the next sum
          * instead when a plot was standing; since PB-048 it always opens the
          * bank, so the branch that read `asked.phase === 'challenge'` was dead
-         * and told a reader this tap might hand her a round. It cannot.
+         * and told a reader this tap might hand them a round. It cannot.
          */
         p.say(TILE_QUESTION)
         return asked
@@ -205,10 +205,10 @@ export function handleWorldTap(flow: Flow, hit: Hit | null, p: InteractionPorts)
 
     case 'tile': {
       /*
-       * Tapping her own land turns the island about THAT tile.
+       * Tapping their own land turns the island about THAT tile.
        *
        * It never starts a round — it used to, so there was no way to look at
-       * what she had built without being handed a sum, and land is asked for
+       * what they had built without being handed a sum, and land is asked for
        * at a socket now. That left the tile tap doing nothing at all, which is
        * the slot this fills, and it fills it with the one thing the tap can
        * unambiguously mean: *look here*.
@@ -219,21 +219,21 @@ export function handleWorldTap(flow: Flow, hit: Hit | null, p: InteractionPorts)
        * path in the game that has already caused two reported bugs. The sea
        * carries no location worth pivoting on, and pivoting over open water is
        * precisely the "lost the island" failure the camera is built to prevent.
-       * Her own land is the only surface where "look here" has a meaning, and
+       * Their own land is the only surface where "look here" has a meaning, and
        * it was already free.
        *
-       * Nothing is lost or spent, so a mis-aimed tap costs her only a tap
+       * Nothing is lost or spent, so a mis-aimed tap costs them only a tap
        * somewhere better (brief section 19).
        *
        * THERE IS NO EXCEPTION FOR A STANDING PLOT, and that is PB-048. Tapping
-       * her land while one stood used to carry on building it. Joe found what
+       * their land while one stood used to carry on building it. Joe found what
        * that does in the wild: Juno taps an ANIMAL, misses — `picking.ts` answers
        * with whatever IS under the ray, so a near-miss falls through to this very
-       * case — and she is dropped into building a tile she had walked away from.
+       * case — and they are dropped into building a tile they walked away from.
        *
        * So a tile tap starts nothing and resumes nothing, ever. Sockets are the
        * only way to ask for land, which is what the `socket` case above already
-       * says the design intends, and a build she left is picked back up by
+       * says the design intends, and a build they left is picked back up by
        * tapping a glowing socket and choosing again (`askForLand`).
        */
       p.focusOn(hit.axial)

@@ -1,9 +1,9 @@
 /**
  * The sign on the home tile: "[Name] Island".
  *
- * The one place the world says out loud that it belongs to her. Worth more
+ * The one place the world says out loud that it belongs to them. Worth more
  * than any label in the interface, because it is IN the island rather than
- * on top of it — she can walk the camera round it, and it is still there.
+ * on top of it — they can walk the camera round it, and it is still there.
  *
  * Built from primitives like Fred rather than bought, for the same reason:
  * nothing in the packs carries text, and text is the entire point.
@@ -52,7 +52,7 @@ function nameTexture(name: string): THREE.CanvasTexture {
 
 export interface Sign {
   group: THREE.Group
-  /** Re-letter the board, e.g. once the child has told us her name. */
+  /** Re-letter the board, e.g. once the child has told us their name. */
   setName(name: string): void
   /**
    * Where the signpost stands and how much room it takes, for anything that
@@ -62,7 +62,7 @@ export interface Sign {
    * this. Each time the fault was the same shape — a hand-built object that
    * the scenery pipeline never sees, so `props.obstacles()` knows nothing
    * about it and `publishObstacles()` is never told, and pets walk straight
-   * through the one thing on the island with her name on it.
+   * through the one thing on the island with their name on it.
    *
    * Read afresh rather than published once, because `refresh()` in main.ts is
    * what decides where the sign stands and it does so AFTER the sign is built.
@@ -79,7 +79,7 @@ export interface Sign {
  * 0.355, so each one climbed 0.065 into the board — over a third of its
  * height — and, being slightly deeper than the board, stood PROUD of the
  * lettered face rather than behind it. The result was two stakes drawn on
- * top of her name. Deriving the post height from the board's underside means
+ * top of their name. Deriving the post height from the board's underside means
  * moving the board can no longer put a post through the writing.
  */
 export const BOARD_W = 0.52

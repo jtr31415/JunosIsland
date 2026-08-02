@@ -1,5 +1,5 @@
 /**
- * Asking the browser to keep her island.
+ * Asking the browser to keep their island.
  *
  * Storage that has not been marked persistent is *best effort*: under pressure
  * a browser will evict it without asking and without telling anyone. On a
@@ -9,10 +9,10 @@
  *
  * Deliberately requested at FIRST MEANINGFUL PROGRESS rather than at boot.
  * Some browsers show a permission prompt, and a prompt on the very first
- * screen — before she has anything worth keeping — is both confusing and the
- * most likely moment for a grown-up to dismiss it. After the first friend has
- * come home there is something to protect, and the answer is recorded in the
- * save so a later session can tell what happened.
+ * screen — before they have anything worth keeping — is both confusing and
+ * the most likely moment for a grown-up to dismiss it. After the first
+ * friend has come home there is something to protect, and the answer is
+ * recorded in the save so a later session can tell what happened.
  */
 
 export type PersistState = boolean | null
@@ -48,9 +48,9 @@ export async function requestPersistence(
 /**
  * Should we ask yet?
  *
- * True once she owns something and we have not already got an answer. "Owns
- * something" is a friend or a tile she counted up — the first moment there is
- * anything to lose.
+ * True once they own something and we have not already got an answer. "Owns
+ * something" is a friend or a tile they counted up — the first moment there
+ * is anything to lose.
  */
 export function shouldRequest(
   known: PersistState, pets: number, tilesEarned: number,

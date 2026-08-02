@@ -6,7 +6,7 @@
  * that point was `new THREE.Vector3(0, 0, 0)` with nothing on the island ever
  * moving it. So an island grown out to one side was orbited about a corner:
  * spin swung the far edge away rather than turning it in place, and pinch flew
- * in on the home tile whatever she was looking at.
+ * in on the home tile whatever the child was looking at.
  *
  * These are arithmetic tests, not mock tests. `camera.ts` needs nothing from
  * the DOM but `addEventListener`, so the real module runs here and the real
@@ -87,8 +87,8 @@ describe('islandBounds', () => {
     /*
      * This is the framing half of the bug. Measuring the furthest tile's
      * distance from {0,0} counts the whole span, so a one-sided island is held
-     * at twice the distance it needs — smaller AND further away the more she
-     * builds.
+     * at twice the distance it needs — smaller AND further away the more they
+     * build.
      */
     const tiles = island(
       { q: 0, r: 0 }, { q: 1, r: 0 }, { q: 2, r: 0 }, { q: 3, r: 0 }, { q: 4, r: 0 })
@@ -126,14 +126,14 @@ describe('framing an island that is not at the origin', () => {
   it('eases the pivot across, it does not cut', () => {
     /*
      * The distance already lerps at 0.12 and the pivot rides the same curve.
-     * A cut would read as the island teleporting under her finger.
+     * A cut would read as the island teleporting under their finger.
      */
     const dom = stubDom()
     const c = createOrbitCamera(dom.el)
     c.frame(v(0, 0), 0)             // where we came in
     settle(c)
 
-    c.frame(v(10, 0), 2)            // she built out to the east
+    c.frame(v(10, 0), 2)            // they built out to the east
     expect(c.pivot().x).toBeCloseTo(0)
     c.update()
     expect(c.pivot().x).toBeCloseTo(10 * EASE)
@@ -155,10 +155,10 @@ describe('framing an island that is not at the origin', () => {
 describe('spinning a grown island', () => {
   it('turns the far tile in place instead of swinging it away', () => {
     /*
-     * The complaint itself. Drag to rotate, and the point she is looking at
+     * The complaint itself. Drag to rotate, and the point they are looking at
      * must stay the same distance from the camera — that is what "rotating
      * about it" means. Before the fix the ORIGIN was what stayed fixed, and
-     * the tile she was looking at travelled right across the screen.
+     * the tile they were looking at travelled right across the screen.
      */
     const dom = stubDom()
     const c = createOrbitCamera(dom.el)
@@ -215,7 +215,7 @@ describe('spinning a grown island', () => {
  * ------------------------------------------------------------------ */
 
 describe('lookAt — zoom to location', () => {
-  it('moves the pivot onto the place she asked for', () => {
+  it('moves the pivot onto the place they asked for', () => {
     const dom = stubDom()
     const c = createOrbitCamera(dom.el)
     c.frame(v(0, 0), 8)              // a big island centred on home
@@ -289,7 +289,7 @@ describe('the pivot cannot leave the island — this is not panning', () => {
 
   it('pins the pivot to the home rock while that is the whole island', () => {
     // Radius nought: there is nowhere else to look, so there is no way to
-    // orbit an empty sea on the very first screen she ever sees.
+    // orbit an empty sea on the very first screen they ever see.
     const dom = stubDom()
     const c = createOrbitCamera(dom.el)
     c.frame(v(0, 0), 0)
@@ -311,9 +311,9 @@ describe('the pivot cannot leave the island — this is not panning', () => {
 describe('a deliberate focus survives the island growing under it', () => {
   it('travels with the island rather than snapping back to the middle', () => {
     /*
-     * She looks at her eastern shore, then earns a tile and builds it. The
-     * island's middle shifts a little; the camera must shift by that little,
-     * not haul her back to the centre of everything.
+     * The child looks at their eastern shore, then earns a tile and builds
+     * it. The island's middle shifts a little; the camera must shift by that
+     * little, not haul them back to the centre of everything.
      */
     const dom = stubDom()
     const c = createOrbitCamera(dom.el)
@@ -326,7 +326,7 @@ describe('a deliberate focus survives the island growing under it', () => {
     expect(c.focus().z).toBeCloseTo(0)
   })
 
-  it('walks the pivot onto the centroid when she has NOT chosen a spot', () => {
+  it('walks the pivot onto the centroid when the child has NOT chosen a spot', () => {
     // From a cold start pivot and centre are the same point, so every shift
     // lands the pivot exactly on the island's middle. That is the drift fix.
     const dom = stubDom()

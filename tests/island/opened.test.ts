@@ -31,7 +31,7 @@ const BASE = collection('base')?.members ?? []
 const pet = (species: string, n = 0): Pet =>
   ({ id: `${species}-${n}`, name: `friend ${n}`, species, at: { q: 0, r: 0 } })
 
-/** Every species of a collection, as if she had collected the lot. */
+/** Every species of a collection, as if the child had collected the lot. */
 const allOf = (id: string): string[] => [...(collection(id)?.members ?? [])]
 
 describe('what counts as owned', () => {
@@ -40,7 +40,7 @@ describe('what counts as owned', () => {
      * The whole of "one slot per species" as arithmetic. Four foxes is one fox
      * as far as an album is concerned, and if it were not, a child who had
      * exhausted the base pack could push a collection past 100% on duplicates
-     * and open an album for animals she had never met.
+     * and open an album for animals they had never met.
      */
     const owned = ownedByCollection(['animal-fox', 'animal-fox', 'animal-fox'])
     expect(owned[BASE_COLLECTION]).toBe(1)
@@ -55,8 +55,8 @@ describe('what counts as owned', () => {
 
 describe('a fresh island', () => {
   it('opens four albums straight away, base among them', () => {
-    // The first half of Joe's sentence. Under the cadence alone she would see
-    // one album until she owned twenty of the twenty-four.
+    // The first half of Joe's sentence. Under the cadence alone they would see
+    // one album until they owned twenty of the twenty-four.
     const opened = advance([], NOTHING_OPENED, rng())
     expect(opened.open).toHaveLength(MAX_ACTIVE)
     expect(opened.open[0]).toBe(BASE_COLLECTION)
@@ -97,7 +97,7 @@ describe('a fresh island', () => {
 
   it('opens nothing but albums that actually have animals in them', () => {
     // PB-058 stated directly, at the seam where a child would meet it: before
-    // this, four drawn at random from twenty-one meant most of what she opened
+    // this, four drawn at random from twenty-one meant most of what they opened
     // was a page of empty frames.
     for (let seed = 1; seed < 40; seed++) {
       const opened = advance([], NOTHING_OPENED, mulberry32(seed))
@@ -109,7 +109,7 @@ describe('a fresh island', () => {
   })
 })
 
-describe('and then nothing, until she finishes one', () => {
+describe('and then nothing, until they finish one', () => {
   it('stays at four however many friends come home', () => {
     /*
      * The second half of the sentence, and the case that would break if the
@@ -126,8 +126,8 @@ describe('and then nothing, until she finishes one', () => {
     const opened = advance([], NOTHING_OPENED, rng())
     const after = advance(allOf(BASE_COLLECTION), opened, rng())
     expect(after.open).toHaveLength(MAX_ACTIVE + 1)
-    // The finished one is still there — see `albumsToShow`. She keeps her
-    // trophy; it simply stops occupying a slot.
+    // The finished one is still there — see `albumsToShow`. The child keeps
+    // their trophy; it simply stops occupying a slot.
     expect(after.open).toContain(BASE_COLLECTION)
     expect(activeCount(allOf(BASE_COLLECTION), after)).toBe(MAX_ACTIVE)
   })
@@ -153,19 +153,19 @@ describe('and then nothing, until she finishes one', () => {
   })
 })
 
-describe('the save she is already carrying, with albums that were never worth giving', () => {
+describe('the save they are already carrying, with albums that were never worth giving', () => {
   /*
    * The half of PB-058 that a one-line change to HELD_BACK does not touch.
    * Juno's live save has up to three empty collections open right now, and they
-   * are not merely ugly — they are permanent. `completion` divides what she owns
-   * by the ROSTER size, so a collection with no models sits at 0% forever, never
-   * completes, never stops being active, and holds one of Joe's four slots for
-   * good. Three of them and she has one working slot and is never given another
-   * album for the rest of the game.
+   * are not merely ugly — they are permanent. `completion` divides what the
+   * child owns by the ROSTER size, so a collection with no models sits at 0%
+   * forever, never completes, never stops being active, and holds one of Joe's
+   * four slots for good. Three of them and Juno has one working slot and is
+   * never given another album for the rest of the game.
    */
   const STUCK = { open: ['base', 'ocean', 'ice', 'jungle'], lastOpened: 'jungle' }
 
-  it('takes back the empty albums and gives her live ones in their place', () => {
+  it('takes back the empty albums and gives the child live ones in their place', () => {
     const after = advance(['animal-fox'], STUCK, rng())
     for (const id of ['ocean', 'ice', 'jungle']) expect(after.open).not.toContain(id)
     expect(after.open).toContain(BASE_COLLECTION)
@@ -174,22 +174,22 @@ describe('the save she is already carrying, with albums that were never worth gi
     for (const id of after.open) expect(shippedIn(id).length).toBeGreaterThan(0)
   })
 
-  it('loses her nothing she owns — brief §19 — because base is untouched', () => {
+  it('loses the child nothing they own — brief §19 — because base is untouched', () => {
     const after = advance(BASE.slice(0, 5), STUCK, rng())
     expect(after.open).toContain(BASE_COLLECTION)
-    // The count she had is the count she has. Nothing about the prune reaches
-    // her pets; it only ever removes a page she could not have collected from.
+    // The count they had is the count they have. Nothing about the prune ever
+    // reaches their pets; it only removes a page they could not collect from.
     expect(ownedByCollection(BASE.slice(0, 5))[BASE_COLLECTION]).toBe(5)
   })
 
-  it('KEEPS a held-back album she has already collected from, which is the §19 guard', () => {
+  it('KEEPS a held-back album they have already collected from, which is the §19 guard', () => {
     /*
      * The case the (b) guard exists for, and it is built out of real roster data
      * rather than a mock: `animal-unicorn` is a genuine member of `legendary` in
-     * `roster.ts`, so `ownedByCollection` gives her a real count of 1 there even
+     * `roster.ts`, so `ownedByCollection` gives them a real count of 1 there even
      * though not one legendary species has been modelled yet. That is exactly
      * the shape of the day Joe releases `legendary` to a child who already has
-     * some of it — and on that day an (a)-only prune would take her unicorn's
+     * some of it — and on that day an (a)-only prune would take their unicorn's
      * page off the shelf. It does not.
      */
     expect(HELD_BACK).toContain('legendary')
@@ -216,7 +216,7 @@ describe('the save she is already carrying, with albums that were never worth gi
      * from `candidates`, which filters `HELD_BACK` out — so no pruned id can be
      * drawn back into the hole it left, and the second call finds nothing to
      * take. `main.ts` calls `advance` on every arrival, so an oscillation would
-     * reshuffle her albums every time she came back to the island.
+     * reshuffle their albums every time they came back to the island.
      */
     const once = advance(['animal-fox'], STUCK, rng())
     const twice = advance(['animal-fox'], once, rng())
@@ -269,7 +269,7 @@ describe('through the save and back', () => {
 
   it('a save written before this field existed reads as a fresh roster', () => {
     // The reason this is additive and not a version bump: an older save must
-    // open, not be refused. Refusing costs the child her island.
+    // open, not be refused. Refusing costs the child their island.
     const flow = { ...createFlow(), pets: [] as Pet[] }
     const save = toSave(flow, true) as unknown as Record<string, unknown>
     delete save.openCollections

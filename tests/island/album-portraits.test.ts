@@ -203,7 +203,7 @@ describe('the portraits are the island\'s own models', () => {
     /*
      * `preview` is a clone that shares geometry and materials with every pet of
      * the species on the island right now, so freeing them here would break
-     * friends she already owns (brief §19). Detached, never disposed — the same
+     * friends they already own (brief §19). Detached, never disposed — the same
      * contract `stage.showTemp` keeps, now proven on the grid's path too.
      */
     const { album, handed } = setup()
@@ -248,7 +248,7 @@ describe('two requests for one species do the work once', () => {
     expect(gpu.encodes).toBe(BASE?.members.length ?? 0)
   })
 
-  it('lets a page she has already seen come back with no work at all', async () => {
+  it('lets a page they have already seen come back with no work at all', async () => {
     const { album, asked } = setup()
     album.open([GACHAP], ['base'])
     await settle()
@@ -262,11 +262,11 @@ describe('two requests for one species do the work once', () => {
 
 /* ------------------------------------------------------------------ */
 
-describe('a turn warms the page she is about to reach', () => {
+describe('a turn warms the page they are about to reach', () => {
   /** Fox lives only in the base set, so a count of it names the page exactly. */
   const AFTER = ['garden', 'base']
 
-  it('takes the next page\'s portraits while she is looking at this one', async () => {
+  it('takes the next page\'s portraits while they are looking at this one', async () => {
     const { album, times } = setup()
     album.open([GACHAP], AFTER)
     expect(times(FOX), 'not during the turn itself').toBe(0)
@@ -290,7 +290,7 @@ describe('a turn warms the page she is about to reach', () => {
     /*
      * Building every page up front is exactly the cost the paging commit
      * removed. A child who never turns past the first page must not pay for four
-     * rosters she is not looking at — so the base set, three pages away, is
+     * rosters they are not looking at — so the base set, three pages away, is
      * still untouched here.
      */
     const { album, times } = setup()

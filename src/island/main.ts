@@ -1,7 +1,7 @@
 /**
  * Pet Island.
  *
- * Reading hatches eggs into pets. Maths earns land the child places herself.
+ * Reading hatches eggs into pets. Maths earns land the child places themselves.
  * Those are the two verbs, and they are the same two the brief opens with.
  *
  * Everything about WHAT to read or count comes from the M0 modules, unchanged
@@ -111,10 +111,10 @@ const PLOT_FAREWELL_MS = balance.stage.flyBackMs + 500
 /**
  * How long the stage holds after the shell breaks.
  *
- * Long enough to MEET the friend: she pops up on the plinth as the shell
- * goes, and this is how long the child gets to look at her before the stage
- * dissolves and she walks out into the world. It was briefly cut to 700ms
- * when the beat was missing and the shot was of an empty turntable.
+ * Long enough to MEET the friend: it pops up on the plinth as the shell
+ * goes, and this is how long the child gets to look at it before the stage
+ * dissolves and the friend walks out into the world. It was briefly cut to
+ * 700ms when the beat was missing and the shot was of an empty turntable.
  */
 const HATCH_HOLD_MS = balance.stage.hatchHoldMs
 
@@ -199,8 +199,8 @@ async function boot(): Promise<void> {
    * side of it: the plot builds correctly whatever it is told to build, the flow
    * records correctly what is being built, and every bug was in the sentence
    * between them. The host holds the rule that closes them — what stands on the
-   * island tracks what the flow SAYS, so a plot she has retyped is rebuilt rather
-   * than left standing there depicting her old answer.
+   * island tracks what the flow SAYS, so a plot they have retyped is rebuilt
+   * rather than left standing there depicting their old answer.
    */
   const plots = createPlotHost({
     models: world.models,
@@ -237,9 +237,9 @@ async function boot(): Promise<void> {
   pets.setMovers(() => [fred.obstacle()])
 
   /*
-   * Her signpost, on the home tile. The one place the world says out loud
-   * that it belongs to her — and it is IN the island rather than on top of
-   * it, so she can turn the camera round it and it is still there.
+   * Their signpost, on the home tile. The one place the world says out loud
+   * that it belongs to them — and it is IN the island rather than on top of
+   * it, so the child can turn the camera round it and it is still there.
    */
   // Lettered once the save has been read; see below.
   const sign = createSign('')
@@ -250,8 +250,8 @@ async function boot(): Promise<void> {
    *
    * Its own little scene, drawn into a scissored corner of the same canvas
    * after the world. The egg or the growing plot is RE-PARENTED onto its
-   * turntable for the duration, so the piece she watches is literally the one
-   * she owns rather than a stand-in copy.
+   * turntable for the duration, so the piece they watch is literally the one
+   * they own rather than a stand-in copy.
    */
   const stage = createStage()
   world.onOverlayFrame(renderer => {
@@ -303,15 +303,15 @@ async function boot(): Promise<void> {
     idb: await openIdb(), now: () => clock.now(),
   })
   const PROFILE = 'juno'
-  /** Her name where the script wants one, or something friendly if she skipped. */
+  /** Their name where the script wants one, or a friendly word if they skipped. */
   const child = (): string => childName || 'friend'
   const loaded = await loadIsland(store, PROFILE)
 
   /*
    * "I found your island!" — never an error a child reads.
    *
-   * The primary save failed its checksum and a snapshot was used instead. She
-   * is told something reassuring happened, not that something broke; the
+   * The primary save failed its checksum and a snapshot was used instead. The
+   * child is told something reassuring happened, not that something broke; the
    * detail is in the console for a grown-up.
    */
   const load = store.lastLoad(PROFILE, 'save')
@@ -320,7 +320,7 @@ async function boot(): Promise<void> {
   }
 
   /*
-   * Ask the browser to keep her island, once she owns something worth keeping.
+   * Ask the browser to keep their island, once they own something worth keeping.
    *
    * Storage that is not marked persistent can be evicted under pressure with
    * no warning to anyone. Asked after the first friend or the first tile
@@ -328,7 +328,7 @@ async function boot(): Promise<void> {
    * screen is the one most likely to be dismissed.
    */
   /*
-   * The harness (A3): the single place that decides what she may be dealt, and
+   * The harness (A3): the single place that decides what they may be dealt, and
    * the only thing that hears how it went.
    *
    * `attainment` is the record it mutates and `persist()` writes; the harness
@@ -356,13 +356,13 @@ async function boot(): Promise<void> {
   const onceFlags = loaded.onceFlags
 
   /**
-   * Which albums she has open, advanced the moment the save is read.
+   * Which albums they have open, advanced the moment the save is read.
    *
    * ADVANCED HERE AND NOT IN `save.ts` because opening one is a DRAW, and a
    * loader has no business consuming randomness — the same separation
    * `collection.ts`'s deck keeps a hundred lines below. It is done at boot
    * rather than lazily when the album opens so that the four are decided once
-   * and written on her next save, whether or not she ever taps the book: a
+   * and written on their next save, whether or not they ever tap the book: a
    * roster that materialised only on first view would be a different four for
    * every child who never opened it.
    *
@@ -387,20 +387,20 @@ async function boot(): Promise<void> {
    * that may answer that question.
    *
    * It was a `let` set on the story's LAST line, which is a line most sessions
-   * never reach: the story hands over to the child at beat six and returns, she
-   * can back out of that round, and a reload can land on any beat. All of those
-   * left the flag false, so the opening replayed on every single load. See
-   * opening.ts — the gate claims it the moment the story starts.
+   * never reach: the story hands over to the child at beat six and returns,
+   * they can back out of that round, and a reload can land on any beat. All of
+   * those left the flag false, so the opening replayed on every single load.
+   * See opening.ts — the gate claims it the moment the story starts.
    */
   const opening = openingGate(loaded.openingSeen, () => persist())
   /*
-   * What she is called. Empty until she has been asked, which happens once,
+   * What they are called. Empty until they have been asked, which happens once,
    * just before the story. Falls back to a neutral word rather than blocking:
-   * a name prompt must never be a wall between a child and her game.
+   * a name prompt must never be a wall between a child and their game.
    */
   let childName = loaded.childName
   sign.setName(childName || 'my')
-  // The tab follows her name too, once she has given one (#10).
+  // The tab follows their name too, once they have given one (#10).
   if (childName) document.title = `${childName}'s Island`
 
   /*
@@ -408,7 +408,7 @@ async function boot(): Promise<void> {
    *
    * It is painted here at boot rather than when a round opens, because the
    * rule lives on <body> and a class arriving after the cards are on screen
-   * would repaint them in front of her.
+   * would repaint them in front of the child.
    */
   let calmColours = loaded.calmColours
   applyWordColours(document.body, calmColours)
@@ -446,7 +446,7 @@ async function boot(): Promise<void> {
   flow = loaded.flow
 
   /**
-   * Who is in the egg: someone she has not met, while there is anyone left.
+   * Who is in the egg: someone they have not met, while there is anyone left.
    *
    * Joe, on the shipped build: *"a second animal of the same type has just
    * spawned. that must not happen."*
@@ -456,24 +456,24 @@ async function boot(): Promise<void> {
    * last `speciesMemory` hatches. That killed the clumping and left the actual
    * complaint untouched, because a window of five over a pack of 24 leaves 19
    * candidates on every draw and cannot see which of them are already standing
-   * on her island. At eight pets, about two hatches in five were a duplicate:
+   * on their island. At eight pets, about two hatches in five were a duplicate:
    * not a collision, the ordinary case on a schedule. Measured, before the fix,
    * over 24 hatches of the real state machine: 19 distinct animals and five
    * repeats.
    *
    * `makeCollectionDeck` states the rule in the terms it is really about —
-   * never deal an animal she already has — and falls back to exactly the old
-   * window once she has met all 24, so PB-036 holds and an egg never has
+   * never deal an animal they already have — and falls back to exactly the old
+   * window once they have met all 24, so PB-036 holds and an egg never has
    * nothing to give (JT-027 is the open question about what that ought to
    * become). See `collection.ts` for why widening the window is not this fix.
    *
-   * Built HERE, after the save, because her island is where the collection
+   * Built HERE, after the save, because their island is where the collection
    * lives: `flow.pets` is the list of who has come home, in order. Nothing
    * about the deck is persisted and nothing needs to be — priming it from what
-   * she already owns costs no save change (PHASE3-HANDOVER §6: a schema bump
+   * they already own costs no save change (PHASE3-HANDOVER §6: a schema bump
    * waits for the first `v*` tag). Without the priming the deck would start
    * empty on every load and the bug walks back in through the front door:
-   * reload, hatch, an animal she already had.
+   * reload, hatch, an animal they already had.
    */
   // Plain `string` in, plain `string` out: a species read back out of a save is
   // a string rather than the literal union SPECIES infers, and priming must be
@@ -483,7 +483,7 @@ async function boot(): Promise<void> {
   drawSpecies.remember(flow.pets.map(p => p.species))
 
   /**
-   * And decided IN ADVANCE, so she can be fetched while the child is reading.
+   * And decided IN ADVANCE, so it can be fetched while the child is reading.
    *
    * Joe: "preloaded the animal otherwise there is a render delay and
    * disappointment." The species used to be drawn on the line that hatched it,
@@ -517,8 +517,8 @@ async function boot(): Promise<void> {
      * harness had not landed, so every answer Juno gave was measured and then
      * dropped. This one line is where measurement starts existing.
      *
-     * Deliberately separate from `onPassed`: what she ANSWERED and what she
-     * was PAID for are different questions, and a find page emits several of
+     * Deliberately separate from `onPassed`: what they ANSWERED and what they
+     * were PAID for are different questions, and a find page emits several of
      * the first against one of the second.
      */
     onAttempt: evt => { harness.recordAttempt(evt) },
@@ -529,10 +529,10 @@ async function boot(): Promise<void> {
       openingResumeAt = -1
       flow = handleChallengeDismissed(flow)
       /*
-       * WIRING (break governor). A child who walks out of her third mashed page
-       * in a row is the clearest case the watch has, and this is the one place
-       * the island's own greeting would otherwise talk over Fred. Pinned by
-       * tests/island/stretch.test.ts.
+       * WIRING (break governor). A child who walks out of their third mashed
+       * page in a row is the clearest case the watch has, and this is the one
+       * place the island's own greeting would otherwise talk over Fred. Pinned
+       * by tests/island/stretch.test.ts.
        */
       if (!offerAStretch()) {
         overlay.say('Tap the egg to read to it — or tap the island for land!')
@@ -579,7 +579,7 @@ async function boot(): Promise<void> {
      * the turntable — so re-siting mid-round flung it several units off the
      * plinth to orbit the vignette. refresh() runs after every completed page,
      * so this fired constantly. Its place on the island cannot change while
-     * she is looking at it anyway; it is re-sited when it comes home.
+     * the child is looking at it anyway; it is re-sited when it comes home.
      */
     if (stage.holds(egg.group)) return
     const clutter = props.clutter()
@@ -694,7 +694,7 @@ async function boot(): Promise<void> {
     fred.setHome(home.x - world.models.size * 0.22, home.z + world.models.size * 0.24,
       world.models.size * 0.34)
     /*
-     * Always visible, because they are now how she asks for land at all.
+     * Always visible, because they are now how the child asks for land at all.
      * A control that only appears once you have already used it is not a
      * control, it is a reward.
      */
@@ -710,7 +710,7 @@ async function boot(): Promise<void> {
 
   /* ---------- progress ----------
    * A hatch now costs five reading rounds and a tile ten sums, so the child
-   * needs to SEE that she is getting somewhere - otherwise the work feels
+   * needs to SEE that they are getting somewhere - otherwise the work feels
    * like it goes nowhere, which is the opposite of what the pacing is for.
    */
   const progressBar = document.createElement('div')
@@ -732,7 +732,7 @@ async function boot(): Promise<void> {
   /* ---------- the grown-up gear ----------
    *
    * Everything the child owns is behind this: every pet, every name, every
-   * tile she counted up. Brief §19 says none of it can be lost, and a plain
+   * tile they counted up. Brief §19 says none of it can be lost, and a plain
    * "reset island" button sitting on the play surface is one curious tap away
    * from all of it — which is not a guardrail, it is a trap with a label.
    *
@@ -774,7 +774,7 @@ async function boot(): Promise<void> {
     const n = flow.pets.length
     const friends = `${n} friend${n === 1 ? '' : 's'}`
     const choice = await askChoice(document.body, 'Grown-ups', [
-      { id: 'learning', label: 'What she is working on', detail: 'what she is dealt, and how it is going' },
+      { id: 'learning', label: 'What they are working on', detail: 'what they are dealt, and how it is going' },
       { id: 'colours', label: 'Word colours', detail: calmColours ? 'all green' : 'green and red' },
       { id: 'backup', label: 'Back up to a file', detail: `${friends} and this island` },
       { id: 'restore', label: 'Restore from a backup', detail: 'replaces what is here' },
@@ -789,7 +789,7 @@ async function boot(): Promise<void> {
     if (choice === 'restore') { await restore(); return }
     /*
      * Brief §3 wants the story replayable forever. It used to be a tap on
-     * Fred, which Joe hit mid-game — the intro restarted and walked her
+     * Fred, which Joe hit mid-game — the intro restarted and walked the child
      * through challenges that handed over an animal and then a tile. Still
      * available, now behind the PIN where a curious tap cannot reach it.
      */
@@ -801,9 +801,9 @@ async function boot(): Promise<void> {
      * Joe's card: *"it should be at least a question to the adult ... wipe
      * should offer 3 options with tick boxes: 1. wipe island and animals, 2
      * wipe academic progress ... 3 wipe kids name."* It used to be
-     * all-or-nothing, so a parent who wanted her maths to start over had to
-     * destroy her animals to get there — and animals are the thing brief §19
-     * is most emphatic she cannot lose.
+     * all-or-nothing, so a parent who wanted their child's maths to start over
+     * had to destroy the child's animals to get there — and animals are the
+     * thing brief §19 is most emphatic a child cannot lose.
      *
      * `askWipe` includes its own confirm and only resolves after it, so a
      * value here means a grown-up has seen the ticked list read back and said
@@ -829,7 +829,7 @@ async function boot(): Promise<void> {
    * Written to the disk BEFORE the screen changes, which is the same order the
    * learning panel's tick uses (grownups.ts, A5) and for the same reason: a
    * grown-up who sees the colours change has been told the choice is kept, and
-   * if the write failed that is a lie he will only discover on the next
+   * if the write failed that is a lie they will only discover on the next
    * reload. On a failed write nothing changes and nothing is claimed.
    */
   async function wordColours(): Promise<void> {
@@ -899,12 +899,12 @@ async function boot(): Promise<void> {
    *
    * The only export route there is: brief §19 permits no accounts and no
    * network calls beyond static hosting, so this file is the difference
-   * between a lost tablet costing an afternoon and costing everything she has
-   * ever built.
+   * between a lost tablet costing an afternoon and costing everything a child
+   * has ever built.
    */
   async function backup(): Promise<void> {
     // Flush first. Backing up a save that is one ceremony out of date is a
-    // subtle way of losing exactly the thing she just earned.
+    // subtle way of losing exactly the thing they just earned.
     await persist()
     const env = await store.envelope(PROFILE, 'save')
     if (!env) { overlay.toast('Nothing to back up yet'); return }
@@ -957,7 +957,7 @@ async function boot(): Promise<void> {
    */
   const stamp = document.createElement('div')
   stamp.className = 'dev-stamp'
-  // The channel is on the stamp because 'is this the build she plays?' is
+  // The channel is on the stamp because 'is this the build they play?' is
   // the first question anyone looking at a screenshot needs answered.
   stamp.textContent = BUILD_STAMP + ' · ' + CHANNEL
     + (devBalance ? ' · fast' : '')
@@ -980,7 +980,7 @@ async function boot(): Promise<void> {
      *
      * `pets.preview` clones the shared prototype, which has already had
      * `wearFaceUVs` applied — so the friend on the card is literally the friend
-     * on the island, and she stays right the day item 7 dresses anybody.
+     * on the island, and it stays right the day item 7 dresses anybody.
      *
      * THIS NOW FEEDS THE GRID'S THUMBNAILS TOO, which is PB-055. Until then the
      * album kept a second `GLTFLoader` for the little pictures, so opening it
@@ -991,9 +991,9 @@ async function boot(): Promise<void> {
      */
     preview: species => pets.preview(species),
     /*
-     * WHERE SHE IS NOW — and this is the whole of "find it on the map".
+     * WHERE THE FRIEND IS NOW — and this is the whole of "find it on the map".
      *
-     * NOT `flow.pets[].at`, which is where she HATCHED. Wandering happens on the
+     * NOT `flow.pets[].at`, which is where it HATCHED. Wandering happens on the
      * live scene-graph roots inside `pets.ts` and is never written back to the
      * flow, so the hatch spot is a different tile on any grown island. This is
      * the one port that had to be added to `pets.ts` for this feature.
@@ -1027,7 +1027,7 @@ async function boot(): Promise<void> {
    *
    * Every wiring bug found at the M1 gate had the same shape: a transition
    * no-ops (wrong phase), main.ts opens the challenge anyway, the child does
-   * the whole round, and challengePassed then matches no branch — so she gets
+   * the whole round, and challengePassed then matches no branch — so the child
    * nothing for real work. Asserting the phase here turns that entire class of
    * mistake into a visible nothing instead of a swallowed something.
    */
@@ -1069,12 +1069,12 @@ async function boot(): Promise<void> {
      *
      * The split layout still applies, so the panel takes one side and the
      * world shows through the other. Nothing is drawn into that gap: the
-     * stage slot is transparent, and what she sees there IS the island.
+     * stage slot is transparent, and what the child sees there IS the island.
      */
     /*
      * Both the egg and the tile go on the turntable — which is now a
-     * TRANSPARENT container, so they read as floating freely over her island
-     * rather than sitting in a box with its own grass and sky.
+     * TRANSPARENT container, so they read as floating freely over the child's
+     * island rather than sitting in a box with its own grass and sky.
      */
     const piece = kind === 'read' ? egg.group
       : kind === 'sum' ? plots.current()?.group ?? null
@@ -1116,7 +1116,7 @@ async function boot(): Promise<void> {
    * that card was chosen under whatever was ticked at the time — so a held
    * round must be ATTRIBUTED to the stage it was originally dealt at, not to
    * whatever a fresh draw would pick now. Two slots rather than the harness's
-   * one `current`, because the rounds interleave: she can leave a sum, read a
+   * one `current`, because the rounds interleave: they can leave a sum, read a
    * page, and come back to the sum, and a single slot would by then be holding
    * the reading page.
    */
@@ -1170,17 +1170,17 @@ async function boot(): Promise<void> {
     /*
      * *"dealt MIXED with the minus sign popping on debut"* — runA.md:236.
      *
-     * The debut is the first take-away she is EVER dealt, which is a question
+     * The debut is the first take-away they are EVER dealt, which is a question
      * about the record and not about this round: `takingAway` 1 with no
      * attempts on it yet. Read straight off `attainment` because that is where
      * the answer already is — no new persisted flag, and nothing added to the
      * harness, which would be a second thing to keep in step with the first.
      *
      * It reads `attempts` and not the tick, and that matters: the path is
-     * ticked the instant she says yes to the offer, so a tick would be spent
-     * before she had seen a single minus sign. `dealt()` above does not touch
+     * ticked the instant they say yes to the offer, so a tick would be spent
+     * before they had seen a single minus sign. `dealt()` above does not touch
      * `attempts` — only an answered question does — so this stays true right
-     * up to the moment she answers it, held rounds included.
+     * up to the moment they answer it, held rounds included.
      *
      * REJECTED: popping on every subtraction. runA.md:236 says debut, and a
      * glyph that jumps every time stops meaning "this one is new" by the
@@ -1194,7 +1194,7 @@ async function boot(): Promise<void> {
   }
 
   /**
-   * Run B's offer, put to her at the completion high (runA.md:230-236).
+   * Run B's offer, put to the child at the completion high (runA.md:230-236).
    *
    * WHAT THIS FUNCTION DELIBERATELY DOES NOT DO is most of it. Whether there
    * is an offer to make — priority between the two, the cadence, the
@@ -1207,18 +1207,18 @@ async function boot(): Promise<void> {
    *
    * AFTER THE CEREMONY, NEVER INSIDE IT. `ceremony()` holds the island's exits
    * shut for the length of its body, and a question with no timer behind it
-   * inside that body would hold them shut until she answered — which is a lock
-   * on a child, and brief §19 does not allow one. It is also the moment the
-   * spec asks for: she has just watched a friend arrive or a piece of land
-   * land, and *"do you want harder ones?"* means something different there
+   * inside that body would hold them shut until the child answered — which is
+   * a lock on a child, and brief §19 does not allow one. It is also the moment
+   * the spec asks for: they have just watched a friend arrive or a piece of
+   * land land, and *"do you want harder ones?"* means something different there
    * than it does after a page that merely ended.
    *
    * AND IT PERSISTS. An accepted offer ticks a stage and stamps the honeymoon,
-   * and both of those live in `attainment` — so without this write her yes is
-   * a thing that happened until she next closes the tab. Through `commit` on
-   * the attainment record, exactly as the grown-ups panel's ticks are, and not
-   * through `commitState()`: those receipts are counted one-for-one against
-   * ceremonies (barrier.test.ts), and this is not one.
+   * and both of those live in `attainment` — so without this write their yes
+   * is a thing that happened until they next close the tab. Through `commit`
+   * on the attainment record, exactly as the grown-ups panel's ticks are, and
+   * not through `commitState()`: those receipts are counted one-for-one
+   * against ceremonies (barrier.test.ts), and this is not one.
    */
   async function putTheOffer(): Promise<void> {
     const due = harness.pendingOffer()
@@ -1237,10 +1237,10 @@ async function boot(): Promise<void> {
       : 'You are doing really well! Would you like some trickier questions? They will get you eggs and tiles faster.'
 
     /*
-     * Spoken AND shown. She is five: the trickier line is above her reading
-     * level, and a question she cannot read is not a choice. The panel carries
-     * its own copy because `body:has(.overlay:not(.hide)) .say` blanks Fred's
-     * card for exactly as long as the buttons are up.
+     * Spoken AND shown. The child is five: the trickier line is above their
+     * reading level, and a question they cannot read is not a choice. The panel
+     * carries its own copy because `body:has(.overlay:not(.hide)) .say` blanks
+     * Fred's card for exactly as long as the buttons are up.
      */
     speech.speak(line)
     const accepted = await overlay.offer(line)
@@ -1286,7 +1286,7 @@ async function boot(): Promise<void> {
 
       if (hatched) {
         /*
-         * This egg is spent, so decide the NEXT friend and start fetching her
+         * This egg is spent, so decide the NEXT friend and start fetching it
          * now — the next hatch is five pages away, which is minutes of cover
          * rather than the 700ms a breaking shell buys.
          *
@@ -1302,7 +1302,7 @@ async function boot(): Promise<void> {
          * The pet exists in `flow` the moment handleChallengePassed returns,
          * but persist() used to run only after the ceremony — leaving a
          * two-second window in which closing the tab lost both the friend and
-         * the page that earned her. Two seconds is not long unless it is the
+         * the page that earned it. Two seconds is not long unless it is the
          * single most important moment in the game (brief §19).
          */
         const receipt = await commitState()
@@ -1318,17 +1318,17 @@ async function boot(): Promise<void> {
          * overlay, recoverable only by reloading.
          */
         await ceremony(receipt, exits, async () => {
-          // If she has already left (collect-and-leave inside the win hold),
+          // If the child has already left (collect-and-leave in the win hold),
           // there is no stage to perform on; hatch in the world as before.
           const onStage = overlay.isOpen()
           /*
-           * THE CEREMONY HAPPENS ON THE STAGE (§3 and §6), where she has been
-           * watching.
+           * THE CEREMONY HAPPENS ON THE STAGE (§3 and §6), where the child has
+           * been watching.
            *
            * The first version closed the stage and then hatched the egg back in
-           * the world — so the egg she had followed for five pages vanished at
+           * the world — so the egg they had followed for five pages vanished at
            * the exact moment it finally mattered, and the payoff played out
-           * somewhere she was not looking. Order now: burst and hatch in view,
+           * somewhere they were not looking. Order now: burst and hatch in view,
            * name card, spoken name, and only then does the stage dissolve and
            * the friend arrive on the island.
            */
@@ -1380,7 +1380,7 @@ async function boot(): Promise<void> {
            * in the ordinary case — the current species is already cached,
            * because it was warmed a whole egg ago. But after a FAILED warm the
            * two fetches race inside the same `petLoadMs` budget, and the one
-           * that matters is the one she is waiting to meet. Fable caught this
+           * that matters is the one they are waiting to meet. Fable caught this
            * reviewing the diff; the fix is ordering, not machinery.
            *
            * Still fire-and-forget, and it must stay that way: this runs inside a
@@ -1394,9 +1394,9 @@ async function boot(): Promise<void> {
              * Reframe for a PET, not an egg.
              *
              * The camera was framed for a 0.55 egg, and a pet is wider than it
-             * is tall — so at the egg's framing she filled the vignette edge to
-             * edge and her feet were cropped off the bottom. Pulling back a
-             * little puts the whole friend on the plinth with air around her,
+             * is tall — so at the egg's framing it filled the vignette edge to
+             * edge and its feet were cropped off the bottom. Pulling back a
+             * little puts the whole friend on the plinth with air around it,
              * which is what being introduced to someone looks like.
              */
             stage.frame(0.68)
@@ -1408,8 +1408,8 @@ async function boot(): Promise<void> {
           fred.hop()
 
           /*
-           * A beat with the friend on the plinth and her name on the card,
-           * before the stage dissolves and she walks out into the world.
+           * A beat with the friend on the plinth and its name on the card,
+           * before the stage dissolves and it walks out into the world.
            *
            * Cut short if nobody came: holding on an empty plinth is the dead
            * beat this whole change exists to remove, and it would be perverse
@@ -1447,7 +1447,7 @@ async function boot(): Promise<void> {
            * After the arrival, not with it. §3 orders these one after the
            * other, and for good reason: a pet bouncing in mid-island while a
            * chip launches toward the top corner asks a six-year-old to watch
-           * two things at once, and she will watch neither.
+           * two things at once, and they will watch neither.
            */
           setTimeout(() => {
             // The card goes as the chip picks the name up, so the two read as
@@ -1461,9 +1461,9 @@ async function boot(): Promise<void> {
          * THE OPENING STILL WINS, and the offer waits for another session.
          *
          * Fred is mid-story: he handed the child one page at beat six and is
-         * about to pick the thread back up. A panel asking whether she wants
+         * about to pick the thread back up. A panel asking whether they want
          * harder sums, opened over the top of that, is two voices at once and
-         * the first thing the island ever says to her being an upsell. The
+         * the first thing the island ever says to them being an upsell. The
          * offer costs nothing to postpone — `pendingOffer()` will still be
          * making it next time, because nothing here has been noted.
          */
@@ -1489,7 +1489,7 @@ async function boot(): Promise<void> {
       // refresh() applies, and that IS the feedback. No name, no promise.
       sfx.play('up')
       refresh()
-      // ...and on the stage she is watching, in view, as it happens (§6).
+      // ...and on the stage they are watching, in view, as it happens (§6).
       refreshDots('read')
 
       if (!more || openingResumeAt >= 0) {
@@ -1500,7 +1500,7 @@ async function boot(): Promise<void> {
           setTimeout(() => { void runOpening(at) }, 600)
         } else {
           // WIRING (break governor). Fred's story wins if it is mid-sentence —
-          // he is already talking, and the suggestion keeps until she opens
+          // he is already talking, and the suggestion keeps until they open
           // another page. Pinned by tests/island/stretch.test.ts.
           offerAStretch()
         }
@@ -1510,7 +1510,7 @@ async function boot(): Promise<void> {
       /*
        * Stay in the work. Reading five pages should feel like one sitting,
        * not five trips out to the island and back — the world only returns
-       * when the friend arrives, or when she taps back.
+       * when the friend arrives, or when the child taps back.
        *
        * The finished page is still on screen throughout this pause, because
        * finish() no longer tears it down; openRead() replaces it in a single
@@ -1535,7 +1535,7 @@ async function boot(): Promise<void> {
        * runA.md:232-233 — *"accept = tick + honeymoon (pay 3, 2 sessions)"*.
        * The harness stamps WHEN and `flow.ts` owns what a round is worth, so
        * this line is the whole of the join between them, and it asks about
-       * `dealtSum.path` rather than about maths in general: she accepted an
+       * `dealtSum.path` rather than about maths in general: they accepted an
        * offer on ONE path, and a honeymoon on `takingAway` must not quietly
        * pay three for addition too. `'sums'` is the fallback for the paths
        * into this branch that predate the harness (the opening script), and
@@ -1553,9 +1553,9 @@ async function boot(): Promise<void> {
          * THE FLY-BACK (§6): flourish on the turntable, then the land arrives.
          *
          * Spec's own words for why: "the connective payoff between abstract
-         * work and world position". She did sums on one side of the screen;
-         * the ground appears on the other; the arc is the sentence that joins
-         * them.
+         * work and world position". The child did sums on one side of the
+         * screen; the ground appears on the other; the arc is the sentence
+         * that joins them.
          *
          * NOTE THE ORDER. refresh() is held back until the scaffolding has
          * touched down, because the flow machine commits the real tile the
@@ -1567,7 +1567,7 @@ async function boot(): Promise<void> {
          * until it lands; the real one takes over as it is disposed.
          */
         // §19: save the finished tile BEFORE celebrating it. The hatch branch
-        // learned this; closing the tab mid-ceremony must not cost her the sum.
+        // learned this; closing the tab mid-ceremony must not cost them the sum.
         const receipt = await commitState()
         void askToKeepIt()
 
@@ -1602,7 +1602,7 @@ async function boot(): Promise<void> {
           speech.speak('You have found some land for your friends!')
           fred.talk(2.2)
           /*
-           * In from the SIDE, to the socket she chose — never the middle.
+           * In from the SIDE, to the socket they chose — never the middle.
            * The plot group already sits at its own socket, so the arc is a
            * lateral swing into it rather than a drop from overhead.
            */
@@ -1628,9 +1628,9 @@ async function boot(): Promise<void> {
           await wait(balance.stage.flyBackMs)
 
           /*
-           * The tile keeps EXACTLY what she built.
+           * The tile keeps EXACTLY what the child built.
            *
-           * She watched those eight things arrive one at a time; planting a
+           * They watched those eight things arrive one at a time; planting a
            * different eight from the coordinate hash at touchdown means the
            * trees move and change species in the frame the scaffolding
            * disappears. So the prop field adopts the grown scenery, and never
@@ -1643,7 +1643,7 @@ async function boot(): Promise<void> {
           /*
            * Touchdown. The scaffolding goes and the real tile appears in the
            * same beat, so there is never a frame with two hexes in one place
-           * — coincident faces flicker, and she would see it.
+           * — coincident faces flicker, and the child would see it.
            */
           plots.drop()
           world.lighting.celebrationBump()   // the move-in lift (lighting §4)
@@ -1652,7 +1652,7 @@ async function boot(): Promise<void> {
 
         /*
          * The other completion high, and the same rules: after the ceremony so
-         * the exits are her own again, and nothing follows it — no stretch, no
+         * the exits are theirs again, and nothing follows it — no stretch, no
          * second ask. See `putTheOffer`.
          */
         await putTheOffer()
@@ -1668,8 +1668,8 @@ async function boot(): Promise<void> {
        * 1. TAKE THE PLOT OFF THE STAGE. `stageFor('sum')` re-parents the plot
        *    onto the turntable and the turntable goes with the panel, so closing
        *    without handing it back left the plot alive — still in `flow.plot`,
-       *    still holding her sums — parented to something no longer on screen.
-       *    Her island showed an empty socket where her half-built tile was. Joe:
+       *    still holding their sums — parented to something no longer on screen.
+       *    Their island showed an empty socket where the half-built tile was. Joe:
        *    *"there is never a half built tile... map goes back to blank and it
        *    only resumes when i pick any blank tile socket"*. It also made the
        *    change-your-mind tap unreachable: no plot on the island to tap.
@@ -1731,7 +1731,7 @@ async function boot(): Promise<void> {
      *
      * It used to be recorded after the last beat, which is the one exit this
      * loop mostly does not take: beat six hands over to the child and RETURNS,
-     * and the story only resumes if she finishes that round — dismissing it
+     * and the story only resumes if they finish that round — dismissing it
      * clears `openingResumeAt` and ends the story for good, with nothing
      * written. A reload at any point did the same. So the profile stayed
      * "never seen" and Fred started again from "Oh! Hello" on every load, which
@@ -1764,7 +1764,7 @@ async function boot(): Promise<void> {
        * move on — and moving on speaks the next line, which cancels the
        * current utterance (v0:749, faithfully ported). Guess low and the last
        * words are cut off; the child's own name is at the END of "Oh! Hello,
-       * Juno", which is exactly what she lost. Now the beat ends when the
+       * Juno", which is exactly what they lost. Now the beat ends when the
        * voice does, with the computed time only as a ceiling for the case
        * where there is no voice at all.
        */
@@ -1853,7 +1853,7 @@ async function boot(): Promise<void> {
   document.body.append(offerBox)
 
   /*
-   * A tap on the backdrop puts the offer away and gives her the island back.
+   * A tap on the backdrop puts the offer away and hands the island back.
    *
    * Same rule and same mechanics as the grown-ups panels: only a tap on the
    * backdrop ITSELF, never one that bubbled up from a tile button, or choosing
@@ -1914,7 +1914,7 @@ async function boot(): Promise<void> {
         const next = chooseTile(flow, t)
         flow = next
         /*
-         * She asked at a socket, so choosing a kind SITES it — and then gets
+         * They asked at a socket, so choosing a kind SITES it — and then gets
          * straight on with building it, exactly as tapping a socket with a
          * kind already in hand does. Without this the second question was gone
          * but the second TAP was not: the plot appeared and then sat there
@@ -1953,7 +1953,7 @@ async function boot(): Promise<void> {
    * they want to do."*
    *
    * IT CLEARS ITSELF ON THE OVERRIDE, which is deliberate and not laziness. If
-   * the memory persisted, she would be asked once in a session and silently
+   * the memory persisted, they would be asked once in a session and silently
    * waved through forever after — a silent tax, and Joe asked for an
    * announcement. Clearing it means every single override is preceded by Fred
    * saying why, and costs exactly one extra tap. Ask, override, ask, override.
@@ -2004,9 +2004,9 @@ async function boot(): Promise<void> {
    *     channel at all, which is a second reason the suggestion waits.
    *
    * §19 IN ONE LINE: this returns a boolean and speaks a sentence. It sets no
-   * lock, starts no timer, and takes nothing back — everything she counted up is
-   * already banked and persisted by the refresh() above every caller. She can
-   * ignore Fred and tap the egg again on the very next frame.
+   * lock, starts no timer, and takes nothing back — everything they counted up
+   * is already banked and persisted by the refresh() above every caller. They
+   * can ignore Fred and tap the egg again on the very next frame.
    */
   function offerAStretch(): boolean {
     if (!overlay.stretchDue()) return false
@@ -2031,7 +2031,7 @@ async function boot(): Promise<void> {
       speech.speak('Fred!')
     },
     bouncePet: id => pets.bounce(id),
-    // "Zoom to location": move the camera's pivot onto the tile she tapped, so
+    // "Zoom to location": move the camera's pivot onto the tile they tapped, so
     // spin and pinch happen there instead of back at the home tile. The world
     // owns the easing and the clamping; this is only the coordinate.
     focusOn: a => world.focusOn(world.worldOf(a)),
@@ -2063,7 +2063,7 @@ async function boot(): Promise<void> {
     egg.update(dt, t)
     // Before update, so a tap arriving this frame meets a target sized for the
     // shot it is drawn in. The proxies are world-space spheres and the camera
-    // pulls back as her island grows; without this a pet's tap target falls
+    // pulls back as their island grows; without this a pet's tap target falls
     // from 47.5px to 26px on a full island (pets.ts, `pickRadiusAt`).
     pets.setCameraDistance(world.cameraDistance())
     pets.update(dt, t, flow.island, world.models.size)
@@ -2121,7 +2121,7 @@ async function boot(): Promise<void> {
      *
      * The reset lives behind the grown-ups PIN and then a menu, which is right
      * for a tablet a six-year-old holds — a plain "start again" button on the
-     * play surface is one curious tap from everything she owns. But it is
+     * play surface is one curious tap from everything they own. But it is
      * needless friction when the loop being tested IS the first ten minutes,
      * and Joe asked for the old button back.
      *
@@ -2178,19 +2178,19 @@ async function boot(): Promise<void> {
    * quiet time, not the busy time. From here there are minutes of reading
    * before the first shell breaks.
    *
-   * Not awaited: boot goes on to ask her name and start the story, and neither
-   * should wait on a GLB.
+   * Not awaited: boot goes on to ask their name and start the story, and
+   * neither should wait on a GLB.
    */
   void pets.warm(nextSpecies)
 
   /*
-   * Ask her name once, before the story.
+   * Ask their name once, before the story.
    *
-   * After the world is drawn, not before: asked first, she was answering into
-   * a blank blue screen. Her island should be behind the question — it is
-   * hers, and that is the whole reason for asking.
+   * After the world is drawn, not before: asked first, they were answering
+   * into a blank blue screen. Their island should be behind the question — it
+   * is theirs, and that is the whole reason for asking.
    *
-   * Before the opening rather than after, so Fred can greet her by name in
+   * Before the opening rather than after, so Fred can greet them by name in
    * his first line. A story that starts "hello friend" and switches to "hello
    * Juno" halfway reads as a bug.
    */
@@ -2207,7 +2207,7 @@ async function boot(): Promise<void> {
    * fault rather than as a fallback: eight lines in a row, and a child who
    * hears two of them in Oliver and the rest in the device's robot has been
    * shown a bug, not a graceful degradation. On the common path this costs
-   * nothing — she has just typed her name, and the clips landed while she did.
+   * nothing — the child was typing their name while the clips landed.
    *
    * Raced against a cap, never awaited bare. `load()` cannot reject, but it can
    * be slow on a cold cellular first run, and nothing about the story may wait

@@ -4,7 +4,7 @@
  * These tests drive the computation directly: a `StageStats` in, a
  * `StageReport` out. There is no panel here and there deliberately cannot be
  * one, because what is being pinned is not how the dots are drawn but what a
- * parent is TOLD about his daughter — the boundaries, the honesty gates, and
+ * parent is TOLD about their child — the boundaries, the honesty gates, and
  * the one arithmetic decision (median, never mean) that keeps a butterfly
  * walking past the screen from reading as a child who has got slower.
  *
@@ -97,7 +97,7 @@ describe('accuracy — the EWMA, banded', () => {
   })
 })
 
-describe('speed — the recent median against her own beginning', () => {
+describe('speed — the recent median against the child\'s own beginning', () => {
   it('reads settling while the gain is under 15%', () => {
     const s = stage({ early: tenEarly(1000), latencies: [900, 900, 900] })
     expect(stageReport(s).speed.tier).toBe('settling')
@@ -115,7 +115,7 @@ describe('speed — the recent median against her own beginning', () => {
     expect(stageReport(s).speed.tier).toBe('solid')
   })
 
-  it('reads settling when she has got slower, rather than refusing to say', () => {
+  it('reads settling when the child has got slower, rather than refusing to say', () => {
     const s = stage({ early: tenEarly(1000), latencies: [1400, 1400, 1400] })
     expect(stageReport(s).speed.tier).toBe('settling')
   })
@@ -125,8 +125,8 @@ describe('speed — the recent median against her own beginning', () => {
      * A child gets up mid-question, or a butterfly goes past, and one latency
      * comes back at four minutes. The mean of these five is 48,600ms — against
      * a 1000ms baseline that is a gain of MINUS forty-seven, and the panel
-     * would tell a parent his daughter had got dramatically slower on a stage
-     * she has in fact nearly halved. The median is 600 and does not notice.
+     * would tell a parent their child had got dramatically slower on a stage
+     * they have in fact nearly halved. The median is 600 and does not notice.
      */
     const s = stage({ early: tenEarly(1000), latencies: [600, 600, 600, 600, 240_000] })
     expect(stageReport(s).speed.tier).toBe('solid')
@@ -184,9 +184,9 @@ describe('consistency — is it holding up across days, unaided', () => {
   })
 
   it('reads steady when a rescue landed inside the window', () => {
-    // The work is there; the evidence that she did it unaided is not. That
-    // middle rung is the MECHANICAL CALL — the spec defines consistency as one
-    // boolean and this scale has three rungs.
+    // The work is there; the evidence that the child did it unaided is not.
+    // That middle rung is the MECHANICAL CALL — the spec defines consistency as
+    // one boolean and this scale has three rungs.
     const s = stage({ sessions: goodThree(), rescues: [noon(2026, 7, 21)] })
     expect(stageReport(s).consistency.tier).toBe('steady')
   })
@@ -200,7 +200,7 @@ describe('consistency — is it holding up across days, unaided', () => {
 
   it('is not spoiled by a rescue from before the window', () => {
     // The rescue ring holds ten and the window holds three days. An old rescue
-    // that has not been pushed out yet must not follow her around.
+    // that has not been pushed out yet must not follow the child around.
     const s = stage({ sessions: goodThree(), rescues: [noon(2026, 7, 4)] })
     expect(stageReport(s).consistency.tier).toBe('solid')
   })
@@ -375,7 +375,7 @@ describe('what Auto would do', () => {
     expect(autoWouldDo('reading', it.h, 'auto')).toBe('watching')
   })
 
-  it('says she is being gone easy on for the sessions after a yes', () => {
+  it('says the child is being gone easy on for the sessions after a yes', () => {
     const it = island()
     it.a.takingAway.stages[1]!.ticked = true
     masterSums1(it)
@@ -390,7 +390,7 @@ describe('what Auto would do', () => {
 
   it('keeps saying it after the path comes off Auto, because it is a promise made', () => {
     // The honeymoon outranks the mode deliberately. A parent taking the ticks
-    // into his own hand does not un-say the two easy sessions she was given.
+    // in hand does not un-say the two easy sessions the child was given.
     const it = island()
     it.a.takingAway.stages[1]!.ticked = true
     masterSums1(it)
@@ -425,7 +425,7 @@ describe('what Auto would do', () => {
      * JT-011(a): *"Manual persists, and Run B must skip it."* The harness
      * refuses probes and offers on a path off Auto, so a line that reported
      * them would be describing something that cannot happen — and the parent it
-     * would mislead is the one who just said he was driving.
+     * would mislead is the one who just said they were driving.
      */
     const it = island()
     it.a.takingAway.stages[1]!.ticked = true
@@ -443,8 +443,8 @@ describe('what Auto would do', () => {
   it('is in the register of the tier words: lower case, and no shouting', () => {
     /*
      * The line sits an inch from "settling · steady · solid" on the same page,
-     * and it is read by someone deciding whether to trust the island with his
-     * daughter's next step. A tripwire, because register is the kind of thing a
+     * and it is read by someone deciding whether to trust the island with their
+     * child's next step. A tripwire, because register is the kind of thing a
      * later edit breaks without noticing.
      */
     const it = island()

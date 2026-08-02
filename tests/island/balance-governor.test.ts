@@ -73,7 +73,7 @@ describe('the price wall stands outside the warn wall — PB-042', () => {
     }
   })
 
-  it('is silent at the price wall where the warn wall already bit — the wall she stands on', () => {
+  it('is silent at the price wall where the warn wall already bit — the wall they stand on', () => {
     // The measured reason for 1.2: standing exactly ON the crowded warn wall
     // leaves ZERO animals of headroom at every size, so before PB-042 the next
     // egg was always already a charged egg. It must not be any more.
@@ -173,12 +173,12 @@ describe('the way back — tilesShortOfCorridor and petsShortOfCorridor', () => 
     }
   })
 
-  it('asks for nothing at all while she is inside the corridor', () => {
+  it('asks for nothing at all while they are inside the corridor', () => {
     for (let fields = 0; fields <= FIELDS; fields++) {
       for (let pets = 0; pets <= PETS; pets++) {
         if (crowdedSteps(fields, pets) === 0) expect(tilesShortOfCorridor(fields, pets)).toBe(0)
         if (emptySteps(fields, pets) === 0) expect(petsShortOfCorridor(fields, pets)).toBe(0)
-        // And it always asks for something when she is outside it.
+        // And it always asks for something when they are outside it.
         if (crowdedSteps(fields, pets) > 0) {
           expect(tilesShortOfCorridor(fields, pets)).toBeGreaterThan(0)
         }

@@ -45,7 +45,7 @@ export interface Balance {
      */
     grace: { pets: number; tiles: number }
     /**
-     * The two walls of the corridor she is free to play inside, in TILES PER PET.
+     * The two walls of the corridor they are free to play inside, in TILES PER PET.
      *
      * Joe, JT-012: *"target ratio i think should be 1 animal per 2 tiles, with a
      * buffer to 2:3 either way, then it starts to become increasingly tougher to
@@ -70,7 +70,7 @@ export interface Balance {
      *
      * `empty` — 3.0 tiles per pet, one animal for every three tiles. Breached
      * when `habitableFields > 3 · pets`: bare land with nobody on it, so the
-     * TILE gets dearer and Fred asks her to read.
+     * TILE gets dearer and Fred asks them to read.
      *
      * See `emptySteps` and `crowdedSteps`, which are the only place either
      * number is compared against anything — the governors and the prices read
@@ -84,8 +84,8 @@ export interface Balance {
      *
      * `corridor` is where FRED SPEAKS. This is where the TILL OPENS, and it sits
      * strictly further out on both sides: 1.2 outside 1.5, 4.0 outside 3.0. In
-     * the band between them she has been told and is not being charged, which is
-     * the whole of the ruling.
+     * the band between them they have been told and are not being charged,
+     * which is the whole of the ruling.
      *
      * The measured reasons for these two numbers, and everything else in the
      * governor block, are in the tuning table above `emptySteps`.
@@ -104,7 +104,7 @@ export interface Balance {
      * §19 does not allow a lockout.
      *
      * `capMultiple` is the "up to a point" at the far end: nothing is ever more
-     * than three times its list price, however far out of balance she runs. With
+     * than three times its list price, however far out of balance they run. With
      * the shipped caps that is 96 units of sums for a tile and 84 of pages for an
      * egg — a lot of work, reachable work, and it never grows again.
      */
@@ -117,15 +117,15 @@ export interface Balance {
      * Joe, from playtesting: *"investigate: two cats spawned in a row."* The
      * draw was uniform over the 24 species with no memory at all, so a repeat
      * came up one hatch in 24 — often enough that a child collecting friends
-     * meets one early and reads it as her work not counting.
+     * meets one early and reads it as their work not counting.
      *
      * FIVE, of 24. An egg is several pages of reading apart, so five covers a
-     * whole sitting's worth of hatches: within one session she cannot meet the
+     * whole sitting's worth of hatches: within one session they cannot meet the
      * same animal twice. It still leaves 19 candidates on every draw, so the
      * next friend is genuinely a surprise, and a favourite can come back after
      * six hatches rather than after the whole pack. Raising it toward 23 turns
      * the collection into a checklist; dropping it to 1 fixes only the literal
-     * back-to-back case and leaves cat-dog-cat, which reads the same to her.
+     * back-to-back case and leaves cat-dog-cat, which reads the same to them.
      */
     speciesMemory: number
   }
@@ -294,7 +294,7 @@ export const itemPay = (): number => Math.max(1, balance.pay.item)
  *
  * `Math.max` rather than a bare read, so a dev overlay or a hand-tuned
  * `balance.json` can never make the honeymoon pay LESS than an ordinary item:
- * "going easy on her" that charged more would be a punishment for saying yes.
+ * "going easy on them" that charged more would be a punishment for saying yes.
  */
 export const honeymoonPay = (): number =>
   Math.max(itemPay(), balance.pay.honeymoon)
@@ -380,7 +380,7 @@ export const tileCost = (n: number): number => cost(balance.tile, n)
  *
  * WHY THE PRICE WALL IS NOT THE WARN WALL (PB-042). They used to be the same
  * wall, so the sentence "you have rather a lot of friends" and the higher price
- * arrived in the same instant: she was told and billed together, and had no
+ * arrived in the same instant: they were told and billed together, and had no
  * move that was merely warned. The gap is the room to act on the warning.
  *
  * WHY 1.2 AND 4.0 — MEASURED, not chosen by eye. Both were fixed by walking
@@ -408,7 +408,7 @@ export const tileCost = (n: number): number => cost(balance.tile, n)
  *   PER ANIMAL (`floor(4p) - floor(3p) = p`, exactly, at every p).
  *
  * WHY THE TWO SIDES ARE NOT SYMMETRIC (JT-018). Joe: the crowded wall prices
- * EGGS, and animals come out of a limited stash — she cannot make more. The
+ * EGGS, and animals come out of a limited stash — they cannot make more. The
  * empty wall prices TILES, and tiles are unlimited. Being generous about bare
  * land costs the island nothing, so the empty buffer is the wide one.
  *
@@ -420,7 +420,7 @@ export const tileCost = (n: number): number => cost(balance.tile, n)
 
 /**
  * How many whole fields past the EMPTY wall the island stands — the tile's step
- * count. Zero unless she is genuinely out of balance.
+ * count. Zero unless they are genuinely out of balance.
  *
  * The first field past the wall is step 1, and that is exactly the field at
  * which Fred starts asking (`activeGovernor`), which is the coherence the card
@@ -438,9 +438,9 @@ export const emptySteps = (habitableFields: number, pets: number): number =>
  * count. The mirror of `emptySteps`, and its exact mirror by construction.
  *
  * Measured in PETS rather than fields, because the egg is what gets dearer at
- * this wall and a pet is the thing she is buying. The most pets `habitableFields`
- * can hold without breaching is `floor(fields / crowded)`; every pet beyond that
- * is one step.
+ * this wall and a pet is the thing they are buying. The most pets
+ * `habitableFields` can hold without breaching is `floor(fields / crowded)`;
+ * every pet beyond that is one step.
  */
 export const crowdedSteps = (habitableFields: number, pets: number): number =>
   Math.max(0, pets - Math.floor(habitableFields / balance.governor.corridor.crowded))
@@ -450,7 +450,7 @@ export const crowdedSteps = (habitableFields: number, pets: number): number =>
  * actually gets charged for. `emptySteps`' shape exactly, one wall further out.
  *
  * Zero everywhere `emptySteps` is zero and for a stretch beyond it: the band
- * where Fred has asked her to read and the tile still costs list price. Never
+ * where Fred has asked them to read and the tile still costs list price. Never
  * greater than `emptySteps`, because `price.empty` is the outer wall — the
  * warning cannot arrive after the bill.
  */
@@ -462,7 +462,7 @@ export const emptyPriceSteps = (habitableFields: number, pets: number): number =
  * actually charged for. `crowdedSteps`' shape exactly, one wall further out.
  *
  * In PETS, for the same reason `crowdedSteps` is: the egg is what gets dearer
- * and an animal is the thing she is buying. The most animals `habitableFields`
+ * and an animal is the thing they are buying. The most animals `habitableFields`
  * can hold before the till opens is `floor(fields / price.crowded)`.
  */
 export const crowdedPriceSteps = (habitableFields: number, pets: number): number =>
@@ -484,9 +484,9 @@ export const graceHolds = (pets: number, tiles: number): boolean =>
   pets <= balance.governor.grace.pets && tiles <= balance.governor.grace.tiles
 
 /**
- * How many grass tiles she must ADD to get back inside the CROWDED warn wall —
+ * How many grass tiles they must ADD to get back inside the CROWDED warn wall —
  * the number Fred can say out loud instead of "you have rather a lot of
- * friends". Zero when she is already inside it.
+ * friends". Zero when they are already inside it.
  *
  * The exact inverse of `crowdedSteps` by construction, and tested as one:
  * adding this many fields makes `crowdedSteps` exactly 0, and adding one fewer
@@ -498,9 +498,9 @@ export const tilesShortOfCorridor = (habitableFields: number, pets: number): num
   Math.max(0, Math.ceil(pets * balance.governor.corridor.crowded) - habitableFields)
 
 /**
- * How many animals she must ADD to get back inside the EMPTY warn wall — the
+ * How many animals they must ADD to get back inside the EMPTY warn wall — the
  * mirror of `tilesShortOfCorridor`, in the unit that side is measured in.
- * Zero when she is already inside it.
+ * Zero when they are already inside it.
  *
  * The exact inverse of `emptySteps`, on the same terms: adding this many pets
  * drives it to 0 and one fewer does not. `ceil(fields / empty)` is the fewest
@@ -515,7 +515,7 @@ export const petsShortOfCorridor = (habitableFields: number, pets: number): numb
  * `1 + steps/4`, capped at 3: one step out is a quarter dearer, eight steps out
  * is treble and nothing is ever dearer than that. Inside the corridor `steps` is
  * 0 and this is exactly 1, so every price in a balanced island is the price it
- * has always been — the whole scheme is invisible until she leaves the corridor.
+ * has always been — the whole scheme is invisible until they leave the corridor.
  */
 export function scarcityMultiplier(steps: number): number {
   const { slope, capMultiple } = balance.governor.escalation

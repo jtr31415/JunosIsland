@@ -116,7 +116,7 @@ the report Joe owed.
 - **Pet-o-matic** dev page: every species × every designed set on
   turntables, keyboard-pageable, for Joe's veto pass.
 - Acceptance: 1,000 distinct renders enumerable in Pet-o-matic; a golden
-  test pins that natural-set pets she already owns render identically to
+  test pins that natural-set pets the child already owns render identically to
   before the engine landed.
 
 ### 7. Progressive album + set unlocks
@@ -271,4 +271,4 @@ is item 5, yours now.
 Run all five gates plus the new sim gate; update STATUS.md against this
 briefing's numbering; request the Fable 5 review with the full diff and ask
 it to attack: the persistence barrier coverage, refusal-contingency in 13,
-set-unlock latching, and anything that touches her existing save.
+set-unlock latching, and anything that touches the child's existing save.

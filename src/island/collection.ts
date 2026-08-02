@@ -1,5 +1,5 @@
 /**
- * Who is in the next egg: a dealer that knows what she has already collected.
+ * Who is in the next egg: a dealer that knows what has already been collected.
  *
  * Joe, 29 Jul, on the shipped build: *"a second animal of the same type has
  * just spawned. that must not happen."*
@@ -12,18 +12,18 @@
  * report and it is still doing its job. It is simply not a collection rule.
  *
  * A window of five over a pack of twenty-four leaves nineteen candidates on
- * every draw, and how many of those nineteen she already owns is a fact about
- * her island that the window cannot see. At eight pets, roughly eight of the
- * nineteen are animals she has got, so about two hatches in five were a
- * duplicate — this was not a collision, it was the ordinary case arriving on a
- * schedule. Widening the window does not fix it either: the window measures
+ * every draw, and how many of those nineteen the child already owns is a fact
+ * about their island that the window cannot see. At eight pets, roughly eight
+ * of the nineteen are animals they have got, so about two hatches in five were
+ * a duplicate — this was not a collision, it was the ordinary case arriving on
+ * a schedule. Widening the window does not fix it either: the window measures
  * HATCHES and the rule is about the ISLAND, and at a width of twenty-four the
  * dealer degenerates into a rota that hands out the pack in a fixed lap.
  *
  * So the rule is stated in the terms it is actually about: **never deal an
- * animal she already has, while there is anyone in the pack she has not met.**
+ * animal the child already has, while anyone in the pack is still unmet.**
  *
- * ## What happens when she has met everybody
+ * ## What happens when everybody has been met
  *
  * PB-036 is a standing requirement — Joe, JT-018: *"i have an unlimited amount
  * of tiles but a limited stash of animals as rewards. neither must ever run
@@ -36,7 +36,7 @@
  * The rule is therefore CONDITIONAL by construction, not by accident. Once the
  * pack is exhausted the deck falls back to precisely the behaviour that
  * shipped — a uniform draw carrying the short memory, so a completed album
- * still produces friends, with new names, and never the one she saw a moment
+ * still produces friends, with new names, and never the one seen a moment
  * ago. It is a floor, not an answer: what a child should actually be given for
  * a twenty-fifth egg is a product decision, raised as JT-027.
  *
@@ -52,19 +52,19 @@
 import { ri } from '../core/rng'
 import type { Rng } from '../core/rng'
 
-/** A dealer that deals the unmet first. Callable; `remember` states what she has. */
+/** Deals the unmet first. Callable; `remember` states what the child has. */
 export interface CollectionDeck {
   (): string
   /**
-   * State what is already on her island, in the order it came home.
+   * State what is already on the island, in the order it came home.
    *
    * REPLACES whatever the deck was holding rather than adding to it, because
    * the caller is stating the collection, not appending to it — the same
    * contract as `MemoryDeck.remember`, so the two are interchangeable at the
-   * call site. Anything outside `src` is ignored: brief §19 says nothing she
-   * owns is ever lost, and a save naming a species that has since been dropped
-   * from the pack must not throw on the way to her next hatch, nor consume one
-   * of the slots that are left.
+   * call site. Anything outside `src` is ignored: brief §19 says nothing the
+   * child owns is ever lost, and a save naming a species that has since been
+   * dropped from the pack must not throw on the way to the next hatch, nor
+   * consume one of the slots that are left.
    */
   remember(owned: readonly string[]): void
 }
@@ -89,12 +89,12 @@ export function makeCollectionDeck(
 ): CollectionDeck {
   const keep = Math.max(0, Math.min(Math.trunc(memory) || 0, src.length - 1))
   /**
-   * Everything she has, plus everything this deck has promised.
+   * Everything the child has, plus everything this deck has promised.
    *
    * A draw counts as owned the moment it is DEALT, not when the pet lands.
    * main.ts decides the species a whole egg ahead so it can be preloaded, so
    * between the draw and the hatch there is a friend who is spoken for but not
-   * yet on the island — and dealing her twice would put two of the same animal
+   * yet on the island — and dealing it twice would put two of the same animal
    * in the pack's own queue. If the tab closes in that window the promise is
    * simply forgotten and re-drawn on the next load, which costs nothing:
    * `remember` re-states the collection from `flow.pets`, the only record that
@@ -112,7 +112,7 @@ export function makeCollectionDeck(
   }
 
   const deck = ((): string => {
-    // Anyone she has not met yet always wins, and there is nothing to weigh:
+    // Anyone not met yet always wins, and there is nothing to weigh:
     // every unmet animal is equally new.
     const unmet = src.filter(v => !owned.has(v))
     if (unmet.length) {

@@ -5,10 +5,10 @@
  * delay and disappointment."*
  *
  * The hatch is the emotional peak of the whole game — the shell breaks, the
- * stage holds, and she meets her friend. The ceremony already began the fetch
- * as the egg cracked, which buys about 700ms; a ~140KB GLB over a tablet's wifi
- * does not fit in 700ms, so the plinth was empty at exactly the moment it
- * mattered and the friend appeared afterwards, out of nowhere.
+ * stage holds, and the child meets their friend. The ceremony already began
+ * the fetch as the egg cracked, which buys about 700ms; a ~140KB GLB over a
+ * tablet's wifi does not fit in 700ms, so the plinth was empty at exactly the
+ * moment it mattered and the friend appeared afterwards, out of nowhere.
  *
  * TWO things have to hold, and the second is the one that is easy to get wrong
  * and impossible to see:
@@ -94,11 +94,11 @@ beforeEach(() => {
   createLighting(null, meadowDay as LightingPreset)
 })
 
-describe('the friend is fetched before she is needed', () => {
+describe('the friend is fetched before the hatch needs it', () => {
   it('leaves the species ready with the network held shut afterwards', async () => {
     /*
      * The promise the whole change exists to make: once the friend has been
-     * warmed, the hatch gets her without touching the network. The gate is
+     * warmed, the hatch gets it without touching the network. The gate is
      * closed for the second half, so a `preview` that went back out would
      * hang here rather than be quietly rescued by a cache the tablet has not
      * got.
@@ -179,8 +179,8 @@ describe('a preload that fails costs nothing', () => {
 
   it('does not poison the species for the rest of the session', async () => {
     /*
-     * Brief §19: nothing she owns can be lost. One dropped request must not
-     * mean that species can never hatch again until she reloads — so a failure
+     * Brief §19: nothing the child owns can be lost. One dropped request must
+     * not mean that species can never hatch again until a reload — so a failure
      * is evicted rather than remembered, and the hatch tries for itself.
      */
     const field = createPetField()
@@ -232,7 +232,7 @@ describe('main.ts decides the species early enough to preload it', () => {
     /*
      * The original: `SPECIES[ri(defaultRng, SPECIES.length)]` sat two lines
      * above `handleChallengePassed`, so the friend was not known until the
-     * instant she was needed and there was nothing at all to preload.
+     * instant it was needed and there was nothing at all to preload.
      */
     expect(passed).not.toMatch(/SPECIES\s*\[\s*ri\(/)
     expect(passed).toContain('const species = nextSpecies')
@@ -242,7 +242,7 @@ describe('main.ts decides the species early enough to preload it', () => {
     /*
      * `drawSpecies` was a bare uniform pick — `SPECIES[ri(...)]` — then a
      * remembered draw (species.test.ts), and is now a collection draw that will
-     * not deal an animal she already owns (collection.test.ts). What this test
+     * not deal an animal they already own (collection.test.ts). What this test
      * cares about has survived all three and is not the implementation: ONE
      * named function, defined outside `passed`, whose result is seated in
      * `nextSpecies` where the preload can reach it.

@@ -150,7 +150,7 @@ describe('the harness is constructed exactly once (A9)', () => {
      * `createHarness` over a second copy of that record would not throw, would
      * not fail a type check and would not look wrong at either call site: it
      * would simply mean half the attempts a child made went into a record
-     * nobody persisted, and a grown-ups report that quietly understated her.
+     * nobody persisted, and a grown-ups report that quietly understated them.
      * Silent divergence between two things that must agree is HANDOFF §5's
      * four-time offender, and the only cheap defence is counting.
      */

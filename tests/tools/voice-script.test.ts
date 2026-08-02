@@ -111,7 +111,7 @@ describe('the ledger, enumerated', () => {
     /*
      * This is the law the double bake exists for. "1 more friends will fill it
      * up!" is a sentence a child learning to read must never be shown, and the
-     * only way to be sure she is not is for the singular tail to be its own
+     * only way to be sure they are not is for the singular tail to be its own
      * recording rather than the plural one with a hopeful `s` rule in front of
      * it — a plural rule in code is a rule that one day meets a word it is
      * wrong about, in front of the child who is reading it.

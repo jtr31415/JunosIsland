@@ -73,9 +73,9 @@ describe('island save', () => {
   it('keeps a half-built plot across a reload, site and all', async () => {
     /*
      * Brief section 18: nothing a child owns can be lost. The plot is the
-     * only record of which socket she chose and how many sums she has
+     * only record of which socket they chose and how many sums they have
      * already spent on it, so dropping it from the save quietly throws both
-     * away and starts her over on the next tile.
+     * away and starts them over on the next tile.
      */
     const store = createLocalStore(mem)
     const before = midBuildFlow()
@@ -97,7 +97,7 @@ describe('island save', () => {
   })
 
   it('always resumes in free play, never mid-challenge', async () => {
-    // A reload must never strand the child inside a round she cannot finish
+    // A reload must never strand the child inside a round they cannot finish
     const store = createLocalStore(mem)
     const mid = tapEgg(createFlow())
     expect(mid.phase).toBe('challenge')
@@ -143,9 +143,9 @@ describe('island save — land already earned survives visibly', () => {
     /*
      * Saves written under the previous flow banked a finished tile that had
      * never been placed. Under the new flow there is nowhere to put that, and
-     * simply dropping it would take back land she had worked for.
+     * simply dropping it would take back land they had worked for.
      *
-     * So it resumes in 'placing' with the work credited: she picks a type and
+     * So it resumes in 'placing' with the work credited: they pick a type and
      * a socket, and the tile completes on siting rather than being charged
      * for a second time.
      */
@@ -174,8 +174,8 @@ describe('island save — land already earned survives visibly', () => {
  *
  * One sum used to pay 1 and now pays 2, with every price doubled to match. A
  * save that records `sumProgress: 3` therefore means three sums, which is now
- * worth six units — and reading it as 3 would charge her for those sums a
- * second time. Brief §18: nothing she owns can be lost.
+ * worth six units — and reading it as 3 would charge them for those sums a
+ * second time. Brief §18: nothing they own can be lost.
  */
 describe('progress written under the old economy', () => {
   const oldSave = (sumProgress: number, readProgress: number) => ({
@@ -193,8 +193,8 @@ describe('progress written under the old economy', () => {
 
   it('buys the same tile it was going to buy', () => {
     /*
-     * The failure in the terms that matter: she was three sums into a tile
-     * that cost eight. She must still owe five, not eight.
+     * The failure in the terms that matter: they were three sums into a tile
+     * that cost eight. They must still owe five, not eight.
      */
     const { flow } = fromSave(oldSave(3, 0))
     const owed = Math.ceil((sumsForTile(flow) - flow.sumProgress) / itemPay())
@@ -222,7 +222,7 @@ describe('attainment travels with the island (A5)', () => {
    * REFUSES the save" — `durable.ts:119` migrates only upward and returns null
    * downward, which sends the loader to the snapshot ring, which is the empty
    * island HANDOFF §6 names as the cost of a version. So the bump would trade
-   * a lost REPORT for a lost ISLAND, and only one of those is hers.
+   * a lost REPORT for a lost ISLAND, and only one of those is theirs.
    *
    * envelope.ts's own rule agrees: *"Bumped whenever a migration is added."*
    * There is no migration to add — the default is computed by the loader,
@@ -236,7 +236,7 @@ describe('attainment travels with the island (A5)', () => {
     sumProgress: 6, readProgress: 4, tilesEarned: 1,
   })
 
-  it('writes what she has done and reads it back unchanged', () => {
+  it('writes what the child has done and reads it back unchanged', () => {
     const a = createAttainment()
     const h = createHarness(a, () => Date.parse('2026-07-28T09:00:00Z'))
     h.dealt('sums', 1)
@@ -259,7 +259,7 @@ describe('attainment travels with the island (A5)', () => {
      * The spec's migration line, corrected. Read literally — "sums 1 ticked,
      * everything else honest zeroes" — every island already in existence would
      * wake up unable to deal a reading page, so the egg could never hatch
-     * again. What she is already playing is what she keeps.
+     * again. What they are already playing is what they keep.
      */
     const { attainment } = fromSave(priorSave())
     expect(attainment.sums.stages[1]?.ticked).toBe(true)
@@ -267,7 +267,7 @@ describe('attainment travels with the island (A5)', () => {
     expect(attainment.building.stages[1]?.ticked).toBe(true)
   })
 
-  it('does not hand her subtraction on the strength of a migration', () => {
+  it('does not hand them subtraction on the strength of a migration', () => {
     // The island has never dealt one. JT-007 is Joe ticking it himself.
     const { attainment } = fromSave(priorSave())
     for (const s of [1, 2, 3]) {
@@ -572,7 +572,7 @@ describe('fixtures both directions (A5)', () => {
  *
  * `honeymoonTiles` is the count of tiles bought during a honeymoon, subtracted
  * from `tilesEarned` when the next tile is priced. Losing it on load would snap
- * every remaining price up by however many tiles she was given free, which is
+ * every remaining price up by however many tiles they were given free, which is
  * the stranding `flow.ts` refuses to allow; inventing it would hand out a
  * discount nobody granted.
  */
@@ -618,7 +618,7 @@ describe('the honeymoon index survives a reload', () => {
      * The trap this exists for. `readProgress` and `sumProgress` are in units
      * and a pre-A7 save doubles them on load. `honeymoonTiles` counts TILES, so
      * the same doubling would silently hand a child two free tiles' worth of
-     * discount for every one she was actually given.
+     * discount for every one they were actually given.
      */
     const preA7 = {
       tiles: [['0,0', 'grass']] as Array<[string, 'grass']>,

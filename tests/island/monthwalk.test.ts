@@ -18,18 +18,18 @@
  * adaptive dials are exactly that shape again, and worse, because they are
  * coupled through TIME rather than through a function call — a mercy run arms
  * on Tuesday's answers, a whisper budget is a fact about one sitting, a decline
- * is honoured in days-she-played, a probe ring fills over a fortnight, and
+ * is honoured in days-they-played, a probe ring fills over a fortnight, and
  * `solid` is recomputed from scratch on every read. Every one of those is
  * correct in isolation. Only a walk can ask whether a child who lives inside
  * all of them at once ever loses ground.
  *
  * SO THIS FILE HAS EXACTLY ONE ASSERTION, applied about a hundred times: the
- * census of what she may be dealt, and of what she has banked, is taken at the
- * end of every single day and compared with yesterday's. Nothing in it may go
- * backwards. Everything else below is the business of getting three different
- * children into states where that claim is worth something — a girl who says no
- * to everything, a girl having a terrible fortnight, and a girl who is getting
- * good.
+ * census of what the child may be dealt, and of what they have banked, is taken
+ * at the end of every single day and compared with yesterday's. Nothing in it
+ * may go backwards. Everything else below is the business of getting three
+ * different children into states where that claim is worth something — a child
+ * who says no to everything, a child having a terrible fortnight, and a child
+ * who is getting good.
  *
  * `src/island/main.ts` cannot be imported (it boots a WebGL island), so the
  * loop this walk imitates is pinned by source text instead, the way
@@ -66,8 +66,8 @@ describe('the loop this walk is a copy of', () => {
      * A walk is only evidence about the island if it walks what the island
      * walks. These three calls, in this order, are the entire circuit between
      * the harness and a child: `dealMaths` chooses, `dealt` says it was really
-     * put in front of her (which is where the mercy and whisper budgets are
-     * spent), and `recordAttempt` says what she did with it. `playDay` below
+     * put in front of them (which is where the mercy and whisper budgets are
+     * spent), and `recordAttempt` says what they did with it. `playDay` below
      * does those three and nothing else.
      *
      * The fourth line is the offer's, and it is here for the same reason: the
@@ -112,18 +112,18 @@ const DAY_ZERO = new Date(2026, 6, 1, 12, 0, 0, 0).getTime()
  * A run is deliberately invisible: it is not persisted, not announced and not
  * readable anywhere on the interface (`harness.ts:620-638`), so a walk that
  * needs to know whether one is live has to count the same thing the harness
- * counts — three wrong in a row on a path, spent over the next two items she is
- * actually dealt. Mirroring the rule rather than exposing it keeps the
+ * counts — three wrong in a row on a path, spent over the next two items they
+ * are actually dealt. Mirroring the rule rather than exposing it keeps the
  * invisibility intact, and the mirror is checked against the real thing by the
- * struggler's walk, which asserts what the run actually deals her.
+ * struggler's walk, which asserts what the run actually deals them.
  *
  * IT IS NEEDED FOR THE WHISPER COUNT, and this is the trap it exists to avoid:
- * a mercy run puts her on the bottom rung, that rung may well be a settled one,
- * and `harness.ts:1013-1021` is explicit that a mercy item is NOT a whisper —
- * *"the run put her there, so charging the whisper budget for it would retire a
- * stage she was sent to for comfort."* A count that could not tell them apart
- * would report whispers on a day that had none, and would pass the *"1–2 per
- * session"* cap by measuring the wrong thing.
+ * a mercy run puts them on the bottom rung, that rung may well be a settled
+ * one, and `harness.ts:1013-1021` is explicit that a mercy item is NOT a
+ * whisper — *"the run put them there, so charging the whisper budget for it
+ * would retire a stage they were sent to for comfort."* A count that could not
+ * tell them apart would report whispers on a day that had none, and would pass
+ * the *"1–2 per session"* cap by measuring the wrong thing.
  */
 const mercyShadow = () => {
   const wrong = new Map<Path, number>()
@@ -131,12 +131,12 @@ const mercyShadow = () => {
   return {
     /** Is a run live on this path, as `dealMaths` reads it? */
     live: (p: Path): boolean => (left.get(p) ?? 0) > 0,
-    /** An item was actually put in front of her: `dealt` spends the run here. */
+    /** An item was actually put in front of them: `dealt` spends the run here. */
     spend: (p: Path): void => {
       const n = left.get(p) ?? 0
       if (n > 0) left.set(p, n - 1)
     },
-    /** She answered. True if THIS answer armed a run. */
+    /** They answered. True if THIS answer armed a run. */
     answered: (p: Path, correct: boolean): boolean => {
       if (correct) { wrong.set(p, 0); return false }
       const n = (wrong.get(p) ?? 0) + 1
@@ -171,7 +171,7 @@ const walk = (seed: number) => {
 }
 type Walk = ReturnType<typeof walk>
 
-/** One item, as it was chosen, and what she did with it. */
+/** One item, as it was chosen, and what they did with it. */
 interface Dealt {
   path: Path
   stage: number
@@ -181,7 +181,7 @@ interface Dealt {
   settled: boolean
   /** Was a mercy run live when it was chosen? Then it is not a whisper. */
   mercy: boolean
-  /** A settled rung she met of her own accord: the whisper the budget counts. */
+  /** A settled rung met of their own accord: the whisper the budget counts. */
   whisper: boolean
   /** Did THIS answer arm a mercy run? */
   armed: boolean
@@ -190,12 +190,12 @@ interface Dealt {
 /**
  * A realistic sitting: `items` maths questions, dealt and answered.
  *
- * `accuracy` is the chance she gets one right, drawn from the same seeded
+ * `accuracy` is the chance they get one right, drawn from the same seeded
  * stream as the deal — so a walk is one deterministic sequence end to end and
  * a failure on day nineteen is a failure on day nineteen tomorrow as well.
  *
- * SHE IS NEVER DEALT NOTHING. The assertion sits here rather than in a test of
- * its own because it has to hold on every item of every day of every walk:
+ * THEY ARE NEVER DEALT NOTHING. The assertion sits here rather than in a test
+ * of its own because it has to hold on every item of every day of every walk:
  * `harness.ts:830` promises it, and the failure it guards against is a child
  * tapping a plot and finding no question there.
  */
@@ -301,8 +301,8 @@ const levelsOf = (h: Harness): Record<string, number[]> => {
 
 /**
  * The record with the MEASUREMENT taken out of it: mode, ticks, offer
- * bookkeeping, honeymoon. What she has been ALLOWED, as opposed to what she has
- * done.
+ * bookkeeping, honeymoon. What they have been ALLOWED, as opposed to what they
+ * have done.
  *
  * Used wherever a test needs to say "nothing but honest attempt records
  * changed": snapshot this, do the thing, snapshot again, compare. Anything the
@@ -329,7 +329,7 @@ const shapeOf = (a: Attainment): string => JSON.stringify(LIVE_PATHS.map(p => ({
  *
  *   - a rung that existed stops existing;
  *   - a tick that was on goes off (Auto may only ever tick — runA.md:240);
- *   - `attempts` falls, or any ring shortens — she cannot un-answer a question;
+ *   - `attempts` falls, or a ring shortens — they cannot un-answer a question;
  *   - a day already banked is revised DOWN, or disappears from the session ring
  *     while that ring is not yet full. The ring is six deep by design, so a day
  *     leaving a FULL ring is the documented cap and not a loss.
@@ -379,7 +379,7 @@ interface MarchOpts {
   days?: number
   items: number
   accuracy: number
-  /** What she says when the island puts an offer to her. Never asked, if absent. */
+  /** What they say when the island puts an offer to them. Never asked, if absent. */
   offer?: (due: Offer, day: number) => void
   onItem?: (got: Dealt) => void
   onDay?: (day: number, dealt: Dealt[]) => void
@@ -390,7 +390,7 @@ interface MarchOpts {
  *
  * The offer is put once a sitting AFTER the day's questions, which is the order
  * the island produces: `pendingOffer` is consulted at a moment in the flow that
- * a child has already been playing through, and the days-she-played counter
+ * a child has already been playing through, and the days-they-played counter
  * that governs the cooldown is bumped by `recordAttempt`.
  */
 const march = (w: Walk, o: MarchOpts): void => {
@@ -425,9 +425,9 @@ describe('the refuser — a month of saying no, and nothing is taken away', () =
      * child's answer from the island. `noteOffer(path, false)` is documented as
      * costing nothing beyond two sessions of quiet (harness.ts:1219-1226), and
      * the danger in a rule like that is not the line that implements it — it is
-     * that fourteen refusals over a month might, between them, hold her ewma
+     * that fourteen refusals over a month might, between them, hold their ewma
      * still while a probe ring fills and a `solid` read flickers, and quietly
-     * leave her somewhere worse than she started.
+     * leave them somewhere worse than they started.
      *
      * So this asserts the decline THIRTEEN OR SO TIMES OVER, once per offer,
      * against the whole record each time: the entire attainment is cloned, the
@@ -476,8 +476,8 @@ describe('the refuser — a month of saying no, and nothing is taken away', () =
 
     /*
      * The walk has to have been worth walking. A month that happened to offer
-     * her nothing would pass every assertion above by doing nothing at all, and
-     * that is precisely the dead test this repo has shipped four of.
+     * them nothing would pass every assertion above by doing nothing at all,
+     * and that is precisely the dead test this repo has shipped four of.
      */
     expect(declines).toBeGreaterThanOrEqual(8)
     expect(kinds).toContain('takingAway')
@@ -485,7 +485,7 @@ describe('the refuser — a month of saying no, and nothing is taken away', () =
 
     /*
      * AND THE COOLDOWN IS TWO SESSIONS, measured in the only way a walk can
-     * measure it: the days between the island asking the same thing twice. She
+     * measure it: the days between the island asking the same thing twice. They
      * played every day of this month, so a session is a day.
      *
      * The SHORTEST gap is the assertion, not every gap: a path that was ready
@@ -499,10 +499,10 @@ describe('the refuser — a month of saying no, and nothing is taken away', () =
     expect(w.a.sums.stages[1]!.attempts).toBeGreaterThan(150)
 
     /*
-     * And the whole point, stated at the end: after a month of refusing, she is
-     * exactly where she started. Not diminished — the ticked set is identical,
-     * not merely a superset — because Auto ticks only what she says yes to, and
-     * she said yes to nothing.
+     * And the whole point, stated at the end: after a month of refusing, they
+     * are exactly where they started. Not diminished — the ticked set is
+     * identical, not merely a superset — because Auto ticks only what they say
+     * yes to, and they said yes to nothing.
      */
     expect(tickedKeys(w.a)).toEqual(opening)
     expect(w.h.levelFor('sums')).toEqual([1])
@@ -515,7 +515,7 @@ describe('the refuser — a month of saying no, and nothing is taken away', () =
 describe('the struggler — a bad fortnight, and the ratchet holds', () => {
   it('answers mostly wrong for a month and is demoted from nothing', () => {
     /*
-     * THE RATCHET, the other half of runA.md:239-240. Her estimate falls
+     * THE RATCHET, the other half of runA.md:239-240. Their estimate falls
      * through the floor, mercy runs arm over and over, and not one rung comes
      * off: `setTicked` is the only writer of a tick and Auto only ever calls it
      * with `true` (runA.md:240). What a walk adds to that reading is the
@@ -523,9 +523,9 @@ describe('the struggler — a bad fortnight, and the ratchet holds', () => {
      * that rolls over twice, none of which any single-rule test puts together.
      *
      * The second sum rung and subtraction are opened by a PARENT'S HAND before
-     * she starts, which is how they would really arrive (JT-007 is Joe ticking
-     * `takingAway` himself). Without a rung above the bottom there is nothing
-     * for a demotion to be visible against.
+     * the child starts, which is how they would really arrive (JT-007 is Joe
+     * ticking `takingAway` himself). Without a rung above the bottom there is
+     * nothing for a demotion to be visible against.
      */
     const w = walk(0x57a06611)
     expect(w.h.setTicked('sums', 2, true)).toBe(true)
@@ -549,22 +549,22 @@ describe('the struggler — a bad fortnight, and the ratchet holds', () => {
          * the island making a bad ten minutes worse.
          */
         if (watching && got.path === 'sums') {
-          expect(got.stage, 'a mercy run dealt her something above the bottom rung')
+          expect(got.stage, 'a mercy run dealt them something above the bottom rung')
             .toBe(1)
           expect(got.probe, 'a mercy run let a probe through').toBe(false)
-          expect(got.mercy, 'the run was over before it had dealt her anything')
+          expect(got.mercy, 'the run was over before it had dealt them anything')
             .toBe(true)
           watching.left -= 1
           if (watching.left === 0) {
             /*
              * THE SNAPSHOT THE BRIEF ASKS FOR. Across the whole run the only
-             * thing that may have changed is the record of what she answered:
+             * thing that may have changed is the record of what they answered:
              * `shapeOf` carries every tick, mode, offer and honeymoon in the
              * file, and it is byte-identical either side. A mercy is a fact
              * about ten minutes, and ten minutes may not become a fact about a
              * child.
              */
-            expect(shapeOf(w.a), 'a mercy run changed what she is allowed')
+            expect(shapeOf(w.a), 'a mercy run changed what they are allowed')
               .toBe(watching.shape)
             expect(w.a.sums.stages[1]!.attempts, 'a mercy run stopped counting')
               .toBeGreaterThan(watching.attempts)
@@ -605,10 +605,10 @@ describe('the struggler — a bad fortnight, and the ratchet holds', () => {
     expect(inspected, 'no mercy run ever armed on the path with two rungs').toBe(true)
 
     /*
-     * HER ESTIMATE FELL AND THE TICKS DID NOT MOVE. That is the ratchet in one
-     * line: `ewma` is what the island knows about today, the tick is what her
-     * father said she may be dealt, and the first has no authority over the
-     * second.
+     * THEIR ESTIMATE FELL AND THE TICKS DID NOT MOVE. That is the ratchet in
+     * one line: `ewma` is what the island knows about today, the tick is what
+     * their parent said they may be dealt, and the first has no authority over
+     * the second.
      */
     expect(w.a.sums.stages[1]!.ewma!).toBeLessThan(0.5)
     expect(w.a.sums.stages[2]!.ewma!).toBeLessThan(0.5)
@@ -617,7 +617,7 @@ describe('the struggler — a bad fortnight, and the ratchet holds', () => {
     expect(w.h.levelFor('takingAway')).toEqual([1])
 
     /*
-     * And nothing was offered to her either, which is the same rule seen from
+     * And nothing was offered to them either, which is the same rule seen from
      * the other end: the gate reads `solid`, `solid` reads a fallen estimate,
      * and the island's answer to a bad month is silence rather than a demotion.
      */
@@ -626,11 +626,11 @@ describe('the struggler — a bad fortnight, and the ratchet holds', () => {
 })
 
 describe('the improver — settled rungs whisper, and wake without falling', () => {
-  it('earns her way up a month, retires a rung to a whisper, and wakes it intact', () => {
+  it('earns their way up a month, retires a rung to a whisper, and wakes it intact', () => {
     /*
      * The third life, and the only one where the record is supposed to MOVE.
-     * She answers well, she is offered the next thing and says yes, and a rung
-     * she has mastered drops to the occasional item. Every one of those is a
+     * They answer well, they are offered the next thing and say yes, and a rung
+     * they have mastered drops to the occasional item. Every one of those is a
      * chance for something to be quietly lost — an accepted offer that unticks
      * the rung below it, a retirement that stops dealing a stage instead of
      * whispering it, a settled stage that never comes back. The census catches
@@ -659,7 +659,7 @@ describe('the improver — settled rungs whisper, and wake without falling', () 
         const won = `${due.path}:${due.stage}`
         const after = tickedKeys(w.a)
         expect(after, `saying yes to ${due.kind} ticked nothing`).toContain(won)
-        expect(after.filter(k => k !== won), 'saying yes cost her a rung')
+        expect(after.filter(k => k !== won), 'saying yes cost them a rung')
           .toEqual(before)
       },
       onDay: (day, dealt) => {
@@ -667,9 +667,9 @@ describe('the improver — settled rungs whisper, and wake without falling', () 
          * *"1–2 items per session from mastered stages"* — runA.md:237, and the
          * upper end is a cap on a SITTING. Counted per path per day against the
          * stage's settledness AT THE MOMENT IT WAS CHOSEN, because settledness
-         * is derived rather than stored and flickers with her last answer; and
-         * against `whisper` rather than `settled`, because an item a mercy run
-         * put her on is not one the budget pays for (`mercyShadow` above).
+         * is derived rather than stored and flickers with their last answer;
+         * and against `whisper` rather than `settled`, because an item a mercy
+         * run put them on is not one the budget pays for (`mercyShadow` above).
          */
         for (const p of MATHS_PATHS) {
           const spent = dealt.filter(d => d.path === p && d.whisper).length
@@ -693,7 +693,7 @@ describe('the improver — settled rungs whisper, and wake without falling', () 
     expect(whispers, 'a retired rung was never visited again').toBeGreaterThan(0)
 
     /*
-     * SETTLED IS NOT GONE. She finishes the month on a good run — right answers
+     * SETTLED IS NOT GONE. They finish the month on a good run — right answers
      * on the retired rung put its estimate back over the bar — and the rung is
      * settled again, which is the state the wake has to be measured from. The
      * loop is bounded because an unbounded one would hang rather than fail.
@@ -719,7 +719,7 @@ describe('the improver — settled rungs whisper, and wake without falling', () 
      * no flag to unset, because nothing about settledness was ever stored
      * (harness.ts:546-549) — and the thing worth proving is that it is NOT A
      * DEMOTION: the shape of the record is byte-identical either side, both
-     * rungs are still ticked, and every attempt she ever made is still there.
+     * rungs are still ticked, and every attempt they ever made is still there.
      * `settledStages` simply stops listing it.
      *
      * Two rather than one: one wrong answer lands the ewma on exactly the bar,
@@ -732,7 +732,7 @@ describe('the improver — settled rungs whisper, and wake without falling', () 
     w.h.recordAttempt(attempt({ correct: false }))
 
     expect(w.h.settledStages('sums')).not.toContain(1)
-    expect(shapeOf(w.a), 'waking changed what she is allowed').toBe(shape)
+    expect(shapeOf(w.a), 'waking changed what they are allowed').toBe(shape)
     expect(w.a.sums.stages[1]!.attempts).toBe(banked + 2)
     assertNoDemotion(census, censusOf(w.a), 'the wake')
     expect(w.h.levelFor('sums')).toEqual([1, 3, 2])
@@ -750,11 +750,11 @@ describe('nothing demotes, ever — runA.md:240, over all three lives at once', 
     /*
      * The three walks above each assert their own contract and this one asserts
      * only the shared promise, stated where it can be read on its own: whatever
-     * she does for a month — refuse everything, get everything wrong, or get
-     * good — the set of rungs she may be dealt only ever grows, and the evidence
-     * behind them only ever accumulates. `march` compares the full census at the
-     * close of every day, so the loop below is thirty comparisons apiece and the
-     * assertions here are the endpoints.
+     * they do for a month — refuse everything, get everything wrong, or get
+     * good — the set of rungs they may be dealt only ever grows, and the
+     * evidence behind them only ever accumulates. `march` compares the full
+     * census at the close of every day, so the loop below is thirty comparisons
+     * apiece and the assertions here are the endpoints.
      *
      * The improver is the only one whose ticked set may legitimately grow, and
      * the superset check is deliberately not an equality: a walk that could
@@ -783,9 +783,9 @@ describe('nothing demotes, ever — runA.md:240, over all three lives at once', 
           .toBeGreaterThanOrEqual(createHarness(createAttainment()).levelFor(p).length)
       }
       /*
-       * And she was really there: a month of questions, all of them answered.
+       * And they were really there: a month of questions, all of them answered.
        * Summed across the maths rungs rather than read off one of them, because
-       * the improver's month opens two more and spreads her work over them —
+       * the improver's month opens two more and spreads their work over them —
        * which is the growth this test is refusing to call a loss.
        */
       const answered = MATHS_PATHS.reduce((n, p) =>

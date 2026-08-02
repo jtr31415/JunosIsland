@@ -92,7 +92,7 @@ export const MOUNTAIN_HEXES: Array<{ name: string; weight: number; big?: boolean
  *
  * The growing plot and the finished hex are two different placement paths
  * (increments.ts and props.ts — HANDOFF §6), and for a mountain they must agree
- * EXACTLY: she watches a particular peak rise, and that is the peak she must
+ * EXACTLY: they watch a particular peak rise, and that is the peak they must
  * get. A second `pick` over the same table would be one edit away from
  * disagreeing, so there is one function and both callers use it.
  */
@@ -260,7 +260,7 @@ export const MOUNTAIN_FALLBACKS: ReadonlyArray<{ name: string; weight: number; b
  *
  * THE PLOT IS NOT AFFECTED. `plot.ts` names its peak through `mountainHexFor`
  * and the finished build arrives via `props.adopt`, which never goes near the
- * refusal path — so the peak she watched rise is still the peak she gets.
+ * refusal path — so the peak the child watched rise is still the peak they get.
  */
 export const mountainFallbackFor = (a: Axial): string =>
   pick(MOUNTAIN_FALLBACKS, hash(a) >>> 3).name

@@ -144,7 +144,7 @@ describe('the clips it can name', () => {
   it('splices one larynx and never two (voice.md §3)', () => {
     /*
      * The law the double bake and Fred's own numerals exist for. If the numerals
-     * were ever recast to the teacher — the obvious economy, since she owns the
+     * were ever recast to the teacher — the obvious economy, since they own the
      * taught words — every counted sentence would change voice mid-sentence on
      * the number and back again. Asserted per template, over the exact set of
      * clips that template chains.

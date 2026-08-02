@@ -18,7 +18,7 @@
  *
  * 2. **A template is never baked as written.** `gov.spaceSurplus` reads
  *    "Let's read with the egg — {n} more {friend|friends} will fill it up!" and
- *    the number is a fact about her island at the moment Fred opens his mouth.
+ *    the number is a fact about the island at the moment Fred opens his mouth.
  *    It cuts into a head, a spliced numeral, and a tail — and the TAIL BAKES
  *    TWICE, once singular and once plural, because "1 more friends will fill it
  *    up" is a sentence a child learning to read must never be shown.

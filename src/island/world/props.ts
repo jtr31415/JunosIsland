@@ -145,13 +145,13 @@ export const FEATURES: Record<Character, Array<{ name: string; weight: number; b
 }
 
 /**
- * The pre-assembled mountain hexes, for a tile she CHOSE to be a mountain.
+ * The pre-assembled mountain hexes, for a tile they CHOSE to be a mountain.
  *
  * A separate table from `FEATURES.highland` on purpose, and the difference is
  * the whole of Joe's correction. `FEATURES` holds mountains as a FEATURE OF a
  * meadow — fitted to `FITS.big`, off-centred by `spread`, so a green rim shows
  * and the hex still reads as a field with a mountain on it. That is right for a
- * tile the island dressed on its own, and wrong for a tile she picked mountains
+ * tile the island dressed on its own, and wrong for a tile they picked mountains
  * for. Joe, with a screenshot of the pack's own promo render: *"the mountain
  * tiles are not as expected... the tiles from the hex set that i am expecting
  * for the moutnain selection."* In that render each mound COVERS its hex.
@@ -489,7 +489,7 @@ export const FITS = {
    * Smaller, and it has to be: props.ts plants ONE feature on a hex, while the
    * growing plot arranges EIGHT of them on the same hex. Eight pieces a hex
    * wide do not fit round a hex — that is arithmetic, not taste, and it is why
-   * a tree kept ending up inside a rock on the tiles she built herself.
+   * a tree kept ending up inside a rock on the tiles they built themselves.
    *
    * Measured rather than guessed: across four thousand seeded plots, feature
    * pieces at full size can only be placed 74% of the time without
@@ -502,7 +502,7 @@ export const FITS = {
    * Same bargain as `grown` — eight pieces round one hex, so nothing may be as
    * big as it would be planted on its own — but not as short. A tree squashed to
    * the general grown height reads as a bush, which defeats the point of putting
-   * trees on the tiles she builds.
+   * trees on the tiles they build.
    */
   grownTree: [0.5, 0.86] as const,
   /**
@@ -561,8 +561,8 @@ export const VARY = {
    * roughly half the scenery on every island that already exists — including
    * Juno's — because `vary` feeds `fitInto`, which feeds `footprintOf`, which
    * decides where a piece stands. That is the world rearranging itself behind
-   * her, which the header of this file forbids. If the true floor is ever wanted,
-   * it needs a migration or a new hash channel, not a one-character edit.
+   * them, which the header of this file forbids. If the true floor is ever
+   * wanted, it needs a migration or a new hash channel, not a one-character edit.
    */
   tree: { min: 0.95, span: 45 },
   /** Tile features and landscape. */
@@ -784,9 +784,9 @@ export interface PropField {
   /**
    * Take over the scenery a plot grew, as that tile's own.
    *
-   * She watched those eight things arrive one at a time. Disposing them at
-   * touchdown and planting a different eight from the hash means the tile she
-   * built is not the tile she gets — the trees move and change species in the
+   * They watched those eight things arrive one at a time. Disposing them at
+   * touchdown and planting a different eight from the hash means the tile they
+   * built is not the tile they get — the trees move and change species in the
    * frame the scaffolding disappears. So the plot's group becomes the tile's
    * scenery, and sync() leaves that hex alone forever after.
    */
@@ -1122,7 +1122,7 @@ export function createPropField(base = ''): PropField {
          *
          * It used to be skipped entirely, which meant a child who built a
          * pond watched eight water plants grow on it during the build and
-         * then saw a bare blue hex the moment it completed. Losing what she
+         * then saw a bare blue hex the moment it completed. Losing what they
          * had just made is precisely what brief §19 forbids.
          */
         if (type === 'water') {
@@ -1166,7 +1166,7 @@ export function createPropField(base = ''): PropField {
           continue
         }
         // Rock is dressed like any other dry hex. Skipping it here — which is
-        // what `!== 'grass'` did — left her mountains as bare green plates.
+        // what `!== 'grass'` did — left their mountains as bare green plates.
         if (!isLand(type)) continue
         const parts = k.split(',').map(Number)
         const a: Axial = { q: parts[0] as number, r: parts[1] as number }
@@ -1192,7 +1192,7 @@ export function createPropField(base = ''): PropField {
          *
          * It used to grow nothing at all, so while every other tile had cover
          * the one the child looks at most was bare grass. The centre still
-         * stays clear — Fred, her signpost, the egg and the first pet all
+         * stays clear — Fred, their signpost, the egg and the first pet all
          * live there — but the rim gets a ring of undergrowth, which is the
          * difference between "kept clear" and "unfinished".
          */
@@ -1214,8 +1214,8 @@ export function createPropField(base = ''): PropField {
         /*
          * A rock hex is ALWAYS highland, never rolled.
          *
-         * That is the whole implementation of "a mountain tile": she picked
-         * mountains, so she gets mountains, rather than a hex that might roll a
+         * That is the whole implementation of "a mountain tile": they picked
+         * mountains, so they get mountains, rather than a hex that might roll a
          * meadow. `highland` is the one character with no open-ground entry in
          * its feature table, so every rock tile grows a hill or a mountain —
          * which is exactly the pre-assembled set Joe asked for, "with gras and
@@ -1230,8 +1230,8 @@ export function createPropField(base = ''): PropField {
          */
         const rockTile = type === 'rock'
         const character = rockTile ? 'highland' : characterOf(a)
-        // Through the shared chooser, so the peak she watched rise on the plot is
-        // the peak that lands here.
+        // Through the shared chooser, so the peak they watched rise on the plot
+        // is the peak that lands here.
         const spec = rockTile
           ? { name: mountainHexFor(a), weight: 1 }
           : pick(FEATURES[character], h)
@@ -1371,7 +1371,7 @@ export function createPropField(base = ''): PropField {
          * now pulled away from the sun (Joe's rule, juice.ts), a 2.2-tall peak
          * throws its blob more than three units out — clean off the island and
          * onto the open sea, where a blue-grey disc floats on the water behind
-         * her range. Seen in the browser, which is the only way this sort of
+         * their range. Seen in the browser, which is the only way this sort of
          * thing gets seen.
          */
         if (!rockTile) shadowUnder(obj, group)
@@ -1404,18 +1404,18 @@ export function createPropField(base = ''): PropField {
       placed.add(`${a.q},${a.r}`)
       group.add(grown)
       // Everything on it counts as clutter, so the egg is never sited inside
-      // what she just planted; nothing counts as an obstacle, because these
+      // what they just planted; nothing counts as an obstacle, because these
       // are the same knee-high pieces pets have always walked over.
       const w = toWorld(a, hexSize)
       decor.push({ x: w.x, z: w.z, r: hexSize * 0.55 })
 
       /*
-       * ...and the pieces she grew are SOLID to anything planted later.
+       * ...and the pieces they grew are SOLID to anything planted later.
        *
        * The other half of the trees-inside-rocks report. A grown tile arrives
        * here fully formed and used to register only as clutter, so when the
        * next tile along was dressed, its own feature — a hill or a boulder,
-       * blocking half a hex — could be sited straight through the scenery she
+       * blocking half a hex — could be sited straight through the scenery they
        * had just built. Each piece is measured where it actually stands rather
        * than covered by one circle over the tile, because a single hex-wide
        * keep-out would sterilise the whole neighbourhood.
@@ -1435,16 +1435,16 @@ export function createPropField(base = ''): PropField {
         const r = Math.max(size.x, size.z) / 2
         if (r > 1e-3) footprints.push({ x: at.x, z: at.z, r })
         /*
-         * ...and the tiles she BUILDS get shadows too.
+         * ...and the tiles they BUILD get shadows too.
          *
          * The second placement path, and the one that gets forgotten — trees
          * inside rocks was reported twice for exactly this reason (HANDOFF §6).
-         * Skipping it would be the worst possible split, because the tiles she
-         * would be looking at are the ones she made: hers floating, the ones
-         * the island grew on its own anchored.
+         * Skipping it would be the worst possible split, because the tiles
+         * they would be looking at are the ones they made: theirs floating,
+         * the ones the island grew on its own anchored.
          *
          * Here rather than in `increments.ts` on purpose. A plot HOVERS while
-         * she builds it and squashes when it lands, so a blob living inside it
+         * they build it and squashes when it lands, so a blob living inside it
          * would be a shadow hanging in mid-air for the whole build. By the time
          * `adopt` is called the pieces have touched down and stopped moving,
          * which is exactly when a shadow starts being true.

@@ -46,7 +46,7 @@
  * The NATURAL set needs no patch either way, and gets none: `dress()` returns
  * early for it, and an unpatched natural pet reads the original swatches, which
  * no set ever writes to. A patched one reads a verbatim copy of them. Both are
- * the same pixels, which is what keeps brief §19 — the friends she already owns
+ * the same pixels, which is what keeps brief §19 — the friends they already own
  * are unchanged — true rather than merely likely.
  */
 import type * as THREE from 'three'

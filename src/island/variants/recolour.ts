@@ -360,7 +360,7 @@ export function shade(t: number, p: SetPalette): [number, number, number] {
  * rather than nudged: no combination of an absolute hue and an absolute
  * saturation means "leave it alone". A negative saturation is the natural set
  * and nothing else, and the natural set has to be bit-identical rather than
- * merely close — that is what makes the friends she already owns provably
+ * merely close — that is what makes the friends they already own provably
  * unchanged.
  */
 export const isNatural = (p: SetPalette): boolean => p.sat < 0

@@ -79,7 +79,7 @@ function sketch(origin: TileType, ring: Partial<Record<number, TileType>>): Isla
   return i
 }
 
-/** A flow with a given island, at the point where she is choosing a kind. */
+/** A flow with a given island, at the point where the child is choosing a kind. */
 const placing = (island: Island, pending: { q: number; r: number } | null): Flow => ({
   ...createFlow(), island, phase: 'placing', pending, chosen: null,
 })
@@ -88,7 +88,7 @@ describe('rock is dry land, everywhere the code asks', () => {
   /*
    * THE BUG THIS FILE WAS WRITTEN FOR. Each of these read `=== 'grass'` before
    * rock existed, so a mountain would have presented open water to its
-   * neighbours — cutting beaches into the middle of her island, and doing it
+   * neighbours — cutting beaches into the middle of their island, and doing it
    * silently, because nothing throws when a hex merely looks wrong.
    */
 
@@ -122,7 +122,7 @@ describe('rock is dry land, everywhere the code asks', () => {
      * A mountain hex is planted at the model's native size and centred, so the
      * mound covers its tile and blocks nearly the whole hex below walking
      * height. There is nowhere on it for a pet to stand. Were it counted as
-     * room, the governor would believe she has space she cannot use and pets
+     * room, the governor would believe they have space they cannot use and pets
      * would fail placement silently — worse than a visible shortage.
      *
      * So: rock counts as land for the COASTLINE (it is dry, it can be built
@@ -135,10 +135,10 @@ describe('rock is dry land, everywhere the code asks', () => {
 
   it('does not let mustBeWater fire beside it', () => {
     /*
-     * Two of her ponds round a socket and none of her fields forces water into
-     * it, so a green plug never blocks a channel. A ROCK neighbour is her land
-     * too — and water beside rock is illegal — so forcing water there would be
-     * a contradiction the placement rules could not satisfy.
+     * Two of their ponds round a socket and none of their fields forces water
+     * into it, so a green plug never blocks a channel. A ROCK neighbour is their
+     * land too — and water beside rock is illegal — so forcing water there would
+     * be a contradiction the placement rules could not satisfy.
      *
      * The rock sits at (-1,0), two hexes from either pond, because a rock
      * adjacent to water is not a state the rules permit and building the
@@ -163,13 +163,13 @@ describe("Joe's two rules, both directions", () => {
     expect(canBeRock(createIsland(), { q: 1, r: 0 })).toBe(true)
   })
 
-  it('rock may NOT go beside her water', () => {
+  it('rock may NOT go beside their water', () => {
     const i = sketch('grass', { 0: 'water' })
     // (2,-1) touches the pond at (1,0).
     expect(canBeRock(i, { q: 2, r: -1 })).toBe(false)
   })
 
-  it('water may NOT go beside her rock — the same rule, read the other way', () => {
+  it('water may NOT go beside their rock — the same rule, read the other way', () => {
     const i = sketch('grass', { 0: 'rock' })
     expect(canBeWater(i, { q: 2, r: -1 })).toBe(false)
   })
@@ -196,7 +196,7 @@ describe("Joe's two rules, both directions", () => {
     i = place(i, { q: 1, r: 0 }, 'rock')
     i = place(i, { q: 2, r: 0 }, 'rock')
 
-    // Every empty hex touching her rock refuses water...
+    // Every empty hex touching their rock refuses water...
     const empties = new Set<string>()
     for (const k of i.tiles.keys()) {
       const [q, r] = k.split(',').map(Number) as [number, number]
@@ -212,15 +212,15 @@ describe("Joe's two rules, both directions", () => {
     }
     expect(empties.size, 'no sockets were actually examined').toBeGreaterThan(5)
 
-    // ...and symmetrically, rock refuses to go beside her water.
+    // ...and symmetrically, rock refuses to go beside their water.
     let j: Island = place(createIsland(), { q: 1, r: 0 }, 'water')
     expect(canBeRock(j, { q: 2, r: -1 })).toBe(false)
     expect(canBeRock(j, { q: 2, r: 0 })).toBe(false)
   })
 })
 
-describe('the unlock: fifteen of her own tiles', () => {
-  /** An island of `n` tiles she placed, plus the home hex, all dry and in a line. */
+describe('the unlock: fifteen of their own tiles', () => {
+  /** An island of `n` tiles they placed, plus the home hex, all dry and in a line. */
   const line = (n: number): Island => {
     let i: Island = createIsland()
     for (let q = 1; q <= n; q++) i = place(i, { q, r: 0 }, 'grass')
@@ -234,7 +234,7 @@ describe('the unlock: fifteen of her own tiles', () => {
   })
 
   it('does not count the home hex Fred was already standing on', () => {
-    // "after she has placed 15 tiles already" — fifteen of HERS.
+    // "after she has placed 15 tiles already" — fifteen of THEIRS.
     expect(rockUnlocked({ ...createFlow(), island: line(14) })).toBe(false)
     expect(rockUnlocked({ ...createFlow(), island: line(15) })).toBe(true)
   })
@@ -246,7 +246,7 @@ describe('the unlock: fifteen of her own tiles', () => {
     expect(tileOffer(after)).toContain('rock')
   })
 
-  it('puts mountains LAST, so the two buttons she knows do not move', () => {
+  it('puts mountains LAST, so the two buttons they know do not move', () => {
     const offer = tileOffer(placing(line(15), { q: 16, r: 0 }))
     expect(offer[offer.length - 1]).toBe('rock')
     expect(offer.indexOf('grass')).toBeLessThan(offer.indexOf('rock'))
@@ -256,7 +256,7 @@ describe('the unlock: fifteen of her own tiles', () => {
 describe('the offer never shows a button that does something else', () => {
   /*
    * The rule the whole offer exists to keep (flow.ts): a button must show what
-   * `tileTypeFor` is going to do. A mountain button at a socket beside her pond
+   * `tileTypeFor` is going to do. A mountain button at a socket beside their pond
    * would place grass, and a six-year-old would be right to conclude the
    * mountain button is broken.
    */
@@ -281,8 +281,8 @@ describe('the offer never shows a button that does something else', () => {
   it('falls back to grass — never water — if rock is asked for illegally', () => {
     /*
      * Reachable from a restored save or the opening script, which chooses a kind
-     * before it knows the socket. She asked for land; grass is the gentler
-     * reading, and it never re-cuts her fields.
+     * before it knows the socket. They asked for land; grass is the gentler
+     * reading, and it never re-cuts their fields.
      */
     const i = sketch('grass', { 0: 'water' })
     expect(tileTypeFor(placing(i, null), { q: 2, r: -1 }, 'rock')).toBe('grass')
@@ -292,7 +292,7 @@ describe('the offer never shows a button that does something else', () => {
 describe('a mountain tile actually looks like one', () => {
   it('grows its scenery from the same pack, and every piece exists', () => {
     /*
-     * THE SECOND PLACEMENT PATH — `increments.ts` for the plot she builds,
+     * THE SECOND PLACEMENT PATH — `increments.ts` for the plot they build,
      * `props.ts` for the finished hex. Trees-inside-rocks was reported twice
      * because a fix touched only one of them (HANDOFF §6). Widening `TileType`
      * made the compiler demand this palette, which is the only reason it did not
@@ -376,7 +376,7 @@ describe('the finished mountain hex is the pack\'s pre-assembled one', () => {
 })
 
 /**
- * The plot builds the mountain she picked, and keeps it.
+ * The plot builds the mountain the child picked, and keeps it.
  *
  * Joe, 28 July: *"when selecting a mountain tile, the incremental build goes back
  * to a gras tile with props on. we need to make sure the proper rock/mountain
@@ -384,10 +384,10 @@ describe('the finished mountain hex is the pack\'s pre-assembled one', () => {
  *
  * TWO PLACEMENT PATHS AGAIN — `increments.ts` grows the plot, `props.ts` plants
  * the finished hex (HANDOFF §6) — and for a mountain they must agree exactly, not
- * merely look similar: she watches one particular peak rise and that is the peak
- * she must be given. So there is ONE chooser, and both callers use it.
+ * merely look similar: the child watches one particular peak rise and that is the
+ * peak they must be given. So there is ONE chooser, and both callers use it.
  */
-describe('the mountain on the plot is the mountain she gets', () => {
+describe('the mountain on the plot is the mountain they get', () => {
   // The plot lifecycle moved out of main.ts into its own testable host; the
   // naming of the peak went with it. See plot.ts.
   const HOST = resolve(here, '../../src/island/plot.ts')

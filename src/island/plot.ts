@@ -10,17 +10,17 @@
  *
  * THE RULE THIS FILE EXISTS TO HOLD: what is on screen tracks what the flow says.
  * Not "a plot is created when none is standing", which is what main.ts did and
- * what let a grass plot outlive her decision to build a mountain instead. The
+ * what let a grass plot outlive their decision to build a mountain instead. The
  * comparison is by SITE AND KIND — the two things the scaffolding is constructed
  * from — so a difference in either rebuilds it.
  *
  * Joe, 28 July: *"when user selects a mountain tile to be completed, the
  * incremental build at the side shows a propped grass tile, not a mountain tile.
  * then the grass tile is placed on the island and only on reloading the page does
- * it change to a mountain."* Both halves are that one fault. The scaffolding she
+ * it change to a mountain."* Both halves are that one fault. The scaffolding they
  * finished was a grass plot, `props.adopt` hands the finished hex exactly what the
  * scaffolding grew — and marks the hex dressed, so `props.sync` never plants the
- * peak. Her save said 'rock' the whole time, which is why a reload corrected it.
+ * peak. Their save said 'rock' the whole time, which is why a reload corrected it.
  *
  * Everything the island proper needs from a plot is a port, so the whole
  * lifecycle can be driven headlessly (`tests/island/plot.test.ts`).
@@ -44,7 +44,7 @@ export interface PlotPorts {
   worldOf(a: Axial): THREE.Vector3
   /** Load a scenery piece by name, textured and ready to add. */
   prop(name: string): Promise<THREE.Object3D>
-  /** Offer taps on the plot, so she can change her mind about it. */
+  /** Offer taps on the plot, so the child can change their mind about it. */
   setPickable(group: THREE.Object3D | null): void
   /**
    * Take this group off the challenge stage, if that is where it is.
@@ -66,7 +66,7 @@ export interface PlotHost {
    * Where the plot was sited, remembered past the flow clearing it.
    *
    * `commitPlot` nulls `flow.plot` in the same transition that makes the tile
-   * real, and the fly-back still has to know which socket to adopt her grown
+   * real, and the fly-back still has to know which socket to adopt their grown
    * scenery onto.
    */
   sitedAt(): Axial | null
@@ -135,16 +135,16 @@ export function createPlotHost(ports: PlotPorts): PlotHost {
     // two hexes overlap and the farewell disposes the wrong one.
     if (farewell) drop()
     /*
-     * SHE HAS CHANGED HER MIND, so the scaffolding changes with it.
+     * THE CHILD HAS CHANGED THEIR MIND, so the scaffolding changes with it.
      *
-     * `chooseTile` retypes a plot in place — the site and every sum she has
+     * `chooseTile` retypes a plot in place — the site and every sum they have
      * already answered stay exactly as they were, which is what makes changing
-     * her mind free (`flow.ts`, and `retype.test.ts`). Nothing about that reaches
-     * the screen unless the thing on screen is rebuilt, and this is the only
-     * place that can notice: the flow has no idea a scaffolding exists.
+     * their mind free (`flow.ts`, and `retype.test.ts`). Nothing about that
+     * reaches the screen unless the thing on screen is rebuilt, and this is the
+     * only place that can notice: the flow has no idea a scaffolding exists.
      *
-     * Rebuilding costs her nothing. `sumProgress` lives on the Flow, so the new
-     * plot is put straight to the progress she has already paid for, below.
+     * Rebuilding costs them nothing. `sumProgress` lives on the Flow, so the new
+     * plot is put straight to the progress they have already paid for, below.
      */
     if (!same(built, state.plot)) drop()
     if (!plot) {
@@ -163,7 +163,7 @@ export function createPlotHost(ports: PlotPorts): PlotHost {
       }, seed >>> 0, plannedLook(state.island, state.plot.at, state.plot.type),
       /*
        * A mountain hex builds AS a mountain. Named through the shared chooser so
-       * the peak she watches rise is the one props.ts plants at touchdown — the
+       * the peak they watch rise is the one props.ts plants at touchdown — the
        * two placement paths agreeing by construction rather than by luck.
        */
       state.plot.type === 'rock'
@@ -173,7 +173,7 @@ export function createPlotHost(ports: PlotPorts): PlotHost {
       plot.group.position.copy(ports.worldOf(state.plot.at))
       plotAt = state.plot.at
       ports.scene.add(plot.group)
-      // Tappable, so she can change her mind about what is being built here.
+      // Tappable, so they can change their mind about what is being built here.
       ports.setPickable(plot.group)
     }
     plot.setProgress(state.sumProgress, sumsForTile(state))

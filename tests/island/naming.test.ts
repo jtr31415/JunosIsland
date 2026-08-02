@@ -314,7 +314,7 @@ describe('band obedience', () => {
   })
 
   it('falls back to medium for a species the roster has never heard of', () => {
-    // A save from a future build must never leave a blank where her friend's
+    // A save from a future build must never leave a blank where a friend's
     // name goes — script.ts:132 speciesName() sets that precedent.
     expect(collectionOf('animal-not-a-real-species')).toBeUndefined()
     expect(nameBandOf('animal-not-a-real-species')).toBe('medium')
@@ -373,7 +373,7 @@ describe('pins', () => {
 
   /**
    * THE TRIPWIRE FOR THE DAY JUNO'S SAVE ARRIVES, and the reason to read this
-   * before writing her names into `name-pins.json`.
+   * before writing those names into `name-pins.json`.
    *
    * Allocation is collision-aware, so a pin is not a private edit — it takes a
    * name out of circulation. The invariant we want, and the one asserted here,
@@ -385,7 +385,7 @@ describe('pins', () => {
    * STRING is a name already allocated to another creature. That is a genuine
    * clash between a name Juno says out loud and a name in the table, and the
    * child's own pet wins — but it is a decision, not a detail. If this test
-   * goes red when her pins land, do not relax it: find which creature the pin
+   * goes red when those pins land, do not relax it: find which creature the pin
    * displaced and say so in the handoff.
    */
   it('renames only the species it pins', () => {
@@ -419,7 +419,7 @@ describe('pins', () => {
    * may be guessed into the table — an invented pin invents a memory Juno does
    * not have.
    *
-   * The day her save lands, this assertion is expected to be DELETED or
+   * The day that save lands, this assertion is expected to be DELETED or
    * inverted (assert the pins that arrived, by name). Whoever does that: that
    * edit, plus the JSON, is the WHOLE change. No migration, no save rewrite.
    */

@@ -25,8 +25,8 @@ export function generateAdd(s: SumState, rng: Rng, level: number): void {
        *
        * Level 1 never reaches ten and level 2 bridges it on EVERY item, so
        * before this there was nothing in between — a child went from sums
-       * inside her fingers to sums that all need the ten broken open, with no
-       * step where the ten simply sits there and the units are counted on.
+       * inside their fingers to sums that all need the ten broken open, with
+       * no step where the ten simply sits there and the units are counted on.
        * That step is the place-value idea bridging is built out of, and
        * subtraction's ladder has always had it (`STAGE_LABELS.takingAway`:
        * to ten / teens minus units / anything to twenty). This is addition's

@@ -1,14 +1,14 @@
 /**
  * @vitest-environment jsdom
  *
- * THE ALBUM AS A ROSTER: what is to come, beside what she has.
+ * THE ALBUM AS A ROSTER: what is to come, beside what they have.
  *
  * Joe, 1 Aug: *"show the blank slots in the album of what is to come.
  * silhouettes only, no names, no animals, no clickability, just a roster of the
  * animals per album, 4 albums always on show, next one shows when one is
  * completed. we need to keep motivation up. and anticipation is motivation."*
  *
- * `album.test.ts` covers the pop-out and everything about a friend she owns, and
+ * `album.test.ts` covers the pop-out and everything about a friend they own, and
  * none of it is repeated here. This file is about the three things the roster
  * added, in the order they could go wrong:
  *
@@ -16,7 +16,7 @@
  *      highlights under a finger promises something that will not happen.
  *   2. NOBODY IS LOST. A roster view keys on species, and a child owns PETS —
  *      so a duplicate, or an animal from an album that is not open, has to go
- *      somewhere. Brief §19 is that nothing she owns is ever lost, and this is
+ *      somewhere. Brief §19 is that nothing they own is ever lost, and this is
  *      exactly the sort of change that loses somebody quietly.
  *   3. THE SLOTS ARE THE ROSTER'S, in the roster's order, on every island.
  *
@@ -39,7 +39,7 @@ const pet = (id: string, name: string, species: string): Pet =>
 
 const FOX = pet('p1', 'Gachap', 'animal-fox')
 const BEE = pet('p2', 'Vusp', 'animal-bee')
-/** A second animal of a species she already has. Only possible once a pack is out. */
+/** A second animal of a species they own. Only possible once a pack is out. */
 const FOX2 = pet('p3', 'Rellow', 'animal-fox')
 /** A species no open album lists — what a save from a later build can carry. */
 const STRANGER = pet('p4', 'Moth', 'animal-from-the-future')
@@ -84,7 +84,7 @@ function setup() {
 afterEach(() => { document.body.innerHTML = '' })
 
 describe('a slot for every animal in the album', () => {
-  it('draws the whole roster, not just the ones she has', () => {
+  it('draws the whole roster, not just the ones they have', () => {
     const { album, slots, owned } = setup()
     album.open([FOX], ['base'])
     expect(slots()).toHaveLength(BASE?.members.length ?? 0)
@@ -131,7 +131,7 @@ describe('a slot for every animal in the album', () => {
 describe('turning the pages', () => {
   const FOUR = ['base', 'garden', 'home-pets', 'birds']
 
-  it('gives one dot per page and marks where she is', () => {
+  it('gives one dot per page and marks where they are', () => {
     const { album, dots, here, forward } = setup()
     album.open([FOX], FOUR)
     expect(dots()).toHaveLength(4)
@@ -144,7 +144,7 @@ describe('turning the pages', () => {
   it('cannot go back off the front or forward off the end', () => {
     /*
      * Dimmed rather than removed: a control that vanishes moves the one beside
-     * it, so the forward arrow would slide under her finger on the last page.
+     * it, so the forward arrow would slide under their finger on the last page.
      */
     const { album, back, on, forward } = setup()
     album.open([FOX], FOUR)
@@ -175,7 +175,7 @@ describe('turning the pages', () => {
     expect(root.querySelector('.album-pager')?.classList.contains('hide')).toBe(true)
   })
 
-  it('opens on the first page every time, not where she left off', () => {
+  it('opens on the first page every time, not where they left off', () => {
     const { album, headings, forward } = setup()
     album.open([FOX], FOUR)
     forward(3)
@@ -183,11 +183,11 @@ describe('turning the pages', () => {
     expect(headings()[0]?.textContent).toContain('Base Set')
   })
 
-  it('builds only the page she is looking at', () => {
+  it('builds only the page they are looking at', () => {
     /*
      * Every cell asks the portrait renderer for a picture, so rendering all
      * five pages to show one of them is the cost the stacked version paid on
-     * every open. The base set is the only page in the DOM until she turns.
+     * every open. The base set is the only page in the DOM until they turn.
      */
     const { album, slots } = setup()
     album.open([FOX], FOUR)
@@ -232,13 +232,13 @@ describe('a blank slot is a shape and nothing else', () => {
   })
 })
 
-describe('nobody she owns is ever lost', () => {
+describe('nobody they own is ever lost', () => {
   it('keeps a second animal of the same species, below the rosters', () => {
     /*
-     * One slot per species is Joe's ruling, and a duplicate has no slot to go
-     * in — but she named it and it is hers. `collection.ts` starts dealing
-     * repeats again the moment a pack is exhausted, so this is reachable rather
-     * than theoretical.
+     * One slot per species is Joe's ruling, and a duplicate has no slot to
+     * go in — but the child named it and it is theirs. `collection.ts` starts
+     * dealing repeats again the moment a pack is exhausted, so this is
+     * reachable rather than theoretical.
      */
     const { album, sections, owned, dots, forward } = setup()
     album.open([FOX, FOX2], ['base'])

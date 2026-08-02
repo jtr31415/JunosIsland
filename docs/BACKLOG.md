@@ -87,8 +87,8 @@ overtaken — the queue put `PB-030` above it, Run B built the adaptive ladder, 
 it is live and headless (`harness.ts:13-16`, `856`, `1127`). v1 ships WITH
 adaptive difficulty. Nothing here needs a ruling any more.
 Item 13 sits inside "the release" but is blocked on the above. Fable's view: it
-should ship without, since today's fixed difficulty is the v0 behaviour she
-already plays. Joe's call.
+should ship without, since today's fixed difficulty is the v0 behaviour the
+child already plays. Joe's call.
 
 ### PB-003 · Two overlays now behave differently
 Tapping outside the tile offer returns to the island (it is `cancelPlacing`, a
@@ -97,9 +97,9 @@ in progress. Recorded as a rule in HANDOFF §6 — but it is a feel judgement an
 Juno is the only real judge.
 
 ### PB-004 · A gesture is live on her tablet
-Tapping her own land turns the island about that tile. Costless, cannot start a
-round, but it is a product change to a gesture Joe had explicitly ruled on. Veto
-is one line in `interactions.ts` (the `focusOn` call in the `'tile'` case).
+Tapping the child's own land turns the island about that tile. Costless, cannot
+start a round, but it is a product change to a gesture Joe had explicitly ruled
+on. Veto is one line in `interactions.ts` (the `focusOn` call in the `'tile'` case).
 
 ### PB-005 · The lighting slice — END OF PHASE 4 (#43)
 Joe: *"add to this slice lighting review and tilt shift with a bit more fog, on a
@@ -111,8 +111,8 @@ measured fps on the actual mid-range Android tablet** — not a desktop, not
 headless. Nothing in this project has ever been measured there. Order: measure →
 amend the brief → build. Building first and measuring after is how the previous
 attempt went wrong (HANDOFF §2 rule 3). `?flat` already exists reserved for this;
-drive the same switch. And the DEFAULTS matter more than the options, because she
-will never open a settings menu.
+drive the same switch. And the DEFAULTS matter more than the options, because a
+child will never open a settings menu.
 
 ---
 
@@ -148,8 +148,8 @@ last witness can itself be a dead end; the code says so at `coast.ts:1067` and
 `:1286`. Read the rest as the case that produced the fix.
 **IN FLIGHT at time of writing.** The dry-connection floor is an empirical margin,
 not a theorem. FABLE FALSIFIED IT with a 64-tap counterexample, replayed through
-the real tap path with every placement a genuinely offered button, ending with her
-fields sealed behind water. It is pinned in `tests/island/coast.test.ts` under
+the real tap path with every placement a genuinely offered button, ending with the
+child's fields sealed behind water. It is pinned in `tests/island/coast.test.ts` under
 `describe('the floor is a margin, not a theorem')`, which currently asserts the
 FAILURE so the limit stays known.
 
@@ -167,7 +167,7 @@ grass would actually land. Structural, fires never in normal play, closes the
 bypass free. When it lands, the pinned test flips.
 
 Severity if not done: a greedy harvest plus a six-ply search was needed to find
-the counterexample. Before the floor, six natural taps walled her in.
+the counterexample. Before the floor, six natural taps walled the child in.
 
 ### PB-008 · #46 `void async` over a loop — one failure kills the rest, THREE MORE SITES
 **This pattern already cost a day of scenery.** The shape: an `async sync()` that
@@ -209,9 +209,9 @@ rarer, not gone.
 
 **Matters for item 13:** adaptive difficulty will read "pages passed" as mastery,
 and a passed page may mean five words or one. Decide whether a partial page counts
-before building the difficulty rule. Note §19 says work she genuinely did should
-bank — the question is whether "passed" and "collected" should be the same fact.
-Today they are.
+before building the difficulty rule. Note §19 says work the child genuinely did
+should bank — the question is whether "passed" and "collected" should be the
+same fact. Today they are.
 
 ### PB-009 · #47 A quarter of dead trunks flicker shadowless
 Because `VARY` has no real floor (`(dh >> 13) % span` is a signed shift on an
@@ -229,15 +229,15 @@ pins a floor the code does not enforce.
 
 **Status 29 July: SHIPPED (`efff9fa`), in the shape proposed below.**
 `chooseTile` swaps `plot.type` in place and re-runs `tileTypeFor`, keeping
-`plot.at` and `sumProgress` so the change costs her nothing already earned —
-`flow.ts:520-548`, re-entry at `:553-557`. Tested at `tests/island/retype.test.ts`,
-including the §19 property at `:101`.
+`plot.at` and `sumProgress` so the change costs the child nothing already
+earned — `flow.ts:520-548`, re-entry at `:553-557`. Tested at
+`tests/island/retype.test.ts`, including the §19 property at `:101`.
 Juno's own first feature request, via Joe. Distinct from the offer-dismiss already
 shipped, which only escapes the chooser BEFORE a kind is picked. This undoes a plot
-already sited and **already holding every sum she has spent on it**, so switching
-type must carry that progress over rather than restart the build (§19).
-`cancelPlacing` deliberately leaves `plot` alone for exactly this reason. Likely
-shape: keep `plot.at` and `sumProgress`, change only `plot.type`, re-run
+already sited and **already holding every sum the child has spent on it**, so
+switching type must carry that progress over rather than restart the build
+(§19). `cancelPlacing` deliberately leaves `plot` alone for exactly this reason.
+Likely shape: keep `plot.at` and `sumProgress`, change only `plot.type`, re-run
 `tileTypeFor` so the coast rules still get the final say.
 
 ---
@@ -303,10 +303,10 @@ and is now enjoying looking at the island and looking for the animals. we may wa
 to add some pure play elements as session reward."*
 
 The observation matters as much as the idea: after an hour of earning, the reward
-she chose for herself was unstructured looking. Nobody designed that. Three things
-already shipped serve it — the pet tap target (she was missing the animals she was
-hunting), the album's find-on-map, and camera focus. The cheapest "pure play
-element" may be to stop obstructing the play she has already invented.
+the child chose for themselves was unstructured looking. Nobody designed that.
+Three things already shipped serve it — the pet tap target (they were missing the
+animals they were hunting), the album's find-on-map, and camera focus. The cheapest
+"pure play element" may be to stop obstructing the play they have already invented.
 
 Open questions: does a pure-play reward need to be EARNED (which makes it economy,
 not play)? And §19 means a "session reward" must never become a session limit.
@@ -365,10 +365,10 @@ re-bases pacing on 600. `album.ts:140-168` already reserves the third row for
 this.
 
 `docs/rock-hexes-proposal.md` is a down-payment on item 14 and carries two questions
-for Joe: what a rock tile is FOR (if not habitable, choosing it silently slows her
-pet progress, which a six-year-old cannot weigh), and that "pure grey" is not
-actually available — the bare mountain variants sample the atlas rock swatch, which
-the Summer palette renders TAN.
+for Joe: what a rock tile is FOR (if not habitable, choosing it silently slows
+the child's pet progress, which a six-year-old cannot weigh), and that "pure grey"
+is not actually available — the bare mountain variants sample the atlas rock
+swatch, which the Summer palette renders TAN.
 
 ---
 

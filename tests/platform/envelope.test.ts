@@ -21,7 +21,7 @@ describe('canonical', () => {
 
   it('keeps array order, because array order is data', () => {
     // [grass, water] is not [water, grass]. Sorting these would be a bug that
-    // rearranged her island.
+    // rearranged the child's island.
     expect(canonical(['grass', 'water'])).not.toBe(canonical(['water', 'grass']))
   })
 
@@ -137,7 +137,7 @@ describe('migrations', () => {
     expect(v2.persistGranted).toBeNull()
   })
 
-  it('v1 to v2 keeps progress she had actually made', () => {
+  it('v1 to v2 keeps progress they had actually made', () => {
     // The point of the whole exercise: a migration that zeroes real work is
     // worse than no migration at all.
     const v2 = migrate_v1_v2({ readProgress: 3, sumProgress: 5, bankedTiles: 1 })

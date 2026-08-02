@@ -4,7 +4,7 @@
  * Reading progress is made PHYSICAL (slice-1 spec §3): the egg is not a
  * progress bar with a shell drawn on it, it is the progress bar. Every page
  * read moves it along a fixed sequence of states, so a child can see how close
- * her friend is without a number anywhere.
+ * their friend is without a number anywhere.
  *
  *   intact → hairline → crack → big cracks → wobble → hatch
  *
@@ -42,7 +42,7 @@ export interface Egg {
    * Every egg — including the very first — used to blink into existence at
    * full size. A thing that appears has always been there as far as a child
    * is concerned; a thing that ARRIVES came from somewhere, and the whole
-   * premise is that eggs wash up on her shore.
+   * premise is that eggs wash up on their shore.
    */
   arrive(): void
   /** Crack open: a shudder, a burst, then hide. Resolves when done. */
@@ -235,8 +235,8 @@ export function createEgg(): Egg {
       /*
        * The seams open with PROGRESS, continuously, rather than snapping
        * between drawn states. The named stages still exist because the rest of
-       * the game speaks in them, but what she sees is a shell easing apart a
-       * little further with every page she reads.
+       * the game speaks in them, but what they see is a shell easing apart a
+       * little further with every page they read.
        */
       openAmount = Math.max(0, Math.min(1, progress)) ** 1.4 * 0.055
       openBy(openAmount, openAmount * 6)

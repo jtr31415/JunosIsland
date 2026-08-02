@@ -36,7 +36,7 @@ export type TileType = 'grass' | 'water' | 'rock'
  * for three. Widening the union does not make TypeScript find those places,
  * because they compare values rather than switching exhaustively: rock would
  * simply have presented open water to the coast mask and cut beaches into the
- * middle of her island.
+ * middle of their island.
  *
  * So the land/water question goes through here, and never through `=== 'grass'`.
  */

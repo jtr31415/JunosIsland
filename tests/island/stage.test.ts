@@ -233,7 +233,7 @@ describe('the album chip', () => {
  *
  * The ceremony moves the child's real egg onto the stage and back, and stands
  * a borrowed pet beside it — all by re-parenting live objects between two
- * scenes. Every one of those moves is a chance to lose something she owns.
+ * scenes. Every one of those moves is a chance to lose something they own.
  *
  * The regression this exists to catch: an exit path that forgets
  * `showTemp(null)` leaves the hatched pet parented to the turntable FOREVER —
@@ -274,8 +274,8 @@ describe('the turntable, as a scene graph', () => {
     /*
      * A three.js clone shares geometry and materials with the cached
      * original. Freeing them here would break every other pet of that
-     * species, on the stage and on the island, including friends she already
-     * owns (brief §19). Detaching is the whole of the cleanup.
+     * species, on the stage and on the island, including friends the child
+     * already owns (brief §19). Detaching is the whole of the cleanup.
      */
     const stage = createStage()
     const geometry = new THREE.BoxGeometry(1, 1, 1)
@@ -334,7 +334,7 @@ describe('the turntable, as a scene graph', () => {
     /*
      * A 4-unit-tall box fitted into 0.6 of height settles at 0.15. Computed
      * here rather than read back after showTemp, which deliberately starts
-     * the friend at nothing so she can pop into being.
+     * the friend at nothing so it can pop into being.
      */
     stage.showTemp(pet, 0.6)
     expect(pet.scale.x).toBeLessThan(0.01)     // starts from nothing
