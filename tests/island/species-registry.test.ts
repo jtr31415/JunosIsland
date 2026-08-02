@@ -101,17 +101,21 @@ describe('the species registry', () => {
     // Home Pets' fourteen missing species by hand assembly, one per commit, so
     // this collection is 16 of 16 again — this time every member assembled and
     // not one of them spent by a kit. 54 + 14 = 68.
-    expect(REGISTRY.size).toBe(68)
+    // 84 SINCE 3 AUG, and the +16 is FARM, shipped whole on the parts route
+    // (PB-074) — sixteen of sixteen, every one hand-assembled. It is the first
+    // collection to arrive complete in a single run since the kit route was
+    // retired, and the second collection the parts route has closed.
+    expect(REGISTRY.size).toBe(84)
     expect(shippedIn('base')).toHaveLength(24)
     expect(shippedIn('garden')).toHaveLength(14)      // COMPLETE — the slow worm is assembled
     expect(shippedIn('home-pets')).toHaveLength(16)   // COMPLETE — all 16 hand-assembled (PB-073)
     expect(shippedIn('woodland')).toHaveLength(0)     // all 16 were kit-built
     expect(shippedIn('africa')).toHaveLength(1)       // crocodile; 13 kit-built deleted
-    expect(shippedIn('farm')).toHaveLength(0)         // all 16 were kit-built
+    expect(shippedIn('farm')).toHaveLength(16)        // COMPLETE — all 16 hand-assembled (PB-074)
     expect(shippedIn('night-time')).toHaveLength(13)  // 16 rostered; bat, sugar glider, scorpion
   })
 
-  it('leaves 252 species rostered but unshipped, on purpose', () => {
+  it('leaves 236 species rostered but unshipped, on purpose', () => {
     // The gap is the point. Nobody should "finish" the registry — a species
     // without a built kit renders as nothing, which is worse than absent.
     //
@@ -138,12 +142,18 @@ describe('the species registry', () => {
     // per worker in parallel. That is now twice, so it is a method rather than a
     // fluke — the wall is a schedule, and the schedule is roughly a collection
     // per run.
+    // 236 since 3 Aug, and the −16 is FARM (PB-074), measured and dispatched the
+    // same way a third time. Three runs, three collections, and this one is the
+    // largest single drop the assembly route has made — sixteen rather than
+    // thirteen or fourteen, because Farm had no member the bank could not
+    // express. So the schedule above now has a rate to read off it, and the
+    // remaining 236 are about fifteen runs rather than an unknown quantity.
     const rostered = COLLECTIONS.flatMap(c => c.members)
     expect(rostered).toHaveLength(320)
-    expect(rostered.filter(id => !speciesRecord(id))).toHaveLength(252)
+    expect(rostered.filter(id => !speciesRecord(id))).toHaveLength(236)
   })
 
-  it('has TWO complete collections — garden, and home-pets rebuilt properly', () => {
+  it('has THREE complete collections — garden, and home-pets and farm rebuilt properly', () => {
     // This test used to assert ZERO, and said in its own comment: "if this test
     // ever goes red, a second kit landed and that question became live." That
     // is exactly what happened, so it is inverted rather than deleted — the
@@ -208,11 +218,20 @@ describe('the species registry', () => {
     // NOTE both are UNSIGNED beyond Garden: completeness here means every
     // rostered member has a record, not that Joe has approved them. He signs off
     // in the editor and that gate is his alone.
+    //
+    // AND NOW THERE ARE THREE. FARM shipped 16 of 16 on the parts route (PB-074),
+    // which is the same method a third time and the first collection to arrive
+    // whole in a single run — Home Pets needed two earlier assembly runs before
+    // PB-073 closed it. Farm is also the collection this file has watched go both
+    // ways: it was 16 of 16 once on the songbird kit, then 0 when those sixteen
+    // were deleted, and it is 16 again now on animals that were each measured and
+    // argued. Same number, and the paragraphs above are why it is not the same
+    // event. Farm is UNSIGNED too, on the same terms as Home Pets.
     const complete = COLLECTIONS
       .filter(c => c.id !== 'base')
       .filter(c => c.members.every(id => speciesRecord(id)))
       .map(c => c.id)
-    expect([...complete].sort()).toEqual(['garden', 'home-pets'])
+    expect([...complete].sort()).toEqual(['farm', 'garden', 'home-pets'])
   })
 
   it('names the seven base animals roster §5 gives a threat badge', () => {
