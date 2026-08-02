@@ -126,6 +126,27 @@ function deferred(): { promise: Promise<void>; resolve: () => void; reject: () =
 }
 
 describe('what the panel puts on screen', () => {
+  it('talks about the child as "they" (PB-056)', () => {
+    /*
+     * This panel is the only screen in the game that talks ABOUT the child
+     * rather than to them, so it is the one place a pronoun can hide — and all
+     * six of the gendered strings PB-056 corrected were here or in the menu
+     * that opens it. Asserted over the whole rendered subtree rather than over
+     * the copy tables, because the heading, the note and the three mode
+     * descriptions are written in three different places and only the DOM sees
+     * all of them at once.
+     *
+     * `tests/copy/pronouns.test.ts` sweeps every string literal in src/; this
+     * one proves the strings that reach the screen are among the ones swept.
+     */
+    const { deps } = makeDeps()
+    const root = open(deps)
+    expect(root.querySelector('.grownups-title')?.textContent).toBe('What they are working on')
+    expect(root.querySelector('.grownups-note')?.textContent)
+      .toBe('Only you see this. Nothing on this page is shown to them.')
+    expect(root.textContent ?? '').not.toMatch(/\b(she|her|hers|herself|he|him|his)\b/i)
+  })
+
   it('gives every live path its own section, in the ladder’s order', () => {
     const { deps } = makeDeps()
     const root = open(deps)

@@ -1,9 +1,9 @@
 /**
- * The album: every friend read home, with the name she gave them.
+ * The album: every friend read home, with the name the child gave them.
  *
  * Pets are never lost or taken (brief section 5), so this is a record of
- * ownership first: every friend she has read home is in here, with her name, and
- * nothing in this file can ever remove one.
+ * ownership first: every friend the child has read home is in here, with its
+ * name, and nothing in this file can ever remove one.
  *
  * ## It IS a checklist now, and that is a reversal
  *
@@ -17,10 +17,10 @@
  *   keep motivation up. and anticipation is motivation."*
  *
  * The old rule was protecting against a scoreboard — a page that tells a child
- * she is behind. What replaced it is not that, and the difference is in the
+ * they are behind. What replaced it is not that, and the difference is in the
  * detail of what a blank slot is allowed to be: a shape and a count, with no
- * name, no tap and no way to fail. She is never missing anything; there are
- * simply animals she has not met yet, and they have outlines.
+ * name, no tap and no way to fail. The child is never missing anything; there
+ * are simply animals still to be met, and they have outlines.
  *
  * The four albums come from `species/unlock.ts` by way of `species/opened.ts`.
  * This file is handed the list and does not decide it.
@@ -36,8 +36,8 @@
  * the pop out album should rotate it as well."* And then: *"on the pop out card
  * with the animal in large, we also need as info its species."*
  *
- * So a tap on a friend opens her big, turning slowly, with her name, her
- * species, a button that says both out loud, and a way to go and find her.
+ * So a tap on a friend opens them big, turning slowly, with their name, their
+ * species, a button that says both out loud, and a way to go and find them.
  *
  * Three things about how it is built are load-bearing:
  *
@@ -197,7 +197,7 @@ function createPortraitRenderer(
    * And a failure is a shrug rather than a throw. By the time this runs the game
    * has already got a context for the world, so a second one failing means the
    * browser is at its limit — in which case thumbnails are the right thing to
-   * lose. Her friends, their names and the pop-out all still work.
+   * lose. The child's friends, their names and the pop-out all still work.
    */
   let renderer: THREE.WebGLRenderer | null = null
   let unavailable = false
@@ -330,7 +330,7 @@ export function petFacts(pet: Pet & { setId?: string }): AlbumFact[] {
  * on the live scene-graph roots in `pets.ts` and is never written back to the
  * flow. Flying to the hatch spot would have been "find where it came from",
  * which on a grown island is a different tile entirely — and the whole reason
- * this button exists is that Juno went looking round the island for her animals
+ * this button exists is that Juno went looking round the island for the animals
  * unprompted (PHASE3-HANDOVER §10).
  *
  * **The height is dropped.** A bee hovers at `TREE_HEIGHT`, and the camera's
@@ -338,7 +338,7 @@ export function petFacts(pet: Pet & { setId?: string }): AlbumFact[] {
  * island is flat. So handing the pivot a y of 2.3 leaves it up in the air for
  * the rest of the session: every later spin orbits a point above the ground and
  * nothing brings it back down, since `frame()` only carries it in x and z. The
- * ground under a friend is what she means by where it is.
+ * ground under a friend is what the child means by where it is.
  */
 export function focusPoint(
   live: THREE.Vector3 | null, hatched: THREE.Vector3,
@@ -348,7 +348,7 @@ export function focusPoint(
 }
 
 /**
- * How big the friend is framed on the pop-out, and how big she is fitted.
+ * How big the friend is framed on the pop-out, and how big it is fitted.
  *
  * The hatch's own numbers (`main.ts` uses `frame(0.68)` / `showTemp(_, 0.44)`),
  * pulled in a little because this slot is most of the screen rather than 45% of
@@ -362,15 +362,15 @@ const POP_FIT = 0.46
  * Where the camera AIMS, as a fraction of the framing radius.
  *
  * DERIVED from the fit rather than picked, and it is the difference between a
- * friend in the middle of her half of the card and a friend sitting on the
+ * friend in the middle of its half of the card and a friend sitting on the
  * bottom edge of it. `stage.frame`'s default aims at 0.8 of the radius — right
  * for the hatch, where the vignette is a tall slot beside a panel — which here
- * is 0.48 units up while the pet's own middle is at 0.23, so she was framed a
+ * is 0.48 units up while the pet's own middle is at 0.23, so it was framed a
  * whole body-height below where the lens was looking. Checked by eye, twice.
  *
- * The eye sits a little above the aim, so she is seen very slightly from above:
- * looking down on a friend reads as looking AT her, whereas dead level reads as
- * a specimen photograph.
+ * The eye sits a little above the aim, so the pet is seen very slightly from
+ * above: looking down on a friend reads as looking AT them, whereas dead level
+ * reads as a specimen photograph.
  */
 const POP_LOOK = POP_FIT / 2 / POP_FRAME
 const POP_EYE = POP_LOOK * 1.5
@@ -394,7 +394,7 @@ export interface AlbumWorld {
   preview(species: string): Promise<THREE.Object3D>
   /** Where a friend is standing right now — `pets.positionOf`. Null if not out yet. */
   livePosition(id: string): THREE.Vector3 | null
-  /** Where she hatched. The fallback, for a friend whose model is still in flight. */
+  /** Where the pet hatched. The fallback, for a friend whose model is in flight. */
   hatchPosition(pet: Pet): THREE.Vector3
   /** Turn the island about a point. The camera owns the easing and the clamp. */
   focusOn(point: THREE.Vector3): void
@@ -407,9 +407,9 @@ export interface AlbumWorld {
 export interface Album {
   /**
    * @param albums Which collections to lay out, in the order they were opened —
-   * `albumsToShow(opened)`. Four of them while she is mid-collection, and one
-   * more each time she finishes one. An id this build cannot resolve is skipped
-   * rather than drawn empty.
+   * `albumsToShow(opened)`. Four of them while the child is mid-collection, and
+   * one more each time they finish one. An id this build cannot resolve is
+   * skipped rather than drawn empty.
    */
   open(pets: readonly Pet[], albums: readonly string[]): void
   close(): void
@@ -487,7 +487,7 @@ export function createAlbum(
   on.setAttribute('aria-label', 'the next album')
 
   /**
-   * Which page she is on, as dots rather than as "3 of 5".
+   * Which page the child is on, as dots rather than as "3 of 5".
    *
    * There is already a number on this card — the `2 of 14` beside the heading,
    * which counts ANIMALS — and a second x-of-y three centimetres away counting
@@ -537,12 +537,12 @@ export function createAlbum(
   actions.className = 'album-pop-actions'
 
   /**
-   * The button that reads her name out.
+   * The button that reads the friend's name out.
    *
    * It replaces a tap on the grid cell, which is what used to speak. Joe asked
    * for a button, and a button is better than a whole cell for the reason the
    * challenge X is better than a text link: it says what it does with a symbol,
-   * and it is nowhere near the thing she taps to open the card.
+   * and it is nowhere near the thing the child taps to open the card.
    */
   const say = document.createElement('button')
   say.className = 'chunk chunk-button album-say'
@@ -565,8 +565,8 @@ export function createAlbum(
    * the progress card, top-right is the album button itself, and two round
    * buttons stacked in one corner is a coin toss.
    *
-   * The card's own ✕ sits in exactly this place, so it is also the cross she has
-   * already met once in this feature.
+   * The card's own ✕ sits in exactly this place, so it is also the cross the
+   * child has already met once in this feature.
    */
   const popShut = document.createElement('button')
   popShut.className = 'chunk chunk-button album-pop-close'
@@ -609,13 +609,13 @@ export function createAlbum(
   /**
    * Take the pop-out down.
    *
-   * `back` is whether the grid comes back up. It does when she closes the card;
-   * it does not when the card closed because she asked to go and look at the
-   * island, since the album would then be standing in front of the thing she
-   * asked to see.
+   * `back` is whether the grid comes back up. It does when the child closes the
+   * card; it does not when the card closed because they asked to go and look at
+   * the island, since the album would then be standing in front of the thing
+   * they asked to see.
    *
-   * The friend is DETACHED, never disposed — she is a clone sharing geometry and
-   * materials with every other pet of her species, including ones on the island
+   * The friend is DETACHED, never disposed — it is a clone sharing geometry and
+   * materials with every other pet of that species, including ones on the island
    * right now (brief §19).
    */
   function popDown(back: boolean): void {
@@ -642,10 +642,10 @@ export function createAlbum(
    * The grid GOES AWAY while the card is up, and that is forced rather than
    * chosen: `.album-card` is opaque paper and `.album` blurs what is behind it,
    * so a pop-out layered over the grid would be a pet rendered behind a sheet of
-   * paper through a blur. Standing her over the island instead is also the
-   * better reading of the card — the island is where "find on the map" is about
-   * to send her, and it is already the thing behind the transparent container
-   * the hatch uses (Joe: "so it looks like it floats freely").
+   * paper through a blur. Standing the friend over the island instead is also
+   * the better reading of the card — the island is where "find on the map" is
+   * about to send the child, and it is already the thing behind the transparent
+   * container the hatch uses (Joe: "so it looks like it floats freely").
    *
    * Nothing is spoken on open. `speak()` cancels the previous utterance
    * (v0:749), so a card opening mid-sentence would behead Fred — and the button
@@ -658,9 +658,9 @@ export function createAlbum(
     pop.classList.remove('hide')
 
     void world.preview(pet.species).then(model => {
-      // She may have closed it, or opened another friend, while the model was
-      // in flight. Standing a stale guest on the turntable is how a pet ends
-      // up on a card belonging to somebody else.
+      // The child may have closed it, or opened another friend, while the
+      // model was in flight. Standing a stale guest on the turntable is how a
+      // pet ends up on a card belonging to somebody else.
       if (current !== pet) return
       showcase.frame(POP_FRAME, POP_LOOK, POP_EYE)
       showcase.showTemp(model, POP_FIT)
@@ -681,7 +681,7 @@ export function createAlbum(
   pop.onclick = e => { if (e.target === pop) popDown(true) }
 
   /**
-   * Her name, and then what she is.
+   * The friend's name, and then what it is.
    *
    * CHAINED, not two calls. `speak()` cancels whatever is speaking (v0:749,
    * faithfully ported), so `speak(name); speak(species)` would say the species
@@ -690,9 +690,9 @@ export function createAlbum(
    *
    * The species is spoken as well as shown because it is new reading content in
    * a reading game: the word is on the card in the literacy font and hearing it
-   * as she looks at it is the whole mechanic the rest of the game is built on. It
-   * is a second line rather than one sentence, per voice.md's law that a name is
-   * never spliced into another utterance.
+   * as the child looks at it is the whole mechanic the rest of the game is built
+   * on. It is a second line rather than one sentence, per voice.md's law that a
+   * name is never spliced into another utterance.
    *
    * If the browser never fires `onend` the name is still said, which is what Joe
    * asked for; the species is the part that degrades.
@@ -709,7 +709,7 @@ export function createAlbum(
     if (!pet) return
     world.focusOn(focusPoint(world.livePosition(pet.id), world.hatchPosition(pet)))
     // ...and get out of the way. A full-screen album in front of the island is
-    // not an answer to "where is she?".
+    // not an answer to "where is my friend?".
     hide()
   }
 
@@ -729,7 +729,7 @@ export function createAlbum(
       { x: r.left, y: r.top, width: r.width, height: r.height })
   })
 
-  /** A friend she owns: her portrait, her name, and a way into the pop-out. */
+  /** A friend the child owns: portrait, name, and a way into the pop-out. */
   function cellFor(pet: Pet): HTMLElement {
     const cell = document.createElement('div')
     cell.className = 'chunk album-cell'
@@ -745,11 +745,11 @@ export function createAlbum(
     cell.append(name)
 
     /*
-     * Tapping a friend opens her, big and turning.
+     * Tapping a friend opens them, big and turning.
      *
-     * It used to speak her name and nothing else. Joe: "if you click it, it
+     * It used to speak the name and nothing else. Joe: "if you click it, it
      * should pop out bigger..." — the name is still a tap away, on a button
-     * that also says what she is.
+     * that also says what the friend is.
      */
     cell.setAttribute('role', 'button')
     cell.setAttribute('aria-label', `${pet.name}, ${speciesName(pet.species)}`)
@@ -762,22 +762,22 @@ export function createAlbum(
      * species used to raise one unhandled rejection per open. The cell is
      * already complete without it: the name is under the picture and the alt
      * text is the name, so a friend whose portrait never arrives is a blank
-     * square with her name on it rather than a hole in the grid.
+     * square with its name on it rather than a hole in the grid.
      */
     void portraits.shoot(pet.species)
       .then(url => { if (url) img.src = url })
-      .catch(() => { /* no picture of this one; her name is still there */ })
+      .catch(() => { /* no picture of this one; its name is still there */ })
     return cell
   }
 
   /**
-   * ONE SHE HAS NOT MET. A shape, and deliberately nothing else.
+   * ONE THE CHILD HAS NOT MET. A shape, and deliberately nothing else.
    *
    * Joe, 1 Aug: *"silhouettes only, no names, no animals, no clickability"*. So:
    *
    *   - NO NAME, and no empty name element either — the row below the picture is
    *     reserved by the CSS instead, so a blank slot is exactly as tall as a
-   *     friend's and the grid does not go ragged where she has gaps.
+   *     friend's and the grid does not go ragged where there are gaps.
    *   - NOT A BUTTON. No `role`, no `onclick`, and `pointer-events: none` in the
    *     CSS, because a slot that highlights under a finger promises something
    *     will happen when nothing will.
@@ -787,8 +787,8 @@ export function createAlbum(
    *     fourteen — rather than eleven announcements of "not found yet".
    *
    * The silhouette is the species' own outline, blackened in CSS rather than
-   * re-rendered in black: it is the same cached portrait the day she finds one,
-   * so a friend arriving swaps a filter rather than fetching a picture.
+   * re-rendered in black: it is the same cached portrait the day the child finds
+   * one, so a friend arriving swaps a filter rather than fetching a picture.
    */
   function blankFor(species: string): HTMLElement {
     const cell = document.createElement('div')
@@ -809,7 +809,7 @@ export function createAlbum(
   /**
    * One album: a heading, a count, and a slot for every species in it.
    *
-   * IN ROSTER ORDER, never in the order she found them. The roster order is the
+   * IN ROSTER ORDER, never in the order they were found. The roster order is the
    * same on every island, which is what makes the shape of a half-finished album
    * something two children can talk about — roster §3's "playground currency"
    * applied to the page rather than to the names on it.
@@ -854,9 +854,9 @@ export function createAlbum(
        * The FIRST pet of each species fills that species' slot.
        *
        * First rather than newest, so a slot never changes the friend it shows
-       * once it is filled. Everyone who does not get a slot — a second animal of
-       * the same species, or a species no open album lists — is gathered below
-       * rather than dropped: brief §19 is that nothing she owns is ever lost, and
+       * once filled. Everyone who does not get a slot — a second animal of the
+       * same species, or a species no open album lists — is gathered below rather
+       * than dropped: brief §19 is that nothing the child owns is ever lost, and
        * a roster view is exactly the sort of change that loses somebody quietly.
        */
       const mine = new Map<string, Pet>()
@@ -865,11 +865,11 @@ export function createAlbum(
       /*
        * The pages are DECIDED here and BUILT one at a time below.
        *
-       * Deciding up front is what lets the dots be drawn before she has turned
-       * to anything, and building lazily is what keeps a turn cheap: a page is
-       * up to twenty-four cells, each of which asks the portrait renderer for a
-       * picture, and rendering all five pages to show one of them was the cost
-       * the stacked version was paying on every open.
+       * Deciding up front is what lets the dots be drawn before the child has
+       * turned to anything, and building lazily is what keeps a turn cheap: a
+       * page is up to twenty-four cells, each of which asks the portrait renderer
+       * for a picture, and rendering all five pages to show one of them was the
+       * cost the stacked version was paying on every open.
        */
       const pages = albums.filter(id => collection(id) !== undefined)
       const shown = new Set<string>()

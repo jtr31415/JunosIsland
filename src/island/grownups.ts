@@ -420,7 +420,7 @@ export function applyWordColours(root: HTMLElement, calm: boolean): void {
  */
 export const WORD_COLOUR_CHOICES: readonly Choice[] = [
   { id: 'mixed', label: 'Green and red', detail: 'red marks a tricky word' },
-  { id: 'green', label: 'All green', detail: 'gentler if red puts her off' },
+  { id: 'green', label: 'All green', detail: 'gentler if red puts them off' },
 ]
 
 /* ------------------------------------------- A4/A6: what she is working on */
@@ -468,7 +468,7 @@ const RESERVED_TITLES: Record<ReservedPath, string> = {
 const MODES: ReadonlyArray<{ mode: Mode; label: string; detail: string }> = [
   {
     mode: 'auto', label: 'Auto',
-    detail: 'Moves her on by itself, and only ever forward. Right now it is watching, not ticking.',
+    detail: 'Moves them on by itself, and only ever forward. Right now it is watching, not ticking.',
   },
   {
     mode: 'manual', label: 'Manual',
@@ -476,7 +476,7 @@ const MODES: ReadonlyArray<{ mode: Mode; label: string; detail: string }> = [
   },
   {
     mode: 'hold', label: 'Hold',
-    detail: 'Pins her exactly where she is. Nothing moves on its own.',
+    detail: 'Pins them exactly where they are. Nothing moves on its own.',
   },
 ]
 
@@ -810,8 +810,8 @@ export function showLearning(root: HTMLElement, deps: LearningDeps): Promise<voi
     const close = panel(root, box => {
       // Wider than a keypad or a confirmation: this one is read, not answered.
       box.classList.add('grownups-learning')
-      box.append(heading('What she is working on'))
-      box.append(note('Only you see this. Nothing on this page is shown to her.'))
+      box.append(heading('What they are working on'))
+      box.append(note('Only you see this. Nothing on this page is shown to them.'))
 
       /*
        * ONE harness for the whole panel, and it is the ISLAND'S. Four sections

@@ -32,8 +32,8 @@ export type PageKind = 'find' | 'build' | 'sum'
 /**
  * One resolved attempt.
  *
- * "Resolved" is load-bearing: an attempt that was never finished — she left
- * mid-word, or she peeked — is never emitted at all. See `pageEnded` and
+ * "Resolved" is load-bearing: an attempt that was never finished — they left
+ * mid-word, or they peeked — is never emitted at all. See `pageEnded` and
  * `help('peek')`.
  */
 export interface AttemptEvent {
@@ -41,12 +41,12 @@ export interface AttemptEvent {
   /**
    * Which target within the page, in the order they were asked. Always 0 on
    * build and sum, which put one question each; a five-word find page emits
-   * 0..4 as she works down it.
+   * 0..4 as they work down it.
    */
   index: number
   correct: boolean
   /**
-   * Question put → first tap, in milliseconds, or null if she tapped before
+   * Question put → first tap, in milliseconds, or null if they tapped before
    * the prompt was ever issued (possible on find and build, where the prompt
    * runs off a timer that `quietUntil` can defer).
    *
@@ -70,7 +70,7 @@ export interface AttemptEvent {
    */
   helped: boolean
   /**
-   * Her wrong taps on this attempt reached the mash threshold, so the
+   * Their wrong taps on this attempt reached the mash threshold, so the
    * renderer's own rescue fired (the word again slowly, or the dots opening).
    *
    * Recorded rather than excluded, and by construction it changes no accuracy:
@@ -118,7 +118,7 @@ export function createAttemptTally(
   let wrongs = 0
   let helped = false
   let rescued = false
-  /** She revealed the answer, so there is nothing here to judge. */
+  /** They revealed the answer, so there is nothing here to judge. */
   let voided = false
   let askedAt: number | null = null
   let firstTapAt: number | null = null
@@ -185,15 +185,15 @@ export function createAttemptTally(
       if (!kind) return
       /*
        * THE PEEK IS NOT HELP, and the difference is the whole of JT-008(1).
-       * Tapping the grey `?` reveals the answer and the round goes inert — she
-       * never answers it, so there is no answer to be right or wrong about.
+       * Tapping the grey `?` reveals the answer and the round goes inert — they
+       * never answer it, so there is no answer to be right or wrong about.
        * Joe: *"peeking is not rewarded — it is counted as no attempt."* So the
        * attempt is voided rather than marked, and `right()` will emit nothing
        * even if the pad somehow fires afterwards.
        *
-       * A peeked stage therefore reads as UNPRACTISED (dashes, until she does
+       * A peeked stage therefore reads as UNPRACTISED (dashes, until they do
        * fifteen real ones) rather than as fine. That is the honest reading: the
-       * report should not tell you she can do something she has not done.
+       * report should not tell you they can do something they have not done.
        */
       if (k === 'peek') voided = true
       else helped = true
@@ -203,10 +203,10 @@ export function createAttemptTally(
       /*
        * The attempt in flight is DISCARDED, never failed.
        *
-       * She tapped the X in the middle of a word. Joe's ruling (JT-008(3)):
+       * They tapped the X in the middle of a word. Joe's ruling (JT-008(3)):
        * *"abandoned challenges should be measured as paused and answers made
        * so far count towards proficiency."* Both halves are here, and the
-       * second one needs no code — every target she DID answer was emitted the
+       * second one needs no code — every target they DID answer was emitted the
        * moment it resolved, so walking away cannot reach back and unmake them.
        * Only the unfinished one goes, and it goes silently: leaving is not
        * evidence of getting it wrong, and a model that counted it would mean

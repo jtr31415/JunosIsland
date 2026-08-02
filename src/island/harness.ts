@@ -5,7 +5,7 @@
  * literal in `main.ts` — `level: 1` on the reading deps, `1` in the `dealSum`
  * call — and every outcome a child produced was computed by `attempts.ts` and
  * dropped on the floor, because nothing was listening. This module is both
- * ends of that: what she may be dealt, and what happened when she was.
+ * ends of that: what they may be dealt, and what happened when they were.
  *
  * THE SHAPE IS THE SPEC'S. `levelFor(path)` says which stages of a path are
  * ticked; `recordAttempt(evt)` moves the stats for whatever was last dealt;
@@ -98,7 +98,7 @@ export type Mode = 'auto' | 'manual' | 'hold'
 export interface SessionRecord { date: string; correct: number; total: number }
 
 export interface StageStats {
-  /** May she be dealt this? The whole of the capability model. */
+  /** May they be dealt this? The whole of the capability model. */
   ticked: boolean
   attempts: number
   /**
@@ -106,7 +106,7 @@ export interface StageStats {
    *
    * Seeded with the first answer rather than with zero. A stage seeded at zero
    * says a child who has got everything right is at .15, which is a statement
-   * about the seed and not about her.
+   * about the seed and not about them.
    */
   ewma: number | null
   /** The last 30 CORRECT latencies, in ms, raw. */
@@ -120,7 +120,7 @@ export interface StageStats {
    * beginning has been overwritten by the trend itself.
    */
   early: number[]
-  /** The last 6 days she worked on this stage. */
+  /** The last 6 days they worked on this stage. */
   sessions: SessionRecord[]
   /** The last 10 rescue timestamps. */
   rescues: number[]
@@ -129,9 +129,9 @@ export interface StageStats {
    *
    * A ring of its own, and nothing a probe does may leak into the fields
    * above it. Run B (runA.md:227-229) gates promotion on *"probe accuracy
-   * ≥ .70 over ≥ 8"*, and the stage being probed is one she has never been
-   * taught — so the probe is a QUESTION ABOUT READINESS and not a record of
-   * her work. Two of those fields would be actively damaged by it:
+   * ≥ .70 over ≥ 8"*, and the stage being probed is one they have never
+   * been taught — so the probe is a QUESTION ABOUT READINESS and not a
+   * record of their work. Two of those fields would be actively damaged by it:
    *
    *   - `ewma` is seeded by the first answer (see `recordAttempt` below), so
    *     one failed first probe would seed an unticked stage at 0 and damn it
@@ -153,7 +153,7 @@ export interface StageStats {
  *
  * Run B's cadence in three facts (runA.md:230-232): at most one offer a
  * session, a decline costs nothing, and a decline is respected for two
- * sessions. `daysSinceDecline` counts DAYS SHE PLAYED rather than days on the
+ * sessions. `daysSinceDecline` counts DAYS THEY PLAYED rather than days on the
  * calendar — a child who does not open the island for a week has not declined
  * anything twice — so it is bumped from the one day key `recordAttempt`
  * already computes, and `lastCountedDay` is the cursor that keeps that bump
@@ -228,9 +228,9 @@ const HONEYMOON_SESSIONS = 2
  * the real code and Fable chose option C: read *bounded 65/35* as a bound on
  * the STRENGTH of the lean — a multiplier on the weaker path's tick weight —
  * rather than as a clamp on the resulting share. The reason is that the ticks
- * must always dominate, because they are the parent's statement of what his
- * daughter may be dealt, and a lean that could invert which path leads would
- * be quietly overruling him with an accuracy estimate.
+ * must always dominate, because they are the parent's statement of what
+ * their child may be dealt, and a lean that could invert which path leads
+ * would be quietly overruling them with an accuracy estimate.
  *
  * WHAT THE MULTIPLIER BUYS, in the only two shapes worth naming:
  *
@@ -240,7 +240,7 @@ const HONEYMOON_SESSIONS = 2
  *   2:1 ticks (Joe's example, subtraction the weaker), full lean:
  *     weights 2 : 1.857 → about .519 sums / .481 subtraction. The parent's
  *     ticks still lead, and subtraction has bought most of the practice it
- *     needed without the lean taking the decision away from him.
+ *     needed without the lean taking the decision away from them.
  *
  * The lean reads PERSISTED estimates only — the spec's own words — so
  * nothing that happened in this sitting can move the share of maths.
@@ -253,7 +253,7 @@ const HONEYMOON_SESSIONS = 2
  * a freshly introduced `takingAway` has almost no history, and a lean
  * computed from the OTHER path's data alone would force-feed a five-year-old
  * a brand-new kind of maths on the strength of no evidence about it at all.
- * Below this bar she is dealt at her tick share, which is Joe's answer.
+ * Below this bar they are dealt at their tick share, which is Joe's answer.
  */
 const LEAN_MIN_ATTEMPTS = 8
 /** A gap this small is noise in an ewma, not a weakness. */
@@ -301,11 +301,11 @@ const freshOffer = (): OfferState =>
  * The A5 spec says *"existing saves get sums 1 ticked, everything else honest
  * zeroes"*, which read literally would leave an island unable to deal a reading
  * page — the egg would never hatch again. The honest reading, and the one taken
- * here, is that the zeroes are the STATS and the ticks are what she is already
- * playing. `takingAway` is NOT among them: the island has never dealt a
- * subtraction, and starting one on the strength of a migration would be handing
- * a child new work that nobody decided to give her. JT-007 is Joe ticking it
- * himself, deliberately, which is the right way for it to arrive.
+ * here, is that the zeroes are the STATS and the ticks are what the child
+ * is already playing. `takingAway` is NOT among them: the island has never
+ * dealt a subtraction, and starting one on the strength of a migration would be
+ * handing a child new work that nobody decided to give them. JT-007 is Joe
+ * ticking it himself, deliberately, which is the right way for it to arrive.
  */
 const STARTS_TICKED: ReadonlyArray<readonly [Path, number]> =
   [['sums', 1], ['reading', 1], ['building', 1]]
@@ -466,9 +466,9 @@ export function readAttainment(v: unknown): Attainment {
    * So the invariant is restored where the untrusted data comes IN, and not
    * only where a parent's finger does.
    *
-   * The ticks are repaired and the STATS are not: measurement is the record of
-   * what she has actually done, and nothing about a broken tickbox makes it
-   * untrue.
+   * The ticks are repaired and the STATS are not: measurement is the record
+   * of what the child has actually done, and nothing about a broken tickbox
+   * makes it untrue.
    */
   for (const moment of [MATHS_PATHS, READING_PATHS]) {
     if (moment.some(p => STAGES[p].some(s => out[p].stages[s]?.ticked))) continue
@@ -574,7 +574,7 @@ export interface Harness {
   /** Is this path's own offer standing today? A thin read of `pendingOffer`. */
   offerDue(path: Path): boolean
   /**
-   * The one offer to put to her right now, or null.
+   * The one offer to put to them right now, or null.
    *
    * The single question the offer surface asks, so it must be complete on its
    * own: the cadence, the cooldown, the gate and the ordering between B's two
@@ -582,9 +582,9 @@ export interface Harness {
    */
   pendingOffer(): Offer | null
   /**
-   * She was asked, and this is what she said.
+   * They were asked, and this is what they said.
    *
-   * Accept ticks the target and stamps the honeymoon; decline costs her
+   * Accept ticks the target and stamps the honeymoon; decline costs them
    * nothing at all beyond two sessions of quiet. Neither ever unticks.
    */
   noteOffer(path: Path, accepted: boolean): void
@@ -615,14 +615,14 @@ export function createHarness(
   state: Attainment, now: () => number = Date.now,
 ): Harness {
   /**
-   * What the last deal handed her.
+   * What the last deal handed them.
    *
    * Null until something is dealt, and an attempt arriving against null is
    * DROPPED rather than guessed at. The overlay's tally outlives a single
    * round, so a mis-wire that attributed stray attempts to whatever was dealt
    * last would corrupt a stage quietly — which is the one failure a
    * measurement system must not have, because its output is a parent deciding
-   * what his daughter can do.
+   * what their child can do.
    */
   let current: { path: Path; stage: number; probe: boolean } | null = null
 
@@ -635,19 +635,19 @@ export function createHarness(
    * about the child.
    *
    * A run of three wrong answers is a bad ten minutes, not a capability, and
-   * writing it into `attainment` would mean a Tuesday afternoon followed her
+   * writing it into `attainment` would mean a Tuesday afternoon followed them
    * into every session afterwards — visible in a save, arguable over, and one
    * more field the migration has to repair. The whisper budget is the same
    * statement about a sitting: *"1–2 items per session"* is a sentence about
    * TODAY. So all three counters die with the session, which also makes them
    * untestable through the save and therefore only observable where they
-   * actually matter — in what she gets dealt.
+   * actually matter — in what they get dealt.
    *
-   * Brief §19 governs the mercy run in particular: wrong answers cost her
+   * Brief §19 governs the mercy run in particular: wrong answers cost them
    * nothing. It is silent, it is never announced, there is no read for it on
-   * the interface, and the attempts she makes during one are recorded exactly
-   * as honestly as any others. She simply finds the next two questions on the
-   * bottom rung, and nobody tells her why.
+   * the interface, and the attempts they make during one are recorded exactly
+   * as honestly as any others. They simply find the next two questions on the
+   * bottom rung, and nobody tells them why.
    */
   /** Consecutive wrong answers on a path, reset by any correct one. */
   const wrongRun = new Map<Path, number>()
@@ -679,7 +679,7 @@ export function createHarness(
 
   /* --------------------------------------------------------- Run B's reads */
 
-  /** The top rung she is allowed, which is the one the gate judges. */
+  /** The top rung they are allowed, which is the one the gate judges. */
   const topTicked = (path: Path): number | null => {
     const set = tickedStages(path)
     return set.length ? (set[set.length - 1] as number) : null
@@ -715,7 +715,7 @@ export function createHarness(
    * the last two sessions, and two distinct days.
    *
    * Zero-rescue is read against the sessions rather than against the clock,
-   * because a rescue is only evidence about the days she was actually here.
+   * because a rescue is only evidence about the days they were actually here.
    */
   const solid = (st: StageStats): boolean => {
     if (st.ewma === null || st.ewma < PROMOTE_EWMA) return false
@@ -822,8 +822,8 @@ export function createHarness(
    * The bug was latent for as long as every ladder happened to be numbered in
    * its own order, and became reachable the moment `STAGES.sums` became
    * [1, 3, 2]: a child ticked on all three has top = 2, and stage 3 — the
-   * EASIER rung, one place below her — would compare 3 < 2 and never retire.
-   * She would go on being dealt the middle rung at full weight forever. The
+   * EASIER rung, one place below them — would compare 3 < 2 and never retire.
+   * They would go on being dealt the middle rung at full weight forever. The
    * doc comment above already said "below the top ticked rung" in words; this
    * makes the code agree with it.
    */
@@ -854,7 +854,7 @@ export function createHarness(
    *
    * THE FALLBACK IS NOT OPTIONAL. A path whose every ticked stage has gone to
    * zero — all settled, budget spent — must still be dealable, so everything
-   * goes back to 1. She is never dealt nothing.
+   * goes back to 1. The child is never dealt nothing.
    */
   const stageWeights = (path: Path, stages: number[]): number[] => {
     if ((mercyLeft.get(path) ?? 0) > 0) return stages.map((_, i) => (i === 0 ? 1 : 0))
@@ -955,15 +955,15 @@ export function createHarness(
        * The uniform draw above is Joe's JT-010(1) and stays exactly as it was;
        * the probe then takes one round in eight (runA.md:229) and swaps the
        * STAGE for the rung above — same path, so the share of maths is
-       * untouched and a probe cannot quietly hand her subtraction she has not
-       * been offered. `probeWanted` is asked FIRST so that a path with nothing
+       * untouched and a probe cannot quietly hand them subtraction they have
+       * not been offered. `probeWanted` is asked FIRST so a path with nothing
        * to probe does not consume a roll it has no use for: the island's rng
        * is a shared sequence and spending from it invisibly is how a
        * deterministic test stops being deterministic.
        *
        * A MERCY RUN SILENCES THE PROBE on its own path, and it has to: the
        * run exists because three answers in a row went wrong, and answering
-       * that by slipping her a question from the rung ABOVE would be the
+       * that by slipping them a question from the rung ABOVE would be the
        * island making a bad ten minutes worse. Asked before `probeWanted` and
        * so it spends no roll either.
        */
@@ -981,7 +981,7 @@ export function createHarness(
        * THE TICKBOX IS A CAPABILITY, THE MIX IS A PREFERENCE. Where they
        * disagree the tickbox wins and the mix chooses among what is left —
        * the other way round would let a data file overrule a parent's
-       * statement that his daughter cannot do a thing yet.
+       * statement that their child cannot do a thing yet.
        */
       if (this.levelFor(READING_PATH_OF[wanted]).length) return wanted
       const other: PageKind = wanted === 'find' ? 'build' : 'find'
@@ -1034,13 +1034,13 @@ export function createHarness(
 
       /*
        * THE TWO SESSION BUDGETS ARE SPENT HERE, at the moment something is
-       * actually put in front of her, and not at the moment it was chosen.
+       * actually put in front of them, and not at the moment it was chosen.
        * `dealMaths` may be called speculatively, and a run that drained itself
-       * on questions nobody asked would be a mercy she never received.
+       * on questions nobody asked would be a mercy they never received.
        *
        * A mercy item is not a whisper even when the bottom rung happens to be
-       * a settled one: the run put her there, so charging the whisper budget
-       * for it would retire a stage she was sent to for comfort. A PROBE is
+       * a settled one: the run put them there, so charging the whisper budget
+       * for it would retire a stage they were sent to for comfort. A PROBE is
        * never a whisper either, and needs no test of its own for it: a probe
        * is always on the rung ABOVE the top ticked one, and a settled stage is
        * always below it.
@@ -1058,17 +1058,17 @@ export function createHarness(
       if (!st) return
 
       /*
-       * THE MERCY COUNTER, and it counts every answer she gave — probes
+       * THE MERCY COUNTER, and it counts every answer they gave — probes
        * included, which is the one place this file lets a probe touch
        * anything outside its own ring.
        *
        * It is not an inconsistency: the rule that a probe moves no stat is
        * about the RECORD, and about a wrong answer on a rung nobody has given
-       * her permanently marking that rung. This counter is not a record of
+       * them permanently marking that rung. This counter is not a record of
        * anything. It is a count of how the last few minutes have felt, it is
-       * gone when the tab closes, and from where she is sitting three wrong in
-       * a row is three wrong in a row whether or not the island privately
-       * labelled one of them a taste of the next rung.
+       * gone when the tab closes, and from where they are sitting three
+       * wrong in a row is three wrong in a row whether or not the island
+       * privately labelled one of them a taste of the next rung.
        */
       if (evt.correct) wrongRun.set(current.path, 0)
       else {
@@ -1080,10 +1080,10 @@ export function createHarness(
       }
 
       /*
-       * A DAY SHE PLAYED, counted once, for every path at once.
+       * A DAY THEY PLAYED, counted once, for every path at once.
        *
        * The cooldown is measured in sessions and a session is a day the island
-       * was open — not a day she happened to work on the declining path. It
+       * was open — not a day they happened to work on the declining path. It
        * has to be all paths, because `takingAway` before its introduction has
        * nothing ticked and therefore records no attempts at all: counted
        * per-path, a declined introduction would never come round again.
@@ -1120,7 +1120,7 @@ export function createHarness(
        * Correct-only, because A6 takes a correct-only median and a wrong
        * attempt's latency is a different measurement rather than an unused
        * one: a child who taps instantly and wrongly would otherwise read fast.
-       * Null means she tapped before the prompt was ever put, which is not a
+       * Null means they tapped before the prompt was ever put, which is not a
        * time at all.
        */
       if (evt.correct && evt.latencyMs !== null) {
@@ -1169,7 +1169,7 @@ export function createHarness(
        * ONE OFFER A SESSION, ISLAND-WIDE (runA.md:230). The cadence is stored
        * per path because a decline is about a path, but the LIMIT is about the
        * child: two questions in one sitting is a sales pitch, and the second
-       * one is the one she says yes to just to make it stop.
+       * one is the one they say yes to just to make it stop.
        */
       if (LIVE_PATHS.some(p => state[p]?.offer.lastOfferDay === today)) return null
 
@@ -1186,7 +1186,7 @@ export function createHarness(
        * REJECTED: dealing subtraction probes before the path is open. That
        * ambushes a five-year-old with a minus sign nobody has introduced, and
        * it spends the debut runA.md:234-236 is explicit about — *"dealt MIXED
-       * with the minus sign popping on debut"* — on a question she was given
+       * with the minus sign popping on debut"* — on a question they were given
        * by accident. The debut has to still be a debut.
        *
        * REJECTED: waiting for `sums` 2. Joe's own worked example in JT-010 —
@@ -1197,7 +1197,7 @@ export function createHarness(
        *
        * It wins the tie because only one offer may be made and this one is the
        * larger event: a whole new kind of maths, against one rung more of the
-       * kind she is already doing.
+       * kind they are already doing.
        */
       const sums1 = statsFor('sums', 1)
       if (
@@ -1207,7 +1207,7 @@ export function createHarness(
         return { path: 'takingAway' as Path, stage: 1, kind: 'takingAway' as const }
       }
 
-      /* The same-path offer: *"trickier questions"* on a rung she has earned. */
+      /* The same-path offer: *"trickier questions"* on a rung they have earned. */
       for (const path of MATHS_PATHS) {
         if (!auto(path) || !cadenceOk(path, today)) continue
         const top = topTicked(path)
@@ -1242,7 +1242,7 @@ export function createHarness(
       } else {
         /*
          * A DECLINE COSTS NOTHING (runA.md:231). Nothing is unticked, nothing
-         * is recorded against her, no stat moves: the island simply stops
+         * is recorded against them, no stat moves: the island simply stops
          * asking for two sessions. Auto may only ever tick (runA.md:240), and
          * that is true of a refusal as much as of a collapse in accuracy.
          */
@@ -1255,7 +1255,7 @@ export function createHarness(
 
     honeymoonActive(path) {
       /*
-       * *"2 sessions"* counted the way the cooldown is: days she was here.
+       * *"2 sessions"* counted the way the cooldown is: days they were here.
        * The acceptance day itself is the first, so a child who accepts and
        * plays on gets the rest of that sitting and the next one.
        *

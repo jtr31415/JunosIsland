@@ -15,7 +15,7 @@
  * `challenges.css` has named Andika as its first choice since the port, and it
  * has never once been used: nothing bundled the font and nothing declared an
  * @font-face, so it resolved only if the device happened to have it installed.
- * On Juno's Android tablet it does not, so every word she has ever read has been
+ * On Juno's Android tablet it does not, so every word ever read there has been
  * rendered in Roboto — which is exactly what Joe caught by eye:
  *
  *   "we need to change the font to something where the l has a little hook and
@@ -27,8 +27,8 @@
  * with a tail. It was the right choice all along; it just never arrived.
  *
  * Bundled rather than fetched: this is an offline-capable PWA on a tablet, and a
- * font that needs the network is a font that is missing exactly when she is on
- * the sofa without it. 40KB for regular and bold, latin subset.
+ * font that needs the network is a font that is missing exactly when the child
+ * is on the sofa without it. 40KB for regular and bold, latin subset.
  */
 import '@fontsource/edu-sa-beginner/latin-400.css'
 import '@fontsource/edu-sa-beginner/latin-700.css'
@@ -68,7 +68,7 @@ export interface OverlayHost {
    * It is also false when a run of struggle has just ended — see
    * `stretchDue()`. Same meaning, and deliberately the same channel: "do not
    * deal another page" is exactly what a break suggestion needs, and it is a
-   * path that already banks everything she has done.
+   * path that already banks everything the child has done.
    */
   onPassed(more: boolean): void
   /** Fired when the overlay is dismissed without finishing. Costs nothing. */
@@ -78,8 +78,8 @@ export interface OverlayHost {
    *
    * Optional because the thing that consumes it does not exist yet: A3's
    * harness owns `recordAttempt`, and until it lands the island simply does
-   * not listen. Measurement is deliberately a SEPARATE channel from
-   * `onPassed` — what she answered and what she was paid for are different
+   * not listen. Measurement is deliberately a SEPARATE channel from `onPassed`
+   * — what the child answered and what they were paid for are different
    * questions, and a find page emits several of these against one payment.
    */
   onAttempt?(evt: AttemptEvent): void
@@ -146,25 +146,25 @@ export interface Overlay {
    *
    * §3's last beat. It answers the question a six-year-old actually has at
    * the end of a hatch — "where did my friend GO?" — by drawing the line
-   * between the ceremony and the place her friends are kept. Without it the
-   * album is a button she has no reason to believe in.
+   * between the ceremony and the place their friends are kept. Without it the
+   * album is a button the child has no reason to believe in.
    *
    * Silently does nothing if the target is missing or the browser has no
    * WAAPI: a decoration that throws would take the ceremony with it.
    */
   flyToAlbum(name: string, target: Element | null): void
   /**
-   * Ask the child her name, once, before the story starts.
+   * Ask the child their name, once, before the story starts.
    *
    * In-page rather than window.prompt: a browser dialog is grey, system-font
    * and frightening in a way the brief rules out (§1.2, bright never scary),
    * and on a tablet it covers the game with an OS panel. Resolves with '' if
-   * she skips, which must always be allowed — a name prompt cannot be a wall
+   * they skip, which must always be allowed — a name prompt cannot be a wall
    * between a child and the game.
    */
   askName(): Promise<string>
   /**
-   * Run B's offer, put to the child in her own words. Resolves yes or no.
+   * Run B's offer, put to the child in their own words. Resolves yes or no.
    *
    * `text` is passed in rather than chosen here because the WORDING belongs to
    * the spec (runA.md:230-236) and the CHOICE belongs to the harness — this is
@@ -183,7 +183,7 @@ export interface Overlay {
   toast(msg: string): void
   isOpen(): boolean
   /**
-   * Has she just mashed her way through several pages in a row?
+   * Has the child just mashed their way through several pages in a row?
    *
    * The overlay is the only thing that sees both halves of the question: the
    * renderers report every wrong tap through `ChallengeDeps.onWrong`, and
@@ -198,7 +198,7 @@ export interface Overlay {
    *
    * §19: this is the whole of the mechanism. There is no lock, no cooldown and
    * no countdown behind it — the host puts Fred's suggestion on the island and
-   * every tap still works. Nothing here can bar her from playing on.
+   * every tap still works. Nothing here can bar the child from playing on.
    */
   stretchDue(): boolean
 }
@@ -227,7 +227,7 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
    * The single most-needed control in a listen-then-tap game: a child who
    * missed the word has no way forward without it, and guessing is not
    * reading. It repeats the prompt WITHOUT restarting the round — found words
-   * and placed tiles stay exactly where she left them.
+   * and placed tiles stay exactly where they were left.
    */
   const again = document.createElement('button')
   again.className = 'chunk chunk-button overlay-again'
@@ -248,17 +248,17 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
    *
    *   - It was a text button reading "← back to the island", sitting in the
    *     control row an inch from "say it again" — the button a struggling child
-   *     reaches for repeatedly. A word she cannot yet read, next to the word she
-   *     taps most. That is the mis-tap.
+   *     reaches for repeatedly. A word they cannot yet read, next to the word
+   *     they tap most. That is the mis-tap.
    *   - An X in the corner is the one close affordance a six-year-old has
-   *     already met on every device she has touched, it needs no reading at
-   *     all, and it is nowhere near anything she taps on purpose.
+   *     already met on every device they have touched, it needs no reading at
+   *     all, and it is nowhere near anything they tap on purpose.
    *
    * There is now exactly ONE way out, and it is deliberate. The tap-outside
    * backdrop went with the old button, for the reason below.
    *
    * Leaving costs nothing — challengeFailed takes no tile and no pet — and
-   * since the flow now HOLDS the card, it does not cost her the word either.
+   * since the flow now HOLDS the card, it does not cost the word either.
    */
   const back = document.createElement('button')
   back.className = 'chunk chunk-button overlay-x'
@@ -355,8 +355,8 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
    * still compares like with like.
    *
    * A SESSION's memory, never persisted: a run of struggle is a fact about the
-   * last few minutes, and serving it back to her tomorrow would be a game that
-   * remembers her bad afternoon.
+   * last few minutes, and serving it back tomorrow would be a game that
+   * remembers the child's bad afternoon.
    */
   const breaks = createBreakWatch()
   /** True from the end of a mashed run until the next page is mounted. */
@@ -420,7 +420,7 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
      *
      * It stays immediate for build and sum, and that is not an inconsistency:
      * both fly the star and then call `onAdvance` a beat later
-     * (SUM_ADVANCE_MS), and `earned` is what protects that gap — she has
+     * (SUM_ADVANCE_MS), and `earned` is what protects that gap — they have
      * answered, the star has flown, and tapping the X must not throw it away
      * (§18). Moving those to completion would trade this bug for a worse one.
      */
@@ -430,8 +430,8 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
        * ...and on every renderer, this is the right answer landing, which is
        * what resolves the attempt. Note the asymmetry above is about PAYMENT
        * and this line is about MEASUREMENT: a five-word find page banks once
-       * and is measured five times, because she answered five questions and
-       * turned one page.
+       * and is measured five times, because the child answered five questions
+       * and turned one page.
        */
       tally.right()
     },
@@ -480,10 +480,10 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
     if (handle) { handle.teardown(); handle = null }
     mounted = null
     /*
-     * Whatever she was halfway through is let go, unmeasured — the single
-     * choke point for it, so no exit can forget: the X, the host closing up,
-     * and the next page's own mount all arrive here. Everything she FINISHED
-     * was emitted as it landed and is already gone upstairs.
+     * Whatever the child was halfway through is let go, unmeasured — the
+     * single choke point for it, so no exit can forget: the X, the host
+     * closing up, and the next page's own mount all arrive here. Everything
+     * they FINISHED was emitted as it landed and is already gone upstairs.
      */
     tally.pageEnded()
     layer.classList.add('hide')
@@ -506,19 +506,19 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
     /*
      * Close the page's book BEFORE telling the host, because the answer decides
      * `more`: a page that ends a run of struggle asks for no further page, so
-     * the host hands her back the island and Fred makes his suggestion there.
+     * the host hands them back the island and Fred makes his suggestion there.
      *
      * NOTE what this does not do: interrupt. The suggestion is computed at the
      * end of a page and delivered after it, never over the top of one. A child
-     * three wrong taps into a word she cannot hear does not need the game
-     * talking across her; and "get up and run about" is not something anyone
+     * three wrong taps into a word they cannot hear does not need the game
+     * talking across them; and "get up and run about" is not something anyone
      * can act on mid-page anyway.
      *
      * If this page HATCHED or FINISHED A TILE the host ignores `more` and plays
-     * the ceremony, and the suggestion is simply not made. That is right: she
-     * ends up on her island watching a friend arrive, which is already the
-     * break, and cutting into it would be the one genuinely unkind version of
-     * this feature. `stretch` then clears itself on the next page.
+     * the ceremony, and the suggestion is simply not made. That is right: the
+     * child ends up on their island watching a friend arrive, which is already
+     * the break, and cutting into it would be the one genuinely unkind version
+     * of this feature. `stretch` then clears itself on the next page.
      */
     stretch = breaks.pageEnded()
     host.onPassed(!stretch)
@@ -548,15 +548,15 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
    * anyone tries with a modal. That reasoning holds for a grown-up's dialog and
    * not for this one, because of what the backdrop IS here: `.stage-slot` is
    * `pointer-events: none` on purpose, so the whole vignette — nearly half the
-   * screen in a staged round, and the half with her own egg turning on it —
-   * counts as backdrop. A child watching her egg and reaching out to touch it
-   * was ending the round. That is not a modal being dismissed, it is a child
-   * being thrown out of a page for looking at the thing she is working toward.
+   * screen in a staged round, and the half with the child's own egg turning on
+   * it — counts as backdrop. A child watching their egg and reaching out to
+   * touch it was ending the round. That is not a modal being dismissed, it is a
+   * child thrown out of a page for looking at the thing they are working toward.
    *
    * So the backdrop still SWALLOWS taps (the layer keeps pointer-events, or
    * they would fall through and spin the camera under a live round) and does
    * nothing else. The one way out is the X, which is unmissable and is not
-   * anywhere she taps by accident.
+   * anywhere they tap by accident.
    */
   /** While true, the ways out are ignored. See setBusy(). */
   let busy = false
@@ -565,13 +565,13 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
     const wasOpen = !layer.classList.contains('hide')
     if (!wasOpen || busy) return
     // Already answered correctly? Then leaving COLLECTS. Never discard work
-    // the child has actually done (brief section 18). But she asked to go, so
+    // the child has actually done (brief section 18). But they asked to go, so
     // the reward lands on the island and no further page is dealt.
     const collect = earned
     earned = false
-    // Leaving is a way for a page to end too, and a child who walks out of her
-    // third mashed page in a row is the clearest case there is. Counted before
-    // the teardown, so the host can ask on the other side of it.
+    // Leaving is a way for a page to end too, and a child who walks out of
+    // their third mashed page in a row is the clearest case there is. Counted
+    // before the teardown, so the host can ask on the other side of it.
     stretch = breaks.pageEnded()
     teardown()
     if (collect) host.onPassed(false)
@@ -721,12 +721,12 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
          *
          * Deliberately NOT `overlay-again`/`overlay-back`, which are a bright
          * primary and a faded secondary at 75% opacity. "No" here is not a
-         * lesser answer and must not be dressed as one: a decline costs her
+         * lesser answer and must not be dressed as one: a decline costs them
          * nothing (runA.md:231), so a child who does not fancy harder sums
-         * today has to be able to say so without the screen implying she has
+         * today has to be able to say so without the screen implying they have
          * picked the sad button. Same size, same weight, same shape; only the
          * fill differs, and it differs so the two are TELLABLE APART, which a
-         * five-year-old reading two similar words needs more than she needs a
+         * five-year-old reading two similar words needs more than they need a
          * hierarchy.
          */
         const yes = document.createElement('button')
@@ -754,7 +754,7 @@ export function createOverlay(root: HTMLElement, host: OverlayHost): Overlay {
          * declining an offer buys two sessions of silence on that path. A palm
          * landing on the dim area beside the panel, or a stray tap left over
          * from the ceremony that just finished, must not be able to spend an
-         * answer she never gave. There is also no timer and no default (brief
+         * answer they never gave. There is also no timer and no default (brief
          * §19: nothing expires) — the panel simply waits.
          */
         const done = (accepted: boolean): void => {

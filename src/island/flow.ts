@@ -36,25 +36,25 @@ import { tileSteps, eggSteps } from './governors'
  * belongs here and nowhere else. Inside the corridor both step counts are 0 and
  * these are identically the old prices.
  *
- * NOTHING SHE HAS BANKED CAN BE STRANDED BY A RISE, and it is worth writing down
- * WHY rather than asserting it, because the two walls move in opposite
+ * NOTHING THEY HAVE BANKED CAN BE STRANDED BY A RISE, and it is worth writing
+ * down WHY rather than asserting it, because the two walls move in opposite
  * directions and the honest answer is not obvious.
  *
  * A tile's price rises with `emptySteps = fields − 3·pets`. While a plot stands
  * part-paid, `fields` cannot rise (the only thing that raises it is committing a
- * plot, which zeroes `sumProgress` and hands her the tile) and `pets` cannot
+ * plot, which zeroes `sumProgress` and hands them the tile) and `pets` cannot
  * fall — so mid-round the step count can only go DOWN, and hatching a friend
- * makes the tile she is part-way through CHEAPER.
+ * makes the tile they are part-way through CHEAPER.
  *
  * An egg's price rises with `crowdedSteps = pets − ⌊fields/1.5⌋`. While an egg
- * stands part-read, `pets` cannot rise (hatching zeroes `readProgress` and hands
- * her the friend) and `fields` cannot fall — tiles are never lost, and a retype
- * moves an uncommitted plot's type, not the island's. So again the step count
- * can only go down mid-round, and laying a field makes the egg cheaper.
+ * stands part-read, `pets` cannot rise (hatching zeroes `readProgress` and
+ * hands them the friend) and `fields` cannot fall — tiles are never lost, and a
+ * retype moves an uncommitted plot's type, not the island's. So again the step
+ * count can only go down mid-round, and laying a field makes the egg cheaper.
  *
- * Which is the pleasant half of the design: the only actions open to her while
+ * Which is the pleasant half of the design: the only actions open to them while
  * part-paid are the ones the governor is asking for, and every one of them
- * lowers the price of the thing she is already paying for. Walked in
+ * lowers the price of the thing they are already paying for. Walked in
  * `tests/island/governors.test.ts` rather than trusted to these three
  * paragraphs.
  */
@@ -72,13 +72,13 @@ export const pagesForEgg = (f: Flow): number =>
  * sessions are up. That reading is unshippable HERE, because of the
  * no-stranding proof written out directly above. An index that resumes SNAPS
  * the price up at the instant it resumes — and if a plot is standing part-paid
- * when it does, her `sumProgress` is suddenly short of a price that rose under
- * her, which is the one thing those three paragraphs promise cannot happen.
+ * when it does, their `sumProgress` is suddenly short of a price that rose under
+ * them, which is the one thing those three paragraphs promise cannot happen.
  * The proof holds for the governor because mid-round the step count can only
  * fall; a resuming freeze would be a rise the proof does not cover.
  *
  * So the honeymoon does not stop the index — it makes the tiles bought under it
- * NOT COUNT, for ever. Two tiles earned during a honeymoon leave her paying the
+ * NOT COUNT, for ever. Two tiles earned during a honeymoon leave them paying the
  * price of tile n rather than tile n+2 from then on, and no price ever rises
  * except in the ordinary way. It is strictly more generous than a resuming
  * freeze and it can never strand a part-paid plot.
@@ -120,11 +120,11 @@ export interface Flow {
   /** The type the child picked from the offer, awaiting a socket tap. */
   chosen: TileType | null
   /**
-   * The socket she tapped to ask for land, if she asked at one.
+   * The socket they tapped to ask for land, if they asked at one.
    *
    * Land used to be asked for by tapping any grass, so the game had no idea
-   * where she wanted it and had to ask a second question — "now choose where
-   * it goes" — after she had picked a type. Asking happens AT a socket now, so
+   * where they wanted it and had to ask a second question — "now choose where
+   * it goes" — after they had picked a type. Asking happens AT a socket now, so
    * the answer is already in hand and the question is not worth asking.
    *
    * Transient: it lives for the length of one choice and is never saved.
@@ -166,11 +166,11 @@ export interface Flow {
    * when through a challenge... also resume at the same challenge card,
    * otherwise kids can skip something they dont like."* The resume is the
    * load-bearing half. A way out that re-rolled the question would be a way to
-   * skip a word she does not fancy, one tap at a time.
+   * skip a word they do not fancy, one tap at a time.
    *
    * ONE BIT, and only one bit, because the card itself already exists
    * somewhere better: the generators keep their own history and `history[idx]`
-   * IS the card she was dealt (v0's `renderCurrent` renders exactly that, and
+   * IS the card they were dealt (v0's `renderCurrent` renders exactly that, and
    * its `forward` only generates when `idx` sits at the end). All that is
    * missing is whether that card has been consumed. So this stays a boolean and
    * `flow.ts` keeps importing nothing from `core/` — no `ReadPick`, no
@@ -178,7 +178,7 @@ export interface Flow {
    *
    * Set when a round is abandoned, cleared when one is passed. Two of them
    * rather than one, because reading and maths draw from different decks: a
-   * finished sum must not quietly re-roll the word she walked away from.
+   * finished sum must not quietly re-roll the word they walked away from.
    *
    * Transient, exactly like `pending` and `chosen` — `save.ts` does not write
    * it. See the note there: a RELOAD still re-rolls, and that is accepted.
@@ -246,14 +246,14 @@ export function tapSum(f: Flow): Flow {
  *
  * This used to `return tapSum(f)` when a plot stood, and that resumption is what
  * shipped the bug. The sum overlay stays open across every sum of a tile, so the
- * only way she is ever back on the island with a plot standing is by LEAVING one
+ * only way back onto the island with a plot standing is by LEAVING one
  * — a standing plot in free play IS the abandoned state. Resuming it meant any
- * tap that reached this function dropped her back into a build she had walked
+ * tap that reached this function dropped them back into a build they had walked
  * away from, and a missed tap at an animal reaches it (`picking.ts` answers with
- * whatever is under the ray, so a near-miss is the tile beneath her friend).
+ * whatever is under the ray, so a near-miss is the tile beneath their friend).
  *
  * Nothing is lost by re-asking: `sumProgress` lives on the Flow, not on the plot,
- * so every sum she has answered carries into whatever she chooses next. What is
+ * so every sum they have answered carries into whatever they choose next. What is
  * discarded is the site and the kind — which is exactly what the ruling says, and
  * `placeTile` is where that discarding actually happens.
  */
@@ -364,11 +364,11 @@ export function challengePassed(
  * Costs nothing. No tile lost, no pet lost, the egg still there to try again
  * (brief section 18 — wrong answers cost nothing but a wobble).
  *
- * And the card is HELD rather than thrown away. Leaving must cost her nothing,
- * but it must not BUY her anything either: without this, an X and a re-tap
- * dealt a different word, so the way out doubled as a way to skip the word she
+ * And the card is HELD rather than thrown away. Leaving must cost them nothing,
+ * but it must not BUY them anything either: without this, an X and a re-tap
+ * dealt a different word, so the way out doubled as a way to skip the word they
  * did not fancy — and it charged for the privilege, because the generators ramp
- * their difficulty off `history.length` and draw from finite decks. She comes
+ * their difficulty off `history.length` and draw from finite decks. They come
  * back to the same card, at the same size, having spent nothing.
  */
 export function challengeFailed(f: Flow): Flow {
@@ -390,27 +390,27 @@ export function challengeFailed(f: Flow): Flow {
  * always take it. M2 widens this as biomes arrive.
  */
 /**
- * The kinds of land she can choose between.
+ * The kinds of land the child can choose between.
  *
  * ONE BUTTON PER KIND. It used to offer `['grass', 'water', 'grass']` — a
  * pick-of-three with grass listed twice, from slice-1 §7's weighting of the
  * first-run offer. Joe, reasonably: "the type strangely being land, water,
  * land — I don't see why two land options are needed?" He is right. Weighting
  * a random draw is one thing; showing a child the same button twice and asking
- * her to choose is another, and she cannot tell them apart because there is
- * nothing to tell.
+ * them to choose is another, and they cannot tell the two apart because there
+ * is nothing to tell.
  *
  * It grows on its own when the biome ladder lands (item 14) and there are
  * spring, desert and ice to choose from — at which point this is a genuine
  * pick-of-several rather than a pick-of-three that was really a pick-of-two.
  */
 /**
- * Has she earned the mountains yet?
+ * Has the child earned the mountains yet?
  *
  * Joe: *"it needs to be pickable in the selector after she has placed 15 tiles
- * already."* Counted as tiles SHE placed, so the home hex Fred was already
- * standing on does not count toward her fifteen — she is being asked for
- * fifteen of her own, which is what the sentence says.
+ * already."* Counted as tiles THEY placed, so the home hex Fred was already
+ * standing on does not count toward their fifteen — they are being asked for
+ * fifteen of their own, which is what the sentence says.
  *
  * The threshold lives in `balance.json` with the other unlock rungs rather than
  * here, because every other pacing number does and a constant hidden in a
@@ -426,16 +426,16 @@ export function tileOffer(f: Flow): TileType[] {
   if (f.phase !== 'placing') return []
   /*
    * Without a socket in hand there is nothing to judge against, so both are
-   * offered and `placeTile` settles it when she taps. That is the opening
-   * script's path — Fred asks for land on her behalf and has nowhere in mind.
+   * offered and `placeTile` settles it when they tap. That is the opening
+   * script's path — Fred asks for land on their behalf and has nowhere in mind.
    */
   if (!f.pending) return ['grass', 'water']
   /*
    * Never offer a kind that the socket would then override. A button that does
    * something other than what it shows is worse than no button — which is also
-   * the answer to whether a ONE-BUTTON offer is honest. It is: it says what she
+   * the answer to whether a ONE-BUTTON offer is honest. It is: it says what they
    * will get. Leaving the water button up where the rules will turn it into land
-   * would teach a six-year-old that the water button is broken, and she would be
+   * would teach a six-year-old that the water button is broken, and they would be
    * right.
    *
    * So the offer is DERIVED from the choke point rather than restating it. It
@@ -445,19 +445,19 @@ export function tileOffer(f: Flow): TileType[] {
    * promise a comment cannot keep. `landOffer` asks `landedType` what each button
    * would actually do and shows the ones that do what they say, so a rule can only
    * ever be added in one place. That now includes the last-resort backstop: where
-   * water would leave her nowhere to grow, there is no water button to press.
+   * water would leave them nowhere to grow, there is no water button to press.
    */
   const kinds = landOffer(f.island, f.pending)
   /*
-   * Mountains last, so the two she has always known keep their places — a button
-   * that moves is a button she has to re-find every time.
+   * Mountains last, so the two they have always known keep their places — a
+   * button that moves is a button they have to re-find every time.
    *
    * ADDED HERE RATHER THAN IN `landOffer`, and that is the one place the choke
    * point above is deliberately not the whole story. Whether rock is REACHABLE is
    * a coast question and `canBeRock` answers it there; whether it is UNLOCKED is a
    * pacing question, and pacing lives in `balance.json`, which the coastline knows
    * nothing about. `canBeRock` is still asked rather than assumed: rock never sits
-   * beside water, so at a socket touching one of her ponds the button would be a
+   * beside water, so at a socket touching a pond of theirs the button would be a
    * lie, and this function exists only to show what `tileTypeFor` will really do.
    */
   if (rockUnlocked(f) && canBeRock(f.island, f.pending)) kinds.push('rock')
@@ -465,29 +465,29 @@ export function tileOffer(f: Flow): TileType[] {
 }
 
 /**
- * What actually goes on a socket, whatever she picked.
+ * What actually goes on a socket, whatever they picked.
  *
  * Joe's placement rules, in one place because they must never disagree:
  *
- *   - THE FLOOR, from playtesting: water never spends her last dry way out of her
- *     own fields. See `mustBeLand` — this is what stops her walling her island
- *     off from itself.
- *   - Two or more of her own water tiles round a socket and none of her fields,
- *     and it is water — otherwise she plugs a channel with a green hex.
+ *   - THE FLOOR, from playtesting: water never spends their last dry way out of
+ *     their own fields. See `mustBeLand` — this is what stops them walling their
+ *     island off from itself.
+ *   - Two or more of their own water tiles round a socket and none of their
+ *     fields, and it is water — otherwise they plug a channel with a green hex.
  *   - Water only where the water cell can carry its whole beach, which is what
- *     lets her fields stay flat and uncut. See `drawableAsWater`: nineteen of the
- *     sixty-four neighbourhoods qualify, and the rest are ruled out by the
+ *     lets their fields stay flat and uncut. See `drawableAsWater`: nineteen of
+ *     the sixty-four neighbourhoods qualify, and the rest are ruled out by the
  *     arithmetic of an asset pack with no four-land-edge model.
  *
- * ...and behind all three, THE BACKSTOP: no placement may leave her unable to
+ * ...and behind all three, THE BACKSTOP: no placement may leave them unable to
  * grow. Where the settled answer would do that, the other kind lands instead.
  *
  * Every one of them is applied HERE rather than only in the offer, because the
  * opening script chooses a kind before it knows the socket. One choke point means
  * the island can never hold a tile the coastline cannot draw, and cannot reach a
- * state where nothing green can ever touch her land again. `tileOffer` now derives
- * its buttons from this function instead of restating its conditions, so the two
- * cannot disagree about what a tap will do.
+ * state where nothing green can ever touch their land again. `tileOffer` now
+ * derives its buttons from this function instead of restating its conditions, so
+ * the two cannot disagree about what a tap will do.
  *
  * WHAT THE BACKSTOP REPLACED, because the history is the argument for it. The
  * dry-connection floor claimed here to make walling-in impossible; that claim was
@@ -499,12 +499,12 @@ export function tileOffer(f: Flow): TileType[] {
  * witnesses that keep the island alive.
  *
  * "Unable to grow" is asked as `coast.hasOutwardCorridor` — is there still a dry
- * chain from her fields out to open sea? — and NOT as the one-ply question the
+ * chain from their fields out to open sea? — and NOT as the one-ply question the
  * counterexample was filed against. One ply is not enough and measurement says so:
  * it can be walked down to a single witness that is a dead end, where every kind
  * ends the island and there is nothing left to refuse. The corridor cannot be
  * walked down, because a field can never break it. Read `coast.landedType` for the
- * induction, and for why refusing never leaves her with nothing to tap.
+ * induction, and for why refusing never leaves them with nothing to tap.
  *
  * The floor stays, and stays first: it is cheap, it fires early, and it keeps the
  * island in a shape where the backstop has almost nothing left to do — measured at
@@ -515,13 +515,13 @@ export function tileTypeFor(f: Flow, a: Axial, chosen: TileType): TileType {
    * Rock answers FIRST, and answers only for itself.
    *
    * It satisfies the floor and the backstop on its own terms: rock is dry land
-   * and cannot have water beside it, so a rock hex creates ways out of her fields
-   * exactly as a field does (see `dryAfter`) and can never cut a corridor.
-   * Delegating it to `landedType` would answer 'grass' to a girl who asked for a
-   * mountain, in the one case where her mountain was already the right answer.
+   * and cannot have water beside it, so a rock hex creates ways out of their
+   * fields exactly as a field does (see `dryAfter`) and can never cut a corridor.
+   * Delegating it to `landedType` would answer 'grass' to a child who asked for a
+   * mountain, in the one case where their mountain was already the right answer.
    *
-   * Where the rules refuse it, grass — never water. She asked for land, and the
-   * gentler of the two readings of "land" is the one that keeps her fields.
+   * Where the rules refuse it, grass — never water. They asked for land, and the
+   * gentler of the two readings of "land" is the one that keeps their fields.
    */
   /*
    * >>> PB-052 IS RULED, AND THE ANSWER IS THAT NOTHING HAPPENS HERE. JT-033.
@@ -539,7 +539,7 @@ export function tileTypeFor(f: Flow, a: Axial, chosen: TileType): TileType {
    * relocate the animal from a trapped position, that is no issue at all"*. So
    * the two that would have landed on this line are BOTH closed:
    *
-   *   a) the rock tap silently becoming grass — NOT BUILT. She keeps her
+   *   a) the rock tap silently becoming grass — NOT BUILT. They keep their
    *      mountain. Do not add `if (chosen === 'rock' && sealsAPet(...))` here.
    *   b) the socket refusing to glow — NOT BUILT, and it would have taken a
    *      choice away for a reason no child could infer.
@@ -583,10 +583,10 @@ export function sealsAPet(f: Flow, a: Axial, t: TileType, petRadius = 0): boolea
 }
 
 /**
- * Land she already owns that a pet standing on it could never walk off.
+ * Land the child already owns that a pet standing on it could never walk off.
  *
  * For a save loaded from disk: saves made before any remedy exists can already
- * be sealed, and brief §19 says nothing she owns is lost. This is how a rescue
+ * be sealed, and brief §19 says nothing they own is lost. This is how a rescue
  * finds them. It is a query and it changes nothing.
  */
 export function sealedLand(f: Flow, petRadius = 0): readonly Axial[] {
@@ -594,32 +594,32 @@ export function sealedLand(f: Flow, petRadius = 0): readonly Axial[] {
 }
 
 /**
- * Pick a kind of land — and, if she already said where, put it there.
+ * Pick a kind of land — and, if the child already said where, put it there.
  *
- * The second question is gone. She taps a glowing socket, three kinds are
- * offered, and the one she picks is sited on the socket she tapped. Choosing
+ * The second question is gone. They tap a glowing socket, three kinds are
+ * offered, and the one they pick is sited on the socket they tapped. Choosing
  * without a socket in hand still works and still waits for a tap, because the
- * opening script asks for land on her behalf and has nowhere in mind.
+ * opening script asks for land on their behalf and has nowhere in mind.
  */
 export function chooseTile(f: Flow, t: TileType): Flow {
   if (f.phase !== 'placing') return f
   /*
-   * She is changing her mind about a plot that is already standing.
+   * The child is changing their mind about a plot that is already standing.
    *
    * Joe, relaying the complaint while he was writing: *"she'd like to change her
    * mind if shes picked a wrong type of tile."*
    *
    * NOTHING IS LOST, and that is what makes this safe rather than generous:
    * `sumProgress` lives on the flow, not on the plot, so swapping what is being
-   * built keeps every sum she has already answered. There is therefore no reason
-   * to restrict it to a plot she has not started — a girl who has done nine sums
-   * toward the wrong tile is exactly the girl who most needs this.
+   * built keeps every sum they have already answered. There is therefore no
+   * reason to restrict it to a plot they have not started — a child who has done
+   * nine sums toward the wrong tile is exactly the child who most needs this.
    *
    * It is answered HERE rather than routed through `placeTile`, which since
    * PB-048 relocates a standing plot to whatever socket it is handed. Re-siting
    * on the same hex would come out identical, but this is a retype and not a
    * placement: it must not be able to fail the socket legality check for a hex
-   * she is already building on, and it says what it means.
+   * they are already building on, and it says what it means.
    */
   if (f.plot && f.pending && key(f.pending) === key(f.plot.at)) {
     return {
@@ -639,7 +639,7 @@ export function chooseTile(f: Flow, t: TileType): Flow {
 /**
  * Re-open the tile chooser for the plot already under construction.
  *
- * Entered by tapping the growing plot — she taps the thing she wants to change,
+ * Entered by tapping the growing plot — they tap the thing they want to change,
  * which needs no new button and nothing to discover. The plot stays exactly where
  * it is; only `phase` and `pending` move, so `tileOffer` asks the same question of
  * the same socket it asked the first time.
@@ -669,18 +669,18 @@ export function placeTile(f: Flow, a: Axial): Flow {
   /*
    * SITING RELOCATES A STANDING PLOT. It used to refuse outright, on the ground
    * that a site was a commitment and siting over one would throw away both the
-   * hex she chose and the sums she had spent on it.
+   * hex they chose and the sums they had spent on it.
    *
    * Half of that was never true and the other half is now the ruling. PB-048,
    * Joe: *"if she abandons a tile, the progress towards reward is saved, the
    * location and type is not."* The site was never a commitment — abandoning a
-   * plot and asking for land at another socket is her rechoosing where, and the
-   * old location is meant to go.
+   * plot and asking for land at another socket is the child rechoosing where,
+   * and the old location is meant to go.
    *
    * THE SUMS ARE SAFE, which is the only thing that made the refusal load-bearing:
    * `sumProgress` lives on the Flow and not on the plot, so it is untouched on
    * every path through here. Nothing a child owns can be lost (brief §19) — what
-   * is discarded is a site and a kind, neither of which cost her anything.
+   * is discarded is a site and a kind, neither of which cost them anything.
    *
    * Re-siting on the SAME hex is therefore not a special case, only worth saying
    * out loud: the object built below is the one already standing, rebuilt from
@@ -701,7 +701,7 @@ export function placeTile(f: Flow, a: Axial): Flow {
     ...f,
     chosen: null,
     pending: null,
-    // What the coastline can actually draw here, not merely what she tapped.
+    // What the coastline can actually draw here, not merely what they tapped.
     plot: { at: a, type: tileTypeFor(f, a, f.chosen) },
     phase: 'free',
   }
@@ -768,7 +768,7 @@ function commitPlot(f: Flow, honeymoon = false): Flow {
      * lands ON the price and never over it, and zeroing destroyed nothing.
      *
      * A pay-3 sum breaks that. A tile costing 8 with 6 already answered goes to
-     * 9, and the ninth unit is a third of a sum she genuinely did. Zeroing it
+     * 9, and the ninth unit is a third of a sum they genuinely did. Zeroing it
      * would be taking work back off a child, which §19 does not allow — so the
      * remainder starts the next tile instead.
      *

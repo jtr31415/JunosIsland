@@ -1,17 +1,17 @@
 /**
  * The challenge stage (slice-1 spec §6): the work and its reason, side by side.
  *
- * The child reads on one half of the screen and watches her egg crack on the
+ * The child reads on one half of the screen and watches their egg crack on the
  * other. That adjacency IS the pedagogy — continuous cause-and-effect between
- * an abstract page of words and a thing she owns getting closer. It matters
+ * an abstract page of words and a thing they own getting closer. It matters
  * more since the overlay started staying open across pages: without a stage
- * she now works through five pages seeing nothing change at all.
+ * the child now works through five pages seeing nothing change at all.
  *
  * The vignette is a SEPARATE little scene rendered into a scissored corner of
  * the same canvas. One GL context, its own lighting rig, and the egg or the
  * growing plot re-parented onto its turntable for the duration — three.js
  * moves an object between scenes on add(), so nothing is rebuilt or cloned and
- * the piece the child watches is literally the one she owns.
+ * the piece the child watches is literally the one they own.
  *
  * Serene-right rule (§6): NOTHING here reacts to a wrong answer. Wobble and
  * rescue live in the challenge panel; the stage only ever moves forward.
@@ -51,9 +51,9 @@ export function dotsFilled(done: number, cost: number): number {
   const share = Math.max(0, Math.min(1, done / cost))
   /*
    * Floor, not round, with a guaranteed first dot the moment any work lands.
-   * Rounding lights the first dot before she has done anything, which reads
-   * as a lie; flooring alone leaves her at zero after real work on a long
-   * tile, which reads as being ignored.
+   * Rounding lights the first dot before the child has done anything, which
+   * reads as a lie; flooring alone leaves them at zero after real work on a
+   * long tile, which reads as being ignored.
    */
   if (share <= 0) return 0
   return Math.max(1, Math.floor(share * DOT_COUNT))
@@ -116,8 +116,8 @@ export interface Stage {
    * NEVER dispose what is passed here. A preview is a clone, and a three.js
    * clone SHARES geometry and materials with the cached original — freeing
    * them would break every other pet of that species, on the stage and on the
-   * island, including friends she already owns (brief §19). Dropping the
-   * scene-graph link is the whole of the cleanup, and it is enough.
+   * island, including friends the child already owns (brief §19). Dropping
+   * the scene-graph link is the whole of the cleanup, and it is enough.
    *
    * Pass null to clear.
    */
@@ -125,10 +125,10 @@ export interface Stage {
   /**
    * A burst of sparks on the turntable.
    *
-   * The shell breaking, seen where she has been watching it (§3, §6). Lives
-   * on the stage rather than in the world because that is where her attention
-   * has been for the last five pages — the whole point of the ceremony is
-   * that it happens on the thing she was working toward, not somewhere else.
+   * The shell breaking, seen where the child has been watching it (§3, §6). Lives
+   * on the stage rather than in the world because that is where their attention
+   * has been for the last five pages — the whole point of the ceremony is that
+   * it happens on the thing they were working toward, not somewhere else.
    */
   burst(): void
   /**
@@ -157,7 +157,7 @@ export function createStage(): Stage {
    *
    * The stage is a separate scene, so the world's lights do not reach it — an
    * unlit egg renders as a black blob. Sharing the preset is what keeps the
-   * egg on the turntable the same egg she left on the shore; a second rig
+   * egg on the turntable the same egg they left on the shore; a second rig
    * tuned by eye would drift from the lighting brief the moment either moved.
    */
   const lighting = createLighting(null, meadowDay as LightingPreset)
@@ -167,7 +167,7 @@ export function createStage(): Stage {
    * Joe: "the tile / egg is in a transparent container, so it looks like it
    * floats freely." Everything the vignette used to stand on was a box around
    * the object, and a box is the one thing it must not have: what belongs
-   * behind it is her island, which is already being drawn there.
+   * behind it is the child's island, which is already being drawn there.
    */
   lighting.attach(scene, false)
 
@@ -314,7 +314,7 @@ export function createStage(): Stage {
 
       spin += dt * (Math.PI * 2) / TURN_SECONDS
       turntable.rotation.y = spin
-      // A gentle bob, so the stage is alive while she is thinking.
+      // A gentle bob, so the stage is alive while the child is thinking.
       turntable.position.y = Math.sin(t * 1.1) * 0.035
       lighting.update(dt)
     },
@@ -342,7 +342,7 @@ export function createStage(): Stage {
       /*
        * DO NOT CLEAR. The world was drawn a moment ago and is what belongs
        * behind the guest; clearing would paint a rectangle of nothing over
-       * her island and put the box back.
+       * the child's island and put the box back.
        */
       const wasAutoClear = renderer.autoClear
       renderer.autoClear = false

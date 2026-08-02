@@ -13,8 +13,8 @@
  *      it. `activeGovernor` answered honestly, but both call sites in
  *      `interactions.ts` invited and then returned the flow unchanged — so
  *      nothing greyed out, nothing was taken away, and the tap could be
- *      repeated forever, yet the round she asked for never opened. Ignoring
- *      Fred was the one thing she could not do. Joe found it deployed, with
+ *      repeated forever, yet the round they asked for never opened. Ignoring
+ *      Fred was the one thing they could not do. Joe found it deployed, with
  *      Juno on it: *"erroneously forcing tile building"*.
  *      The override lives in `invite()` in `main.ts` and is asserted in
  *      `tests/island/interactions.test.ts`: Fred asks once, and the next tap
@@ -47,7 +47,7 @@ export type Governor = 'none' | 'space-surplus' | 'nursery-queue'
  * `wriggle-break` cannot come out of `activeGovernor`, because nothing in
  * `Flow` records how the last few minutes went — deliberately, since a run of
  * struggle is a fact about a sitting and must not be persisted and served back
- * to her tomorrow. It is watched separately (`createBreakWatch`) and delivered
+ * to them tomorrow. It is watched separately (`createBreakWatch`) and delivered
  * through the same want-framed channel, which is why it shares this table.
  */
 export type Nudge = Exclude<Governor, 'none'> | 'wriggle-break'
@@ -60,7 +60,7 @@ export type Nudge = Exclude<Governor, 'none'> | 'wriggle-break'
  * number, and `governorLine` fills it in. `{n}` is the count and `{one|many}`
  * picks the noun's form, because "1 more tiles" is the kind of sentence a child
  * learning to read should never be shown. `wriggle-break` reads the CHILD rather
- * than the island, there is no number to give her, and it is left untouched.
+ * than the island, there is no number to give them, and it is left untouched.
  *
  * Never read this table directly for a line to speak — call `governorLine`.
  */
@@ -71,8 +71,8 @@ export const GOVERNOR_LINE: Record<Nudge, string> = {
    *
    * He is right, and the reason is worth keeping: "read some friends home" uses
    * the world-law vocabulary as if the child already shares it, which reads as
-   * whimsy rather than instruction. The new line names the OBJECT she has to tap
-   * — the egg — so it tells her what to do rather than describing what will
+   * whimsy rather than instruction. The new line names the OBJECT they have to
+   * tap — the egg — so it tells them what to do rather than describing what will
    * happen. Kept want-framed, and the apostrophe is deliberate in a reading game.
    *
    * JT-019 adds the count to the SECOND clause and leaves Joe's first clause
@@ -84,9 +84,9 @@ export const GOVERNOR_LINE: Record<Nudge, string> = {
 
   /*
    * The mirror, and the count is the number of TILES: the friends are the thing
-   * she already has, so what she needs is somewhere to put them. "will do it"
+   * the child has, so what they need is somewhere to put them. "will do it"
    * closes it as an achievable errand rather than a shortfall, and the sentence
-   * is still about the pets wanting something rather than about her being late.
+   * is still about the pets wanting something rather than the child being late.
    */
   'nursery-queue': 'They need homes! {n} more {tile|tiles} will do it.',
 
@@ -96,16 +96,16 @@ export const GOVERNOR_LINE: Record<Nudge, string> = {
    * a minute and then come back."*
    *
    * FRED OWNS THE NEED FOR IT, and that is the whole design of the sentence.
-   * Brief §19 forbids shame, and a six-year-old will read any line about her
+   * Brief §19 forbids shame, and a six-year-old will read any line about their
    * own performance as a report on it — "shall we have a rest?" after nine
    * wrong taps is a scoreboard with a kind voice. So the line does not mention
-   * her, her answers, or the work. It is Fred's legs that have gone wriggly,
-   * and she is being invited along.
+   * them, their answers, or the work. It is Fred's legs that have gone wriggly,
+   * and they are being invited along.
    *
    * Want-framed like the other two: it names what to do next (jump up, run
    * about) and bars nothing. And the last clause is brief §19 said out loud —
-   * her island will be right here, because nothing here expires, locks or is
-   * taken back while she is away.
+   * their island will be right here, because nothing here expires, locks or is
+   * taken back while they are away.
    */
   'wriggle-break': "Ooh, my legs have gone all wriggly! Let's jump up and have a run about — then come back, your island will be right here.",
 }
@@ -127,7 +127,7 @@ export function governorLine(which: Nudge, count: number): string {
 }
 
 /**
- * How many of the asked-for thing would put her back inside the corridor.
+ * How many of the asked-for thing would put the child back inside the corridor.
  *
  * The number Fred says out loud, and it is the REAL way out rather than a
  * rounded encouragement: add this many and `activeGovernor` falls silent; add
@@ -135,7 +135,7 @@ export function governorLine(which: Nudge, count: number): string {
  * number that turned out to be short is the game not meaning what it says.
  *
  * It answers against the WARNING walls, not the pricing ones (JT-014), because
- * it is the warning she is trying to clear.
+ * it is the warning they are trying to clear.
  */
 export const restoreCount = (f: Flow, which: Nudge): number =>
   which === 'nursery-queue' ? tilesShortOfCorridor(habitableFields(f), f.pets.length)
@@ -156,8 +156,8 @@ export const restoreCount = (f: Flow, which: Nudge): number =>
  *
  * IT SUPPRESSES THE PRICE AS WELL AS THE WARNING, and that is intended rather
  * than incidental — see the pricing block below. A silent surcharge on a state
- * she has not been told about is exactly what JT-012 rules out, and during grace
- * she is told about nothing.
+ * they have not been told about is exactly what JT-012 rules out, and during
+ * grace they are told about nothing.
  */
 export function inGracePeriod(f: Flow): boolean {
   return graceHolds(f.pets.length, f.island.tiles.size)
@@ -169,7 +169,7 @@ export function inGracePeriod(f: Flow): boolean {
  * Two animals for every three tiles, 1.5 fields per pet. Below this the island
  * is overcrowded and Fred asks for maths.
  *
- * It used to mean the fields her pets WANT, a target that both walls hung off
+ * It used to mean the fields their pets WANT, a target that both walls hung off
  * at an absolute offset. JT-012 moved the target to 2.0 tiles per pet and put
  * the walls at 1.5 and 3.0, so this number is no longer a target at all — it is
  * one wall of the corridor, and the value happens to be unchanged. See
@@ -184,7 +184,7 @@ export const fieldsWanted = (pets: number): number =>
  *
  * The mirror of `fieldsWanted`, and written as a mirror on purpose: one says the
  * least land these friends can live on, the other the most friends this land can
- * hold, and Fred asks for maths the moment she passes it.
+ * hold, and Fred asks for maths the moment they pass it.
  *
  * WHOLE PETS. It used to be `fields · 1.5`, a separate ratio for a separate
  * floor (PB-039), and the floor and the ceiling were two independent numbers.
@@ -207,13 +207,13 @@ export const petsHoused = (fields: number): number =>
  * A mountain hex is planted at the model's native size and centred, so the mound
  * covers its tile and `footprintBelow(WALKING_HEIGHT)` blocks very nearly the
  * whole hex. There is nowhere on it for a pet to stand. Counting it as room
- * would have the governor believe she has space she cannot use, and pets would
- * fail placement quietly — a silent failure rather than a visible shortage,
+ * would have the governor believe they have space they cannot use, and pets
+ * would fail placement quietly — a silent failure rather than a visible shortage,
  * which is the worse of the two.
  *
- * The cost is that mountains do not advance the pet economy: a girl who builds a
- * range still gets asked to read. That is honest, but it is a pacing decision
- * Joe should see rather than infer — carded.
+ * The cost is that mountains do not advance the pet economy: a child who
+ * builds a range still gets asked to read. That is honest, but it is a pacing
+ * decision Joe should see rather than infer — carded.
  */
 export function habitableFields(f: Flow): number {
   let habitable = 0
@@ -222,14 +222,14 @@ export function habitableFields(f: Flow): number {
 }
 
 /**
- * Land beyond the crowded wall — how much room she has spare.
+ * Land beyond the crowded wall — how much room they have spare.
  *
  * IT IS NO LONGER A THRESHOLD. Until JT-012 the ceiling fired at
  * `spaceSurplus >= maxEmptySurplus`, an absolute offset from one ratio; the
  * ceiling is now the `empty` wall in its own right and is read through
- * `emptySteps`, so this survives as a readout — how far off the crowded wall she
- * is standing — and nothing branches on it. The history below is kept because it
- * is the reason the walls are ratios at all.
+ * `emptySteps`, so this survives as a readout — how far off the crowded wall
+ * they are standing — and nothing branches on it. The history below is kept
+ * because it is the reason the walls are ratios at all.
  *
  * IT IS MEASURED AGAINST A RATIO, and that correction is the whole of Joe's
  * report. He said the ratio *"seems to be 1:1, think that was more relaxed
@@ -237,8 +237,8 @@ export function habitableFields(f: Flow): number {
  *
  * This used to be `habitable - pets`, an ABSOLUTE difference, with the corridor
  * either side of it absolute too: land paused at a surplus of 4, eggs paused at a
- * deficit of 3. A constant gap of four is generous when she owns five fields and
- * nothing at all when she owns forty, so the RATIO was driven to 1:1 as the
+ * deficit of 3. A constant gap of four is generous when they own five fields and
+ * nothing at all when they own forty, so the RATIO was driven to 1:1 as the
  * island grew — while the early game, where four is most of the island, genuinely
  * was more relaxed. He was describing real behaviour, not misremembering it.
  *
@@ -278,11 +278,11 @@ export function activeGovernor(f: Flow): Governor {
    * escalation to come *"with an announcement"*, and Fred's ask IS the
    * announcement — and until now that was implemented as ONE condition read
    * twice, which satisfies it and overshoots it. The announcement then arrived
-   * with the bill attached, so the first thing she heard was already costing her.
+   * with the bill attached, so the first thing they heard already cost them.
    *
    * The walls are now nested: Fred speaks at 1.5 / 3.0 and it costs nothing, and
    * only past the WIDER pricing walls (1.2 / 4.0, `*PriceSteps`) does the next
-   * reward get dearer. What survives is the half that protects her — a price
+   * reward get dearer. What survives is the half that protects them — a price
    * still cannot rise without an announcement having come first, because the
    * pricing walls sit strictly outside the warning ones. What goes is the
    * converse: Fred may now speak with the till shut, which is the whole point.
@@ -293,8 +293,8 @@ export function activeGovernor(f: Flow): Governor {
    * 2/3 and 1/3 at the walls, evenly spaced. Inverted, the walls are 1.5 and 3.0
    * tiles per pet, which only looks lopsided in the unit he did not use.
    *
-   * The CEILING: more bare land than one friend per three tiles. Fred asks her
-   * to read, and every further empty field makes the next tile dearer.
+   * The CEILING: more bare land than one friend per three tiles. Fred asks the
+   * child to read, and every further empty field makes the next tile dearer.
    */
   if (emptySteps(fields, pets) > 0) return 'space-surplus'
 
@@ -312,16 +312,16 @@ export function activeGovernor(f: Flow): Governor {
    * `fieldsWanted` by an absolute three. That reads as symmetric with the
    * ceiling and is not, because both ends were then hung off ONE target ratio.
    * `1.5 * pets - 3` converges on 1.5 tiles per pet from below as the island
-   * grows, so at ten pets she was pushed to maths the moment she dropped under
-   * twelve fields — 1.2 tiles per pet, which is nearly the ceiling's own target
-   * and nowhere near a floor. Three is generous when she owns four fields and
-   * nothing at all when she owns forty: exactly the fault 17ad266 corrected at
-   * the other wall, left standing at this one.
+   * grows, so at ten pets they were pushed to maths the moment they dropped
+   * under twelve fields — 1.2 tiles per pet, which is nearly the ceiling's own
+   * target and nowhere near a floor. Three is generous when they own four
+   * fields and nothing at all when they own forty: exactly the fault 17ad266
+   * corrected at the other wall, left standing at this one.
    *
    * Joe, PB-039: *"on the other end of the scale, which i dont think we have
    * bound properly, so she should be pushed to do maths only at 3 animals on 2
    * tiles as the other end of the balance."* So the floor is bound to the land
-   * she has, not to the land her pets want — `petsHoused`, three animals for
+   * they have, not to the land their pets want — `petsHoused`, three animals for
    * every two tiles. At ten pets it now sits at seven fields, 0.7 tiles per pet,
    * and it stays near two-thirds however large the island gets.
    *
@@ -342,10 +342,10 @@ export function activeGovernor(f: Flow): Governor {
  * the direction that matters: `tileSteps(f) > 0` IMPLIES 'space-surplus' and
  * `eggSteps(f) > 0` IMPLIES 'nursery-queue', so nothing ever gets dearer without
  * Fred having asked first. The converse is deliberately false now. He warns at
- * the 1.5 / 3.0 walls for free, and she can carry on past them at list price;
- * the surcharge starts only at the 1.2 / 4.0 walls, once she has been told twice
- * over and kept going. An invitation that costs nothing to decline is a warmer
- * thing than one with a bill stapled to it.
+ * the 1.5 / 3.0 walls for free, and the child can carry on past them at list
+ * price; the surcharge starts only at the 1.2 / 4.0 walls, once they have been
+ * told twice over and kept going. An invitation that costs nothing to decline is
+ * a warmer thing than one with a bill stapled to it.
  *
  * The implication only holds because the pricing corridor strictly CONTAINS the
  * warning one. That is a fact about `balance.json`, not about this file, so it
@@ -354,9 +354,9 @@ export function activeGovernor(f: Flow): Governor {
  * WHICH IS WHY THE GRACE PERIOD IS HERE TOO, and it is not decoration: a brand
  * new island is one hex with nobody on it, which is a whole step past the empty
  * wall. Priced off the wall alone, the very first tile of the game would cost a
- * quarter more while Fred stood silent — a beginner taxed for a state she has no
- * idea exists and could not have avoided. §5 keeps him quiet for the opening;
- * these keep the till shut with him.
+ * quarter more while Fred stood silent — a beginner taxed for a state they
+ * have no idea exists and could not have avoided. §5 keeps him quiet for the
+ * opening; these keep the till shut with him.
  * ------------------------------------------------------------------------- */
 
 /** Steps past the EMPTY PRICING wall, for the next tile. Silent in grace. */
@@ -389,7 +389,7 @@ export const openSockets = (f: Flow): number => sockets(f.island).length
  * `sum.ts` each summon their own help at three wrongs (brief §19, "three
  * stumbles summon help"), and it is field-tested on the child this is for. A
  * different number here would mean two definitions of "mashing" in one game,
- * and the wrong one would be the one nobody had watched her hit.
+ * and the wrong one would be the one nobody had watched them hit.
  */
 export const MASH_WRONGS = 3
 
@@ -407,7 +407,7 @@ export const MASH_WRONGS = 3
  *     often not even the same skill.
  *   - Three is a pattern. Nine wrong taps across three consecutive pages, with
  *     three rescues already spent and none of them landing, is no longer about
- *     the phonics — it is a child whose problem is her body, and Joe's answer
+ *     the phonics — it is a child whose problem is their body, and Joe's answer
  *     (get up, run around, come back) is the right one.
  *
  * It also cannot fire inside Fred's story, which is worth knowing rather than
@@ -443,15 +443,15 @@ export interface BreakWatch {
 /**
  * The reset rule, which is the other half of the threshold.
  *
- * A page she got through with FEWER than `MASH_WRONGS` wrongs clears the streak
+ * A page they got through with FEWER than `MASH_WRONGS` wrongs clears the streak
  * outright. Two reasons, and both matter more than the counting:
  *
  *   - What is being detected is a RUN. A page that went well is evidence the
  *     wobble has passed, and carrying a stale count forward would land the
  *     suggestion in the middle of a good spell — which reads as the game
- *     keeping score on her rather than noticing her.
+ *     keeping score on them rather than noticing them.
  *   - "Clean" here means "not mashed", not "perfect". One or two wrong taps is
- *     ordinary learning and must never count against her; a rule that let them
+ *     ordinary learning and must never count against them; a rule that let them
  *     accumulate would eventually suggest a break to a child who is doing fine.
  *
  * The streak also resets when the suggestion is made, so a rough patch earns
