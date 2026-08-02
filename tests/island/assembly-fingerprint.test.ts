@@ -55,7 +55,13 @@ const PINNED: Readonly<Record<string, string>> = {
   'animal-hedgehog': 'a839dd97acf556e9',
   'animal-squirrel': '6a9ea9c7855c48c5',
   'animal-mouse': '896afcc9e7c39067',
-  'animal-shrew': 'c54d4a52d6fce328',
+  /* Moved once, on purpose, and this is the pin doing its job: `c54d4a52d6fce328`
+   * was the shrew with its mouth EXACTLY IN its own front face — a zero-thickness
+   * card the donor transfer joined and finished on the same plane, z-fighting the
+   * hull and reading as no mouth at all. `CARD_STANDOFF` stands a solved card the
+   * pack's own 0.010 proud, so the only thing that changed on this animal is the
+   * mouth's z, 0.500 to 0.510. Nothing else on it has a zero extent. */
+  'animal-shrew': '41947a98c5ff27be',
   'animal-dormouse': 'e1819320d0649b66',
   'animal-vole': '1a861003a11a28c9',
   'animal-frog': '95cc009b85563d69',

@@ -394,6 +394,27 @@ const NO_ROLE = 'unsorted'
 /** The header a roleless AUTHORED row gets: `Primitives (3)` via `plural`. */
 const PRIMITIVE = 'primitive'
 
+/**
+ * Headers that name what a person is HUNTING FOR, where the role name does not.
+ *
+ * The role tagging is untouched and stays untouched — JT-038 says the drawers are
+ * roles, and `card` is still `card` in the data, in `bank.generated.ts`, and in
+ * every place a species or a test reads it. This map changes one thing: the words
+ * over the drawer.
+ *
+ * It exists because "Cards" describes the GEOMETRY (a flat cut-out sheet) and
+ * nobody arrives at this list looking for a flat cut-out sheet. They arrive
+ * looking for a mouth — and a mouth is a card, so the one drawer that has it is
+ * the one drawer they will not open. `plural` is left generic on purpose: it
+ * derives a header for whatever role the bank grows next, and teaching it about
+ * particular words would make the day-one behaviour of a new role worse to make
+ * one header better.
+ *
+ * The count suffix is still appended by the caller, so this reads
+ * `Mouths & face cards (4)` and stays scannable beside the other headers.
+ */
+const HEADER: Readonly<Record<string, string>> = { card: 'Mouths & face cards' }
+
 export const groupShapes = (rows: readonly ShapeRow[]): readonly ShapeGroup[] => {
   const byRole = new Map<string, ShapeRow[]>()
   const push = (role: string, r: ShapeRow): void => {
@@ -428,6 +449,7 @@ export const groupShapes = (rows: readonly ShapeRow[]): readonly ShapeGroup[] =>
       /* The count is in the header because Joe is scanning: 29 noses is a page of
        * scrolling and 4 cards is not, and knowing which before he starts is the
        * difference between reading the list and hunting through it. */
-      return { label: `${plural(role, sorted.length)} (${sorted.length})`, rows: sorted }
+      const head = HEADER[role] ?? plural(role, sorted.length)
+      return { label: `${head} (${sorted.length})`, rows: sorted }
     })
 }

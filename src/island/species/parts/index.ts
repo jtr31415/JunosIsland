@@ -85,7 +85,9 @@ export type { AssemblyBuild, Feature, Hull, Paint, Placement, Spin } from './ass
  * `creature.ts` is the whole argument for it; Joe's is one sentence: *"can we not
  * set up a script and the agent just provides the script definitions?"*
  */
-export { defineCreature, creatureSpec, ridgeSpan, HULL_SHAPE_IDS } from './creature'
+export {
+  defineCreature, creatureSpec, ridgeSpan, HULL_SHAPE_IDS, CARD_STANDOFF,
+} from './creature'
 export type { CreatureDef, PartDef, PartLike, PaintLike, RidgeDef, RidgeRow, HullDef, HullFrame }
   from './creature'
 /** Determinism, made checkable: pin a species and drift is red rather than found. */

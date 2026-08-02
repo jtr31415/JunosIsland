@@ -254,8 +254,25 @@ describe('groupShapes gives the dropdown headers without losing a row', () => {
   })
 
   it('orders the groups alphabetically by role, which needs no judgement call', () => {
-    const labels = groupShapes(ALL_SHAPES).map(g => g.label.split(' (')[0]!)
-    expect(labels).toEqual(labels.slice().sort())
+    /* The key is the ROLE, recovered off the rows — not the header. It used to be
+     * safe to read the order off the labels, because a label was `plural(role)`
+     * and sorted the same way. It is not any more: `card` heads "Mouths & face
+     * cards", since nobody hunting for a mouth opens a drawer marked "Cards"
+     * (`HEADER` in `library.ts`). The role tagging and the ORDER are still
+     * JT-038's and are what this asserts; only the prose over the drawer moved,
+     * and a test that could not tell those two apart was asserting the weaker
+     * claim by accident. */
+    const roles = [...new Set(ALL_SHAPES.flatMap(r => r.roles))]
+    const ids = (rows: readonly ShapeRow[]): string =>
+      JSON.stringify(rows.map(r => r.id).slice().sort())
+    const keys = groupShapes(ALL_SHAPES).map((g) => {
+      const role = roles.find(x => ids(ALL_SHAPES.filter(r => r.roles.includes(x))) === ids(g.rows))
+      /* A roleless bucket has no role to recover and heads itself, so its own
+       * header is its key — which is what it was before this test knew better. */
+      return role ?? g.label.split(' (')[0]!.toLowerCase()
+    })
+    expect(keys).toEqual(keys.slice().sort())
+    expect(keys, 'the card drawer is still filed under `card`').toContain('card')
   })
 
   it('heads each group with a plural and the count, so Joe knows the scroll', () => {

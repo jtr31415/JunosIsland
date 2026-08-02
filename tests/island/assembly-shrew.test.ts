@@ -22,6 +22,7 @@ import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
 import {
   buildAssembled, SHREW_ASSEMBLY, MOUSE_ASSEMBLY, EYE_CARD_Z, HULL_FRONT_Z, HEIGHT_FLOOR,
+  CARD_STANDOFF,
 } from '../../src/island/species/parts'
 import { partById } from '../../src/island/species/parts/bank.generated'
 import { assertAssembly } from './assembly-assert'
@@ -261,8 +262,12 @@ describe('animal-shrew: the mouth and the teeth, which cost nothing to place', (
     // Zero thickness and sunk its own measured 0.000, so it lies ON the face.
     expect(card.size[2]).toBe(0)
     expect(card.attachment!.sunkFractionMean).toBe(0)
+    // Plus CARD_STANDOFF. Until that constant existed this mouth joined at
+    // 0.500 and, having no thickness to be shifted by, FINISHED at 0.500 —
+    // coplanar with the hull's own front face, z-fighting it, invisible. It is
+    // now proud by the pack's own 0.010 and the definition still says nothing.
     expect(feature('mouth').placement).toEqual({
-      kind: 'single', at: [0, card.offset[1], HULL_FRONT_Z['box-31']],
+      kind: 'single', at: [0, card.offset[1], HULL_FRONT_Z['box-31']! + CARD_STANDOFF],
     })
     // NOT the eye card's absolute-plane rule. `EYE_CARD_Z` is pinned across all
     // 48 cards in the pack at sd 0.0000; the face-plate family is not, and its
@@ -270,7 +275,7 @@ describe('animal-shrew: the mouth and the teeth, which cost nothing to place', (
     // instead of 0.170 in front of it.
     expect(card.offset[2]).toBeCloseTo(0.670, 3)
     const g = build()
-    expect(boxOf(g, 'mouth').max.z).toBeCloseTo(boxOf(g, 'hull').max.z, 6)
+    expect(boxOf(g, 'mouth').max.z - boxOf(g, 'hull').max.z).toBeCloseTo(CARD_STANDOFF, 6)
   })
 
   it('mirrors ONE tooth mesh, and the bank holds the other half to prove it', () => {

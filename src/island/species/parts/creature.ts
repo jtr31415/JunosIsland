@@ -462,6 +462,31 @@ const asPaint = (p: PaintLike): Paint => (typeof p === 'string' ? { base: p } : 
 interface Anchor { at: P3 }
 
 /**
+ * How far proud of the face a SOLVED flat card sits. 0.010 — and it is the pack's
+ * own number, arrived at twice from two places that never spoke to each other.
+ *
+ * A card has no thickness, so it has no extent along its own facing, so the donor
+ * transfer joins it AND finishes it in the same plane: a single-sided quad exactly
+ * coplanar with the hull's own face. That does not read as slightly wrong, it reads
+ * as ABSENT — the two surfaces z-fight, and nothing in `assembly.ts` or
+ * `texture.ts` biases depth to break the tie. A `polygonOffset` would be a renderer
+ * setting standing in for a measurement, and the measurement exists:
+ *
+ *   - `EYE_CARD_Z` is 0.6350 and `box-03`'s front face is 0.6250, so the pack's own
+ *     48 eye cards float exactly 0.010 proud on the seven usual hulls. `hulls.ts`
+ *     already calls that "the daylight the pack gives it".
+ *   - Kenney's face decals are a separate flat sheet 0.010 in front of the head —
+ *     `docs/HANDOFF.md` §6, measured off the source meshes, not off our own.
+ *
+ * So the number is recovered rather than chosen, like everything else the transfer
+ * does. Its evidence is what it reproduces: on `box-03` the solve now lands a face
+ * card at 0.635, which is the constant the goldfish, the firefly and the glow-worm
+ * each typed by hand to stop their mouths vanishing. Three species were working
+ * around this default; the default was wrong.
+ */
+export const CARD_STANDOFF = 0.01
+
+/**
  * The widest a ridge row can be and still have every station embedded.
  *
  * §8 step 4, which is §3's "nothing floats" as arithmetic: a flat face ends and
@@ -649,6 +674,30 @@ export function creatureSpec(id: string, def: CreatureDef): AssemblyBuild {
       if (kind === 'single' && which !== 0) t[0] = 0
       t[which] = face
       at = t
+    }
+
+    /* THE STANDOFF. A zero-thickness card has `extent === 0` along its facing, so
+     * the shift below is zero and the transfer would leave it exactly IN the face
+     * it joined, where it z-fights into invisibility. `CARD_STANDOFF` is the
+     * daylight the pack itself gives a card; see the constant for where the 0.010
+     * comes from, twice.
+     *
+     * Only when the placement was SOLVED. An explicit `at` is the author naming the
+     * plane, and moving it would shift the goldfish's, the firefly's and the
+     * glow-worm's mouths off the 0.635 they were written to sit on — and off it by
+     * the very amount that number already contains. `on` gets it too: a card on
+     * another feature's outer face is the same two coplanar quads.
+     *
+     * It rides on the JOIN POINT and not on `shift`, because `at` is what travels
+     * into the `Feature` and `assembly.ts` re-solves the shift from the built
+     * geometry when it places the mesh. The `shift` here only feeds `anchors`, so
+     * biasing that alone would move what hangs off the card and not the card. */
+    if (d.at === undefined && s.extent < 1e-9) {
+      at = [
+        at[0] + facing[0] * CARD_STANDOFF,
+        at[1] + facing[1] * CARD_STANDOFF,
+        at[2] + facing[2] * CARD_STANDOFF,
+      ]
     }
 
     const shift = -s.lo - sink * s.extent
