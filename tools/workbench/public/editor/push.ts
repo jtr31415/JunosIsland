@@ -61,6 +61,114 @@ export interface PushReply {
   error?: string
 }
 
+/* ------------------------------------------------- reading the reply honestly */
+
+/**
+ * Place 1 — `src/island/species/parts/assembled/<id>.ts`. The file that IS the
+ * animal in the game.
+ *
+ * The other nine places register it, roster it, and record what Joe decided
+ * about it. Only this one carries the shape, so only this one answers the
+ * question he is actually asking when he presses the button.
+ */
+export const SPECIES_MODULE_PLACE = 1
+
+/** Where place 1 lives, from the id alone — the same path `push.mjs` derives. */
+export const speciesModulePath = (speciesId: string): string =>
+  `src/island/species/parts/assembled/${speciesId}.ts`
+
+/**
+ * The only fields of a reply the verdict is allowed to read.
+ *
+ * Narrow on purpose: `skipped` and `left` are evidence for Joe to read, not
+ * inputs to the decision, and naming them here would invite a future rule that
+ * called a fully-skipped push a success again.
+ */
+export type PushVerdictInput = Pick<PushReply, 'speciesId' | 'wrote' | 'say' | 'error'>
+
+/** How the page must present a push, decided from the reply and nothing else. */
+export interface PushOutcome {
+  /** Did the animal reach the game? Not "did the request succeed". */
+  ok: boolean
+  /** The text for `#push-note`. */
+  note: string
+  /** The class for `#push-note` — `note bad` whenever `ok` is false. */
+  noteClass: string
+  /** The text for the always-visible header line. */
+  sayText: string
+  /** Whether that header line is red. Always true when `ok` is false. */
+  sayBad: boolean
+}
+
+/**
+ * **What the push ACTUALLY did, judged by what it says it WROTE.**
+ *
+ * Joe's bug, 2 August: he edited the hedgehog, pressed the button, and the page
+ * told him `animal-hedgehog is in the game` in green while the reply in front of
+ * it said every single place had been SKIPPED and nothing had been written. The
+ * hedgehog is already built, and `push.mjs` never writes over a species that is
+ * already built — so the one thing that would have changed the animal, place 1,
+ * was skipped, and the page called that success because the reply carried no
+ * `error` key.
+ *
+ * **The absence of an error is not the presence of an animal.** A reply can be a
+ * perfectly well-formed 200 that wrote the MOVES table and nothing else; it can
+ * be a re-run that found every place already taken. In both the file that holds
+ * the shape is untouched, and in both the honest sentence is "your edits are not
+ * in the game".
+ *
+ * So the rule is one line and it is deliberately strict: **place 1 appears in
+ * `wrote`, or this was not a push into the game.** Being strict in this
+ * direction is the safe way round — the worst this can do is call a moves-only
+ * push a non-change, which it is; the other way round is what cost him the
+ * afternoon.
+ *
+ * The server's own `reply.say` is preferred for the explanation, because it is
+ * written for him and knows why each place was skipped. What it may not do is
+ * choose the COLOUR: the note goes `note bad` and the header goes red on every
+ * path where the animal did not change, whatever the words are.
+ */
+export function pushOutcome(reply: PushVerdictInput, speciesId: string): PushOutcome {
+  const id = speciesId || reply.speciesId || 'this animal'
+
+  if (reply.error) {
+    return {
+      ok: false,
+      note: reply.error,
+      noteClass: 'note bad',
+      sayText: `nothing was pushed: ${reply.error}`,
+      sayBad: true,
+    }
+  }
+
+  const wroteTheAnimal = (reply.wrote ?? []).some(p => p.place === SPECIES_MODULE_PLACE)
+  if (!wroteTheAnimal) {
+    const path = speciesModulePath(id)
+    return {
+      ok: false,
+      note: `${id} did NOT change in the game — nothing was written to ${path}. `
+        + (reply.say ? `${reply.say} ` : '')
+        + 'Your edits are still only a saved draft. The list below says what happened to every '
+        + 'place; a species that is already built is never written over, so if you meant to '
+        + 'replace it, delete that file yourself and push again.',
+      noteClass: 'note bad',
+      sayText: `${id} did NOT reach the game — ${path} was not written`,
+      sayBad: true,
+    }
+  }
+
+  return {
+    ok: true,
+    note: reply.say ?? '',
+    /* Still `warn`, not plain: a successful push leaves `npm test` red on
+     * purpose and the server's sentence says so. Warn is "read this", `bad` is
+     * "this did not happen", and the two must never be the same colour again. */
+    noteClass: 'note warn',
+    sayText: `${id} is in the game — read the list below before you close this`,
+    sayBad: false,
+  }
+}
+
 /** Everything the server needs, and nothing it could use to name a file. */
 export interface PushRequest {
   speciesId: string
@@ -71,6 +179,27 @@ export interface PushRequest {
   after: readonly string[]
   auditRow: ReturnType<typeof auditRowFor>
   factRow: ReturnType<typeof factRowFor>
+  /**
+   * **This is an EDIT of a species that is already built, not a new one.**
+   *
+   * Joe's bug, 2 August: `push.mjs` never writes over a built species, and all
+   * thirty are built, so editing a shipped animal and pressing the button could
+   * not change it — place 1 was skipped every time. The guard is right; what it
+   * lacked was a way to say the request is the sanctioned circumstance its own
+   * comment describes, which is "on purpose, in an editor, with git watching".
+   *
+   * So this is an explicit INTENT and not an inference. The server treats
+   * anything but a literal `true` as a new species, and a new species whose id
+   * collides with a built one still gets the refusal word for word — which is
+   * the case the guard exists for and the one it must keep catching.
+   *
+   * Its value is PROVENANCE, not a constant: `main.ts` holds the map
+   * `loadBuiltDefs()` returned, so `defs.has(speciesId)` is literally "the
+   * definition on screen came out of the game". A species drawn from
+   * `blankDef()` or `cloneAs`d under a new id is not in that map and pushes as a
+   * create.
+   */
+  replace: boolean
   /**
    * How it gets about, Joe's own word — absent when he has not ruled on it.
    * Deliberately NOT sent inside `record`: `withRecord` skips a `defineSpecies`
@@ -134,8 +263,17 @@ export function recordFor(speciesId: string, species: string, today: string): st
  * species editor as SD-003"; a draft is now keyed by its `speciesId`, so the
  * sentence would have read "as animal-fennec-fox" two lines above the id itself.
  */
+/*
+ * `replace` is the caller's to state, and it is not defaulted. The one thing
+ * that knows whether this animal is already in the game is the map
+ * `loadBuiltDefs()` returned, which lives in `main.ts`; a default of `false`
+ * here would quietly reinstate Joe's bug the day somebody added a second call
+ * site, and a default of `true` would hand the "delete it yourself first"
+ * refusal a way to be bypassed by a new species that never claimed to be an
+ * edit.
+ */
 export function pushRequest(
-  speciesId: string, def: CreatureDef, view: SignoffView, today: string,
+  speciesId: string, def: CreatureDef, view: SignoffView, today: string, replace: boolean,
 ): PushRequest {
   if (!view.ready) {
     throw new Error('the name-and-fact panel still has something in it that has to be fixed first')
@@ -157,5 +295,6 @@ export function pushRequest(
     auditRow: auditRowFor(view),
     factRow: factRowFor(view),
     moves: view.moves === '' ? undefined : view.moves,
+    replace,
   }
 }

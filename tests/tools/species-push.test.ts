@@ -33,9 +33,10 @@ import { fileURLToPath } from 'node:url'
  * decision `voice-script.test.ts` records at its own imports.
  */
 // @ts-expect-error — see above; `push.mjs` ships no types.
-import { withExportLine, withRecord, withAssembledImport, withRow, withMovesEntry, assertLf, PushRefused, LOCOMOTIONS as PUSH_LOCOMOTIONS } from '../../tools/workbench/push.mjs'
+import { withExportLine, withRecord, withAssembledImport, withRow, withMovesEntry, withUpdatedDefinition, withRestoredConstants, definitionLiteral, staleBindings, assertLf, PushRefused, LOCOMOTIONS as PUSH_LOCOMOTIONS } from '../../tools/workbench/push.mjs'
 import { LOCOMOTIONS } from '../../src/island/species/moves'
 import { defToModuleSource } from '../../tools/workbench/public/editor/def'
+import { pushOutcome, speciesModulePath } from '../../tools/workbench/public/editor/push'
 import type { CreatureDef } from '../../src/island/species/parts'
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
@@ -491,6 +492,541 @@ describe('a species that is already built is never written over', () => {
   })
 })
 
+/**
+ * **THE EDIT. Joe opens a shipped animal, changes it, and presses the button.**
+ *
+ * 2 August: nothing reached `src/`. Every one of the thirty species is already
+ * built, and a built species was never written over, so place 1 — the file that
+ * IS the animal — was skipped on every push he made. `replace` is the explicit
+ * intent that opens the door, and it opens it exactly here and nowhere else.
+ *
+ * **What this file is really guarding is the 236 lines it does NOT write.**
+ * `defToModuleSource`'s output is byte-identical to 0 of the 30 shipped files:
+ * the generator writes an eleven-line placeholder doc comment where the real
+ * files carry their derivations. `animal-hedgehog.ts` is 286 lines on disk
+ * against 50 emitted, and the difference includes a `flag` ruling in Joe's own
+ * words. So an update SPLICES — the definition literal is replaced and every
+ * byte outside it is carried over — and the assertions below are on the bytes.
+ *
+ * The species here is SYNTHETIC on purpose. Nothing in this file may pin a real
+ * animal to a part, a colour or a coordinate: Joe edits those deliberately, and
+ * a test asserting what the hedgehog's nose is would lock him out of his own
+ * editor the first time he changed it.
+ */
+describe('an edit of a built species replaces its definition and nothing else', () => {
+  const BUILT_REL = 'src/island/species/parts/assembled/animal-x.ts'
+
+  /** The prose above the definition — the thing the whole splice exists to keep. */
+  const HEADER = [
+    '/**',
+    ' * THE FIXTURE ANIMAL, and this paragraph is what a regeneration would delete.',
+    ' *',
+    ' * Two hundred and thirty-six lines of exactly this kind of reasoning sit above',
+    " * the hedgehog's definition, including a flag ruling in Joe's own words and the",
+    ' * whole argument for why its spikes are one shape and not another. A generator',
+    ' * cannot write a line of it and must never be allowed to write over it.',
+    ' */',
+    "import { defineCreature } from '../creature'",
+    '',
+  ].join('\n')
+
+  /** The block that IS replaced, comment and all. */
+  const DEFINITION = [
+    "export const X_ASSEMBLY = defineCreature('animal-x', {",
+    '  palette: {',
+    '    coat: 0x111111,',
+    '  },',
+    '',
+    '  /* A derivation INSIDE the block. This one goes, and that is the point. */',
+    "  snout: { part: 'cone-06' },",
+    '})',
+  ].join('\n')
+
+  /** Anything after the call survives too, trailing newline included. */
+  const TAIL = [
+    '',
+    '/* THE TRAILING LINE — everything below the definition is carried over as well. */',
+    '',
+  ].join('\n')
+
+  const BUILT = HEADER + DEFINITION + TAIL
+
+  /*
+   * A real `CreatureDef` through the REAL generator, so the test covers the path
+   * the editor takes rather than a hand-typed guess at what it sends.
+   */
+  const EDITED: CreatureDef = {
+    palette: { coat: 0x224466, belly: 0xeeeeee },
+    snout: { part: 'cone-06', at: [0, 0.5, 0.625] },
+  }
+
+  /** The editor's payload for an edit of `animal-x`. */
+  const editPayload = (extra: Record<string, unknown> = {}) => payload({
+    speciesId: 'animal-x',
+    exportName: 'X_ASSEMBLY',
+    module: defToModuleSource('animal-x', EDITED),
+    record: "  defineSpecies('animal-x', 'bespoke'),",
+    after: [],
+    auditRow: { ...AUDIT_ROW, id: 'natural/animal-x', speciesId: 'animal-x' },
+    factRow: { ...FACT_ROW, speciesId: 'animal-x' },
+    replace: true,
+    ...extra,
+  })
+
+  it('writes the module and reports place 1, which is the only success there is', async () => {
+    write(BUILT_REL, BUILT)
+    const r = await push(editPayload())
+
+    expect(r.code).toBe(200)
+    /* The client judges a push solely by this — see `pushOutcome` in `push.ts`. */
+    expect(places(r.body.wrote)).toContain(1)
+    expect((r.body.wrote ?? []).find(w => w.place === 1)?.path).toBe(BUILT_REL)
+    const out = pushOutcome(r.body, 'animal-x')
+    expect(out.ok).toBe(true)
+    expect(out.sayText).toContain('is in the game')
+
+    /* The five places an edit must NOT touch, every one of them said out loud. */
+    expect(places(r.body.skipped)).toEqual([2, 3, 4, 8, 9])
+    expect(r.body.say).toContain(BUILT_REL)
+  })
+
+  /**
+   * **The assertion that protects the hedgehog's 236 lines.**
+   *
+   * Not "the comment is still somewhere in the file" — the header and the tail
+   * are compared as BYTE PREFIXES AND SUFFIXES, so a splice that reflowed one
+   * line of prose, dropped the blank line before the call, or ate the trailing
+   * newline fails here.
+   */
+  it('leaves every byte outside the definition block exactly as it was', async () => {
+    write(BUILT_REL, BUILT)
+    expect((await push(editPayload())).code).toBe(200)
+
+    const after = read(BUILT_REL)
+    expect(after.startsWith(HEADER)).toBe(true)
+    expect(after.endsWith(TAIL)).toBe(true)
+    /* And spelled out, in case a future prefix check goes soft: the sentences
+     * themselves, verbatim, and the const line the file already had. */
+    expect(after).toContain("the hedgehog's definition, including a flag ruling in Joe's own words")
+    expect(after).toContain('/* THE TRAILING LINE — everything below the definition is carried over as well. */')
+    expect(after).toContain("export const X_ASSEMBLY = defineCreature('animal-x', {")
+
+    /* The generator's placeholder header never reaches the file — that is the
+     * eleven lines that would have stood where the reasoning is. */
+    expect(after).not.toContain('Written out of the species editor')
+    /* One animal in the file, still. */
+    expect(after.split("defineCreature('animal-x'")).toHaveLength(2)
+    expect(after).not.toContain('\r')
+  })
+
+  it('actually changes the edited field, and drops what the definition no longer says', async () => {
+    write(BUILT_REL, BUILT)
+    expect((await push(editPayload())).code).toBe(200)
+
+    const after = read(BUILT_REL)
+    /* The new definition landed... */
+    expect(after).toContain('0x224466')
+    expect(after).toContain('belly')
+    /* ...and the old one is gone, including its own inside-the-block comment,
+     * which is the half of "replace" that a merge would get wrong. */
+    expect(after).not.toContain('0x111111')
+    expect(after).not.toContain('A derivation INSIDE the block')
+  })
+
+  it('leaves the barrel, the roster and both of Joe’s ledgers alone', async () => {
+    write(BUILT_REL, BUILT)
+    expect((await push(editPayload())).code).toBe(200)
+
+    expect(read(INDEX)).toBe(INDEX_TEXT)
+    expect(read(COLLECTION)).toBe(COLLECTION_TEXT)
+    expect(jsonAt<Ledger>(AUDIT)).toEqual(AUDIT_SEED)
+    expect(jsonAt<Ledger>(FACTS)).toEqual(FACTS_SEED)
+  })
+
+  it('says so honestly when the definition on disk is already exactly this one', async () => {
+    write(BUILT_REL, BUILT)
+    expect((await push(editPayload())).code).toBe(200)
+    const settled = read(BUILT_REL)
+
+    const again = await push(editPayload())
+    expect(again.code).toBe(200)
+    expect(places(again.body.wrote)).toEqual([])
+    expect(places(again.body.skipped)).toContain(1)
+    expect(again.body.say).toContain('already exactly this')
+    expect(read(BUILT_REL)).toBe(settled)
+    /* And the page calls that what it is: nothing changed. */
+    expect(pushOutcome(again.body, 'animal-x').ok).toBe(false)
+  })
+
+  it('still rules on locomotion in the same push', async () => {
+    write(BUILT_REL, BUILT)
+    const r = await push(editPayload({ moves: 'land' }))
+    expect(r.code).toBe(200)
+    expect(places(r.body.wrote).sort((a, b) => a - b)).toEqual([1, 10])
+    expect(read(MOVES)).toContain("'animal-x': 'land',")
+  })
+
+  /**
+   * THE GUARD, PINNED. `replace` opens the door for an editor that says it is
+   * editing; it may never open for a payload that did not. A NEW species whose
+   * id happens to collide with a built one is the case the refusal exists for,
+   * and it gets the same sentence it always got.
+   */
+  it('refuses, word for word, when the request did not say it was an edit', async () => {
+    for (const extra of [{}, { replace: false }, { replace: 'yes' }, { replace: 1 }]) {
+      write(BUILT_REL, BUILT)
+      const r = await push(editPayload({ replace: undefined, ...extra }))
+      expect(r.code, JSON.stringify(extra)).toBe(400)
+      expect(r.body.error).toBe(
+        `${BUILT_REL} already exists, and this will not write over a species that is already built. `
+        + 'Nothing was written. If you meant to replace it, delete it yourself first.')
+      /* And the animal is untouched, which is the whole value of the refusal. */
+      expect(read(BUILT_REL)).toBe(BUILT)
+    }
+  })
+
+  it('is not consulted at all when the species is not built yet', async () => {
+    /* `!alreadyBuilt` is unchanged behaviour whatever `replace` says: a create
+     * is a create, and it writes all six places off the same code as before. */
+    const r = await push(payload({ replace: true }))
+    expect(r.code).toBe(200)
+    expect(places(r.body.wrote)).toEqual([1, 2, 3, 4, 8, 9])
+    expect(read(MODULE)).toBe(MODULE_TEXT)
+  })
+
+  /**
+   * **The named constant, end to end — the button may not hand back a build error.**
+   *
+   * All thirty shipped species import a constant and write it into their
+   * palette; the editor only ever sees the number it evaluated to. A splice that
+   * wrote the number back would leave an import nothing reads, and
+   * `noUnusedLocals` would fail `npx tsc --noEmit` on every update Joe made.
+   *
+   * The constant's value here is DELIBERATELY NOT the real one. `push.mjs` reads
+   * the declaration out of the repo at push time, so a fixture that declares a
+   * different number is the assertion that nothing is hardcoded: a hardcoded
+   * `0x4c4f5e` fails every test below.
+   */
+  describe('a constant whose value did not change is written back as a name', () => {
+    const TEXTURE = 'src/island/species/parts/texture.ts'
+    const FIXTURE_PUPIL = 0x123456
+
+    const NAMED = [
+      '/**',
+      ' * THE FIXTURE ANIMAL, whose palette is written with a name and not a number.',
+      ' */',
+      "import { defineCreature } from '../creature'",
+      "import { PACK_PUPIL } from '../texture'",
+      '',
+      "export const X_ASSEMBLY = defineCreature('animal-x', {",
+      '  palette: {',
+      '    coat: 0x111111,',
+      '    pupil: PACK_PUPIL,',
+      '  },',
+      '})',
+    ].join('\n') + TAIL
+
+    const withPupil = (pupil: number): CreatureDef => ({ palette: { coat: 0x224466, pupil } })
+
+    const seedNamed = () => {
+      write(TEXTURE, `export const PACK_PUPIL = 0x123456\n`)
+      write(BUILT_REL, NAMED)
+    }
+
+    /* The definition region only, from the CALL and not from the import of
+     * `defineCreature` above it — the import line always says the name, so a
+     * slice that started too early would make "not to contain" meaningless. */
+    const definitionOf = (text: string) => text.slice(text.indexOf("defineCreature('animal-x'"))
+
+    it('keeps the identifier when the colour is the one it always was', async () => {
+      seedNamed()
+      const r = await push(editPayload({ module: defToModuleSource('animal-x', withPupil(FIXTURE_PUPIL)) }))
+      expect(r.code).toBe(200)
+
+      const after = read(BUILT_REL)
+      /* The name is back in the definition, and the number never landed. */
+      expect(definitionOf(after)).toContain('pupil: PACK_PUPIL')
+      expect(definitionOf(after)).not.toContain('0x123456')
+      /* The rest of the edit still landed — this is a restore, not a revert. */
+      expect(definitionOf(after)).toContain('0x224466')
+      expect(r.body.say).toContain('PACK_PUPIL still reads as a name')
+      expect(r.body.say).not.toContain('no longer read')
+    })
+
+    /**
+     * THE ONE THAT KEEPS `npx tsc --noEmit` GREEN, stated as the condition tsc
+     * actually applies: after the update, nothing the file declares or imports
+     * is left unread. That is `noUnusedLocals` in one line.
+     */
+    it('leaves no unread import behind, which is what noUnusedLocals checks', async () => {
+      seedNamed()
+      expect((await push(editPayload({ module: defToModuleSource('animal-x', withPupil(FIXTURE_PUPIL)) }))).code)
+        .toBe(200)
+      expect(staleBindings(read(BUILT_REL))).toEqual([])
+      /* And the import line itself is untouched, because it is outside the block. */
+      expect(read(BUILT_REL)).toContain("import { PACK_PUPIL } from '../texture'")
+    })
+
+    it('keeps Joe’s own colour, and says the name is dead, when he really changed it', async () => {
+      seedNamed()
+      const r = await push(editPayload({ module: defToModuleSource('animal-x', withPupil(0x00ff00)) }))
+      expect(r.code).toBe(200)
+
+      const after = read(BUILT_REL)
+      /* His number, exactly as he chose it — never substituted back. */
+      expect(definitionOf(after)).toContain('0x00ff00')
+      expect(definitionOf(after)).not.toContain('PACK_PUPIL')
+      /* And now the import really is dead, which is the case where saying so is
+       * the correct answer rather than a nuisance. */
+      expect(staleBindings(after)).toEqual(['PACK_PUPIL'])
+      expect(r.body.say).toContain('PACK_PUPIL')
+      expect(r.body.say).toContain('no longer read')
+    })
+
+    it('does not substitute when the constant cannot be read at all', async () => {
+      /* No `texture.ts` in this tree: the value is unknown, so the hex stays and
+       * the reply says the name is dead. A wrong substitution would change an
+       * animal's colour, which is far worse than an unused import. */
+      write(BUILT_REL, NAMED)
+      const r = await push(editPayload({ module: defToModuleSource('animal-x', withPupil(FIXTURE_PUPIL)) }))
+      expect(r.code).toBe(200)
+      expect(definitionOf(read(BUILT_REL))).toContain('0x123456')
+      expect(r.body.say).toContain('no longer read')
+    })
+  })
+})
+
+/**
+ * The splicer on its own — the two ways it is allowed to fail.
+ *
+ * A wrong splice corrupts an animal nobody can regenerate; a refusal is merely
+ * annoying. So every case it cannot read exactly is a `PushRefused` and never a
+ * best guess.
+ */
+describe('withUpdatedDefinition: replaces one literal, or refuses to touch the file', () => {
+  const file = (body: string) => [
+    '/** Kept. */',
+    "import { defineCreature } from '../creature'",
+    '',
+    body,
+    '',
+    '/* Kept too. */',
+    '',
+  ].join('\n')
+
+  const ONE = file("export const X_ASSEMBLY = defineCreature('animal-x', { palette: { coat: 0x111111 } })")
+  const NEXT = '{ palette: { coat: 0x222222 } }'
+
+  it('replaces the literal and keeps the prose on both sides', () => {
+    const next = withUpdatedDefinition(ONE, 'animal-x', NEXT) as string
+    expect(next).toBe(file("export const X_ASSEMBLY = defineCreature('animal-x', { palette: { coat: 0x222222 } })"))
+  })
+
+  it('returns null when the result would be identical', () => {
+    expect(withUpdatedDefinition(ONE, 'animal-x', '{ palette: { coat: 0x111111 } }')).toBeNull()
+  })
+
+  it('refuses when there is no such call to replace', () => {
+    expect(() => withUpdatedDefinition(ONE, 'animal-y', NEXT)).toThrow(PushRefused)
+    expect(() => withUpdatedDefinition(ONE, 'animal-y', NEXT)).toThrow(/no `defineCreature/)
+    expect(() => withUpdatedDefinition(ONE, 'animal-y', NEXT)).toThrow(/Nothing was written/)
+  })
+
+  it('refuses when there are two, rather than guessing which is the animal', () => {
+    const two = ONE + "\nexport const OTHER = defineCreature('animal-x', { palette: {} })\n"
+    expect(() => withUpdatedDefinition(two, 'animal-x', NEXT)).toThrow(PushRefused)
+    expect(() => withUpdatedDefinition(two, 'animal-x', NEXT)).toThrow(/2 `defineCreature/)
+  })
+
+  it('refuses a file whose braces never balance', () => {
+    const broken = file("export const X_ASSEMBLY = defineCreature('animal-x', { palette: { coat: 0x1 }")
+    expect(() => withUpdatedDefinition(broken, 'animal-x', NEXT)).toThrow(PushRefused)
+  })
+
+  it('refuses CRLF on either side, so a spliced file is never half one and half the other', () => {
+    expect(() => withUpdatedDefinition(ONE.replace('\n', '\r\n'), 'animal-x', NEXT)).toThrow(/CRLF/)
+    expect(() => withUpdatedDefinition(ONE, 'animal-x', '{\r\n}')).toThrow(/CRLF/)
+  })
+
+  /*
+   * The braces that are NOT structure. A `{` in a sentence and an apostrophe in
+   * a derivation are both everywhere in these files — the hedgehog's own
+   * comments say `{ axis: 'y', deg: 180 }` — and a matcher that counted them
+   * would end the definition in the wrong place and write the tail of one
+   * animal into the middle of another.
+   */
+  it('is not fooled by a brace in a comment or a quote in a string', () => {
+    const tricky = [
+      '/** Kept. */',
+      "export const X_ASSEMBLY = defineCreature('animal-x', {",
+      "  /* Joe's own note, which says { axis: 'y' } and } and { for good measure. */",
+      "  flag: 'a } inside a string, and an escaped \\' apostrophe',",
+      '})',
+      '',
+      '/* Kept too. */',
+      '',
+    ].join('\n')
+    const next = withUpdatedDefinition(tricky, 'animal-x', '{ palette: {} }') as string
+    expect(next).toBe([
+      '/** Kept. */',
+      "export const X_ASSEMBLY = defineCreature('animal-x', { palette: {} })",
+      '',
+      '/* Kept too. */',
+      '',
+    ].join('\n'))
+  })
+
+  it('definitionLiteral: lifts the object the editor sent, braces and all', () => {
+    const source = defToModuleSource('animal-x', { palette: { coat: 0x224466 } })
+    const literal = definitionLiteral(source, 'animal-x') as string
+    expect(literal.startsWith('{')).toBe(true)
+    expect(literal.endsWith('}')).toBe(true)
+    expect(literal).toContain('0x224466')
+    /* Just the literal: the generator's own doc comment and import are NOT in it. */
+    expect(literal).not.toContain('defineCreature')
+    expect(literal).not.toContain('import')
+  })
+})
+
+/**
+ * `staleBindings`: what is left once the constants have been put back.
+ *
+ * After `withRestoredConstants` this list is only ever a name whose VALUE the
+ * edit genuinely changed, or one bound to an expression nothing here may
+ * evaluate. Both are really dead, both live outside the definition block, and
+ * both would otherwise surface as a `noUnusedLocals` error with no visible
+ * cause — so the reply names the line and Joe decides whether the paragraph
+ * above it goes with it.
+ */
+describe('staleBindings: names what a splice genuinely left behind', () => {
+  it('finds an import the code no longer uses, ignoring the prose that mentions it', () => {
+    const source = [
+      '/** The doc comment says PACK_PUPIL, at length, and that is not a use. */',
+      "import { defineCreature } from '../creature'",
+      "import { PACK_PUPIL } from '../texture'",
+      '',
+      "export const X_ASSEMBLY = defineCreature('animal-x', { palette: { pupil: 0x00ff00 } })",
+      '',
+    ].join('\n')
+    expect(staleBindings(source)).toEqual(['PACK_PUPIL'])
+  })
+
+  it('says nothing when every name is still read', () => {
+    const source = [
+      "import { defineCreature } from '../creature'",
+      "import { PACK_PUPIL } from '../texture'",
+      '',
+      "export const X_ASSEMBLY = defineCreature('animal-x', { palette: { pupil: PACK_PUPIL } })",
+      '',
+    ].join('\n')
+    expect(staleBindings(source)).toEqual([])
+  })
+
+  /*
+   * The file-local derivations, which are the other half of the problem and the
+   * half that cannot be restored: a species file writes `const SINK = 0.125 /
+   * 0.359219` above its definition, and the editor only ever sees the number
+   * that came out. A splice therefore orphans the const, and `noUnusedLocals`
+   * treats an unused local exactly as it treats an unused import.
+   */
+  it('finds a file-local derivation the definition no longer reads', () => {
+    const source = [
+      "import { defineCreature } from '../creature'",
+      '',
+      '/* The measurement, and the paragraph above it, both stay. */',
+      'const EAR_SINK = 0.125 / 0.359219',
+      '',
+      "export const X_ASSEMBLY = defineCreature('animal-x', { ears: { sink: 0.5 } })",
+      '',
+    ].join('\n')
+    expect(staleBindings(source)).toEqual(['EAR_SINK'])
+  })
+
+  it('does not call a constant dead when another declaration still reads it', () => {
+    const source = [
+      "import { defineCreature } from '../creature'",
+      '',
+      'const COIL_THICK = 0.456',
+      'const COIL_SINK = (COIL_THICK - 0.18125) / COIL_THICK',
+      '',
+      "export const X_ASSEMBLY = defineCreature('animal-x', { extras: [{ sink: COIL_SINK }] })",
+      '',
+    ].join('\n')
+    expect(staleBindings(source)).toEqual([])
+  })
+
+  it('never calls the assembly export itself dead', () => {
+    const source = [
+      "import { defineCreature } from '../creature'",
+      '',
+      "export const X_ASSEMBLY = defineCreature('animal-x', { palette: {} })",
+      '',
+    ].join('\n')
+    expect(staleBindings(source)).toEqual([])
+  })
+})
+
+/**
+ * **`withRestoredConstants`: the button may not hand Joe a compiler error.**
+ *
+ * The editor's definition comes from `loadBuiltDefs()` — the definition as the
+ * module EVALUATED it — so `pupil: PACK_PUPIL` reaches the editor as a number
+ * and comes back out of the generator as `0x4c4f5e`. Splice that in and the
+ * import is read by nothing, which `noUnusedLocals` calls an error. "The push
+ * works but breaks the build" is the same disease as the silent no-op: it just
+ * fails later and louder.
+ *
+ * So a name whose VALUE did not change is written back. It is a value
+ * comparison and never a cosmetic one — a colour Joe actually changed keeps his
+ * hex, and the name then really is dead.
+ */
+describe('withRestoredConstants: puts a name back only when the number is the same', () => {
+  const pupil = (name: string) => (name === 'PACK_PUPIL' ? 0x4c4f5e : null)
+
+  it('restores the identifier when the value is unchanged', () => {
+    const out = withRestoredConstants(
+      '{ palette: { pupil: PACK_PUPIL } }', '{ palette: { pupil: 0x4c4f5e } }', pupil)
+    expect(out.literal).toBe('{ palette: { pupil: PACK_PUPIL } }')
+    expect(out.restored).toEqual(['PACK_PUPIL'])
+  })
+
+  it('leaves the hex alone when the value really changed', () => {
+    const out = withRestoredConstants(
+      '{ palette: { pupil: PACK_PUPIL } }', '{ palette: { pupil: 0x00ff00 } }', pupil)
+    expect(out.literal).toBe('{ palette: { pupil: 0x00ff00 } }')
+    expect(out.restored).toEqual([])
+  })
+
+  it('does nothing when the constant cannot be read', () => {
+    const out = withRestoredConstants(
+      '{ extras: [{ sink: COIL_SINK }] }', '{ extras: [{ sink: 0.6 }] }', () => null)
+    expect(out.literal).toBe('{ extras: [{ sink: 0.6 }] }')
+    expect(out.restored).toEqual([])
+  })
+
+  /*
+   * The timidity that keeps this from corrupting an animal. `sink` and `at`
+   * occur all over a definition, and matching by key alone would put one part's
+   * constant into another part's slot.
+   */
+  it('refuses a key that occurs more than once on either side', () => {
+    const twice = withRestoredConstants(
+      '{ ears: { sink: S }, tail: { sink: S } }', '{ ears: { sink: 0.4 }, tail: { sink: 0.4 } }',
+      () => 0.4)
+    expect(twice.restored).toEqual([])
+
+    const oneToTwo = withRestoredConstants(
+      '{ ears: { sink: S } }', '{ ears: { sink: 0.4 }, tail: { sink: 0.4 } }', () => 0.4)
+    expect(oneToTwo.restored).toEqual([])
+  })
+
+  it('never touches a member expression or a call', () => {
+    const out = withRestoredConstants(
+      '{ legs: { sink: LEG_ROW.sink } }', '{ legs: { sink: 0.408163 } }', () => 0.408163)
+    expect(out.restored).toEqual([])
+  })
+})
+
 describe('what it refuses, by name, before it has written anything', () => {
   it('refuses a collection the game has not started yet', async () => {
     const r = await push(payload({ collection: 'aquarium' }))
@@ -884,5 +1420,247 @@ describe('withMovesEntry: upserts the MOVES table, and never skips an id already
      * `moves.ts` and not repeated here is a mismatch this catches immediately,
      * rather than a typo that reaches a real push months later. */
     expect([...PUSH_LOCOMOTIONS].sort()).toEqual([...LOCOMOTIONS].sort())
+  })
+})
+
+/**
+ * **The page's verdict on the reply — Joe's bug, from the other end of the wire.**
+ *
+ * 2 August: he edited the hedgehog, pressed "Push it to the game", and the
+ * header told him `animal-hedgehog is in the game` in green while the panel
+ * under it listed every one of the ten places as SKIPPED. Nothing was written.
+ * The page had decided "success" from the ABSENCE of an `error` key, and drew
+ * the note in `note warn` on both branches, so the note itself conveyed nothing
+ * either. He could not tell a refusal from a push.
+ *
+ * `pushOutcome` is the whole decision, lifted out of the DOM so it can be stated
+ * here: **place 1 — `src/island/species/parts/assembled/<id>.ts`, the file that
+ * IS the animal — appears in `wrote`, or the animal did not reach the game.**
+ *
+ * Every reply below is a REAL one, off the real server, produced by the same
+ * `push()` the button calls. Nothing here is a fixture of what a reply is
+ * believed to look like, and nothing here asserts that a call happened: the
+ * claim is that the page CHOOSES the failure presentation, and it is checked on
+ * the class and the words it chose.
+ */
+describe('the page reads a reply by what it WROTE, not by the absence of an error', () => {
+  it('calls a fresh push success — place 1 is in `wrote`', async () => {
+    const r = await push(payload())
+    expect(r.code).toBe(200)
+    expect(places(r.body.wrote)).toContain(1)
+
+    const out = pushOutcome(r.body, 'animal-corn-snake')
+    expect(out.ok).toBe(true)
+    expect(out.noteClass).toBe('note warn')
+    expect(out.sayBad).toBe(false)
+    expect(out.sayText).toContain('is in the game')
+    /* The server's own sentence is what he reads — it is the one that knows
+     * `npm test` is red on purpose. */
+    expect(out.note).toBe(r.body.say)
+  })
+
+  /*
+   * THE HEDGEHOG. An animal that is already built, pushed with a locomotion
+   * ruling: a clean 200, no `error` anywhere, and the only thing written is the
+   * MOVES table. Every edit he made to the SHAPE was skipped, because
+   * `push.mjs` never writes over a species that is already built. The old code
+   * put "is in the game" on the screen in green for exactly this reply.
+   */
+  it('calls a moves-only push on an already-built species a FAILURE, in red, naming the file', async () => {
+    const rel = 'src/island/species/parts/assembled/animal-x.ts'
+    write(rel, "export const X_ASSEMBLY = defineCreature('animal-x', { parts: [] })\n")
+
+    const r = await push(payload({
+      speciesId: 'animal-x',
+      exportName: 'X_ASSEMBLY',
+      module: [
+        "import { defineCreature } from '../creature'", '',
+        "export const X_ASSEMBLY = defineCreature('animal-x', { parts: ['something else'] })", '',
+      ].join('\n'),
+      record: "  defineSpecies('animal-x', 'bespoke'),",
+      after: [],
+      auditRow: { ...AUDIT_ROW, id: 'natural/animal-x', speciesId: 'animal-x' },
+      factRow: { ...FACT_ROW, speciesId: 'animal-x' },
+      moves: 'air',
+    }))
+    /* The reply the page has to judge: a success by every old measure. */
+    expect(r.code).toBe(200)
+    expect(r.body.error).toBeUndefined()
+    expect(places(r.body.wrote)).not.toContain(1)
+    expect(places(r.body.skipped)).toContain(1)
+
+    const out = pushOutcome(r.body, 'animal-x')
+    expect(out.ok).toBe(false)
+    /* The note is RED, not the orange it shares with "read this before you go". */
+    expect(out.noteClass).toBe('note bad')
+    /* And the always-visible header is red too, because the note alone was never
+     * the loudest thing on screen — a stale green line above it was. */
+    expect(out.sayBad).toBe(true)
+    /* Named: the file that did not change, and it is place 1's real path. */
+    expect(speciesModulePath('animal-x')).toBe(rel)
+    expect(out.note).toContain(rel)
+    expect(out.sayText).toContain(rel)
+    /* The sentence that misled him may not appear on this branch at all. */
+    expect(out.sayText).not.toContain('is in the game')
+    expect(out.sayText).toContain('did NOT reach the game')
+    /* The server's explanation is carried, because it is the half that knows WHY. */
+    expect(out.note).toContain(r.body.say)
+  })
+
+  it('calls a push where literally nothing was written a failure', async () => {
+    const rel = 'src/island/species/parts/assembled/animal-x.ts'
+    write(rel, "export const X_ASSEMBLY = defineCreature('animal-x', { parts: [] })\n")
+    const body = payload({
+      speciesId: 'animal-x',
+      exportName: 'X_ASSEMBLY',
+      module: [
+        "import { defineCreature } from '../creature'", '',
+        "export const X_ASSEMBLY = defineCreature('animal-x', { parts: [] })", '',
+      ].join('\n'),
+      record: "  defineSpecies('animal-x', 'bespoke'),",
+      after: [],
+      auditRow: { ...AUDIT_ROW, id: 'natural/animal-x', speciesId: 'animal-x' },
+      factRow: { ...FACT_ROW, speciesId: 'animal-x' },
+      moves: 'air',
+    })
+    expect((await push(body)).code).toBe(200)
+
+    /* Second time: nothing at all is written, and the server says so plainly. */
+    const again = await push(body)
+    expect(again.code).toBe(200)
+    expect(places(again.body.wrote)).toEqual([])
+    expect(again.body.say).toContain('Nothing was written')
+
+    const out = pushOutcome(again.body, 'animal-x')
+    expect(out.ok).toBe(false)
+    expect(out.noteClass).toBe('note bad')
+    expect(out.sayBad).toBe(true)
+    expect(out.sayText).not.toContain('is in the game')
+  })
+
+  /*
+   * The contrast that stops the rule being "everything is a failure": a
+   * half-landed push finished by hand. Five of the six places are skipped and
+   * only place 1 is written — and that is a real change to the animal, so it is
+   * the only shape of reply that may go green.
+   */
+  it('calls a push that wrote ONLY place 1 a success', async () => {
+    expect((await push(payload())).code).toBe(200)
+    rmSync(join(root, MODULE))
+    const again = await push(payload())
+
+    expect(places(again.body.wrote)).toEqual([1])
+    expect(places(again.body.skipped)).toEqual([2, 3, 4, 8, 9])
+
+    const out = pushOutcome(again.body, 'animal-corn-snake')
+    expect(out.ok).toBe(true)
+    expect(out.noteClass).toBe('note warn')
+    expect(out.sayBad).toBe(false)
+    expect(out.sayText).toContain('is in the game')
+  })
+
+  it('reports a refusal in the server’s own words, in red', async () => {
+    /* A real 400, off the real route — the already-built refusal Joe would have
+     * got had he not ruled on locomotion. */
+    const rel = 'src/island/species/parts/assembled/animal-x.ts'
+    write(rel, "export const X_ASSEMBLY = defineCreature('animal-x', { parts: [] })\n")
+    const r = await push(payload({
+      speciesId: 'animal-x',
+      exportName: 'X_ASSEMBLY',
+      module: [
+        "import { defineCreature } from '../creature'", '',
+        "export const X_ASSEMBLY = defineCreature('animal-x', { parts: [] })", '',
+      ].join('\n'),
+      record: "  defineSpecies('animal-x', 'bespoke'),",
+      after: [],
+      auditRow: { ...AUDIT_ROW, id: 'natural/animal-x', speciesId: 'animal-x' },
+      factRow: { ...FACT_ROW, speciesId: 'animal-x' },
+    }))
+    expect(r.code).toBe(400)
+
+    const out = pushOutcome(r.body, 'animal-x')
+    expect(out.ok).toBe(false)
+    expect(out.noteClass).toBe('note bad')
+    expect(out.sayBad).toBe(true)
+    /* Word for word: it names the file and says what to do instead. Wrapping it
+     * would throw away the only part he can act on. */
+    expect(out.note).toBe(r.body.error)
+    expect(out.sayText).toContain(r.body.error!)
+  })
+
+  it('never presents a failure and a success the same way', async () => {
+    /* The bug stated as an invariant, across every real reply above: two
+     * outcomes that disagree about `ok` may not agree about the class, and the
+     * header may not be red on one and calm on the other. Before the fix both
+     * were `note warn` and this is the assertion that catches a relapse. */
+    const good = pushOutcome({ wrote: [{ place: 1, path: 'p', what: 'w' }] }, 'animal-x')
+    const bad = pushOutcome({ wrote: [{ place: 10, path: 'p', what: 'w' }] }, 'animal-x')
+    const refused = pushOutcome({ error: 'no' }, 'animal-x')
+    expect(good.noteClass).not.toBe(bad.noteClass)
+    expect(good.noteClass).not.toBe(refused.noteClass)
+    expect(bad.sayBad && refused.sayBad).toBe(true)
+    expect(good.sayBad).toBe(false)
+    for (const out of [bad, refused]) {
+      expect(out.ok).toBe(false)
+      expect(out.noteClass).toContain('bad')
+    }
+  })
+})
+
+/**
+ * The wiring, pinned the way `editor-own-colour.test.ts` pins its panel.
+ *
+ * `main.ts` cannot be imported — it builds a WebGL stage at module scope — so
+ * the claims above would all still pass with `push()` ignoring `pushOutcome`
+ * entirely, and Joe would still not be able to tell. These read the source.
+ */
+describe('the editor page actually uses the verdict, and has a colour for it', () => {
+  const EDITOR = resolve(REPO, 'tools/workbench/public/editor')
+  const main = readFileSync(join(EDITOR, 'main.ts'), 'utf8')
+  const css = readFileSync(join(EDITOR, 'editor.css'), 'utf8')
+
+  it('has a note class for a failure that is not the warn class', () => {
+    expect(css).toContain('.note.bad { color: var(--loud); }')
+  })
+
+  it('draws the push note and the header from pushOutcome', () => {
+    expect(main).toMatch(/pushOutcome[\s\S]{0,200}?from '\.\/push'/)
+    const at = main.indexOf('pushOutcome(reply, speciesId)')
+    expect(at, 'push() never asks for the verdict').toBeGreaterThan(-1)
+    const after = main.slice(at, at + 400)
+    expect(after).toContain('outcome.noteClass')
+    expect(after).toContain('outcome.sayText')
+    expect(after).toContain('outcome.sayBad')
+    /* And the old unconditional green sentence is gone from the page. */
+    expect(main).not.toContain('say(`${speciesId} is in the game')
+  })
+
+  it('says a refusal in BOTH places on every path that pushes nothing', () => {
+    /* The `!view.ready` path used to write the note and no more, so the header
+     * kept the green "saved ..." from the save a moment earlier. */
+    const at = main.indexOf('const view = drawSignoff()\n  if (!view.ready)')
+    expect(at, 'push() no longer opens the way it did').toBeGreaterThan(-1)
+    expect(main.slice(at, at + 900)).toContain('refuse(')
+    /* `refuse` is the one shape: red note, cleared list, red header. */
+    const shape = main.slice(main.indexOf('function refuse('), main.indexOf('function refuse(') + 500)
+    expect(shape).toContain("pushNote.className = 'note bad'")
+    expect(shape).toContain('pushOut.replaceChildren()')
+    expect(shape).toMatch(/say\([^)]*,\s*true\)/)
+    /* Nothing in push() may still paint a failure orange. */
+    expect(main).not.toContain("pushNote.className = 'note warn'")
+  })
+
+  it('stops a push when the save it depends on failed', () => {
+    expect(main).toContain('async function save(): Promise<boolean>')
+    expect(main).toContain('if (!await save())')
+  })
+
+  it('does not let a non-2xx reply arrive looking like a success', () => {
+    const at = main.indexOf('const api = async (path: string')
+    expect(at).toBeGreaterThan(-1)
+    const body = main.slice(at, at + 900)
+    expect(body).toContain('res.ok')
+    expect(body).toContain('res.status')
+    expect(body).toMatch(/error:/)
   })
 })

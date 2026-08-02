@@ -82,7 +82,7 @@ import {
   STATUSES, STATUS_LABEL, rowLabel, subjectGroups,
   type AuditRow, type Status,
 } from './status'
-import { pushRequest, type PushReply } from './push'
+import { pushOutcome, pushRequest, type PushReply } from './push'
 import { loadBuiltDefs } from './capture'
 import { createStage, type GizmoMode } from './stage'
 import type { CreatureDef } from '../../../../src/island/species/parts'
@@ -761,11 +761,31 @@ el<HTMLButtonElement>('#show-source').addEventListener('click', () => {
 
 /* ---------------------------------------------------------------- the saving */
 
+/**
+ * One request, and a reply that cannot hide a failure.
+ *
+ * Every caller here decides what happened by looking for an `error` key, so a
+ * 400 or a 500 whose body does not happen to carry one used to read as a
+ * success — the status was never inspected at all. A reply that is not JSON did
+ * the same thing, by throwing somewhere else entirely. Both are turned into the
+ * one shape the callers already understand, so silence stops being possible at
+ * the only door the page has.
+ */
 const api = async (path: string, body?: unknown): Promise<Record<string, unknown>> => {
   const res = await fetch(path, body === undefined ? undefined : {
     method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
   })
-  return res.json() as Promise<Record<string, unknown>>
+  let reply: Record<string, unknown>
+  try {
+    reply = await res.json() as Record<string, unknown>
+  } catch {
+    return { error: `${path} answered ${res.status} and the reply was not JSON at all` }
+  }
+  /* The server's own words win when it has any; the status only fills a silence. */
+  if (!res.ok && reply['error'] === undefined) {
+    return { ...reply, error: `${path} answered ${res.status}${res.statusText ? ` ${res.statusText}` : ''} and said nothing about why` }
+  }
+  return reply
 }
 
 function drawSaveNote(): void {
@@ -887,8 +907,14 @@ async function refreshDrafts(): Promise<void> {
  * shipped species** — the live twenty-four are frozen, and the only way out of
  * this page into `src/` is Joe copying the module text himself.
  */
-async function save(): Promise<void> {
-  if (!def) return
+/*
+ * It answers whether it saved. It used to answer nothing at all and report a
+ * failure only by turning the header red — which `push()` then walked straight
+ * past and painted green a moment later, so a push could follow a save that had
+ * not happened and nothing on screen ever said so.
+ */
+async function save(): Promise<boolean> {
+  if (!def) return false
   await refreshDrafts()
   const mine = drafts.find(d => d.speciesId === speciesId)
   const view = drawSignoff()
@@ -922,7 +948,7 @@ async function save(): Promise<void> {
     : await api('/api/save', { what: 'edits', value: { schemaVersion: 1, drafts: [fields] } })
   if (reply['error']) {
     say(`could not save: ${String(reply['error'])}`, true)
-    return
+    return false
   }
   await refreshDrafts()
   isMine = drafts.some(d => d.speciesId === speciesId)
@@ -930,6 +956,7 @@ async function save(): Promise<void> {
   drawSubjects()
   drawSaveNote()
   say(`saved ${speciesId}`)
+  return true
 }
 
 el<HTMLButtonElement>('#save').addEventListener('click', () => {
@@ -951,31 +978,53 @@ el<HTMLButtonElement>('#save').addEventListener('click', () => {
  * landed, what was already there, and what is still his — and the panel says
  * plainly that `npm test` is red until those are written.
  *
- * The draft is saved first, unconditionally. The push does not consult the
- * draft store, but a species that reaches `src/` while the draft it came from
- * still says something else is a pair of records that disagree about the same
- * animal, and the cheap end of that is here.
+ * The draft is saved first, and **a save that fails stops the push.** The push
+ * does not consult the draft store, but a species that reaches `src/` while the
+ * draft it came from still says something else is a pair of records that
+ * disagree about the same animal, and the cheap end of that is here. It used to
+ * go ahead regardless, which meant a red "could not save" was overwritten by a
+ * green line about the game a second later.
+ *
+ * ## SILENCE IS A BUG
+ *
+ * Every path out of this function that writes nothing says so in BOTH places Joe
+ * looks — `#push-note` in `note bad`, and the header, red — and the verdict on a
+ * reply belongs to `pushOutcome` in `push.ts`, not to this function. The three
+ * failure paths used to be indistinguishable from the success one: the same
+ * `note warn` class on the note, and a green "is in the game" on any reply
+ * without an `error` key, including replies whose own body said every place had
+ * been skipped.
  */
 async function push(): Promise<void> {
   if (!def) return
   const view = drawSignoff()
   if (!view.ready) {
-    pushNote.textContent = 'not yet — the Name and fact panel above says what is missing.'
-    pushNote.className = 'note warn'
+    /*
+     * The worst of the silent paths, and the reason this one says it TWICE. It
+     * used to write the note and nothing else — so the header above kept
+     * whatever it last said, which after a save is a green "saved ...", and the
+     * loudest thing on screen actively contradicted the refusal.
+     */
+    refuse('not yet — the Name and fact panel above says what is missing.')
     return
   }
-  await save()
+  if (!await save()) {
+    /* The draft did not land, so nothing is sent. `save()` has already put its
+     * own reason in the header; this says what that reason cost. */
+    refuse(`nothing was pushed — ${speciesId} could not even be saved, and the message above says why.`)
+    return
+  }
   const today = new Date().toISOString().slice(0, 10)
-  const request = pushRequest(speciesId, def, view, today)
+  /*
+   * `defs` is `loadBuiltDefs()`'s map — the definitions read out of the game's
+   * own modules at boot — so this is provenance and not a flag: the animal on
+   * screen came from `src/`, therefore pressing the button is an EDIT of it and
+   * not the creation of a new species. A blank animal or a clone under a new id
+   * is not in that map and pushes as a create, which is exactly the case the
+   * "already exists" refusal must keep catching.
+   */
+  const request = pushRequest(speciesId, def, view, today, defs.has(speciesId))
   const reply = await api('/api/species/push', request) as unknown as PushReply
-
-  if (reply.error) {
-    pushNote.textContent = reply.error
-    pushNote.className = 'note warn'
-    pushOut.replaceChildren()
-    say(`nothing was pushed: ${reply.error}`, true)
-    return
-  }
 
   const row = (marker: string, path: string, text: string, left = false): HTMLLIElement => {
     const li = document.createElement('li')
@@ -990,18 +1039,33 @@ async function push(): Promise<void> {
     ...(reply.skipped ?? []).map(p => row('already there —', p.path, p.what)),
     ...(reply.left ?? []).map(p => row('yours —', p.path, p.why, true)),
   )
-  pushNote.textContent = reply.say ?? ''
-  pushNote.className = 'note warn'
-  say(`${speciesId} is in the game — read the list below before you close this`)
+  /*
+   * The verdict is `pushOutcome`'s and this is only its typist. It judges by
+   * what the reply says it WROTE — place 1 or the animal did not change — and
+   * everything that made a refusal look like a success was decided here, in
+   * DOM code nothing could test. See `push.ts` for the rule and why it is that
+   * way round.
+   */
+  const outcome = pushOutcome(reply, speciesId)
+  pushNote.textContent = outcome.note
+  pushNote.className = outcome.noteClass
+  say(outcome.sayText, outcome.sayBad)
+}
+
+/** A push that did not happen, said in both places Joe can see. */
+function refuse(text: string): void {
+  pushNote.textContent = text
+  pushNote.className = 'note bad'
+  /* The list from the LAST push is cleared: six "written —" rows standing under
+   * a refusal is the same lie in a different font. */
+  pushOut.replaceChildren()
+  say(`nothing was pushed: ${text}`, true)
 }
 
 el<HTMLButtonElement>('#push').addEventListener('click', () => {
+  /* `creatureSpec`'s own words, unwrapped: it names the axiom and the fix. */
   void push().catch((error: unknown) => {
-    /* `creatureSpec`'s own words, unwrapped: it names the axiom and the fix. */
-    const text = error instanceof Error ? error.message : String(error)
-    pushNote.textContent = text
-    pushNote.className = 'note warn'
-    say(`nothing was pushed: ${text}`, true)
+    refuse(error instanceof Error ? error.message : String(error))
   })
 })
 

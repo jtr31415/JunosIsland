@@ -115,6 +115,11 @@ optgroup { font-style: normal; font-weight: 600; color: var(--dim); }
 optgroup option { font-weight: 400; color: var(--ink, inherit); }
 .note { color: var(--dim); font-size: 11px; margin: 6px 0 0; }
 .note.warn { color: var(--warn); }
+/* A note that reports a FAILURE. `warn` used to serve both, so the push note
+   read identically whether the server had written the animal or refused it —
+   which is how a refused hedgehog looked exactly like a pushed one. Same token
+   the other failures already use (`.say.bad`, `#signoff-problems li`). */
+.note.bad { color: var(--loud); }
 .count { color: var(--dim); font-weight: 400; font-size: 11px; }
 /* A blocking problem is loud; an advisory one is not. Same list, two weights,
    so "you may not push" never looks like "you may want to know". */

@@ -71,6 +71,7 @@
  * file at all, let alone one outside the repo.
  */
 
+import { posix } from 'node:path'
 import { exists, readJson, readText, writeJson, writeText } from './repo.mjs'
 
 /** A push this module refuses to perform, with the reason in Joe's words. */
@@ -129,6 +130,379 @@ export function assertLf(rel, text) {
       `${rel} has CRLF line endings, and this push writes LF. Nothing was written — `
       + 'convert the file first, or the diff will claim every line changed.')
   }
+}
+
+/* ----------------------------- 1 again. the definition block, REPLACED --- */
+
+/**
+ * ## Why an UPDATE splices and never regenerates
+ *
+ * Joe, 2 August: he opened a shipped animal in the editor, changed it, pressed
+ * the button, and nothing reached `src/` — because the refusal below is written
+ * for a NEW species whose id collides with a built one, and every one of the
+ * thirty built species trips it. The guard is right and it stays; what was
+ * missing was a way to say "this is an EDIT of that animal", which is `replace`
+ * on the request.
+ *
+ * **But an update may not write `defToModuleSource`'s output over the file.**
+ * That was measured: the generator's output is byte-identical to 0 of the 30
+ * files on disk, because the generator writes an eleven-line placeholder doc
+ * comment where the real files carry their derivations.
+ * `animal-hedgehog.ts` is 286 lines on disk against 50 emitted — the 236 lost
+ * would include a `flag` ruling in Joe's own words and the whole argument for
+ * why the spikes are `cone-01` and not the hog's ear. That reasoning is the
+ * point of one-species-one-file; a button that deleted it would be a worse bug
+ * than the one it fixed.
+ *
+ * So an update replaces the OBJECT LITERAL passed to `defineCreature` and
+ * NOTHING else. Every byte before the `{` and after the matching `}` — the doc
+ * comment, the imports, anything below the call — is carried over untouched.
+ */
+
+/**
+ * The end of the quoted string that starts at `at`, one past its closing quote.
+ *
+ * Needed because the brace matcher must not count a `{` that is inside a string,
+ * and must not mistake an apostrophe in a comment for the start of one. Both
+ * happen in these files: the hedgehog's `flag` is a wrapped concatenation full
+ * of quotes and braces-adjacent prose.
+ */
+function endOfString(source, at, what) {
+  const quote = source[at]
+  for (let i = at + 1; i < source.length; i++) {
+    const c = source[i]
+    if (c === '\\') { i++; continue }
+    if (c === quote) return i + 1
+    /* A '...' or "..." never spans a line; a `...` may. */
+    if (quote !== '`' && c === '\n') break
+  }
+  throw new PushRefused(
+    `${what} has a string that never closes, so this cannot tell where the definition ends. `
+    + 'Nothing was written.')
+}
+
+/**
+ * The index of the `}` that closes the `{` at `open`.
+ *
+ * Comments and strings are consumed whole, so neither a `{` in a sentence nor an
+ * apostrophe in a derivation can move the count. Anything it cannot read — an
+ * unterminated comment or string, braces that never balance — is a `PushRefused`
+ * and never a guess: a wrong splice corrupts an animal nobody can regenerate,
+ * and a refusal is merely annoying.
+ */
+function matchingBrace(source, open, what) {
+  let depth = 0
+  let i = open
+  while (i < source.length) {
+    const c = source[i]
+    const n = source[i + 1]
+    if (c === '/' && n === '*') {
+      const end = source.indexOf('*/', i + 2)
+      if (end === -1) {
+        throw new PushRefused(
+          `${what} has a /* comment that is never closed, so this cannot tell where the `
+          + 'definition ends. Nothing was written.')
+      }
+      i = end + 2
+      continue
+    }
+    if (c === '/' && n === '/') {
+      const end = source.indexOf('\n', i + 2)
+      i = end === -1 ? source.length : end + 1
+      continue
+    }
+    if (c === "'" || c === '"' || c === '`') {
+      i = endOfString(source, i, what)
+      continue
+    }
+    if (c === '{') { depth++; i++; continue }
+    if (c === '}') {
+      depth--
+      if (depth === 0) return i
+      i++
+      continue
+    }
+    i++
+  }
+  throw new PushRefused(
+    `${what} has a \`defineCreature\` call whose braces never balance, so this cannot tell where `
+    + 'the definition ends. Nothing was written.')
+}
+
+/** Escape a species id for use in a `RegExp`. Belt and braces — `SPECIES_ID` already refuses everything below. */
+const reLit = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+/**
+ * Where the definition literal of `defineCreature('<id>', { ... })` starts and
+ * ends, as indices of the `{` and its matching `}`.
+ *
+ * **EXACTLY ONE call, or this refuses.** Not found means the file is not shaped
+ * like a species file and there is nothing to replace; found twice means this
+ * would have to choose which one is the animal, and choosing wrong writes one
+ * definition over another. Both are refusals with the file named.
+ */
+export function definitionSpan(source, speciesId, what) {
+  const call = new RegExp(`defineCreature\\(\\s*'${reLit(speciesId)}'\\s*,\\s*\\{`, 'g')
+  const opens = []
+  for (let m = call.exec(source); m !== null; m = call.exec(source)) {
+    opens.push(m.index + m[0].length - 1)
+  }
+  if (opens.length === 0) {
+    throw new PushRefused(
+      `${what} has no \`defineCreature('${speciesId}', {\` call, so there is no definition to `
+      + 'replace and this will not guess where one goes. Nothing was written.')
+  }
+  if (opens.length > 1) {
+    throw new PushRefused(
+      `${what} has ${opens.length} \`defineCreature('${speciesId}', {\` calls, and this will not `
+      + 'guess which of them is the animal. Nothing was written.')
+  }
+  const open = opens[0]
+  return { open, close: matchingBrace(source, open, what) }
+}
+
+/** The `{ ... }` a module passes to `defineCreature`, braces included. */
+export function definitionLiteral(module, speciesId, what = 'the module text the editor sent') {
+  const { open, close } = definitionSpan(module, speciesId, what)
+  return module.slice(open, close + 1)
+}
+
+/* --------------------------------- the named numbers a definition was written with --- */
+
+/**
+ * ## Why the splice puts `PACK_PUPIL` back
+ *
+ * The editor's definition comes from `loadBuiltDefs()`, which is the definition
+ * as the module EVALUATED it — so every named constant in a species file has
+ * already become a number by the time the editor sees it, and
+ * `defToModuleSource` writes that number out. All thirty shipped species write
+ * `pupil: PACK_PUPIL` and import that constant, so a naive splice replaces the
+ * name with `0x4c4f5e` and leaves an import nothing reads, which
+ * `tsconfig.json`'s `noUnusedLocals` reports as an error. Handing Joe a compiler
+ * error and a manual edit as the reward for pressing one button is the same
+ * failure as the silent no-op this whole change is fixing; it just fails later
+ * and louder.
+ *
+ * So: **an identifier the old literal used at key K, whose value equals the new
+ * literal's value at key K, is written back.** The colour is unchanged, so the
+ * name loses nothing and the file goes on reading the way its author wrote it.
+ *
+ * **And it is a value comparison, never a rewrite of what Joe did.** If he
+ * genuinely changed the pupil, the hex will not equal `PACK_PUPIL` and the hex
+ * stays — at which point the import really is dead, and `staleBindings` says so,
+ * which is the one case where telling him is the correct answer.
+ *
+ * The value is READ OUT OF THE REPO at push time and never hardcoded: this
+ * module may not import a line of `src/`, but it may read it as text. Anything
+ * it cannot read as a plain number — and every file-local derivation here is an
+ * expression, `0.125 / 0.359219` and the like — is left alone rather than
+ * guessed at. A wrong substitution changes an animal's colour, which is far
+ * worse than an unused import.
+ */
+
+/** A number as a species file writes one: `0x4c4f5e`, `0.408163`, `-0.5`, `1e-6`. */
+const NUMERIC = /^(?:0x[0-9a-fA-F]+|[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)$/
+
+/**
+ * The number `const NAME = ...` declares, or `null` when it is not a plain one.
+ *
+ * `null` for `const COIL_SINK = (COIL_THICK - HULL_BOTTOM_Y) / COIL_THICK` on
+ * purpose. Evaluating a species file's arithmetic here would be this module
+ * running `src/`, which is precisely what it may not do.
+ */
+function declaredNumber(source, name, exportedOnly) {
+  const lead = exportedOnly ? 'export\\s+' : '(?:export\\s+)?'
+  const re = new RegExp(`^${lead}const\\s+${reLit(name)}\\s*(?::[^=\\n]*)?=\\s*(.*)$`, 'm')
+  const m = re.exec(codeOnly(source))
+  if (m === null) return null
+  const raw = m[1].replace(/;?\s*$/, '').trim()
+  return NUMERIC.test(raw) ? Number(raw) : null
+}
+
+/** The module specifier a named import of `name` comes from, or `null`. */
+function importedFrom(source, name) {
+  for (const line of source.split('\n')) {
+    const m = /^\s*import\s+(?:type\s+)?\{([^}]*)\}\s+from\s+'([^']+)'/.exec(line)
+    if (m === null) continue
+    const names = m[1].split(',').map(s => s.trim().split(/\s+as\s+/).pop()?.trim())
+    if (names.includes(name)) return m[2]
+  }
+  return null
+}
+
+/**
+ * Look a bare identifier up: the species file's own declarations first, then the
+ * module it imports the name from.
+ *
+ * Relative specifiers only, and every read goes through `repo.mjs`'s jail like
+ * every other read here. `null` means "could not be read", which the caller
+ * treats as "do not substitute".
+ */
+export function constantLookup(root, modulePath, source) {
+  return (name) => {
+    const own = declaredNumber(source, name, false)
+    if (own !== null) return own
+    const spec = importedFrom(source, name)
+    if (spec === null || !spec.startsWith('.')) return null
+    const base = posix.normalize(posix.join(posix.dirname(modulePath), spec))
+    for (const rel of [`${base}.ts`, `${base}/index.ts`]) {
+      if (!exists(root, rel)) continue
+      const text = readText(root, rel)
+      if (text === null) continue
+      const value = declaredNumber(text, name, true)
+      if (value !== null) return value
+    }
+    return null
+  }
+}
+
+const RESERVED = new Set(['true', 'false', 'null', 'undefined'])
+/* A BARE identifier only. `LEG_ROW.sink` and `HULL_MID_Y + 0.1` are expressions
+ * this cannot evaluate, and the negative lookahead is what excludes them. */
+const IDENT_AT_KEY = /\b([A-Za-z_$][\w$]*)\s*:\s*([A-Za-z_$][\w$]*)(?![\w$.(])/g
+const numberAtKey = (k) =>
+  new RegExp(`(\\b${reLit(k)}\\s*:\\s*)(0x[0-9a-fA-F]+|[-+]?(?:\\d+\\.?\\d*|\\.\\d+)(?:[eE][-+]?\\d+)?)(?![\\w$.])`, 'g')
+
+/**
+ * Put back every named constant whose value the edit did not change.
+ *
+ * Returns the adjusted literal and the names restored. Deliberately timid: a key
+ * that appears more than once on either side, or under two different names, is
+ * skipped rather than resolved by position — `part` and `at` occur all over a
+ * definition, and a substitution in the wrong slot is a corrupted animal.
+ */
+export function withRestoredConstants(oldLiteral, newLiteral, valueOf) {
+  const seen = new Map()
+  for (const m of codeOnly(oldLiteral).matchAll(IDENT_AT_KEY)) {
+    const [, k, ident] = m
+    if (RESERVED.has(ident)) continue
+    const cur = seen.get(k)
+    seen.set(k, { ident: cur && cur.ident !== ident ? null : ident, n: (cur?.n ?? 0) + 1 })
+  }
+
+  let literal = newLiteral
+  const restored = []
+  for (const [k, { ident, n }] of seen) {
+    if (ident === null || n !== 1) continue
+    const value = valueOf(ident)
+    if (value === null) continue
+    const hits = [...literal.matchAll(numberAtKey(k))]
+    if (hits.length !== 1) continue
+    const hit = hits[0]
+    /* The whole test: same key, same NUMBER. A colour Joe actually changed does
+     * not match, and its hex stays exactly as he left it. */
+    if (Number(hit[2]) !== value) continue
+    literal = literal.slice(0, hit.index) + hit[1] + ident + literal.slice(hit.index + hit[0].length)
+    restored.push(ident)
+  }
+  return { literal, restored }
+}
+
+/**
+ * Replace the definition literal in a species file that is already on disk.
+ *
+ * The one write an update makes. Everything outside `[open, close]` is carried
+ * over byte for byte, which is what preserves the 236 lines of the hedgehog's
+ * reasoning — and the trailing newline, which lives after the `}` and is never
+ * in the span.
+ *
+ * Returns `null` when the result is identical to the input, so the reply can say
+ * "already exactly this" honestly rather than claiming a write it did not make.
+ */
+export function withUpdatedDefinition(source, speciesId, defLiteral) {
+  const what = `the species file for ${speciesId}`
+  assertLf(what, source)
+  assertLf('the definition the editor sent', defLiteral)
+  const { open, close } = definitionSpan(source, speciesId, what)
+  const next = source.slice(0, open) + defLiteral + source.slice(close + 1)
+  return next === source ? null : next
+}
+
+/**
+ * Blank every comment and every string body, keeping the line structure.
+ *
+ * So that "is this imported name still used?" is a question about CODE. Without
+ * it the hedgehog answers yes on the strength of its doc comment, which says
+ * "**The pupil is `PACK_PUPIL`**" thirty lines above the import.
+ */
+function codeOnly(source) {
+  const blank = (s) => s.replace(/[^\n]/g, ' ')
+  let out = ''
+  let i = 0
+  while (i < source.length) {
+    const c = source[i]
+    const n = source[i + 1]
+    if (c === '/' && n === '*') {
+      const end = source.indexOf('*/', i + 2)
+      const stop = end === -1 ? source.length : end + 2
+      out += blank(source.slice(i, stop)); i = stop; continue
+    }
+    if (c === '/' && n === '/') {
+      const end = source.indexOf('\n', i + 2)
+      const stop = end === -1 ? source.length : end
+      out += blank(source.slice(i, stop)); i = stop; continue
+    }
+    if (c === "'" || c === '"' || c === '`') {
+      let stop
+      try { stop = endOfString(source, i, 'this file') } catch { stop = source.length }
+      out += blank(source.slice(i, stop)); i = stop; continue
+    }
+    out += c; i++
+  }
+  return out
+}
+
+const IMPORT_BINDINGS = /^\s*import\s+(?:type\s+)?\{([^}]*)\}\s+from\s/
+/* Module scope, not exported — an `export const` is read by whatever imports it. */
+const LOCAL_CONST = /^const\s+([A-Za-z_$][\w$]*)\s*[:=]/
+
+/**
+ * Names the file declares or imports that nothing in it reads any more.
+ *
+ * **What is left over once `withRestoredConstants` has done its work**, and
+ * therefore a much smaller and more meaningful list than it would be alone: a
+ * name still here is one whose VALUE the edit actually changed, or one bound to
+ * an expression this cannot evaluate. Either way it is genuinely dead, and
+ * `noUnusedLocals` would report it with no hint of where it came from.
+ *
+ * NOT fixed here, and deliberately: an import line and a derivation constant
+ * both live OUTSIDE the definition block, and the whole promise of an update is
+ * that it does not write outside it. Deleting a line of a species file is a
+ * human's call — the constant usually has a paragraph above it explaining the
+ * measurement, and that paragraph has to go with it or stay, which is a judgement
+ * about prose. So the reply names the lines and Joe decides.
+ *
+ * Conservative: a name that still appears anywhere in the CODE is not reported.
+ * Comments are blanked first, or the hedgehog answers "still used" on the
+ * strength of a doc comment that says "**The pupil is `PACK_PUPIL`**" thirty
+ * lines above the import.
+ */
+export function staleBindings(source) {
+  const lines = codeOnly(source).split('\n')
+  const names = []
+  const rest = []
+  for (const line of lines) {
+    const imported = IMPORT_BINDINGS.exec(line)
+    if (imported !== null) {
+      for (const spec of imported[1].split(',')) {
+        const name = spec.trim().split(/\s+as\s+/).pop()?.trim()
+        if (name) names.push(name)
+      }
+      continue
+    }
+    const local = LOCAL_CONST.exec(line)
+    if (local !== null) {
+      names.push(local[1])
+      /* The declaration's own right-hand side may name OTHER constants, and
+       * those uses are real — `COIL_SINK` reads `COIL_THICK`. So the line stays
+       * in the body, minus the name being declared. */
+      rest.push(line.slice(local[0].length))
+      continue
+    }
+    rest.push(line)
+  }
+  const body = rest.join('\n')
+  return names.filter(n => !new RegExp(`\\b${reLit(n)}\\b`).test(body))
 }
 
 /* ------------------------------------------------- 2. the export line --- */
@@ -418,6 +792,18 @@ export function pushSpecies(root, body) {
   /* Absent means "Joe has not ruled on it yet" and is never treated as a value
    * — `undefined`, never `''`, is what says that all the way down to `withMovesEntry`. */
   const moves = body.moves === undefined ? undefined : str(body.moves)
+  /*
+   * "This is an edit of the species that is already built, not a new species."
+   *
+   * `true` ONLY when the request says so in as many words. Anything else — a
+   * missing key, a string, a 1 — is a new species, because the whole value of
+   * the refusal below is that a payload which never considered the question
+   * cannot get past it. The editor sets this from where its definition came
+   * from: `main.ts` holds `loadBuiltDefs()`'s map, so `defs.has(speciesId)` is
+   * literally "this animal is already in the game", and nothing about it is
+   * hard-coded.
+   */
+  const replace = body.replace === true
 
   /* ---- what the payload has to be, before anything is read off the disk ---- */
 
@@ -494,6 +880,115 @@ export function pushSpecies(root, body) {
    * built is refused UNLESS it is asking only about locomotion, in which case
    * `alreadyBuilt` below skips straight to that and nothing else is touched.
    */
+  /*
+   * THE SANCTIONED CIRCUMSTANCE, AND IT IS THE ONLY ONE.
+   *
+   * The comment above says replacing a species is "a thing to do on purpose, in
+   * an editor, with git watching". The editor is that circumstance, and `replace`
+   * is how it says so — an explicit intent on the request, never a default and
+   * never inferred from the payload looking like an edit. A NEW species whose id
+   * happens to collide with a built one still hits the refusal below, word for
+   * word, because a request that never claimed to be an update never was one.
+   *
+   * And an update is not a rewrite: `withUpdatedDefinition` replaces the
+   * definition literal and nothing else in the file, so the derivations beside
+   * every number survive the button. See its own comment for the measurement.
+   */
+  if (alreadyBuilt && replace) {
+    const was = readText(root, modulePath)
+    assertLf(modulePath, was)
+    assertLf(modulePath, module)
+
+    /* The whole plan first, as everywhere else here: a definition this cannot
+     * find, or a moves value it will not accept, refuses BEFORE any write. */
+    const sent = definitionLiteral(module, speciesId)
+    const before = definitionLiteral(was, speciesId, `the species file for ${speciesId}`)
+    /*
+     * Every named constant whose value the edit did not change is written back
+     * before the splice, so a file that read `pupil: PACK_PUPIL` still does and
+     * its import is still read. See `withRestoredConstants` for why that is a
+     * value comparison and not a cosmetic one.
+     */
+    const { literal: defLiteral, restored } = withRestoredConstants(
+      before, sent, constantLookup(root, modulePath, was))
+    const next = withUpdatedDefinition(was, speciesId, defLiteral)
+
+    let movesNext = null
+    if (moves !== undefined) {
+      if (!exists(root, movesPath)) {
+        throw new PushRefused(`${movesPath} is missing, so there is nowhere to record how ${speciesId} gets about. Nothing was written.`)
+      }
+      const movesWas = readText(root, movesPath)
+      assertLf(movesPath, movesWas)
+      movesNext = withMovesEntry(movesWas, speciesId, moves)
+    }
+
+    const wrote = []
+    const skipped = []
+    const note = (list, place, path, what) => { list.push({ place, path, what }) }
+
+    if (next === null) {
+      note(skipped, 1, modulePath, `the definition on disk is already exactly this one`)
+    } else {
+      writeText(root, modulePath, next)
+      note(wrote, 1, modulePath,
+        'the definition block, replaced in place — the doc comment, the imports and every '
+        + 'derivation beside a number are exactly as they were')
+    }
+
+    /*
+     * The species is already registered, already rostered and already signed
+     * off, so the other places are not merely skipped — writing them would
+     * DUPLICATE a record or overwrite a row a human owns. Said with the reason,
+     * because "skipped" on its own reads like a bug.
+     */
+    note(skipped, 2, indexPath, `${speciesId} is already exported — an edit never adds a second line`)
+    note(skipped, 3, collectionPath, `defineSpecies('${speciesId}') is already in the roster — an edit never adds a second record`)
+    note(skipped, 4, collectionPath, "import '../parts/assembled' was written when this species was first pushed")
+    note(skipped, 8, 'joe/names-audit.json', 'the name row is Joe\'s audited data, and an edit to the shape never rewrites it')
+    note(skipped, 9, 'joe/species-facts.json', 'the fact is Joe\'s audited data, and an edit to the shape never rewrites it')
+
+    if (moves !== undefined) {
+      if (movesNext === null) note(skipped, 10, movesPath, `${speciesId} already carries this locomotion`)
+      else { writeText(root, movesPath, movesNext); note(wrote, 10, movesPath, `moves: '${moves}'`) }
+    }
+
+    /*
+     * What is left after the constants have been put back: names whose value
+     * this edit really did change, or which were bound to an expression. Both
+     * are genuinely dead now, and both live outside the definition block, so
+     * they are named rather than deleted. See `staleBindings`.
+     */
+    const stale = next === null ? [] : staleBindings(next)
+    const keptNote = restored.length === 0
+      ? ''
+      : ` ${restored.join(' and ')} still reads as ${restored.length === 1 ? 'a name' : 'names'} `
+        + 'rather than as a number, because that value is the one it always was.'
+    const staleNote = stale.length === 0
+      ? ''
+      : ` One thing is now yours: ${stale.join(', ')} in ${modulePath} is no longer read by `
+        + 'anything — either the number it stood for is one you changed, or it was written as a '
+        + 'derivation (`0.125 / 0.359219`) and the editor only ever sees the number that came out '
+        + 'of it. Delete the line, and the note above it if that note is only about that number, '
+        + 'or `npx tsc --noEmit` will point at it.'
+
+    return {
+      speciesId,
+      collection,
+      wrote,
+      skipped,
+      left: [],
+      say: next === null
+        ? `${speciesId} is already exactly this in the game — ${modulePath} did not need changing, `
+          + 'so nothing was written.'
+        : `${speciesId} is updated in the game: ${modulePath} now carries the definition you just `
+          + 'edited, and every other byte of that file — the doc comment above it and the reasoning '
+          + 'beside each number — is untouched. Nothing else was written, because the export line, '
+          + 'the roster record and your two ledgers were all written when it was first pushed.'
+          + keptNote + staleNote,
+    }
+  }
+
   if (alreadyBuilt && moves === undefined) {
     throw new PushRefused(
       `${modulePath} already exists, and this will not write over a species that is already built. `
