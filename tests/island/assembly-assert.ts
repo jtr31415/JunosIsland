@@ -529,10 +529,39 @@ export function assertAssembly(claims: AssemblyClaims): void {
           // pack, and it does NOT move with the hull: on box-31 the card floats
           // 0.135 proud of a 0.500 front face, which is what the lion does.
           expect(world(e).z, `${e.name} is off the eye plane`).toBeCloseTo(EYE_CARD_Z, 4)
+          /* SAID TWICE, AT TWO TOLERANCES, AND THE LOOSER ONE IS NOT A CONCESSION.
+           *
+           * `bank.generated.ts` stores `positions` at 4dp and `shape.size` at
+           * 6dp, so for a card whose true extent has a sixth decimal the two
+           * CANNOT agree past the fourth. Measured over the five eye cards:
+           *
+           *     plate-01  field 0.400000 x 0.320208   built delta 0 / 8.0e-6
+           *     plate-08  field 0.400000 x 0.400000   built delta 0 / 0
+           *     plate-06  field 0.329780 x 0.276342   built delta 2.0e-5 / 5.8e-5
+           *     plate-14  field 0.435472 x 0.442601   built delta 7.2e-5 / 1.0e-6
+           *
+           * `toBeCloseTo(x, 4)` allows 5e-5, so `plate-14` and `plate-06` both
+           * fail it and `plate-01` and `plate-08` both pass. THIS WAS A LATENT
+           * BUG IN THIS HARNESS, not a property of any animal: every species
+           * built before Night Time wore `plate-01` or `plate-08`, which are the
+           * two that happen to round exactly, so nothing ever exposed it. The
+           * tarsier is the first species to spend the panda's card and it went
+           * red on the pack's own rounding.
+           *
+           * So the comparison against the metadata field drops to 3dp, which is
+           * all that field can support, and an EXACT comparison against the
+           * part's own referenced vertices is added at 4dp with no allowance at
+           * all. The invariant is unchanged and better evidenced: an eye card is
+           * never scaled, and it is now checked against the geometry rather than
+           * against a rounded description of it. */
           const s = worldBox(e).getSize(new THREE.Vector3())
-          expect(s.x).toBeCloseTo(part.size[0]!, 4)
-          expect(s.y).toBeCloseTo(part.size[1]!, 4)
-          expect(s.z).toBeCloseTo(part.size[2]!, 4)
+          const own = bbox(referenced(part)).size
+          for (let i = 0; i < 3; i++) {
+            expect([s.x, s.y, s.z][i]!, `${e.name} is not ${part.id}'s own size`)
+              .toBeCloseTo(part.size[i]!, 3)
+            expect([s.x, s.y, s.z][i]!, `${e.name} is not ${part.id}'s own size`)
+              .toBeCloseTo(own[i]!, 4)
+          }
           expect(e.userData['stretch']).toEqual([1, 1, 1])
           expect(e.userData['sink']).toBe(0)
         }

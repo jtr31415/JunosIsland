@@ -117,8 +117,39 @@ export const HELD_BACK_BY_JOE: readonly string[] = ['legendary', 'dinosaurs', 'p
  * other switch. Build the species, delete the string, and the cadence starts
  * offering it the next time a child finishes an album.
  */
+/*
+ * `night-time` LEFT THIS LIST ON 2 AUGUST 2026, and it is the first id ever
+ * deleted from it. Thirteen of its sixteen are built on the assembly route and
+ * `shippedIn('night-time').length` is 13, so the derivation above is what took
+ * it out — the tripwire in `species-unlock.test.ts` failed by name ("night-time
+ * now has models") and this deletion is the whole of the response.
+ *
+ * IT LEAVES WITH A HOLE IN IT, which no collection released here has done
+ * before, and that is worth knowing rather than smoothing over. `animal-bat`,
+ * `animal-sugar-glider` and `animal-scorpion` want a membrane and a pincer, and
+ * the bank has neither, so this collection **cannot be completed on the current
+ * parts bank at all**. Two consequences follow and both are real:
+ *
+ *   - `album.ts` draws one frame per ROSTER member, so a child opening Night
+ *     Time sees sixteen frames of which three can never be filled. That is a
+ *     smaller version of the PB-058 bug this list exists for — three empty
+ *     squares rather than sixteen — but it is the same bug, and it is the first
+ *     time it ships.
+ *   - `completion()` divides by ROSTER size, so this collection can never reach
+ *     100%, never goes inactive, and therefore holds one of `MAX_ACTIVE`'s four
+ *     slots permanently. That is exactly the trap the goldfish run recorded for
+ *     Home Pets and closed by building its last two animals. Here it cannot be
+ *     closed that way.
+ *
+ * **So JT-030 — may a collection unlock with a hole in it? — is now live in its
+ * hardest form and it is Joe's.** It is not settled by this deletion: the
+ * alternative was to hold a collection of thirteen finished animals off the
+ * cadence indefinitely for three that no amount of work can produce, which is
+ * worse for a child and hides the question rather than asking it. If he rules
+ * the other way, putting `night-time` back is one string.
+ */
 export const NOT_BUILT_YET: readonly string[] = [
-  'birds', 'ocean', 'critters', 'night-time', 'ice', 'outback', 'jungle', 'raptors',
+  'birds', 'ocean', 'critters', 'ice', 'outback', 'jungle', 'raptors',
   'near-threatened', 'vulnerable', 'endangered', 'critically-endangered',
 ]
 
@@ -384,18 +415,28 @@ function draw(state: UnlockState, rng: Rng): string | null {
  * Returns the ids to open, in the order they were drawn, so the caller can fold
  * them in and record the last one. Empty when four are already active.
  *
- * >>> THE POOL IS FIVE COLLECTIONS WIDE TODAY, AND THAT IS TIGHT. Since PB-058
- * >>> put the twelve unbuilt collections into `HELD_BACK` (see `NOT_BUILT_YET`),
+ * >>> THE POOL IS SIX COLLECTIONS WIDE TODAY, AND THAT IS STILL TIGHT. Since
+ * >>> PB-058 put the unbuilt collections into `HELD_BACK` (see `NOT_BUILT_YET`),
  * >>> everything this function can ever draw is `garden`, `home-pets`,
- * >>> `woodland`, `africa` and `farm` — five. A fresh island opens `base` plus
- * >>> three of those to reach the cap of four, which leaves exactly TWO in
- * >>> reserve for the whole of the rest of the game: the child completes an
- * >>> album, one of the two opens, they complete another, the last one opens,
- * >>> and after that the cadence has nothing left to give until a modeller ships
- * >>> a collection. That is not a fault in this function, it is the true state of
- * >>> the registry, and it is a great deal better than opening a child an album
- * >>> of sixteen empty frames — but it is the number to look at first when someone
- * >>> asks why the album stopped growing.
+ * >>> `woodland`, `africa`, `farm` and — since 2 August — `night-time`. A fresh
+ * >>> island opens `base` plus three of those to reach the cap of four, which
+ * >>> leaves THREE in reserve for the rest of the game: the child completes an
+ * >>> album, one opens, they complete another, another opens, and after that the
+ * >>> cadence has nothing left to give until a modeller ships a collection. That
+ * >>> is not a fault in this function, it is the true state of the registry, and
+ * >>> it is a great deal better than opening a child an album of sixteen empty
+ * >>> frames — but it is the number to look at first when someone asks why the
+ * >>> album stopped growing.
+ * >>>
+ * >>> AND THE SIXTH DOES NOT BEHAVE LIKE THE OTHER FIVE. `night-time` is
+ * >>> thirteen of sixteen and CANNOT be completed on the current parts bank —
+ * >>> two of its members want a membrane and one wants a pincer, and the bank
+ * >>> has neither. `completion()` divides by ROSTER size, so once it opens it
+ * >>> never completes, never goes inactive, and holds one of `MAX_ACTIVE`'s four
+ * >>> slots for good. So it widens the pool by one and narrows the SLOTS by one,
+ * >>> which is very nearly a wash. That is JT-030's question arriving as a
+ * >>> measurement rather than as a design note; `NOT_BUILT_YET` above carries it
+ * >>> in full and it is Joe's to rule on.
  * >>>
  * >>> A POOL SMALLER THAN THE CAP DEGRADES SILENTLY, ON PURPOSE. It neither
  * >>> throws nor spins: `draw` returns null the instant `candidates` is empty

@@ -355,7 +355,23 @@ describe('the viewer is truthful about absolute size', () => {
      */
     const asBefore = (height: number): number => STANDARD_HULL / height
     expect(asBefore(lo)).toBeCloseTo(0.873, 2)
-    expect(asBefore(hi)).toBeCloseTo(0.633, 2)
+    /*
+     * 0.622 SINCE 2 AUGUST, WAS 0.633, AND THE ANIMAL UNDERNEATH IT CHANGED.
+     *
+     * This pins what the OLD per-animal divisor did at the tall end, so it moves
+     * whenever the tallest assembled species does. It was the squirrel at 1.9763
+     * (1.250 / 1.9763 = 0.6325); Night Time's `animal-fennec-fox` is 2.0100 and
+     * is now the tallest thing built by this method (1.250 / 2.0100 = 0.6219).
+     * The fennec is all ear — `box-06`, the bunny's upright pair, is the biggest
+     * ear in the bank and it clears the pack's own 2.02 ceiling by 0.0100.
+     *
+     * The spread this fixture exists to demonstrate therefore got WIDER, not
+     * narrower: 1.404x across the assembled set against the 1.38x quoted above,
+     * so the fault the shared divisor fixed would have been worse today than it
+     * was when it was found. Update the number when a taller animal lands; do
+     * not relax the tolerance.
+     */
+    expect(asBefore(hi)).toBeCloseTo(0.622, 2)
     expect(new Set(heights.map(h => asBefore(h).toFixed(6))).size).toBeGreaterThan(1)
 
     /*

@@ -72,16 +72,29 @@ describe('the species registry', () => {
     // fully built can never complete, never go inactive and never release one of
     // the four active slots JT-027 allows — and Home Pets had been holding one
     // of those four permanently.
-    expect(REGISTRY.size).toBe(100)
+    // 113 since 2 Aug, and the +13 is NIGHT TIME — the first WHOLE COLLECTION
+    // built on the assembly route and the first with no kit build anywhere in
+    // it. Every count above it was a kit spending itself on sixteen animals at
+    // once, with the assembly kit closing single stragglers afterwards; this one
+    // inverts that. Joe's ruling the same day is why: "do not build any more of
+    // them. all the rest must be built in the same way as the garden animals."
+    //
+    // It is THIRTEEN and not sixteen, and the three missing are not pending —
+    // bat and sugar glider want a membrane, scorpion wants a pincer, and the
+    // `wing`, `horn` and `claw` roles occur zero times in the bank.
+    // `species-night-time.test.ts` measures that absence rather than asserting
+    // it, so the day a wing is banked the ruling reopens by itself.
+    expect(REGISTRY.size).toBe(113)
     expect(shippedIn('base')).toHaveLength(24)
     expect(shippedIn('garden')).toHaveLength(14)      // COMPLETE — the slow worm is assembled
     expect(shippedIn('home-pets')).toHaveLength(16)   // COMPLETE — corn snake and goldfish assembled
     expect(shippedIn('woodland')).toHaveLength(16)    // COMPLETE
     expect(shippedIn('africa')).toHaveLength(14)      // 16 rostered, ostrich + vulture want wings
     expect(shippedIn('farm')).toHaveLength(16)        // COMPLETE
+    expect(shippedIn('night-time')).toHaveLength(13)  // 16 rostered; bat, sugar glider, scorpion
   })
 
-  it('leaves 222 species rostered but unshipped, on purpose', () => {
+  it('leaves 207 species rostered but unshipped, on purpose', () => {
     // The gap is the point. Nobody should "finish" the registry — a species
     // without a built kit renders as nothing, which is worse than absent.
     //
@@ -96,9 +109,16 @@ describe('the species registry', () => {
     // members a kit cannot express and the wrong one for a collection. Four
     // animals is four runs — and it is also what it took to close a collection
     // that four kits could not.
+    //
+    // 207 since 2 Aug, and the −13 is NIGHT TIME. That is the sentence above
+    // corrected by evidence: the assembly route closes one animal at a time only
+    // when it is used that way. Measured ONCE for the whole collection and then
+    // dispatched in parallel, it built thirteen in a single run — which is why
+    // this is the first drop of more than four in the assembly era, and why the
+    // remaining 207 are a schedule rather than a wall.
     const rostered = COLLECTIONS.flatMap(c => c.members)
     expect(rostered).toHaveLength(320)
-    expect(rostered.filter(id => !speciesRecord(id))).toHaveLength(220)
+    expect(rostered.filter(id => !speciesRecord(id))).toHaveLength(207)
   })
 
   it('has FOUR complete collections now — garden, home-pets, woodland and farm', () => {
@@ -131,6 +151,14 @@ describe('the species registry', () => {
     // geometry instead. That is the pattern worth reading off this line: a
     // collection's shortfall is not a queue of kits, it is a queue of animals,
     // and the assembly route can clear it one at a time without waiting.
+    //
+    // NIGHT TIME IS DELIBERATELY NOT ON THIS LIST, and that is the useful thing
+    // about it. It is thirteen of sixteen and the three it lacks are not waiting
+    // on effort or on a kit — they want shapes the pack does not contain. So it
+    // is the first collection that can NEVER complete on the current bank, which
+    // makes JT-030 (may a collection unlock with a hole in it?) live again in the
+    // hardest form: for Home Pets the answer could be dodged by building the
+    // last two animals, and here it cannot.
     const complete = COLLECTIONS
       .filter(c => c.id !== 'base')
       .filter(c => c.members.every(id => speciesRecord(id)))
