@@ -91,8 +91,8 @@ export const KITS: Readonly<Partial<Record<KitId, Kit>>> = { quadruped, songbird
  *
  * `kenney` is not "unbuilt" in the same sense and must never be given a builder:
  * the live 24 are authored GLBs loaded by `pets.ts:560`, frozen by roster §1,
- * and a procedural stand-in for one of them would replace a friend she already
- * owns — brief §19.
+ * and a procedural stand-in for one of them would replace a friend they
+ * already own — brief §19.
  */
 const WHY: Readonly<Record<KitId, string>> = {
   kenney: 'the live 24 are authored GLBs, loaded by pets.ts:560 and never built',
@@ -169,10 +169,10 @@ const pack = ([r, g, b]: [number, number, number]): Rgb => (r << 16) | (g << 8) 
  * (`types.ts:90`) is plain RGB and not a texture.
  *
  * THE NATURAL SET IS A TRUE NO-OP. `recolour.ts:361-365`: the natural set "has
- * to be bit-identical rather than merely close — that is what makes the friends
- * she already owns provably unchanged". The atlas path holds the equivalent
- * line at `recolour.test.ts:585`. Here it is the same base object, returned
- * unchanged, so there is not even a rounding trip to argue about.
+ * to be bit-identical rather than merely close — that is what makes the
+ * friends they already own provably unchanged". The atlas path holds the
+ * equivalent line at `recolour.test.ts:585`. Here it is the same base object,
+ * returned unchanged, so there is not even a rounding trip to argue about.
  *
  * The returned palette has exactly the keys the base had: a species that
  * authored no `accent` does not acquire one from a set, because the kit's own

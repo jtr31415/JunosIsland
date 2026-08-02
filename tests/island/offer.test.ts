@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 /**
- * Run B's offer surface: the panel that asks her, and the wire it hangs on.
+ * Run B's offer surface: the panel that asks the child, and the wire it hangs on.
  *
  * WHY THIS FILE IS SHAPED THE WAY IT IS. `docs/HANDOFF.md:588-601` records
  * that the plot/flow seam produced three faults in two days that no unit test
@@ -185,7 +185,7 @@ async function putTheOffer(
 
 /* ================================================================== tests */
 
-describe('the offer the harness makes is the offer she is shown — B2', () => {
+describe('the offer the harness makes is the offer they are shown — B2', () => {
   it('renders the trickier line, and a yes ticks the stage it was about', async () => {
     const { root, overlay, spoken, host } = setup()
     const it = trickierReady()
@@ -201,7 +201,7 @@ describe('the offer the harness makes is the offer she is shown — B2', () => {
     const due = await run
 
     expect(due).toEqual({ path: 'sums', stage: 3, kind: 'trickier' })
-    // The harness MOVED: the rung she was offered is now hers, and the
+    // The harness MOVED: the rung they were offered is now theirs, and the
     // honeymoon marker the economy reads is stamped.
     expect(it.a.sums.stages[3]!.ticked).toBe(true)
     expect(it.h.honeymoonActive('sums')).toBe(true)
@@ -227,12 +227,12 @@ describe('the offer the harness makes is the offer she is shown — B2', () => {
     expect(due).toEqual({ path: 'takingAway', stage: 1, kind: 'takingAway' })
     expect(it.a.takingAway.stages[1]!.ticked).toBe(true)
     expect(it.h.honeymoonActive('takingAway')).toBe(true)
-    // Her first take-away has not happened yet, which is what makes the next
+    // Their first take-away has not happened yet, which is what makes the next
     // one a debut. See the pop tests below.
     expect(it.a.takingAway.stages[1]!.attempts).toBe(0)
   })
 
-  it('costs her nothing when she says no, and buys two sessions of quiet', async () => {
+  it('costs them nothing when they say no, and buys two sessions of quiet', async () => {
     const { root, overlay } = setup()
     const it = trickierReady()
     const before = JSON.stringify(it.a.sums.stages[3])
@@ -242,7 +242,7 @@ describe('the offer the harness makes is the offer she is shown — B2', () => {
     tap(panelOf(root).no)
     await run
 
-    // NOTHING TICKED, nothing recorded against her, no stat moved (runA.md:231).
+    // NOTHING TICKED, nothing recorded against them, no stat moved (runA.md:231).
     expect(it.a.sums.stages[3]!.ticked).toBe(false)
     expect(JSON.stringify(it.a.sums.stages[3])).toBe(before)
     expect(it.h.honeymoonActive('sums')).toBe(false)
@@ -252,7 +252,7 @@ describe('the offer the harness makes is the offer she is shown — B2', () => {
     expect(it.a.sums.offer.daysSinceDecline).toBe(0)
     expect(it.h.pendingOffer()).toBeNull()
 
-    // ...and it is still quiet on the next day she plays, which is the whole
+    // ...and it is still quiet on the next day they play, which is the whole
     // point of a cooldown counted in sessions.
     it.on('2026-07-04')
     expect(it.h.pendingOffer()).toBeNull()
@@ -300,7 +300,7 @@ describe('the offer the harness makes is the offer she is shown — B2', () => {
 })
 
 describe('the panel itself — nothing expires and nothing defaults', () => {
-  it('shows both answers as words she can read', async () => {
+  it('shows both answers as words they can read', async () => {
     const { root, overlay } = setup()
     void overlay.offer(TAKING_AWAY)
     await Promise.resolve()
@@ -312,8 +312,8 @@ describe('the panel itself — nothing expires and nothing defaults', () => {
   it('dresses the two answers as equals, not as a choice and a consolation', async () => {
     /*
      * `.overlay-back` — what `askName`'s skip button uses — is 75% opacity and
-     * a smaller font. A decline costs her nothing (runA.md:231), so the screen
-     * must not imply she has picked the disappointing button.
+     * a smaller font. A decline costs them nothing (runA.md:231), so the screen
+     * must not imply they have picked the disappointing button.
      */
     const { root, overlay } = setup()
     void overlay.offer(TAKING_AWAY)
@@ -378,7 +378,7 @@ describe('the panel itself — nothing expires and nothing defaults', () => {
     expect(panelOf(root).box).toBeNull()
   })
 
-  it('sets no timer, so nothing can answer for her', async () => {
+  it('sets no timer, so nothing can answer for them', async () => {
     vi.useFakeTimers()
     try {
       const { root, overlay } = setup()
@@ -475,7 +475,7 @@ describe('main.ts puts it at the completion high, and re-derives nothing', () =>
     /*
      * `ceremony()` locks the island's exits for the length of its body. An
      * offer with no timer behind it, asked in there, would hold them shut
-     * until she answered — a lock on a child, which brief §19 forbids.
+     * until the child answered — a lock on a child, which brief §19 forbids.
      */
     for (const at of ceremonies) {
       const close = code.indexOf('\n        })', at)
@@ -533,7 +533,7 @@ describe('main.ts puts it at the completion high, and re-derives nothing', () =>
     ]) {
       expect(body, `putTheOffer re-derives \`${banned}\``).not.toContain(banned)
     }
-    // Exactly two words with the harness: what is due, and what she said.
+    // Exactly two words with the harness: what is due, and what they said.
     expect(body.match(/harness\./g) ?? []).toHaveLength(2)
   })
 
@@ -541,7 +541,7 @@ describe('main.ts puts it at the completion high, and re-derives nothing', () =>
     expect(body).toMatch(/if \(due === null\) return/)
   })
 
-  it('persists the tick, or her yes dies with the tab', () => {
+  it('persists the tick, or their yes dies with the tab', () => {
     /*
      * THE MOST LIKELY THING TO BE SILENTLY WRONG. An accepted offer ticks a
      * stage and stamps the honeymoon, and both live in `attainment` — a write
@@ -590,7 +590,7 @@ describe('the minus sign pops on debut — runA.md:236', () => {
     const { root, overlay } = setup()
     overlay.openSum(SUB, false, true)
     expect(glyph(root, MINUS)?.classList.contains('op-debut')).toBe(true)
-    // The equals sign is not news. She has seen one on every sum she has done.
+    // The equals sign is not news. They have seen one on every sum they did.
     expect(glyph(root, '=')?.classList.contains('op-debut')).toBe(false)
     expect(opsOf(root).filter(o => o.classList.contains('op-debut'))).toHaveLength(1)
   })
@@ -603,7 +603,7 @@ describe('the minus sign pops on debut — runA.md:236', () => {
 
   it('does not pop a plus, whatever it is told', () => {
     // There is nothing new about a `+`, and a debut flag that leaked onto one
-    // would be the island making a fuss about a sum she has done a hundred of.
+    // would be the island making a fuss about a sum they have done a hundred of.
     const { root, overlay } = setup()
     overlay.openSum(ADD, false, true)
     expect(glyph(root, '+')?.classList.contains('op-debut')).toBe(false)
@@ -621,13 +621,13 @@ describe('the minus sign pops on debut — runA.md:236', () => {
     expect(css).not.toMatch(/\.op-debut\s*\{\s*animation:\s*hatch-pop/)
   })
 
-  it('is the FIRST take-away she is ever dealt, read off the real record', () => {
+  it('is the FIRST take-away they are ever dealt, read off the real record', () => {
     /*
      * The both-sides half of the pop: `main.ts` decides debut-ness from the
      * attainment record, so the predicate is walked here against a real
      * harness rather than asserted as a string. `dealt()` must not spend it —
      * only an answered question may — or the pop would be gone before the
-     * question she was dealt it for.
+     * question they were dealt it for.
      */
     const it = introReady()
     const debut = (path: Path): boolean =>

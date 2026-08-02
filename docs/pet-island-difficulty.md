@@ -93,7 +93,7 @@ Signals update on every answer; the gate is *acted on* only at boundaries
 
 Current mix per domain, offer/accept/decline history, honeymoon status,
 mercy events (count, not drama), "ready but reluctant" flag, probe accuracy
-vs base accuracy. The child sees none of it, ever — she sees Fred asking a
+vs base accuracy. The child sees none of it, ever — they see Fred asking a
 fun question and tiles filling faster.
 
 ## 9. balance.json additions

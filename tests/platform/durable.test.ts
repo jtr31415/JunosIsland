@@ -184,7 +184,7 @@ describe('the tab-kill case — acceptance (a)', () => {
      * The bug class this whole item exists to make unexpressible. A pet was
      * hatched, the ceremony began, and for about two seconds the pet existed
      * on screen and nowhere else. Close the tab in that window and the friend
-     * she had just read home was gone.
+     * the child had just read home was gone.
      */
     const text = memoryText()
     const store = createDurableStore(noProfiles, { text, idb, now: clock })
@@ -287,10 +287,10 @@ describe("the save already on Juno's tablet", () => {
    * (storage.ts:71-78): a schemaVersion, an updatedAt, and the payload. No
    * rev, no checksum, because neither existed when it was written. An envelope
    * reader calls that "not one of ours", resolves it to null, and boots a
-   * brand new island — so upgrading the game would have wiped everything she
-   * owns. Brief §19: nothing a child owns can be lost.
+   * brand new island — so upgrading the game would have wiped everything they
+   * own. Brief §19: nothing a child owns can be lost.
    */
-  const HER_ACTUAL_SAVE = {
+  const THEIR_ACTUAL_SAVE = {
     schemaVersion: 1,
     updatedAt: 1_753_000_000_000,
     data: {
@@ -306,7 +306,7 @@ describe("the save already on Juno's tablet", () => {
 
   it('loads, with every friend and every tile still there', async () => {
     const text = memoryText()
-    text.write('petIsland.v1.p1.save', JSON.stringify(HER_ACTUAL_SAVE))
+    text.write('petIsland.v1.p1.save', JSON.stringify(THEIR_ACTUAL_SAVE))
 
     const store = createDurableStore(noProfiles, { text, idb, now: clock })
     const loaded = await store.get<Record<string, unknown>>('p1', 'save')
@@ -321,10 +321,10 @@ describe("the save already on Juno's tablet", () => {
 
   it('brings it up to the current schema on the way in', async () => {
     const text = memoryText()
-    text.write('petIsland.v1.p1.save', JSON.stringify(HER_ACTUAL_SAVE))
+    text.write('petIsland.v1.p1.save', JSON.stringify(THEIR_ACTUAL_SAVE))
     const store = createDurableStore(noProfiles, { text, idb, now: clock })
     const loaded = await store.get<Record<string, unknown>>('p1', 'save')
-    // v1 -> v2 adds the persist() answer without disturbing her progress.
+    // v1 -> v2 adds the persist() answer without disturbing their progress.
     expect(loaded?.persistGranted).toBeNull()
     expect(loaded?.readProgress).toBe(2)
     expect(loaded?.sumProgress).toBe(3)
@@ -333,7 +333,7 @@ describe("the save already on Juno's tablet", () => {
   it('is outranked by the first proper save written after it', async () => {
     // Adopted at rev 0, so the next write (rev 1) wins rather than tying.
     const text = memoryText()
-    text.write('petIsland.v1.p1.save', JSON.stringify(HER_ACTUAL_SAVE))
+    text.write('petIsland.v1.p1.save', JSON.stringify(THEIR_ACTUAL_SAVE))
     const store = createDurableStore(noProfiles, { text, idb, now: clock })
     await store.get('p1', 'save')
     await store.put('p1', 'save', { pets: [{ id: 'p3' }], tiles: [] })
@@ -388,7 +388,7 @@ describe('two saves at once — the race the barrier could not protect against',
      * The losing interleaving, in full: a stale pre-award save whose write is
      * slow, then the award. Both used to land on rev 1 with the stale one
      * reaching localStorage second — so reload returned the island WITHOUT
-     * the pet she had just hatched, ceremony and all, despite the awaited
+     * the pet the child had just hatched, ceremony and all, despite the awaited
      * receipt that was supposed to make that impossible.
      */
     const text = memoryText()
@@ -483,9 +483,9 @@ describe('when the snapshot ring cannot be written', () => {
     /*
      * Both primaries are written by the time the ring is appended, so the save
      * HAS happened — but an unguarded throw rejected commitState(), and `void
-     * passed(more)` turned that into an unhandled rejection with no hatch. She
-     * would finish her fifth page, the pet would be saved, and nothing would
-     * happen. Most likely on a full device, which is where quota errors live.
+     * passed(more)` turned that into an unhandled rejection with no hatch. The
+     * child would finish their fifth page, the pet would be saved, and nothing
+     * would happen. Most likely on a full device, where quota errors live.
      */
     const text = memoryText()
     const full: IdbStore = {

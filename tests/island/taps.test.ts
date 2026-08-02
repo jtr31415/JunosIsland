@@ -40,7 +40,7 @@ describe('isTap', () => {
 
   it('accepts a long press that never moved', () => {
     /*
-     * A child puts her finger on the egg and holds it while she looks at it.
+     * A child puts a finger on the egg and holds it while they look at it.
      * There is no long-press gesture here for that to be confused with, so
      * the only thing it can mean is "I pressed this". Meeting it with silence
      * is the worst failure available: an unwanted round can be dismissed, a
@@ -154,7 +154,7 @@ describe('bindWorldTaps', () => {
     expect(taps).toEqual([[50, 50]])
   })
 
-  it('reports where she AIMED, not where her finger ended up', () => {
+  it('reports where they AIMED, not where the finger ended up', () => {
     /*
      * A child's finger rolls as it lifts. Picking at the release point meant
      * an aim at the egg could land on the tile beside it and open a sum —

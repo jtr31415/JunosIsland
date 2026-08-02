@@ -4,7 +4,7 @@
  * The only route out of the device. Brief §19 permits no accounts and no
  * network calls beyond static hosting, so a file the grown-up keeps IS the
  * off-device copy — the difference between a lost tablet costing an afternoon
- * and costing everything she has built.
+ * and costing everything they have built.
  *
  * Pure enough to test: the naming, the parsing and the summary are functions
  * of their input, and only `download` and `pickFile` touch the DOM.

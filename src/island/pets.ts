@@ -57,8 +57,8 @@ export const FLYERS: ReadonlySet<string> = new Set(['animal-bee', 'animal-parrot
  * branches if the trees are ever resized. `FITS` is the one place the game
  * decides how big a piece of landscape may be: `feature` is the budget a tile's
  * own tree is fitted into and `grown` the smaller budget for the eight pieces
- * a plot she built herself carries. The taller of the two is the canopy a bee
- * has to clear.
+ * a plot they built themselves carries. The taller of the two is the canopy a
+ * bee has to clear.
  *
  * Measured against the real island: a tile's tree fits a 0.95-unit height
  * budget and a pet stands about 0.25, so this is roughly four pets up — high
@@ -80,13 +80,13 @@ export const WINGBEAT = 14
 /**
  * The shot a tap target is sized against, and a real touch-target standard.
  *
- * Joe, watching her play: "the tap area for a spawn animal needs to be a bit
+ * Joe, watching them play: "the tap area for a spawn animal needs to be a bit
  * larger. she wants to tap them but regularly misses and is taken to a
  * challenge. it really frustrates her." Missing a pet is not a near-miss that
- * does nothing — `pickFrom` answers with whatever IS under the ray, so she gets
+ * does nothing — `pickFrom` answers with whatever IS under the ray, so they get
  * the egg's reading round, a tile offer, or a plot resuming into a sum. Three
- * different ways of being taken somewhere she did not ask to go, during the
- * play she chose for herself.
+ * different ways of being taken somewhere they did not ask to go, during the
+ * play they chose for themselves.
  *
  * The cause is arithmetic, not code: a pet is scaled to 0.16 and stands about
  * a quarter of a unit against a hex circumradius of 1.15, so under the island's
@@ -131,12 +131,12 @@ export const PICK_RADIUS =
  * The same 48 pixels, in world units, at whatever distance the camera is now.
  *
  * A FIXED world radius is a shrinking tap target, and it shrinks exactly when
- * she needs it most. `frame()` pulls the camera back as her island grows, and
- * the frustum is proportional to distance, so a sphere that answers to 47.5px
- * at the opening shot answers to 39px at fifteen tiles and **26px at the
- * 26-unit clamp** — a whisker off the 20.5px bug the proxy was added to fix,
- * on the late-game island that is full of animals to go looking for. Fable
- * found it; the arithmetic is `0.357 × 26/14`.
+ * they need it most. `frame()` pulls the camera back as their island grows,
+ * and the frustum is proportional to distance, so a sphere that answers to
+ * 47.5px at the opening shot answers to 39px at fifteen tiles and **26px at
+ * the 26-unit clamp** — a whisker off the 20.5px bug the proxy was added to
+ * fix, on the late-game island that is full of animals to go looking for.
+ * Fable found it; the arithmetic is `0.357 × 26/14`.
  *
  * So the radius is scaled by the camera's own distance, which makes the target
  * the same SIZE OF FINGER at every shot — which is what "48dp" meant in the
@@ -158,7 +158,7 @@ export function pickRadiusAt(cameraDistance: number): number {
  *
  * Shared for the reason the blob's falloff texture and the set atlases are
  * shared, and NEVER disposed per pet: freeing either would blank the tap target
- * of every other pet at once, including friends she already owns (brief §19).
+ * of every other pet at once, including friends they already own (brief §19).
  * A unit sphere scaled per creature keeps it to one buffer.
  */
 let proxyGeo: THREE.SphereGeometry | undefined
@@ -182,14 +182,14 @@ let proxyMat: THREE.MeshBasicMaterial | undefined
  * no-op draw call per pet.
  *
  * `DoubleSide` because `Mesh.raycast` honours `material.side`, and a finger
- * that lands inside the sphere — she can pinch right in — would otherwise find
+ * that lands inside the sphere — they can pinch right in — would otherwise find
  * only back faces and miss the pet at point-blank range.
  *
  * ## Sphere, not box
  *
  * The holder is turned to face wherever the pet is walking, so a box would give
- * her a target that changed size as her friend wandered about. A sphere is the
- * same circle from every angle, concentric with what she can see.
+ * them a target that changed size as their friend wandered about. A sphere is
+ * the same circle from every angle, concentric with what they can see.
  *
  * ## Measured, then floored
  *
@@ -220,10 +220,10 @@ function pickProxy(body: THREE.Box3, pick: unknown, cameraDistance: number): THR
    * And a declaration that this is a stand-in rather than a thing.
    *
    * `picking.ts` answers with whatever is nearest the camera, which is the
-   * right rule for objects she can SEE and the wrong one for a shell she
+   * right rule for objects they can SEE and the wrong one for a shell they
    * cannot: a pet standing beside the egg puts an invisible sphere in front of
    * it, so a tap on the egg bounced the pet instead of opening the round —
-   * on "the one thing on the island she is always meant to be able to reach".
+   * on "the one thing on the island they are always meant to be able to reach".
    * Flagged rather than sniffed out of the material, because `colorWrite`
    * false is how it draws nothing, not what it means.
    */
@@ -501,7 +501,7 @@ export interface PetField {
   /** Squash-stretch bounce, e.g. when tapped. */
   bounce(id: string): void
   /**
-   * Where a friend is standing RIGHT NOW, or null if she is not out yet.
+   * Where a friend is standing RIGHT NOW, or null if it is not out yet.
    *
    * The album's "find it on the map" needs this and cannot use `flow.pets[].at`,
    * which is the HATCH spot: wandering happens on these live roots and is never
@@ -527,9 +527,9 @@ export interface PetField {
    * The caller detaches it when done and MUST NOT dispose it: this is a
    * clone, and a three.js clone shares geometry and materials with the cached
    * original, so freeing them would break every other pet of that species —
-   * including friends she already owns (brief §19). It comes from the same
+   * including friends they already own (brief §19). It comes from the same
    * loader and the same cache as the real thing, which is the point: the
-   * friend she meets on the stage is the friend that walks out onto the
+   * friend they meet on the stage is the friend that walks out onto the
    * island.
    */
   preview(species: string): Promise<THREE.Object3D>
@@ -562,10 +562,10 @@ export interface PetField {
    * How far the camera is from what it is looking at, this frame.
    *
    * Called from the frame loop, because the answer changes with every pinch
-   * and with every tile she builds — `frame()` pulls back as the island grows.
+   * and with every tile they build — `frame()` pulls back as the island grows.
    * The tap proxies are re-sized so a pet stays a finger wide ON SCREEN at any
    * shot, rather than a fixed lump of world that shrinks to 26px by the time
-   * her island is big enough to be worth walking round (`pickRadiusAt`).
+   * their island is big enough to be worth walking round (`pickRadiusAt`).
    *
    * It re-sizes the PROXIES and nothing else. A pet's keep-out radius and the
    * stretch of its blob are measured once in `sync`, from a box taken before
@@ -679,7 +679,7 @@ export function createPetField(base = '', rng: Rng = defaultRng): PetField {
      *
      * Caching a rejected promise would turn one dropped request on a tablet's
      * flaky wifi into a species that can never hatch for the rest of the
-     * session — and brief §19 says nothing she owns can be lost. Evicting lets
+     * session — and brief §19 says nothing they own can be lost. Evicting lets
      * the next caller start clean. The `.catch` also means this promise always
      * has a handler even when nobody is awaiting it, which is the normal state
      * of a preload.
@@ -767,7 +767,7 @@ export function createPetField(base = '', rng: Rng = defaultRng): PetField {
          * `void pets.sync(...)` is how main.ts calls this, so a rejection here
          * was both an unhandled rejection and an abandoned loop: one flaky fetch
          * and every pet after it in the list simply did not appear on the island
-         * — including, on the worst ordering, the one she had just hatched.
+         * — including, on the worst ordering, the one they had just hatched.
          *
          * And unlike the scenery, this one RETRIES for free. Nothing has been
          * added to the group or to `live` at this point, so the pet is still
@@ -883,8 +883,8 @@ export function createPetField(base = '', rng: Rng = defaultRng): PetField {
       /*
        * Not here yet. A pet's model loads asynchronously, so the hatch
        * ceremony asks a brand-new friend to hop in before the file has
-       * arrived — and a bounce that quietly does nothing turns the moment she
-       * has worked five pages for into a pet that is simply, flatly, there.
+       * arrived — and a bounce that quietly does nothing turns the moment they
+       * have worked five pages for into a pet that is simply, flatly, there.
        * Remembered instead, and played the moment it lands.
        */
       pendingBounce.add(id)
@@ -910,8 +910,8 @@ export function createPetField(base = '', rng: Rng = defaultRng): PetField {
       // Guarded rather than trusted: `distanceTo` on a camera mid-ease is a
       // float, and a NaN or a zero here would collapse every tap target in the
       // game at once. Same-value calls are the normal case — the shot only
-      // changes while she is pinching or the island is growing — so the early
-      // return keeps this to one comparison on almost every frame.
+      // changes while they are pinching or the island is growing — so the
+      // early return keeps this to one comparison on almost every frame.
       if (!Number.isFinite(d) || d <= 0 || d === cameraDistance) return
       cameraDistance = d
       for (const l of live.values()) sizeProxy(l.proxy, l.bodyHalf, d)

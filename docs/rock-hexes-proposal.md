@@ -92,8 +92,8 @@ the mountain models is the honest first step, and it is about an hour.
 ### The save is the part that has bitten before
 
 `save.ts` has migrations and `tests/island/save.test.ts` covers them. HANDOFF
-records that **rolling the build back shows her an empty island**, and that a
-reader which called Juno's existing save "not one of ours" would have wiped
+records that **rolling the build back shows the child an empty island**, and that
+a reader which called Juno's existing save "not one of ours" would have wiped
 everything she owns. A new tile type means old builds cannot read new saves.
 
 Mitigation, and the reason this wants sequencing rather than speed:
@@ -101,8 +101,8 @@ Mitigation, and the reason this wants sequencing rather than speed:
 - Land the **release tag** first (Phase 3 item 4, still waiting on Joe), so
   production is pinned and a rollback is a deliberate act rather than an accident.
 - Write the migration so an unknown tile type degrades to `grass` rather than
-  failing the whole save — a rock hex becoming a green hex loses nothing she
-  owns, which satisfies brief §19; refusing to load loses everything.
+  failing the whole save — a rock hex becoming a green hex loses nothing the
+  child owns, which satisfies brief §19; refusing to load loses everything.
 
 ---
 
@@ -114,10 +114,10 @@ I should not decide.
 **What is a rock tile FOR?** Grass grows pets' habitats; water is a pond. If rock
 is purely decorative, it is a third button that makes the island prettier and
 costs the same sums — fine, but it competes with grass for the space pets need,
-and the space-surplus governor already tells her to read more friends home when
-she has too much empty land. If rock is *not* habitable, then choosing it is
-choosing to slow her own pet progress, which a six-year-old cannot be expected to
-weigh.
+and the space-surplus governor already tells the child to read more friends
+home when they have too much empty land. If rock is *not* habitable, then
+choosing it is choosing to slow their own pet progress, which a six-year-old
+cannot be expected to weigh.
 
 Three options, and I would want Joe's answer before building any of it:
 

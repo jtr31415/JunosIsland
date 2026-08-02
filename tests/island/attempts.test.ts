@@ -57,7 +57,7 @@ describe('correctness — the same test on all three paths', () => {
     expect(seen.every(e => e.kind === 'find')).toBe(true)
   })
 
-  it("find: a wrong tap does not follow her to the next word", () => {
+  it("find: a wrong tap does not follow the child to the next word", () => {
     // The renderers reset their own wrong counter on a correct tap (v0), and
     // the model must agree: word 2 is a fresh question, not a damaged one.
     const { seen, tally } = setup()
@@ -81,7 +81,7 @@ describe('latency — question put, not page mounted', () => {
   it('find and build start theirs when the prompt is issued', () => {
     const { seen, tally, tick } = setup()
     tally.pageStarted('build')
-    tick(900)                   // the prompt timer, which is not her thinking
+    tick(900)                   // the prompt timer, which is not thinking time
     tally.prompted()
     tick(1500)
     tally.right()
@@ -125,7 +125,7 @@ describe('latency — question put, not page mounted', () => {
     expect(seen[0]?.latencyMs).toBe(700)
   })
 
-  it('is null when she answers before the prompt was ever issued', () => {
+  it('is null when the child answers before the prompt was ever issued', () => {
     const { seen, tally, tick } = setup()
     tally.pageStarted('find')
     tick(200)
@@ -164,7 +164,7 @@ describe('JT-008(1) — the peek is no attempt at all', () => {
 })
 
 describe('JT-008(2) — a hinted answer counts', () => {
-  it('is emitted, and emitted as CORRECT when she then gets it right', () => {
+  it('is emitted, and emitted as CORRECT when they then get it right', () => {
     // The spec said help was "free but uncounted"; Joe overruled it. The long
     // latency is what carries the cost, in the speed tier.
     const { seen, tally, tick } = setup()
@@ -195,7 +195,7 @@ describe('JT-008(2) — a hinted answer counts', () => {
 })
 
 describe('JT-008(3) — abandonment is a pause, not a failure', () => {
-  it('discards the word she was in the middle of', () => {
+  it('discards the word they were in the middle of', () => {
     const { seen, tally } = setup()
     tally.pageStarted('find')
     tally.wrong()
@@ -203,7 +203,7 @@ describe('JT-008(3) — abandonment is a pause, not a failure', () => {
     expect(seen).toEqual([])
   })
 
-  it('keeps every word she DID answer', () => {
+  it('keeps every word they DID answer', () => {
     const { seen, tally } = setup()
     tally.pageStarted('find')
     tally.right()
@@ -245,7 +245,7 @@ describe('the rescue is recorded, never excluded', () => {
     expect(seen[0]?.rescued).toBe(true)
   })
 
-  it('does not follow her to the next target', () => {
+  it('does not follow the child to the next target', () => {
     const { seen, tally } = setup()
     tally.pageStarted('find')
     for (let i = 0; i < MASH_WRONGS; i++) tally.wrong()

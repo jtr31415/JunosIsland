@@ -214,7 +214,7 @@ describe('every built species, measured as pets.ts measures it', () => {
     // reach a child. Its agent held it to the pack's own widest (the fox) on
     // purpose, and that is the one collection where the stricter bar is both
     // achieved and worth keeping: the first new animals Juno meets should not
-    // take more room than animals she already has.
+    // take more room than animals they already have.
     //
     // The other three run wider. Whether they should is the open question in
     // the header — this is not a claim that they are wrong, only that Garden is

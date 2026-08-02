@@ -1,13 +1,13 @@
 /**
- * The X button's other half: she comes back to the SAME card.
+ * The X button's other half: the child comes back to the SAME card.
  *
  * Joe, playtesting: *"there should be an x button to get back to the island
  * when through a challenge, too many accidental hits. also resume at the same
  * challenge card, otherwise kids can skip something they dont like."*
  *
  * The second sentence is the load-bearing one. A way out that re-rolled the
- * question would be a way to skip a word she does not fancy, one tap at a time
- * — and this build's way out re-rolled it three times over, because every
+ * question would be a way to skip a word the child does not fancy, one tap at
+ * a time — and this build's way out re-rolled it three times over, because every
  * `openRead`/`openSum` called a generator:
  *
  *   1. a different card came back;
@@ -85,23 +85,23 @@ const asText = (c: ReturnType<typeof dealReading>): string =>
     ? 'build:' + c.item.w + '|' + c.item.tray.join(',')
     : 'find:' + c.picks.map(p => plainWord(p.w) + '/' + p.cls).join(',')
 
-describe('the flow holds the card she walked away from', () => {
+describe('the flow holds the card the child walked away from', () => {
   it('starts holding nothing', () => {
     const f = createFlow()
     expect(f.readHeld).toBe(false)
     expect(f.sumHeld).toBe(false)
   })
 
-  it('holds a reading card when she leaves the round', () => {
+  it('holds a reading card when the child leaves the round', () => {
     const f = challengeFailed(tapEgg(createFlow()))
     expect(f.readHeld).toBe(true)
     expect(f.phase).toBe('free')
-    // §19: leaving still costs her nothing.
+    // §19: leaving still costs the child nothing.
     expect(f.readProgress).toBe(0)
     expect(f.eggPresent).toBe(true)
   })
 
-  it('lets go of it the moment she answers', () => {
+  it('lets go of it the moment the child answers', () => {
     let f = challengeFailed(tapEgg(createFlow()))
     expect(f.readHeld).toBe(true)
     f = challengePassed(tapEgg({ ...f, phase: 'free' }), { name: 'Bo', species: 'animal-fox' })
@@ -120,9 +120,9 @@ describe('the flow holds the card she walked away from', () => {
 
   it('keeps reading and maths apart', () => {
     /*
-     * Two decks, two bits. A finished sum used to be the obvious place to
-     * clear "the card is held" — and it would have quietly re-rolled the word
-     * she stepped away from, which is the whole fault wearing a different hat.
+     * Two decks, two bits. A finished sum used to be the obvious place to clear
+     * "the card is held" — and it would have quietly re-rolled the word the
+     * child stepped away from, which is the whole fault wearing a different hat.
      */
     let f: Flow = createFlow()
     f = challengeFailed(tapEgg(f))                       // holds a word
@@ -159,7 +159,7 @@ describe('the same reading card comes back', () => {
     const first = dealReading(stores, deps, page, false)
     expect(first.kind).toBe('find')
 
-    // She taps X. challengeFailed sets the bit; the next open passes it in.
+    // The child taps X. challengeFailed sets the bit; the next open passes it in.
     const again = dealReading(stores, deps, page, true)
 
     expect(asText(again)).toBe(asText(first))
@@ -178,7 +178,7 @@ describe('the same reading card comes back', () => {
     expect(asText(again)).toBe(asText(first))
   })
 
-  it('survives leaving over and over — this is the skip she must not get', () => {
+  it('survives leaving over and over — the skip the child must not get', () => {
     const { stores, deps } = reading(5)
     const page = firstOf('find')
     const first = asText(dealReading(stores, deps, page, false))
@@ -187,7 +187,7 @@ describe('the same reading card comes back', () => {
     }
   })
 
-  it('deals a NEW card once she has actually answered', () => {
+  it('deals a NEW card once the child has actually answered', () => {
     // The mirror. Holding forever would be its own trap: one word, for ever.
     const { stores, deps } = reading(9)
     const page = firstOf('find')
@@ -202,8 +202,8 @@ describe('the same reading card comes back', () => {
     /*
      * Dismissal does not touch `readProgress`, so the page index — and
      * therefore which of the two stores is consulted — is the same on the way
-     * back in. If it were not, an X would let her flip a build she disliked
-     * into a find.
+     * back in. If it were not, an X would let the child flip a build they
+     * disliked into a find.
      */
     const { stores, deps } = reading(13)
     const build = firstOf('build')
@@ -215,7 +215,7 @@ describe('the same reading card comes back', () => {
 })
 
 describe('leaving does not inflate the difficulty', () => {
-  it('does not grow the word-find set behind her back', () => {
+  it('does not grow the word-find set behind the child\'s back', () => {
     /*
      * The costly half of the old fault. `n = min(MAX, MIN + history.length)`
      * — so under the old code a page dealt, dismissed and re-dealt five times
@@ -235,7 +235,7 @@ describe('leaving does not inflate the difficulty', () => {
     const after = dealReading(stores, deps, page, true)
     expect(after.kind === 'find' ? after.picks.length : -1).toBe(size)
 
-    // And the page AFTER she finally answers is the second page, not the tenth.
+    // And the page AFTER the child finally answers is the second, not the tenth.
     const second = dealReading(stores, deps, page, false)
     expect(stores.read.history).toHaveLength(2)
     expect(second.kind === 'find' ? second.picks.length : -1).toBe(size + 1)
@@ -243,9 +243,9 @@ describe('leaving does not inflate the difficulty', () => {
 
   it('does not burn the word decks', () => {
     /*
-     * `makeDeck` deals without repeating until it is exhausted, so a deal she
-     * never saw still spends the words in it. Counting draws is the only way to
-     * see that from outside — the deck has no other observable.
+     * `makeDeck` deals without repeating until it is exhausted, so a deal the
+     * child never saw still spends the words in it. Counting draws is the only
+     * way to see that from outside — the deck has no other observable.
      */
     const rng = mulberry32(31)
     let draws = 0
@@ -286,7 +286,7 @@ describe('the same sum comes back', () => {
     expect(store.history).toHaveLength(1)
   })
 
-  it('deals a new one after she answers', () => {
+  it('deals a new one after the child answers', () => {
     const { store, rng } = sums(17)
     dealSum(store, rng, 1, 'add', false)
     dealSum(store, rng, 1, 'add', false)
@@ -313,7 +313,7 @@ describe('main.ts opens rounds through the dealer, not the generators', () => {
 
   it('never calls a generator itself', () => {
     for (const g of ['generateRead(', 'generateBuild(', 'generateAdd(', 'generateSub(']) {
-      expect(code, `${g} in main.ts re-rolls the card she is holding`).not.toContain(g)
+      expect(code, `${g} in main.ts re-rolls the card being held`).not.toContain(g)
     }
   })
 
@@ -331,7 +331,7 @@ describe('the whole gesture, flow and card together', () => {
    * Wired the way main.ts wires it — the flow supplies the bit, `deal` reads it
    * — so a change to either side that broke the pairing shows up here.
    */
-  it('gives her the same word back across an X, and holds nothing after she answers', () => {
+  it('gives the child the same word back across an X, then holds nothing', () => {
     const { stores, deps } = reading(41)
     let f: Flow = createFlow()
 
@@ -350,12 +350,12 @@ describe('the whole gesture, flow and card together', () => {
     expect(asText(dealReading(stores, deps, kindFor(f.readProgress), f.readHeld))).not.toBe(dealt)
   })
 
-  it('gives her the same sum back across an X, at no cost to the plot', () => {
+  it('gives the child the same sum back across an X, at no cost to the plot', () => {
     const { store, rng } = sums(43)
     let f: Flow = createFlow()
     f = chooseTile(askForLand(f, { q: 1, r: 0 }), 'grass')
     // A one-sum tile would finish on the spot; take an island far enough along
-    // that the plot is still standing when she leaves.
+    // that the plot is still standing when the child leaves.
     f = { ...f, tilesEarned: 6, sumProgress: 0 }
     expect(sumsForTile(f)).toBeGreaterThan(1)
 
@@ -377,10 +377,10 @@ describe('what a paused page pays — JT-009', () => {
    * Joe's ruling, 28 Jul: *"we go with (c) nothing changes, she does the page
    * again."*
    *
-   * This is the reward half of JT-008(3). The proficiency half was already
-   * built by A2 — every word she resolved was emitted as it landed — and the
-   * question left open was what the PAGE pays when she leaves it unfinished.
-   * Reading pays by the page, so a girl who finds all but the last word and
+   * This is the reward half of JT-008(3). The proficiency half was already built
+   * by A2 — every word the child resolved was emitted as it landed — and the
+   * question left open was what the PAGE pays when they leave it unfinished.
+   * Reading pays by the page, so a child who finds all but the last word and
    * taps the X banks nothing toward the egg.
    *
    * The behaviour was already the code's, because `challengeFailed` never
@@ -389,7 +389,7 @@ describe('what a paused page pays — JT-009', () => {
    * person to read `challengeFailed` should find the ruling attached to it
    * rather than infer that nobody thought about it.
    */
-  it('banks nothing for the words she did find, and holds the whole page', () => {
+  it('banks nothing for the words they did find, and holds the whole page', () => {
     const { stores, deps } = reading(53)
     let f: Flow = createFlow()
 
@@ -399,7 +399,7 @@ describe('what a paused page pays — JT-009', () => {
     const targets = card.kind === 'find' ? card.picks.length : 0
     expect(targets).toBeGreaterThan(1)
 
-    // She works down the page and stops one short of the end.
+    // The child works down the page and stops one short of the end.
     const seen: AttemptEvent[] = []
     const tally = createAttemptTally(e => seen.push(e), () => 1000)
     tally.pageStarted('find')
@@ -409,7 +409,7 @@ describe('what a paused page pays — JT-009', () => {
     f = challengeFailed(f)
     tally.pageEnded()
 
-    // PROFICIENCY — JT-008(3): every word she answered stands.
+    // PROFICIENCY — JT-008(3): every word the child answered stands.
     expect(seen).toHaveLength(targets - 1)
     expect(seen.every(e => e.correct)).toBe(true)
 
@@ -417,18 +417,18 @@ describe('what a paused page pays — JT-009', () => {
     expect(f.readProgress).toBe(0)
     expect(f.eggPresent).toBe(true)
 
-    // And she comes back to the same page, whole — every word to find again.
+    // And they come back to the same page, whole — every word to find again.
     f = tapEgg(f)
     const again = dealReading(stores, deps, kindFor(f.readProgress), f.readHeld)
     expect(asText(again)).toBe(asText(card))
     expect(again.kind === 'find' ? again.picks.length : -1).toBe(targets)
   })
 
-  it('pays the page in full when she finishes it on the second visit', () => {
+  it('pays the page in full when the child finishes it on the second visit', () => {
     /*
      * The other side of "nothing changes": the chore is a chore, not a
      * forfeit. Re-doing the page pays exactly what doing it once pays, so
-     * leaving costs her time and nothing else — which is what made (c)
+     * leaving costs the child time and nothing else — which is what made (c)
      * defensible against pro-rata in the first place.
      */
     let f: Flow = createFlow()

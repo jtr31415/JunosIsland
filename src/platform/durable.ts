@@ -11,7 +11,7 @@
  * string halfway; a browser under memory pressure evicts localStorage but not
  * IndexedDB, or the other way round. Nothing a child owns can be lost
  * (brief §19), and a save that silently loads as an empty island is the worst
- * possible way to lose it — she would not even be told.
+ * possible way to lose it — they would not even be told.
  */
 import {
   seal, intact, isEnvelope, migrate, canonical, checksum, SCHEMA_VERSION,
@@ -30,7 +30,7 @@ const docPath = (profileId: string, doc: DocKey): string => `${profileId}/${doc}
  * Why a load came back the way it did — for the toast, and for the log.
  *
  * `restored` is the only one a child ever hears about, and even then only as
- * "I found your island!". She is never shown the word corrupt.
+ * "I found your island!". They are never shown the word corrupt.
  */
 export type LoadOutcome = 'fresh' | 'loaded' | 'restored' | 'empty'
 
@@ -73,8 +73,8 @@ export function browserText(storage: Storage = globalThis.localStorage): TextSto
  * right now was written by `createLocalStore`, which wraps the payload as
  * `{schemaVersion, updatedAt, data}` — no rev, no checksum. Read that with an
  * envelope reader and it is "not one of ours", which resolves to null, which
- * boots her a brand new island. Upgrading the game would have wiped
- * everything she owns, which is the exact thing brief §19 forbids and the
+ * boots them a brand new island. Upgrading the game would have wiped
+ * everything they own, which is the exact thing brief §19 forbids and the
  * exact thing this item was written to prevent.
  *
  * So a legacy document is ADOPTED rather than rejected. Its checksum is
@@ -162,7 +162,7 @@ export function createDurableStore(
    *
    * Reproduced: a fire-and-forget `persist()` from refresh() still in flight
    * when a hatch commits, both at rev 1, IndexedDB holding the new friend and
-   * localStorage holding the island without her. On reload she is gone —
+   * localStorage holding the island without it. On reload the friend is gone —
    * despite the awaited receipt that was supposed to make that impossible.
    *
    * Two changes, both needed. The revision is reserved SYNCHRONOUSLY, before
@@ -203,10 +203,10 @@ export function createDurableStore(
      * Both primaries are already written by the time this runs, so the save
      * has happened — but an unguarded throw here rejected commitState(), which
      * `void passed(more)` turns into an unhandled rejection, and the hatch
-     * ceremony simply never played. She would finish her fifth page, the pet
-     * would be saved, and nothing would happen: the payoff broken at the one
-     * beat that matters, and most likely on a full device, which is exactly
-     * where a quota error comes from.
+     * ceremony simply never played. They would finish their fifth page, the
+     * pet would be saved, and nothing would happen: the payoff broken at the
+     * one beat that matters, and most likely on a full device, which is
+     * exactly where a quota error comes from.
      */
     try {
       /*

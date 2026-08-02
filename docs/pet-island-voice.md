@@ -42,9 +42,9 @@ the point of the ruling.
   pool.
 - **Graded by set, not by child.** Set 1's twenty-four names sit at band 1
   and each later set climbs toward band 8. Sets unlock over weeks, so the
-  names she meets track her reading in practice while the name itself never
-  depends on who is hatching it. Set order is consequently a reading ladder
-  and cannot be reshuffled without reshuffling difficulty.
+  names a child meets track their reading in practice while the name itself
+  never depends on who is hatching it. Set order is consequently a reading
+  ladder and cannot be reshuffled without reshuffling difficulty.
 - Bake pass renders each with the teacher voice; an **audit pass** flags
   mispronunciations (automatic: forced-align phonemes vs expected GPCs; plus
   a human skim of the flagged set). A rejected name is **replaced at
@@ -64,10 +64,10 @@ the point of the ruling.
   throughout. Slot gaps ~120ms, seams on natural pause boundaries by script
   design.
 - **The child's name is print, not speech.** Audio uses the baked
-  **"friend"** takes (full native lines, never spliced). Her name appears
+  **"friend"** takes (full native lines, never spliced). It appears
   wherever print is meaningful: the greeting card ("Hello JUNO!"), the
   island's welcome sign, the album cover — a child's own name is the first
-  word she learns to read, and print personalisation is itself literacy
+  word they learn to read, and print personalisation is itself literacy
   content.
 - Parent-recorded name inserts are **parked as a v2 flag**, permitted only in
   a future non-character context (never from a character's mouth).

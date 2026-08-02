@@ -3,8 +3,8 @@
  *
  * These tests drive the module directly. It is deliberately pure: no DOM, no
  * clock it does not own, no generators. What it knows is which stages a child
- * is allowed to be dealt and how she has been doing on them; what it never does
- * is render, deal or persist.
+ * is allowed to be dealt and how they have been doing on them; what it never
+ * does is render, deal or persist.
  *
  * NOT COVERED HERE, and deliberately: which PATH a deal moment picks when two
  * of them are live (sums vs takingAway, reading vs building). That is JT-010,
@@ -91,9 +91,9 @@ describe('a fresh island', () => {
 
   it('ticks exactly what the island can already deal today', () => {
     /*
-     * The first rung of each path she is already playing, and nothing else.
+     * The first rung of each path they are already playing, and nothing else.
      * takingAway starts UNTICKED because the island has never dealt a
-     * subtraction — ticking it would hand her something new on the strength of
+     * subtraction — ticking it would hand them something new on the strength of
      * a migration rather than of a decision (JT-007 is Joe ticking it himself).
      */
     const a = createAttainment()
@@ -114,7 +114,7 @@ describe('a fresh island', () => {
   })
 })
 
-describe('levelFor — which stages she may be dealt', () => {
+describe('levelFor — which stages the child may be dealt', () => {
   it('returns the ticked stages of the path, in order', () => {
     const h = createHarness(createAttainment())
     expect(h.levelFor('sums')).toEqual([1])
@@ -164,7 +164,7 @@ describe('pick — the draw across ticked stages', () => {
     expect([...seen].sort()).toEqual([1, 2])
   })
 
-  it('gives back null when the path is empty, rather than a stage she cannot do', () => {
+  it('gives back null when the path is empty, rather than a stage they cannot do', () => {
     const h = createHarness(createAttainment())
     expect(h.pick('takingAway', () => 0)).toBeNull()
   })
@@ -478,8 +478,8 @@ describe('Run B — probes, the taste of the next rung', () => {
   })
 
   it('wants none on a path a parent took off Auto — JT-011(a)', () => {
-    // Joe: "Manual persists, and Run B must skip it." A parent who said he
-    // moves this path's ticks is not to be answered back by extra questions.
+    // Joe: "Manual persists, and Run B must skip it." A parent who said they
+    // move this path's ticks is not to be answered back by extra questions.
     const it = island()
     masterSums1(it)
     for (const mode of ['manual', 'hold'] as const) {
@@ -668,7 +668,7 @@ describe('Run B — the promotion gate', () => {
 
   it('lets a rescue age out of the last two sessions', () => {
     // The clause is zero-rescue RECENT, not zero-rescue ever. A child who
-    // needed a hand a week ago has since shown she does not.
+    // needed a hand a week ago has since shown they do not.
     const it = island()
     it.a.takingAway.stages[1]!.ticked = true
     it.h.dealt('sums', 1)
@@ -713,7 +713,7 @@ describe('Run B — the promotion gate', () => {
 })
 
 describe('Run B — the cadence of an offer', () => {
-  it('ticks the target and stamps the honeymoon when she says yes', () => {
+  it('ticks the target and stamps the honeymoon when they say yes', () => {
     const it = gateReady()
     it.h.noteOffer('sums', true)
     expect(it.a.sums.stages[3]!.ticked).toBe(true)
@@ -724,7 +724,7 @@ describe('Run B — the cadence of an offer', () => {
 
   it('asks nothing else that session, accepted or declined', () => {
     // runA.md:230, max 1/session. Two questions in one sitting is a sales
-    // pitch, and the second is the one she agrees to to make it stop.
+    // pitch, and the second is the one they agree to to make it stop.
     for (const answer of [true, false]) {
       const it = gateReady()
       it.h.noteOffer('sums', answer)
@@ -737,8 +737,8 @@ describe('Run B — the cadence of an offer', () => {
      * The cadence is stored per path, because a decline is about a path — but
      * the LIMIT is about the child. With subtraction due to be introduced and
      * a trickier sums offer standing behind it, answering the first must end
-     * the questions for the sitting whichever way she answered: a second ask
-     * is the one she says yes to only to make it stop.
+     * the questions for the sitting whichever way they answered: a second ask
+     * is the one they say yes to only to make it stop.
      */
     for (const answer of [true, false]) {
       const it = island()
@@ -752,7 +752,7 @@ describe('Run B — the cadence of an offer', () => {
     }
   })
 
-  it('costs her nothing to decline', () => {
+  it('costs them nothing to decline', () => {
     const it = gateReady()
     const stats = JSON.stringify(it.a.sums.stages)
     it.h.noteOffer('sums', false)
@@ -765,8 +765,8 @@ describe('Run B — the cadence of an offer', () => {
     it.h.noteOffer('sums', false)
     it.h.dealt('sums', 1)
 
-    // The session she declined in is not one of the two: the count starts on
-    // the next day she plays, and reaches 2 on the second of them.
+    // The session they declined in is not one of the two: the count starts on
+    // the next day they play, and reaches 2 on the second of them.
     it.on('2026-07-04')
     it.h.recordAttempt(attempt({ correct: true }))
     expect(it.a.sums.offer.daysSinceDecline).toBe(1)
@@ -777,16 +777,16 @@ describe('Run B — the cadence of an offer', () => {
     expect(it.h.pendingOffer()).toEqual({ path: 'sums', stage: 3, kind: 'trickier' })
   })
 
-  it('counts the cooldown in days she played, not days on the calendar', () => {
+  it('counts the cooldown in days they played, not days on the calendar', () => {
     // A child who did not open the island for a fortnight has not declined
-    // anything twice. Two SESSIONS is what the spec says and what she gets.
+    // anything twice. Two SESSIONS is what the spec says and what they get.
     const it = gateReady()
     it.h.noteOffer('sums', false)
     it.on('2026-07-20')
     expect(it.h.pendingOffer()).toBeNull()
   })
 
-  it('counts a day once, however much of it she plays', () => {
+  it('counts a day once, however much of it they play', () => {
     const it = gateReady()
     it.h.noteOffer('sums', false)
     it.h.dealt('sums', 1)
@@ -806,7 +806,7 @@ describe('Run B — the cadence of an offer', () => {
 
   it('refuses an answer to an offer it is not making', () => {
     // A stale overlay, a double tap, a replayed event: none of them may tick a
-    // stage, because a tick is the one thing here that changes what she gets.
+    // stage, because a tick is the one thing here that changes what they get.
     const it = gateReady()
     it.h.noteOffer('takingAway', true)
     expect(it.a.takingAway.stages[2]!.ticked).toBe(false)
@@ -878,7 +878,7 @@ describe('Run B — introducing taking away', () => {
   it('wins the session when a trickier offer is due as well', () => {
     // Only one offer may be made, so the two have to be ordered, and this one
     // is the larger event: a whole new kind of maths against one rung more of
-    // the kind she is already doing.
+    // the kind they are already doing.
     const it = island()
     masterSums1(it)
     probeNextSum(it)
@@ -919,7 +919,7 @@ describe('Run B — introducing taking away', () => {
     expect(it.h.pendingOffer()).toBeNull()
   })
 
-  it('does not offer it when a parent holds the path himself — JT-011(a)', () => {
+  it('does not offer it when a parent holds the path themselves — JT-011(a)', () => {
     const it = island()
     masterSums1(it)
     it.h.setMode('takingAway', 'manual')
@@ -928,10 +928,10 @@ describe('Run B — introducing taking away', () => {
     expect(it.a.takingAway.stages[1]!.ticked).toBe(false)
   })
 
-  it('comes round again after a decline, though she plays no subtraction', () => {
+  it('comes round again after a decline, though they play no subtraction', () => {
     /*
-     * THE ONE THAT WOULD HAVE SHIPPED BROKEN. The cooldown counts days she
-     * played, and before this offer is accepted she cannot play takingAway at
+     * THE ONE THAT WOULD HAVE SHIPPED BROKEN. The cooldown counts days they
+     * played, and before this offer is accepted they cannot play takingAway at
      * all — nothing on it is ticked, so nothing on it is ever recorded. Counted
      * per path, a declined introduction would never be made again.
      */
@@ -952,7 +952,7 @@ describe('Run B — nothing demotes, ever', () => {
   /*
    * runA.md:240, and the whole reason Auto is safe to leave on. A child who
    * has a bad fortnight — accuracy collapsing, rescue after rescue, a run of
-   * wrong answers — loses NOTHING she has already been given. Untick is a
+   * wrong answers — loses NOTHING they have already been given. Untick is a
    * parent's hand and Auto has no hand at all.
    */
   it('leaves every tick standing through a collapse, a rescue storm and a wrong streak', () => {
@@ -1136,15 +1136,15 @@ describe('a reading page — JT-010(2), three builds to one find', () => {
       ['find', 'build', 'build', 'build', 'find', 'build', 'build', 'build'])
   })
 
-  it('gives her every page as a find when building is unticked', () => {
-    // The tickbox is a capability and the mix is a preference: where they
-    // disagree the parent wins, or a data file would be overruling him.
+  it('gives them every page as a find when building is unticked', () => {
+    // The tickbox is a capability and the mix is a preference: where the two
+    // disagree the parent wins, or a data file would be overruling them.
     const a = createAttainment()
     a.building.stages[1]!.ticked = false
     expect(new Set(kinds(a, 8))).toEqual(new Set(['find']))
   })
 
-  it('gives her every page as a build when reading is unticked', () => {
+  it('gives them every page as a build when reading is unticked', () => {
     const a = createAttainment()
     a.reading.stages[1]!.ticked = false
     expect(new Set(kinds(a, 8))).toEqual(new Set(['build']))
@@ -1221,7 +1221,7 @@ describe('the last tick is protected — JT-010(3)', () => {
   })
 })
 
-describe('a save can never strand her in a round that cannot be dealt', () => {
+describe('a save can never strand the child in a round that cannot be dealt', () => {
   /*
    * `openRead`/`openSum` decline when their moment has nothing ticked, and a
    * port that declines leaves the flow in 'challenge' with no overlay and no
@@ -1262,7 +1262,7 @@ describe('a save can never strand her in a round that cannot be dealt', () => {
 
   it('keeps the stats it repaired the ticks on', () => {
     // Repairing capability must not throw away measurement — that is history,
-    // and it is the only record of what she has actually done.
+    // and it is the only record of what they have actually done.
     const a = readAttainment({
       sums: { mode: 'manual', stages: { 1: { ticked: false, attempts: 42, ewma: 0.9 } } },
       takingAway: { mode: 'manual', stages: { 1: { ticked: false } } },
@@ -1303,9 +1303,9 @@ describe('who moves a path’s ticks', () => {
     expect(Object.prototype.hasOwnProperty.call(a, 'fractions')).toBe(false)
   })
 
-  it('changes nothing about what she may be dealt', () => {
+  it('changes nothing about what they may be dealt', () => {
     // Mode says WHO moves the ticks. It is not itself a tick, and a panel
-    // switching to Hold must not quietly narrow what she is given.
+    // switching to Hold must not quietly narrow what they are given.
     const a = createAttainment()
     const h = createHarness(a)
     const before = LIVE_PATHS.map(p => h.levelFor(p))
@@ -1468,7 +1468,7 @@ describe('the weakness lean — runA.md:236, and JT-010 survives it', () => {
      * introduced one: `takingAway` arrives with almost no history, and a lean
      * computed from the sums data alone would force-feed a five-year-old a
      * brand-new kind of maths on the strength of no evidence about it at all.
-     * Under the bar she is dealt at her TICK share, which is Joe's answer.
+     * Under the bar they are dealt at their TICK share, which is Joe's answer.
      */
     const a = mathsIsland(['sums:1', 'takingAway:1'])
     persist(a, 'sums', 1, 1, 20)
@@ -1502,7 +1502,7 @@ describe('the weakness lean — runA.md:236, and JT-010 survives it', () => {
     /*
      * runA.md:236 says *"bounded 65/35"* and this is where that number is
      * kept: one rung ticked on each path, a gap wide enough to pull as hard as
-     * the lean ever pulls, and the weaker path gets 65% of her maths. Read as
+     * the lean ever pulls, and the weaker path gets 65% of their maths. Read as
      * a bound on the STRENGTH of the lean (Fable's option C), the spec's
      * figure is the calibration of LEAN_MAX rather than a clamp on the share.
      */
@@ -1549,7 +1549,7 @@ describe('the weakness lean — runA.md:236, and JT-010 survives it', () => {
      * Twenty answers on the bottom rung and one on the rung above is mostly a
      * statement about the bottom rung. Flat across stages, a single unlucky
      * answer on a newly ticked stage would halve a path's estimate and swing
-     * the whole of her maths at it.
+     * the whole of their maths at it.
      */
     const a = mathsIsland(['sums:1', 'sums:2', 'takingAway:1'])
     persist(a, 'sums', 1, 0.95, 40)
@@ -1594,11 +1594,11 @@ describe('the weakness lean — runA.md:236, and JT-010 survives it', () => {
 describe('the mercy run — invisible, in-session, and silent', () => {
   /*
    * runA.md:236, *"invisible in-session mercy runs"*, under brief §19: wrong
-   * answers cost her nothing. Nothing is announced, nothing is rendered, there
-   * is no read for it on the interface at all, and the attempts she makes
-   * during one are recorded exactly as honestly as any others. She simply
-   * finds the next two questions on the bottom rung, and nobody tells her why.
-   * These tests can only watch it through the deals, which is the point.
+   * answers cost them nothing. Nothing is announced, nothing is rendered, there
+   * is no read for it on the interface at all, and the attempts they make
+   * during one are recorded exactly as honestly as any others. They simply find
+   * the next two questions on the bottom rung, and nobody tells them why. These
+   * tests can only watch it through the deals, which is the point.
    */
   const struggling = (): { a: Att; h: H } => {
     const a = mathsIsland(['sums:1', 'sums:2'])
@@ -1619,8 +1619,8 @@ describe('the mercy run — invisible, in-session, and silent', () => {
   })
 
   it('spends the run on items actually dealt, not on rounds merely considered', () => {
-    // `dealMaths` may be called without anything being put in front of her. A
-    // run that drained itself on questions nobody asked is a mercy she never
+    // `dealMaths` may be called without anything being put in front of them. A
+    // run that drained itself on questions nobody asked is a mercy they never
     // received.
     const { h } = struggling()
     for (let i = 0; i < 20; i++) h.dealMaths(() => 0.99)
@@ -1671,7 +1671,7 @@ describe('the mercy run — invisible, in-session, and silent', () => {
   it('silences the probe on that path, and spends no roll doing it', () => {
     /*
      * The run exists because three answers in a row went wrong. Answering that
-     * by slipping her a question from the rung ABOVE would be the island
+     * by slipping them a question from the rung ABOVE would be the island
      * making a bad ten minutes worse. The counter is fed here by wrong PROBES,
      * which move no persisted stat — so `sums` 1 is still comfortable and a
      * probe is still wanted, and it is the mercy alone that stops it.
@@ -1688,10 +1688,10 @@ describe('the mercy run — invisible, in-session, and silent', () => {
     expect(drawn).toBe(1)
   })
 
-  it('records her attempts as honestly during a run as outside one', () => {
-    // Brief §19 cuts both ways: the kindness is in what she is DEALT, never in
-    // what is written down. A mercy that quietly stopped counting would be a
-    // measurement system lying to the parent who reads it.
+  it('records their attempts as honestly during a run as outside one', () => {
+    // Brief §19 cuts both ways: the kindness is in what they are DEALT, never
+    // in what is written down. A mercy that quietly stopped counting would be
+    // a measurement system lying to the parent who reads it.
     const a = mathsIsland(['sums:1', 'sums:2'])
     const h = createHarness(a)
     h.dealt('sums', 2)
@@ -1704,7 +1704,7 @@ describe('the mercy run — invisible, in-session, and silent', () => {
 
   it('writes nothing of itself into the attainment', () => {
     // A run of three wrong answers is a bad ten minutes, not a capability. In
-    // the save it would follow her into every session afterwards.
+    // the save it would follow them into every session afterwards.
     const a = mathsIsland(['sums:1', 'sums:2'])
     const h = createHarness(a)
     h.dealt('sums', 2)
@@ -1726,7 +1726,7 @@ describe('the mercy run — invisible, in-session, and silent', () => {
 describe('whisper retirement — mastered, superseded, and quietly awake', () => {
   /*
    * runA.md:237: *"whisper retirement (1–2 items per session from mastered
-   * stages, feeding the settled-✓ that can quietly wake)."* A stage she has
+   * stages, feeding the settled-✓ that can quietly wake)."* A stage they have
    * mastered and moved past is not deleted and not unticked; it drops to the
    * occasional item, and then to none for the rest of the sitting.
    */
@@ -1740,9 +1740,9 @@ describe('whisper retirement — mastered, superseded, and quietly awake', () =>
 
   it('is mastered AND superseded, never merely mastered', () => {
     /*
-     * The top rung she is on can never be settled, however well she is doing —
-     * it is the work. Retiring it would leave a child who had just got good at
-     * something being dealt anything but that.
+     * The top rung they are on can never be settled, however well they are
+     * doing — it is the work. Retiring it would leave a child who had just got
+     * good at something being dealt anything but that.
      */
     const it = island()
     masterSums1(it)
@@ -1758,8 +1758,8 @@ describe('whisper retirement — mastered, superseded, and quietly awake', () =>
   })
 
   it('drops a settled stage to a whisper — one item in six, not none', () => {
-    // Retirement is not deletion. She still meets it, occasionally, and it is
-    // still hers.
+    // Retirement is not deletion. They still meet it, occasionally, and it is
+    // still theirs.
     const got = deals(settled().h, 600)
     about(got['sums:1'], 100)
     about(got['sums:2'], 500)
@@ -1772,7 +1772,7 @@ describe('whisper retirement — mastered, superseded, and quietly awake', () =>
     expect(deals(it.h, 600)).toEqual({ 'sums:2': 600 })
   })
 
-  it('counts only the items she was actually dealt on the settled stage', () => {
+  it('counts only the items they were actually dealt on the settled stage', () => {
     const it = settled()
     it.h.dealt('sums', 2)          // the live rung is not a whisper
     it.h.dealt('sums', 2, true)
@@ -1786,7 +1786,7 @@ describe('whisper retirement — mastered, superseded, and quietly awake', () =>
     it.h.dealt('sums', 1)
     it.h.dealt('sums', 1)
     expect(JSON.stringify(it.a)).toBe(before)
-    // Tomorrow is a new harness over the same record, and she meets it again.
+    // Tomorrow is a new harness over the same record, and they meet it again.
     about(deals(createHarness(it.a), 600)['sums:1'], 100)
   })
 
@@ -1807,7 +1807,7 @@ describe('whisper retirement — mastered, superseded, and quietly awake', () =>
     about(whispering.takingAway, 200)
   })
 
-  it('never deals her nothing, whatever the weights have done', () => {
+  it('never deals them nothing, whatever the weights have done', () => {
     // A defensive guarantee rather than a reachable state — the top rung is
     // never settled, so something on the path always carries weight. It is
     // asserted anyway because the failure it guards against is a child tapping
@@ -1906,10 +1906,10 @@ describe('a child already on the bridging rung is never moved down to 3', () => 
   /*
    * THE MIGRATION CASE, and the one that would actually hurt. A child who has
    * been ticked on `sums` 1 and 2 for weeks wakes up on a build where a rung
-   * has been inserted BELOW her top one. Auto may only ever tick (runA.md:240)
-   * and inserting a rung is not an exception to that: she is not demoted, she
-   * is not offered the easier rung as though it were progress, and she is not
-   * dealt it behind her back.
+   * has been inserted BELOW their top one. Auto may only ever tick
+   * (runA.md:240) and inserting a rung is not an exception to that: they are
+   * not demoted, they are not offered the easier rung as though it were
+   * progress, and they are not dealt it behind their back.
    */
   const settledChild = (): Island => {
     const it = island()
@@ -1920,21 +1920,21 @@ describe('a child already on the bridging rung is never moved down to 3', () => 
     return it
   }
 
-  it('keeps her top rung at 2 with 3 left untouched', () => {
+  it('keeps their top rung at 2 with 3 left untouched', () => {
     const it = settledChild()
     expect(it.h.levelFor('sums')).toEqual([1, 2])
     expect(it.a.sums.stages[3]!.ticked).toBe(false)
     expect(it.a.sums.stages[3]!.attempts).toBe(0)
   })
 
-  it('offers her nothing, because there is no rung above the one she is on', () => {
+  it('offers them nothing, because there is no rung above the one they are on', () => {
     const it = settledChild()
     expect(it.h.pendingOffer()).toBeNull()
     expect(it.h.offerDue('sums')).toBe(false)
     expect(it.h.probeWanted('sums')).toBe(false)
   })
 
-  it('never deals her the rung she skipped, over a whole sweep', () => {
+  it('never deals them the rung they skipped, over a whole sweep', () => {
     const it = settledChild()
     const got = deals(it.h, 600)
     expect(got['sums:3']).toBeUndefined()
@@ -1948,8 +1948,8 @@ describe('settledOn is BELOW in ladder order — the latent comparison', () => {
    * and `nextStage` have always walked the array. The two agreed for as long as
    * every ladder happened to be numbered in its own order, and stopped agreeing
    * the moment `STAGES.sums` became [1, 3, 2]: a child ticked on all three has
-   * top = 2, and rung 3 — one place BELOW her — would compare 3 < 2 and never
-   * retire. She would be dealt the middle rung at full weight forever.
+   * top = 2, and rung 3 — one place BELOW them — would compare 3 < 2 and never
+   * retire. They would be dealt the middle rung at full weight forever.
    */
   const allThree = (): Island => {
     const it = island()
@@ -1986,9 +1986,9 @@ describe('settledOn is BELOW in ladder order — the latent comparison', () => {
   })
 })
 
-describe('Juno’s own save survives the new rung arriving beneath her', () => {
+describe('Juno’s own save survives the new rung arriving beneath them', () => {
   /*
-   * Not a hand-built record: her attainment goes out through `toSave`, through
+   * Not a hand-built record: the attainment goes out through `toSave`, through
    * JSON, and back in through `fromSave` — the path a reload actually takes.
    * `readAttainment` rebuilds outward from `STAGES`, so a rung added to that
    * table is exactly the kind of change that could quietly drop a field or
@@ -2008,7 +2008,7 @@ describe('Juno’s own save survives the new rung arriving beneath her', () => {
     return { before, loaded: fromSave(raw) }
   }
 
-  it('brings her rung-one ticks, ewma, attempts and sessions back byte for byte', () => {
+  it('brings their rung-one ticks, ewma, attempts and sessions back byte for byte', () => {
     const { before, loaded } = junoSaved()
     expect(loaded.attainment.sums.stages[1]).toEqual(before)
     expect(loaded.attainment.sums.stages[1]?.ticked).toBe(true)
@@ -2016,7 +2016,7 @@ describe('Juno’s own save survives the new rung arriving beneath her', () => {
     expect(loaded.attainment.sums.stages[1]?.sessions).toHaveLength(2)
   })
 
-  it('gives her the new rung fresh and unticked, not backdated', () => {
+  it('gives them the new rung fresh and unticked, not backdated', () => {
     const { loaded } = junoSaved()
     expect(loaded.attainment.sums.stages[3]).toEqual({
       ticked: false, attempts: 0, ewma: null,
@@ -2024,7 +2024,7 @@ describe('Juno’s own save survives the new rung arriving beneath her', () => {
     })
   })
 
-  it('leaves her being dealt exactly what she was being dealt', () => {
+  it('leaves them being dealt exactly what they were being dealt', () => {
     const { loaded } = junoSaved()
     expect(createHarness(loaded.attainment).levelFor('sums')).toEqual([1])
   })

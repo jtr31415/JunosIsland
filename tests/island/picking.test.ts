@@ -110,13 +110,13 @@ function rayThrough(cam: THREE.PerspectiveCamera, at: THREE.Vector3): THREE.Rayc
 const EGG_MIDDLE = 0.38 * 0.62
 
 describe('an egg in front of an empty socket', () => {
-  it('answers with the egg she can see, not the socket behind it', () => {
+  it('answers with the egg they can see, not the socket behind it', () => {
     const cam = islandCamera()
 
     /*
      * Find where a ray aimed at the egg comes down to the socket field's
      * height, and put an empty socket exactly there. That is Joe's picture:
-     * the island turned so the egg stands in front of a place she could build.
+     * the island turned so the egg stands in front of a place they could build.
      */
     const probe = rayThrough(cam, new THREE.Vector3(0, EGG_MIDDLE, 0))
     const t = (0.02 - probe.ray.origin.y) / probe.ray.direction.y

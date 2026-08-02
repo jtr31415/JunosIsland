@@ -128,7 +128,7 @@ describe('the way out', () => {
 
     const x = q('.overlay-x')
     expect(x.textContent).toBe('×')
-    // Readable by something even if not by her: it is a glyph, not a word.
+    // Readable by something even if not by the child: a glyph, not a word.
     expect(x.getAttribute('aria-label')).toBe('back to the island')
 
     // It is NOT in the row beside "say it again" — that adjacency is the
@@ -216,8 +216,8 @@ describe('say it again', () => {
  * The backdrop, which USED to dismiss and deliberately no longer does.
  *
  * `.stage-slot` is `pointer-events: none` so the renderer can scissor into it,
- * which means the vignette — nearly half a staged round, and the half with her
- * own egg turning on it — counted as backdrop. Reaching out to touch her egg
+ * which means the vignette — nearly half a staged round, and the half with
+ * their own egg turning on it — counted as backdrop. Reaching out to touch it
  * ended the page. That is Joe's "too many accidental hits", and the fix is not
  * a smarter backdrop: it is one deliberate X and a backdrop that only swallows.
  */
@@ -234,7 +234,7 @@ describe('the backdrop', () => {
   it('does not collect either — an accidental tap changes nothing at all', () => {
     // It used to take the same path as the button, so an answered sum plus a
     // stray tap banked the reward and left. Correct while the backdrop was a
-    // way out; now it would be a reward for a mis-tap, and it ends her sitting.
+    // way out; now it would be a reward for a mis-tap that ends their sitting.
     const { root, overlay, host, layer, isOpen } = setup()
     overlay.openSum(SUM)
     solve(root, SUM_ANSWER)
@@ -256,7 +256,7 @@ describe('the backdrop', () => {
 
   it('does NOT dismiss a press that began inside and drifted out', () => {
     // Answering a word, finger slides off the panel edge as it lifts. That is
-    // not a request to leave, and treating it as one would throw her out of a
+    // not a request to leave, and treating it as one would throw them out of a
     // round mid-answer.
     const { root, overlay, layer, isOpen } = setup()
     overlay.openWordFind(PICKS)
@@ -376,7 +376,7 @@ describe('a find page banks on completion, not on the first word', () => {
     /*
      * The trap in the obvious fix. Build and sum fly the star and call
      * onAdvance a beat later, and `earned` is exactly what protects that gap —
-     * she has answered, and tapping the X must not throw the work away (§18).
+     * they have answered, and tapping the X must not throw the work away (§18).
      * Moving these to completion too would trade one bug for a worse one.
      */
     const { root, overlay, host } = setup()
@@ -509,7 +509,7 @@ describe('the attempt model is wired to what actually happens', () => {
   it('times each find target from its own prompt, not from the mount', () => {
     const { root, overlay, host } = setup()
     overlay.openWordFind(PICKS)
-    vi.advanceTimersByTime(FIRST_PROMPT_MS)  // the timer, not her thinking
+    vi.advanceTimersByTime(FIRST_PROMPT_MS)  // the timer, not thinking time
     vi.advanceTimersByTime(400)
     tap(target(root, host))
     vi.advanceTimersByTime(800)              // wordFind.ts:68 asks for word two
@@ -519,7 +519,7 @@ describe('the attempt model is wired to what actually happens', () => {
     expect(attempts(host).map(a => a.latencyMs)).toEqual([400, 2500])
   })
 
-  it('does not restart the clock when she asks to hear it again', () => {
+  it('does not restart the clock when the child asks to hear it again', () => {
     const { root, overlay, host } = setup()
     overlay.openWordFind(PICKS)
     vi.advanceTimersByTime(FIRST_PROMPT_MS)
@@ -529,7 +529,7 @@ describe('the attempt model is wired to what actually happens', () => {
     tap(target(root, host))
 
     // Reading it again is the task, not a hint — and it is certainly not a
-    // reason to record her as having answered in one second.
+    // reason to record the child as having answered in one second.
     expect(attempts(host)[0]?.latencyMs).toBe(2000)
     expect(attempts(host)[0]?.helped).toBe(false)
   })
@@ -564,7 +564,7 @@ describe('the attempt model is wired to what actually happens', () => {
     expect(attempts(host)[0]).toMatchObject({ correct: true, helped: true, latencyMs: 8000 })
   })
 
-  it('JT-008(3): leaving mid-page keeps the words she found and drops the rest', () => {
+  it('JT-008(3): leaving mid-page keeps the words they found and drops the rest', () => {
     const { root, overlay, host } = setup()
     overlay.openWordFind(PICKS)
     vi.advanceTimersByTime(FIRST_PROMPT_MS)
@@ -576,7 +576,7 @@ describe('the attempt model is wired to what actually happens', () => {
     expect(attempts(host)[0]).toMatchObject({ index: 0, correct: true })
   })
 
-  it('JT-008(3): and a page she never answered reports nothing', () => {
+  it('JT-008(3): and a page they never answered reports nothing', () => {
     const { root, overlay, host } = setup()
     overlay.openWordFind(PICKS)
     vi.advanceTimersByTime(FIRST_PROMPT_MS)

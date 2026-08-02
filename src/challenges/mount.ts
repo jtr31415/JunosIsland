@@ -42,13 +42,13 @@ export interface Holds {
  * needed a channel out of a renderer in the first place).
  */
 export type HelpKind =
-  /** A counting dot-box was opened, by her hand or by the mash rescue. */
+  /** A counting dot-box was opened, by their hand or by the mash rescue. */
   | 'dots'
   /** Fred sounded the word out, grapheme by grapheme (build only). */
   | 'fred'
   /**
    * The grey `?` was tapped and the answer revealed. NOT help — the round goes
-   * inert and she never answers it at all, which is why it needs its own kind
+   * inert and they never answer it at all, which is why it needs its own kind
    * rather than a flag on one. See `attempts.ts` for what the host does with it.
    */
   | 'peek'

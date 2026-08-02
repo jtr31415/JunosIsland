@@ -11,12 +11,12 @@ import type { SumItem } from '../core/generators/sums'
 import type { ChallengeDeps, ChallengeHandle } from './mount'
 
 /**
- * @param debut The very first take-away this child has ever been dealt, so the
- *   minus sign is a glyph she has not met — runA.md:236, *"dealt MIXED with the
- *   minus sign popping on debut"*. It pops ONCE, on the sign only, and it is
- *   the host that knows whether this is the debut (see `main.ts`'s deal site);
- *   this module is only told. Ignored on an addition, because there is nothing
- *   new about a plus.
+ * @param debut The very first take-away this child has ever been dealt, so
+ *   the minus sign is a glyph they have not met — runA.md:236, *"dealt MIXED
+ *   with the minus sign popping on debut"*. It pops ONCE, on the sign only,
+ *   and it is the host that knows whether this is the debut (see `main.ts`'s
+ *   deal site); this module is only told. Ignored on an addition, because
+ *   there is nothing new about a plus.
  */
 export function mountSum(
   p: SumItem, deps: ChallengeDeps, debut = false,
@@ -46,13 +46,13 @@ export function mountSum(
 
   const A = pill(p.a, 'blue'), B = pill(p.b, 'blue'), ANS = pill('?', 'mystery')
   /*
-   * U+2212 MINUS SIGN, not a hyphen, and it pops the first time she meets it.
+   * U+2212 MINUS SIGN, not a hyphen, and it pops the first time they meet it.
    *
    * The pop is one CSS animation on the glyph itself and nothing else: no
-   * toast, no held input, no beat she has to sit through. runA.md:236 asks for
-   * the sign to be INTRODUCED rather than explained, and a symbol that moves
-   * once is how a five-year-old is told "this one is new" without a sentence.
-   * The `=` never pops — she has seen that on every sum she has ever done.
+   * toast, no held input, no beat they have to sit through. runA.md:236 asks
+   * for the sign to be INTRODUCED rather than explained, and a symbol that
+   * moves once is how a five-year-old is told "this one is new" without a
+   * sentence. The `=` never pops — they have seen it on every sum ever done.
    */
   const sign = op(p.op === 'add' ? '+' : '−')
   if (debut && p.op === 'sub') sign.classList.add('op-debut')

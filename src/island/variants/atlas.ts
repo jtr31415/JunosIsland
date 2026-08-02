@@ -22,7 +22,7 @@
  *     failing rather than like the step being missed.
  *   - A set's material belongs to every pet of that set at once. Disposing it
  *     because one preview closed would break every other creature in the set,
- *     including ones she already owns (brief §19). Nothing here disposes per
+ *     including ones they already own (brief §19). Nothing here disposes per
  *     pet; the cache empties only when the whole field does.
  */
 import * as THREE from 'three'
@@ -137,7 +137,7 @@ export function createSetAtlas(base = ''): SetAtlas {
       const hit = textures.get(key)
       if (hit) return hit
       // An unknown set — a save naming one since removed — falls back to
-      // natural rather than stopping her playing.
+      // natural rather than stopping them playing.
       const built = build(setById(setId) ?? NATURAL, speciesId)
       textures.set(key, built)
       return built

@@ -492,7 +492,7 @@ describe('where a friend is standing right now', () => {
     /*
      * `sync` creates nothing until the GLB arrives, so this is the ordinary state
      * of a just-hatched friend on a tablet. It must not be answered with the
-     * origin, which is a real place on her island — Fred is standing there.
+     * origin, which is a real place on the child's island — Fred stands there.
      */
     const field = createPetField()
     expect(field.positionOf('nobody')).toBeNull()

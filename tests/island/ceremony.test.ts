@@ -4,8 +4,8 @@ import type { Exits } from '../../src/island/ceremony'
 
 /**
  * The bug class this exists to make unexpressible: a pet hatched, the ceremony
- * began, and for about two seconds the friend she had just read home existed
- * on screen and nowhere else.
+ * began, and for about two seconds the friend the child had just read home
+ * existed on screen and nowhere else.
  */
 
 function exits(): Exits & { locked: boolean; locks: number; unlocks: number } {

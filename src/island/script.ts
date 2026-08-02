@@ -64,7 +64,7 @@ export const OPENING: Beat[] = [
  * a question the game asks in only some circumstances.
  *
  * "Tile", not "land", at Joe's request. It matches the word the rest of the game
- * uses for the thing she is choosing, and it stays right when the biome ladder
+ * uses for the thing they are choosing, and it stays right when the biome ladder
  * adds kinds that are not land at all.
  */
 export const TILE_QUESTION = 'Which tile would you like?'
@@ -89,7 +89,7 @@ export const fill = (s: string, name: string, petName = ''): string =>
  *
  * Keyed by the FULL id, not the stripped one, so no caller has to know that
  * `animal-` is a prefix. It is also readable content in a reading game, so it is
- * rendered in the same literacy font stack as every other word she meets
+ * rendered in the same literacy font stack as every other word they meet
  * (`.album-fact`, tokens.css) and spoken by the same voice.
  *
  * Two of the twenty-four are judgement rather than transcription:
@@ -144,8 +144,8 @@ export const SPECIES_NAME: Readonly<Record<string, string>> = {
  *
  * Falls back to the id with its prefix stripped and its first letter raised,
  * rather than to an empty string or the word "Unknown". A save from a future
- * build — or a pack that gains a species before this table does — must show her
- * SOMETHING for her own friend; brief §19 forbids losing what she owns, and a
+ * build — or a pack that gains a species before this table does — must show the
+ * child SOMETHING for their own friend; §19 forbids losing what they own, and a
  * blank where an animal's name goes is a small version of losing it.
  */
 export function speciesName(id: string): string {

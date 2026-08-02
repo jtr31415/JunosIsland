@@ -17,7 +17,7 @@
  *      not lock input, start a cooldown, take a tile back or bar a single tap,
  *      and a child who ignores it entirely must be able to carry straight on.
  *   2. Brief §19, "three stumbles summon help and NEVER SHAME". The line must
- *      not be readable as a report on how she is doing.
+ *      not be readable as a report on how they are doing.
  *
  * The tests run the REAL renderers through the REAL overlay, because HANDOFF §5
  * is emphatic about what mocking this seam has cost here four times: `onWrong`
@@ -242,16 +242,16 @@ describe('mashing successive pages, through the real number pad', () => {
 
     /*
      * `more: false` is the existing, tested "collect it but let me out" path —
-     * so the sum she just got RIGHT is banked exactly as it would have been, and
-     * the host hands her back the island instead of dealing another page. That
-     * handover is the entire mechanism: it is what makes "get up and run about"
-     * something a child can actually act on.
+     * so the sum they just got RIGHT is banked exactly as it would have been,
+     * and the host hands the child back the island instead of dealing another
+     * page. That handover is the entire mechanism: it is what makes "get up and
+     * run about" something a child can actually act on.
      */
     expect(host.onPassed).toHaveBeenLastCalledWith(false)
     expect(overlay.stretchDue()).toBe(true)
   })
 
-  it('never fires when she is answering well', () => {
+  it('never fires when the child is answering well', () => {
     const { root, overlay, host } = setup()
     for (let page = 0; page < MASH_PAGES + 2; page++) {
       playSum(root, overlay, 0)
@@ -260,7 +260,7 @@ describe('mashing successive pages, through the real number pad', () => {
     }
   })
 
-  it('does not fire on pages she gets wrong twice and then answers', () => {
+  it('does not fire on pages they get wrong twice and then answer', () => {
     // Two wrongs a page is not mashing, and it is the commonest shape of an
     // ordinary page. This is the false-alarm case in the real renderer.
     const { root, overlay, host } = setup()
@@ -288,7 +288,7 @@ describe('mashing successive pages, through the real number pad', () => {
     expect(host.onPassed).toHaveBeenLastCalledWith(false)
   })
 
-  it('counts the page she walks out of', () => {
+  it('counts the page they walk out of', () => {
     const { root, overlay, host, q } = setup()
     for (let page = 0; page < MASH_PAGES - 1; page++) playSum(root, overlay, MASH_WRONGS)
 
@@ -302,8 +302,8 @@ describe('mashing successive pages, through the real number pad', () => {
     // Leaving costs nothing (brief §19) — still a dismissal, never a collection
     // — and the run is recognised on the way out.
     expect(host.onDismissed).toHaveBeenCalled()
-    // The two earlier pages she FINISHED were collected, as they should be; the
-    // page she walked out of was not collected and was not meant to be.
+    // The two earlier pages they FINISHED were collected, as they should be;
+    // the page they walked out of was not collected and was not meant to be.
     expect(host.onPassed).not.toHaveBeenLastCalledWith(false)
     expect(overlay.stretchDue()).toBe(true)
   })
@@ -323,20 +323,20 @@ describe('the suggestion locks nothing and expires nothing (§19)', () => {
     expect(isOpen()).toBe(true)
   })
 
-  it('collects the page she just finished rather than discarding it', () => {
+  it('collects the page they just finished rather than discarding it', () => {
     const { root, overlay, host } = setup()
     for (let page = 0; page < MASH_PAGES; page++) playSum(root, overlay, MASH_WRONGS)
-    // onPassed, never onDismissed: she answered it, so it counts.
+    // onPassed, never onDismissed: they answered it, so it counts.
     expect(host.onPassed).toHaveBeenLastCalledWith(false)
     expect(host.onDismissed).not.toHaveBeenCalled()
   })
 
-  it('never expires, however long she is away', () => {
+  it('never expires, however long they are away', () => {
     /*
      * The point of the guardrail, and the reason this is not a cooldown. "Come
      * back in a minute" cannot be enforced in either direction: nothing may be
-     * lost while she is gone, and nothing may quietly time out and forget that
-     * she was asked.
+     * lost while they are gone, and nothing may quietly time out and forget
+     * that they were asked.
      */
     const { root, overlay } = setup()
     for (let page = 0; page < MASH_PAGES; page++) playSum(root, overlay, MASH_WRONGS)
@@ -345,10 +345,10 @@ describe('the suggestion locks nothing and expires nothing (§19)', () => {
     expect(overlay.stretchDue()).toBe(true)
   })
 
-  it('lets her carry straight on if she ignores Fred entirely', () => {
+  it('lets the child carry straight on if they ignore Fred entirely', () => {
     /*
-     * The anti-lockout test. She may tap the egg on the very next frame, and the
-     * page must answer normally — no cooldown to sit through, no dead taps.
+     * The anti-lockout test. They may tap the egg on the very next frame, and
+     * the page must answer normally — no cooldown to sit through, no dead taps.
      */
     const { root, overlay, host, isOpen } = setup()
     for (let page = 0; page < MASH_PAGES; page++) playSum(root, overlay, MASH_WRONGS)
@@ -403,11 +403,11 @@ describe('the suggestion locks nothing and expires nothing (§19)', () => {
 describe("Fred's line", () => {
   const line = GOVERNOR_LINE['wriggle-break']
 
-  it('never mentions her, her answers or the work', () => {
+  it('never mentions the child, their answers or the work', () => {
     /*
      * The anti-shame test, and it is a test about GRAMMAR rather than tone,
      * because tone cannot be asserted. A six-year-old reads any sentence about
-     * her own performance as a report on it, so the line may not contain one.
+     * their own performance as a report on it, so the line may not contain one.
      */
     expect(line).not.toMatch(/wrong|mistake|try again|too hard|difficult|tricky/i)
     expect(line).not.toMatch(/\byou'?re\b|\byou are\b|\byou keep\b|\byou can'?t\b/i)
@@ -418,9 +418,9 @@ describe("Fred's line", () => {
     expect(line).not.toMatch(/can'?t|cannot|not allowed|no more|must|stop|wait for/i)
   })
 
-  it("puts the need for the break in FRED's mouth, not hers", () => {
-    // The whole design of the sentence: it is HIS legs, and she is invited
-    // along. That is what makes it unreadable as "you are bad at this".
+  it("puts the need for the break in FRED's mouth, not theirs", () => {
+    // The whole design of the sentence: it is HIS legs, and the child is
+    // invited along. That is what makes it unreadable as "you are bad at this".
     expect(line).toMatch(/\bmy\b/)
     expect(line).toMatch(/let'?s/i)
   })
@@ -431,7 +431,7 @@ describe("Fred's line", () => {
     expect(line).toMatch(/come back/i)
   })
 
-  it('promises out loud that nothing is lost while she is away (§19)', () => {
+  it('promises out loud that nothing is lost while they are away (§19)', () => {
     expect(line).toMatch(/island will be right here|island will wait|be right here/i)
   })
 
@@ -477,8 +477,8 @@ describe('main.ts actually delivers the suggestion', () => {
   it('delivers it on every path a page can end on', () => {
     /*
      * Three call sites, and all three are needed: a completed reading page, a
-     * completed maths page, and a page she walked out of. Miss one and the
-     * suggestion is dead on whichever half of the loop she happens to be
+     * completed maths page, and a page they walked out of. Miss one and the
+     * suggestion is dead on whichever half of the loop they happen to be
      * playing. (Four matches: the three calls plus the declaration.)
      */
     expect(main.match(/offerAStretch\(\)/g) ?? []).toHaveLength(4)

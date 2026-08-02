@@ -832,7 +832,7 @@ describe('the acceptance criteria, end to end through the real recolourer', () =
     expect(offenders).toEqual([])
   }, 60_000)
 
-  it('leaves the natural set bit-identical, because nothing she owns may change', () => {
+  it('leaves the natural set bit-identical, because nothing they own may change', () => {
     // Brief §19. The natural set reuses the base texture untouched, and the
     // decals read a verbatim copy — so a natural pet is the same pet whether or
     // not its geometry has been patched.

@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 /**
- * A4/A6 — the panel where a parent decides what his daughter is dealt.
+ * A4/A6 — the panel where a parent decides what their child is dealt.
  *
  * These tests drive the real DOM, because every rule worth having here is a
  * rule about what is ON SCREEN at a given moment: a tick that has not reached
@@ -482,7 +482,7 @@ describe('colour comfort — the switch that repaints red words green', () => {
     expect(WORD_COLOUR_CHOICES.map(c => c.id)).toEqual(['mixed', 'green'])
     const words = WORD_COLOUR_CHOICES
       .flatMap(c => [c.label, c.detail ?? '']).join(' ').toLowerCase()
-    // Never framed as marking: this changes paint, not whether she is right.
+    // Never framed as marking: this changes paint, not whether they are right.
     for (const forbidden of ['wrong', 'correct', 'mistake', 'error']) {
       expect(words).not.toContain(forbidden)
     }

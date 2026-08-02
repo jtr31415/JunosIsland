@@ -264,7 +264,7 @@ function loadSave(){
 }
 function ownedSet(){ return new Set(owned); }
 
-/* today's visitor: seeded scan for the first sticker she doesn't own yet */
+/* today's visitor: seeded scan for the first sticker they don't own yet */
 function visitorSticker(){
   const os = ownedSet();
   const start = strHash(todayKey()) % CAT_FLAT.length;
@@ -416,7 +416,7 @@ function buildAmbience(){
     addCritter(a, '🦀', 36, 82, 88);
   }
 
-  /* her collection lives in the world, and today's visitor drops by */
+  /* their collection lives in the world, and today's visitor drops by */
   placeOwned(a);
   renderVisitor(a);
 }

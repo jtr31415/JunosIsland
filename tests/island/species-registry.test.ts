@@ -24,7 +24,7 @@ describe('the species registry', () => {
 
   it('marks all 24 as kenney and gives none of them a build', () => {
     // Roster §1: the live 24 are frozen, never rebuilt, never restyled. A build
-    // spec on one of these is the beginning of restyling an animal she owns.
+    // spec on one of these is the beginning of restyling an animal they own.
     for (const s of BASE_SPECIES) {
       expect(s.kit).toBe('kenney')
       expect(s.build).toBeUndefined()

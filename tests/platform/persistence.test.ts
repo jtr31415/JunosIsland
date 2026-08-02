@@ -56,7 +56,7 @@ describe('requestPersistence', () => {
 })
 
 describe('shouldRequest', () => {
-  it('waits until she owns something worth keeping', () => {
+  it('waits until they own something worth keeping', () => {
     // Some browsers prompt. A prompt on the opening screen — before there is
     // anything to protect — is the one most likely to be dismissed.
     expect(shouldRequest(null, 0, 0)).toBe(false)

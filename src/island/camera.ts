@@ -24,12 +24,12 @@
  * - `frame()` — the island grew, so carry the pivot along by however far the
  *   island's own centre moved. With no deliberate focus that walks the pivot
  *   onto the centroid and keeps it there; with one, the focus survives.
- * - `lookAt()` — she asked to look at a place. Eased, never cut.
+ * - `lookAt()` — they asked to look at a place. Eased, never cut.
  *
  * **This is not panning, and must not become panning.** The pivot is clamped
  * inside the island's own footprint, so there is no gesture and no sequence of
- * gestures that puts the camera in the middle of an empty ocean with her island
- * somewhere off screen. A six-year-old cannot recover from that; she can always
+ * gestures that puts the camera in the middle of an empty ocean with their island
+ * somewhere off screen. A six-year-old cannot recover from that; they can always
  * recover from "I am looking at the wrong tile" by tapping the right one.
  */
 import * as THREE from 'three'
@@ -66,7 +66,7 @@ export interface OrbitCamera {
   /**
    * Look at a place: ease the pivot there, so spin and pinch work about it.
    *
-   * The reusable half of "zoom to location". A tap on her own land calls this
+   * The reusable half of "zoom to location". A tap on their own land calls this
    * with that tile; the album's "find it on the map" calls it with the pet's
    * spot. Clamped into the island's footprint (see the header), so no caller
    * can strand the camera over open sea.
@@ -82,7 +82,7 @@ export interface OrbitCamera {
    *
    * Pulls the pivot along by the same amount the centre moved rather than
    * snapping it to the centre, which is what lets a deliberate focus survive
-   * her building another tile. Also sets the framing distance, and defines the
+   * them building another tile. Also sets the framing distance, and defines the
    * region the pivot is allowed to be in.
    */
   frame(centre: THREE.Vector3, radius: number): void

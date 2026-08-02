@@ -101,11 +101,11 @@ describe('the island is not too flat — Joe, 27 July', () => {
     expect(TREE_EVERY.meadow).toBeLessThan(TREE_EVERY.rocky)
   })
 
-  it('plants trees on the tiles she BUILDS too, not only the ones she is given', () => {
+  it('plants trees on the tiles they BUILD too, not only the ones they are given', () => {
     /*
      * The landmine this project has already paid for twice: there are TWO
      * placement paths, `props.ts` for tiles the island grows and
-     * `increments.ts` for the plot she builds herself, and fixing one is not
+     * `increments.ts` for the plot the child builds, and fixing one is not
      * fixing the other (HANDOFF §6). Trees-inside-rocks was reported twice for
      * exactly this reason.
      */

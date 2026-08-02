@@ -9,8 +9,8 @@
  * BOTH HALVES OF THAT ARE ONE FAULT, and it is not in `createGrowingPlot` — that
  * builds a mountain correctly when it is told to (`increments.test.ts`). It is in
  * the glue: the plot was only ever built ONCE, when nothing was standing, so
- * changing her mind about what is being built here left the old scaffolding on
- * screen. She then finished a grass plot, `props.adopt` gave the finished hex
+ * changing their mind about what is being built here left the old scaffolding
+ * on screen. They then finished a grass plot, `props.adopt` gave the finished hex
  * exactly what the scaffolding had grown — and marked it dressed, so `props.sync`
  * never planted the peak. The save recorded 'rock' all along, which is why a
  * reload put the mountain there.
@@ -99,9 +99,9 @@ function rig(): Rig {
 /**
  * A grass plot standing at (1,0) on an island where mountains are unlocked.
  *
- * Fifteen of her own tiles, because that is the rung `rockUnlocked` reads — the
- * offer has to really contain the mountain button for the sequence below to be
- * the one a child can actually perform.
+ * Fifteen of their own tiles, because that is the rung `rockUnlocked` reads —
+ * the offer has to really contain the mountain button for the sequence below to
+ * be the one a child can actually perform.
  */
 function sitedGrass(tilesEarned = 8): Flow {
   let island = createFlow().island
@@ -122,8 +122,8 @@ function sitedGrass(tilesEarned = 8): Flow {
   return chooseTile(asked, 'grass')
 }
 
-describe('the scaffolding follows the flow, not the first thing she picked', () => {
-  it('builds the mountain when she changes her mind to one', async () => {
+describe('the scaffolding follows the flow, not the first thing they picked', () => {
+  it('builds the mountain when the child changes their mind to one', async () => {
     const r = rig()
     const host = createPlotHost(r.ports)
 
@@ -132,7 +132,7 @@ describe('the scaffolding follows the flow, not the first thing she picked', () 
     host.show(f)
     await settle()
     /*
-     * The grass plot she started: scattered cover, no peak. Up to eight pieces
+     * The grass plot they started: scattered cover, no peak. Up to eight pieces
      * and sometimes fewer — `layOut` drops one that cannot stand clear of its
      * neighbours, which is deliberate (a bare patch beats a tree inside a rock).
      */
@@ -186,12 +186,12 @@ describe('the scaffolding follows the flow, not the first thing she picked', () 
     expect(r.unstaged).toEqual([going])
   })
 
-  it('keeps every sum she has already answered, and shows them', async () => {
+  it('keeps every sum the child has already answered, and shows them', async () => {
     /*
-     * `sumProgress` lives on the Flow rather than on the plot, which is what makes
-     * changing her mind free (retype.test.ts). The REBUILD must not throw that
-     * away visually either: nine sums in, the new scaffolding starts nine sums
-     * built, not from bare ground.
+     * `sumProgress` lives on the Flow rather than on the plot, which is what
+     * makes changing their mind free (retype.test.ts). The REBUILD must not
+     * throw that away visually either: nine sums in, the new scaffolding starts
+     * nine sums built, not from bare ground.
      */
     const r = rig()
     const host = createPlotHost(r.ports)
@@ -207,19 +207,19 @@ describe('the scaffolding follows the flow, not the first thing she picked', () 
 
     /*
      * One sum buys the second increment, and on a mountain plot the second
-     * increment IS the peak — so the mountain she has already paid for stands
-     * there in stone rather than as a golden promise she has to earn twice.
+     * increment IS the peak — so the mountain they have already paid for stands
+     * there in stone rather than as a golden promise they have to earn twice.
      */
     const peak = r.made.at(-1)
     expect(peak, 'the peak was asked for').toBeDefined()
-    expect(peak?.visible, 'the sum she already answered still counts').toBe(true)
+    expect(peak?.visible, 'the sum they already answered still counts').toBe(true)
   })
 
   it('does not churn: an unchanged flow keeps the very same scaffolding', async () => {
     /*
-     * `refresh()` runs on every tap. Rebuilding on any of them would restart the
-     * grow animation, re-fetch every model, and reset the build she is watching —
-     * so the comparison has to be an identity, not a redraw.
+     * `refresh()` runs on every tap. Rebuilding on any of them would restart
+     * the grow animation, re-fetch every model, and reset the build they are
+     * watching — so the comparison has to be an identity, not a redraw.
      */
     const r = rig()
     const host = createPlotHost(r.ports)
@@ -254,8 +254,8 @@ describe('the scaffolding follows the flow, not the first thing she picked', () 
  *
  * Same kind of test, and the same reason, as the `overlay.close()` sweep in
  * `retype.test.ts`: the fault this file was written for lived entirely in the
- * glue, where every unit behaved correctly and the sequence still showed her the
- * wrong tile.
+ * glue, where every unit behaved correctly and the sequence still showed the
+ * child the wrong tile.
  */
 describe('main.ts wires the host the only way that works', () => {
   const MAIN = resolve(here, '../../src/island/main.ts')
@@ -319,21 +319,21 @@ describe('the plot the ceremony needs is still there when the flow lets go', () 
 })
 
 /**
- * PB-048 — SHE WALKED AWAY FROM A TILE, AND CAME BACK TO SOMETHING ELSE.
+ * PB-048 — THEY WALKED AWAY FROM A TILE, AND CAME BACK TO SOMETHING ELSE.
  *
- * Joe, reporting it live: Juno taps an ANIMAL on her island, misses — `pickFrom`
- * answers with whatever IS under the ray, so a near-miss falls through to
- * `kind: 'tile'` — and is dropped straight back into building a tile she had
- * walked away from. `askForLand` RESUMED a standing plot, so any tap on her own
- * land carried on a build she had left.
+ * Joe, reporting it live: Juno taps an ANIMAL on their island, misses —
+ * `pickFrom` answers with whatever IS under the ray, so a near-miss falls
+ * through to `kind: 'tile'` — and is dropped straight back into building a tile
+ * they had walked away from. `askForLand` RESUMED a standing plot, so any tap
+ * on their own land carried on a build they had left.
  *
  * His ruling: *"if she abandons a tile, the progress towards reward is saved, the
  * location and type is not. so when she then taps another glowing tile to build
  * one, progress picks up but location and type is rechosen by her on entry."*
  *
- * A standing `flow.plot` while `phase === 'free'` IS the abandoned state: the sum
- * overlay stays open across every sum of a tile, so the only way she lands back on
- * the island mid-build is by leaving. So:
+ * A standing `flow.plot` while `phase === 'free'` IS the abandoned state: the
+ * sum overlay stays open across every sum of a tile, so the only way they land
+ * back on the island mid-build is by leaving. So:
  *
  *   - a tap on an animal or any tile is a CAMERA MOVE and nothing else;
  *   - a tap on the standing plot is unchanged (askToRetype, change-your-mind);
@@ -386,8 +386,8 @@ function partBuilt(): Flow {
 /**
  * Another glowing socket, somewhere else, that really does take water.
  *
- * Found rather than typed: the assertion below is that the new type is HER new
- * choice, so the socket has to be one where water is genuinely on offer —
+ * Found rather than typed: the assertion below is that the new type is THEIR
+ * new choice, so the socket has to be one where water is genuinely on offer —
  * otherwise `tileTypeFor` would answer grass and the test would pass on a plot
  * that had not changed kind at all.
  */
@@ -400,11 +400,11 @@ function elsewhere(f: Flow): Axial {
 }
 
 describe('abandoning a tile', () => {
-  it('a tap on her own land never resumes the build — the reported bug', () => {
+  it('a tap on their own land never resumes the build — the reported bug', () => {
     /*
-     * The miss, exactly as it reaches this layer. She aimed at an animal, the ray
-     * answered with the tile it was standing on, and she was handed a sum toward
-     * a tile she had walked away from.
+     * The miss, exactly as it reaches this layer. They aimed at an animal, the
+     * ray answered with the tile it was standing on, and they were handed a sum
+     * toward a tile they had walked away from.
      */
     const p = ports()
     const f = partBuilt()
@@ -423,19 +423,19 @@ describe('abandoning a tile', () => {
 
     const asked = handleWorldTap(f, { kind: 'socket', axial: B }, p)
     expect(asked.phase).toBe('placing')
-    expect(asked.pending, 'the new socket is the one she tapped').toEqual(B)
+    expect(asked.pending, 'the new socket is the one they tapped').toEqual(B)
     expect(asked.chosen, 'the type is asked again on entry').toBeNull()
-    expect(asked.sumProgress, 'nothing she has answered is spent').toBe(banked)
+    expect(asked.sumProgress, 'nothing they have answered is spent').toBe(banked)
     expect(p.say).toHaveBeenCalledWith(TILE_QUESTION)
     expect(p.openSum, 'a socket tap never opens a sum straight off').not.toHaveBeenCalled()
-    // The offer really contains the button she is about to press, so the
+    // The offer really contains the button they are about to press, so the
     // assertion below cannot pass against an empty offer.
     expect(tileOffer(asked)).toContain('water')
 
     const built = chooseTile(asked, 'water')
     expect(built.plot?.at, 'the old location is discarded').toEqual(B)
     expect(built.plot?.type, 'and so is the old type').toBe('water')
-    expect(built.sumProgress, 'the progress is hers — brief §19').toBe(banked)
+    expect(built.sumProgress, 'the progress is theirs — brief §19').toBe(banked)
     expect(built.phase).toBe('free')
   })
 
@@ -498,25 +498,25 @@ describe('abandoning a tile', () => {
     expect(p.openSum).not.toHaveBeenCalled()
   })
 
-  it('loses nothing at all when she walks out of a sum and starts again elsewhere', () => {
+  it('loses nothing at all when they walk out of a sum and start again elsewhere', () => {
     /*
-     * Brief §19, over the whole of what she owns. The walk-away is the REAL
-     * `challengeFailed` — the card is held, so she comes back to the same sum —
+     * Brief §19, over the whole of what they own. The walk-away is the REAL
+     * `challengeFailed` — the card is held, so they come back to the same sum —
      * and the restart is the real socket tap.
      */
     const f = partBuilt()
     const left = challengeFailed(tapSum({ ...f, phase: 'free' }))
     expect(left.phase).toBe('free')
-    expect(left.sumHeld, 'the card she left is held for her').toBe(true)
+    expect(left.sumHeld, 'the card they left is held for them').toBe(true)
 
     const B = elsewhere(left)
     const back = chooseTile(handleWorldTap(left, { kind: 'socket', axial: B }, ports()), 'water')
 
-    // She really did restart, at the new socket and on a new kind...
+    // They really did restart, at the new socket and on a new kind...
     expect(back.plot?.at).toEqual(B)
     expect(back.plot?.type).toBe('water')
     expect(back.phase).toBe('free')
-    // ...and not one thing she owns moved while she did it.
+    // ...and not one thing they own moved while they did it.
     expect(back.sumProgress).toBe(left.sumProgress)
     expect(back.island.tiles.size).toBe(left.island.tiles.size)
     expect(back.tilesEarned).toBe(left.tilesEarned)
@@ -524,6 +524,6 @@ describe('abandoning a tile', () => {
     expect(back.pets).toEqual(left.pets)
     expect(back.readProgress).toBe(left.readProgress)
     expect(back.eggPresent).toBe(true)
-    expect(back.sumHeld, 'and still held after she restarts').toBe(true)
+    expect(back.sumHeld, 'and still held after they restart').toBe(true)
   })
 })

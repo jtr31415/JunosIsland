@@ -35,8 +35,8 @@ push lands on her device with no release step in between.
 
 1. **`PB-042` — the governors' hard stop becomes a PRICE.** Joe's JT-012 ruling
    re-shapes it and the **build is explicitly held by him** until it is picked
-   up. Invitation first, she may override, and past the buffer the thing she is
-   over-buying gets progressively dearer — announced, never a silent tax.
+   up. Invitation first, they may override, and past the buffer the thing they
+   are over-buying gets progressively dearer — announced, never a silent tax.
    **Three numbers must be settled with Joe before any code**, and they are on
    the card: (1) his target of **one animal per two tiles** contradicts
    `balance.json`'s `tilesPerPet: 1.5`, which is his own earlier ruling and what
@@ -52,8 +52,8 @@ push lands on her device with no release step in between.
 3. **Run B** — automatic progression, context-specced in `pet-island-runA.md`.
    It inherits one hard constraint from JT-011: **it must not promote a path
    whose mode is Manual.**
-4. **`JT-007` is Joe's own and is now doable on the tablet** — gear → What she
-   is working on → Taking away → Manual → tick *to ten*. Nothing is blocked on
+4. **`JT-007` is Joe's own and is now doable on the tablet** — gear → What they
+   are working on → Taking away → Manual → tick *to ten*. Nothing is blocked on
    it; it is the QA department getting subtraction.
 
 ### What landed tonight
@@ -64,26 +64,26 @@ gates green on every commit; parity renders identically throughout.
 
 **`PB-039` — the other end of the balance is a ratio too.** Joe's own card. The
 floor was `1.5·pets − 3`, an absolute shortfall measured off the ceiling's
-target, so it converged on 1.5 tiles per pet from below: at ten pets she was
-pushed to maths the moment she dropped under twelve fields. It is now bound to
-the land she HAS — `petsHoused`, three animals per two tiles — which moves that
-wall from thirteen fields to seven at ten pets and keeps it near two-thirds
-however large the island grows. The ceiling is untouched, deliberately. The
-fault survived the matching fix at the other wall because the entire ratio
-property suite was written against a `ceiling()` helper and there was no
-`floor()`; there is now.
+target, so it converged on 1.5 tiles per pet from below: at ten pets the child
+was pushed to maths the moment they dropped under twelve fields. It is now
+bound to the land they HAVE — `petsHoused`, three animals per two tiles — which
+moves that wall from thirteen fields to seven at ten pets and keeps it near
+two-thirds however large the island grows. The ceiling is untouched,
+deliberately. The fault survived the matching fix at the other wall because the
+entire ratio property suite was written against a `ceiling()` helper and there
+was no `floor()`; there is now.
 
 **Every item of Run A is built: A1–A8.** The summary of the rest follows.
 
-- **A4 · A6 — the panel.** Grown-ups → **What she is working on**. Per path: a
+- **A4 · A6 — the panel.** Grown-ups → **What they are working on**. Per path: a
   mode switch (Auto · Manual · Hold), a tickbox per built stage, and the three
   measures — accuracy, speed, consistency — as filled dots with soft words
   (settling · steady · solid). The four reserved paths are greyed slots.
   `src/island/report.ts` computes the tiers and is pure, so the rules that
-  decide what a parent is told about his daughter are testable as rules.
+  decide what a parent is told about their child are testable as rules.
   Thresholds are in `balance.json`'s new `report` block, tunable without a
   diff.
-- **JT-007 IS READY TO DO.** The route is gear → What she is working on →
+- **JT-007 IS READY TO DO.** The route is gear → What they are working on →
   Taking away → **Manual** → tick *to ten*. That is the QA department getting
   subtraction, and nothing else is needed.
 - **A5 — the rest of persistence,** and two of its three items were faults.
@@ -96,7 +96,7 @@ property suite was written against a `ceiling()` helper and there was no
 - **Three honesty rules worth knowing before reading the panel.** It shows
   DASHES, not a tier, until 15 attempts / 10 early latencies / 3 sessions — a
   tier off four attempts is a statement about the sample. Speed is a MEDIAN
-  against her own early baseline, never a mean, because one four-minute
+  against their own early baseline, never a mean, because one four-minute
   butterfly makes a mean report a child who got faster as having got slower.
   And a tick does not appear until the write has landed.
 - **`JT-011` raised and ANSWERED the same evening.** Manual is a persistent
@@ -224,8 +224,8 @@ Two things the spec did not anticipate, both now handled:
   and five egg prices — the second tile would have gone from 3 sums to 4. `cost()`
   rounds to a whole item and then converts, which makes the doubling exact.
 - **Pre-A7 saves are migrated.** Progress is persisted, and it was written in the
-  old unit; read at face value she would have paid for the tile she was halfway
-  through a second time. `save.pay` records the scale; absent means pre-A7.
+  old unit; read at face value the child would have paid twice for the tile they
+  were halfway through. `save.pay` records the scale; absent means pre-A7.
 
 **A2–A6 are specced and not yet built.** The harness, the attempt model, the
 tickboxes, schema v3 and the grown-ups report interlock and do not split cleanly
@@ -268,7 +268,7 @@ Both branches that were waiting on Joe are in, ratified:
 ### Three things to know before touching this code
 
 1. **`overlay.close()` must always be preceded by `stageFor(null)`.** One site of
-   five was not, and it stranded her half-built tile on the hidden turntable —
+   five was not, and it stranded a half-built tile on the hidden turntable —
    which is why "change your mind" appeared broken (there was no plot on the
    island to tap). Guarded by a source assertion in `tests/island/retype.test.ts`.
 2. **Widening a value union is invisible to `tsc`.** Adding `'rock'` to
@@ -295,17 +295,17 @@ what is on Juno's tablet**, with no release step in between. Worth remembering
 before pushing anything half-finished.
 
 **Mountains shipped** (#14, which had been closed on only half its ask). A third
-button in the tile chooser once she has placed fifteen tiles of her own — the
-home hex does not count. Joe's rules: rock never sits beside water, water never
-beside rock; the button withholds itself where the rules would override it.
-Threshold is `balance.json`'s `{ type: 'rock', tiles: 15 }`. **979 tests.**
+button in the tile chooser once the child has placed fifteen tiles of their own
+— the home hex does not count. Joe's rules: rock never sits beside water, water
+never beside rock; the button withholds itself where the rules would override
+it. Threshold is `balance.json`'s `{ type: 'rock', tiles: 15 }`. **979 tests.**
 
 *The feature was easy; the third VALUE was not.* Every coastline rule was written
 when `TileType` had exactly two members, so it asks `=== 'grass'` and lets
 everything else mean water — right for two, silently wrong for three, and
 invisible to `tsc` because these compare values instead of switching
 exhaustively. Rock would have presented open sea to the coast mask and cut
-beaches through the middle of her island. Eight sites now route through
+beaches through the middle of the child's island. Eight sites now route through
 `isLand()`. **Read the note on `isLand` in `grid.ts` before adding a fourth
 type**; rock escaped needing new coast-table entries only because it can never
 touch water.
@@ -317,7 +317,7 @@ than on work:
 
 | branch | what | why it is waiting |
 |---|---|---|
-| `worktree-agent-aae322fb0f2816589` → `c7b0097` | the growable-witness backstop: an outward-corridor check that is genuinely inductive, where the one-ply witness rule was not | **needs Joe's ratification.** It reinstates a narrow socket refusal — the shape the project rejected before. It fires only where grass is infeasible *and* water would cut her last corridor (0.012% of taps at full wetness, 0% below) and provably cannot refuse her last way out, but a socket that stops glowing is product-visible. |
+| `worktree-agent-aae322fb0f2816589` → `c7b0097` | the growable-witness backstop: an outward-corridor check that is genuinely inductive, where the one-ply witness rule was not | **needs Joe's ratification.** It reinstates a narrow socket refusal — the shape the project rejected before. It fires only where grass is infeasible *and* water would cut the child's last corridor (0.012% of taps at full wetness, 0% below) and provably cannot refuse the child their last way out, but a socket that stops glowing is product-visible. |
 | `worktree-agent-a2a932c7076ce661b` → `b1f7656` | Fred suggests a stretch after three rough pages | Fable reviewed it and said **merge**. Deferred only because Joe ran out of usage, not because anything is wrong. |
 
 Both were cut from bases behind current `main`, so each needs a merge and a fresh
@@ -358,10 +358,10 @@ all six gates; **917 tests** at the time of writing, up from 739.
 |---|---|
 | Reading | word-build to word-find is now **3:1**, at Joe's request. Overrides slice-1 §3's "roughly 50/50". |
 | Typography | **the font was never loading.** `challenges.css` had named Andika since the port with nothing bundled and no `@font-face`, so every word Juno has ever read was Roboto — double-storey `a`, straight `l`, the two shapes she is not taught. Now Edu SA Beginner, bundled and precached. |
-| Camera | the pivot was pinned at the origin forever; it eases to the island's centroid and a tap on her own land turns the island about that tile. |
+| Camera | the pivot was pinned at the origin forever; it eases to the island's centroid and a tap on the child's own land turns the island about that tile. |
 | Hatch | the pet model is **warmed a whole egg ahead**. Measured cold: 569.9 ms → 0.2 ms. |
-| Species | a five-deep memory primed from `flow.pets`, so **her island is the memory** and a reload cannot hand her the same animal twice. |
-| Coast | a floor of dry connections so she cannot wall herself in. **An empirical margin, not a theorem** — see below. |
+| Species | a five-deep memory primed from `flow.pets`, so **the child's island is the memory** and a reload cannot hand them the same animal twice. |
+| Coast | a floor of dry connections so the child cannot wall themselves in. **An empirical margin, not a theorem** — see below. |
 | Challenge | a corner ×, and the same card comes back rather than re-rolling. |
 | Pets | tap target constant across zoom, `clearOf` converges, both random flakes dead. |
 | Scenery | shadows under the larger props, the signpost is solid, and **a regression of mine that had broken most of the island's scenery** is fixed. |
@@ -454,8 +454,8 @@ backup. Carded.
 
 Also unresolved and Joe's: **item 13 is blocked but sits inside the release.**
 Either v1 ships without adaptive difficulty — Fable argues it should, since
-today's fixed difficulty is the v0 behaviour she already plays — or the whole
-release inherits the block.
+today's fixed difficulty is the v0 behaviour the child already plays — or the
+whole release inherits the block.
 
 ---
 
@@ -540,8 +540,8 @@ tablet from it.
 3. **Enclosed ponds are no longer constructible**, and that is a gameplay change
    he should veto if it is wrong. Confining water to the 19 drawable
    neighbourhoods is what lets the water cell carry its whole beach, which is
-   what keeps her fields from being re-cut — but it means water grows as
-   coastline and never as a hole in the middle of her island.
+   what keeps the child's fields from being re-cut — but it means water grows as
+   coastline and never as a hole in the middle of the island.
 4. **Still unjudged by eye:** the rebuilt egg, one-tap tile siting, and the
    grown-ups PIN keypad and menu. Tested, never looked at.
 
@@ -577,7 +577,7 @@ buttons were up, because the CSS hides the say card while any overlay is open.
 
 **The coastline is settled by placement rather than patched by scoring**, which
 is what let Joe's "never a full land tile against a coast tile" hold without
-re-cutting land she has paid for. See the limits section for what it costs.
+re-cutting land the child has paid for. See the limits section for what it costs.
 
 ## What the last stretch changed
 
@@ -596,16 +596,16 @@ saves could claim the same revision, letting the older island win and losing a
 just-hatched pet *despite* the awaited receipt. Both fixed, both pinned.
 
 **Collision and clipping.** The egg was in nothing's obstacle list, so pets
-walked through the one object she is meant to walk up to and tap. It also
+walked through the one object the child is meant to walk up to and tap. It also
 "appeared" rather than arriving, because `arrive()` fired at boot while
 `placeEgg` waited on prop loading — so it flew in at the origin and teleported.
 Every keep-out radius was a guess and always low; all measured now, at walking
 height for pets and full footprint for scenery.
 
 Trees inside rocks took two goes: the first fix went into `props.ts`, but the
-tiles she BUILDS come through the growing plot, a second placement path with no
-overlap check at all. Eight hex-wide pieces cannot fit round one hex — that is
-arithmetic, not taste — so grown pieces have their own smaller size.
+tiles the child BUILDS come through the growing plot, a second placement path
+with no overlap check at all. Eight hex-wide pieces cannot fit round one hex —
+that is arithmetic, not taste — so grown pieces have their own smaller size.
 
 **The variant engine (items 5–6).** Colour is entirely a texture lookup, so a
 set is one recoloured atlas. Getting "which colour is the coat" right took
@@ -618,7 +618,7 @@ models' own UVs — over a colour REGION rather than a list.
 **Feel.** Tapping Fred restarted the intro mid-game; he greets like any pet now
 and the story replay moved behind the PIN. Tapping any grass started a maths
 round, which made looking round the island a minefield; land is asked for at a
-glowing socket, and the socket she taps is where the tile goes — one question
+glowing socket, and the socket the child taps is where the tile goes — one question
 and one tap fewer. The offer no longer shows grass twice.
 
 **The egg** is ten shell pieces that ease apart with every page and fall away at
@@ -638,7 +638,7 @@ buttons with their consequences, red buttons for the two irreversible things.
   both directions: grass that would break a neighbouring pond is refused too, and
   a socket that admits neither kind no longer glows. A played-island test builds
   120 islands through the real tap path and asserts not one bad joint. What it
-  costs is a pond in the middle of her fields, which cannot be made at all.
+  costs is a pond in the middle of the child's fields, which cannot be made at all.
 - **The ladder is 600 creatures, not ~1,000.** The twelve spotted sets are gone:
   every one of them rendered as stripes, and the atlas provably cannot express a
   spot (HANDOFF §6). Twenty-five sets across 24 species is 600. Item 7 has to

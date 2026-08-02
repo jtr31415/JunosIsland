@@ -42,8 +42,8 @@
  *
  * KNOWN LIMIT, so nobody reads a false alarm as a bug: a corner belongs to the
  * habitat only if one of its three hexes is land, so two land masses separated
- * by open sea read as two regions and the smaller one reads as sealed. Her
- * island only ever grows outward from what she already owns, so it is always
+ * by open sea read as two regions and the smaller one reads as sealed. Their
+ * island only ever grows outward from what they already own, so it is always
  * one mass — but a future world with archipelagos wants this widened.
  *
  * DETECTION, plus the one question a RECOVERY needs answering.
@@ -129,7 +129,7 @@ export function cornersOf(a: Axial): readonly string[] {
   return out
 }
 
-/** The land she owns, as coords. */
+/** The land they own, as coords. */
 function landOf(island: Island): Axial[] {
   const out: Axial[] = []
   for (const [k, t] of island.tiles) if (isLand(t)) out.push(parse(k))
@@ -187,8 +187,8 @@ export function walkableRegions(
   for (const [ka, a] of universe) {
     for (const b of neighbours(a)) {
       const kb = key(b)
-      // Each side once, and only where both hexes are near enough to her land
-      // to matter.
+      // Each side once, and only where both hexes are near enough to their
+      // land to matter.
       if (!universe.has(kb) || ka >= kb) continue
       /*
        * The two ends of this side are exactly the two corners the hexes share:
@@ -248,7 +248,7 @@ export function regionOf(
   return null
 }
 
-/** The land she can still reach from the island's main walkable region. */
+/** The land they can still reach from the island's main walkable region. */
 function reachableLand(
   island: Island, hexSize: number, keepOut: KeepOut, petRadius: number,
 ): Set<string> {
@@ -280,7 +280,7 @@ export function sealedHexes(
  * Would placing `t` at `a` strand any land hex that is reachable today?
  *
  * BEFORE against AFTER, and only ever in that direction: new land arriving is
- * not a seal, so this asks whether anything she can walk to now would stop
+ * not a seal, so this asks whether anything a pet can walk to now would stop
  * being walkable — not whether the count of regions went up. `place` returns a
  * new island rather than mutating, so the caller's island is untouched.
  */

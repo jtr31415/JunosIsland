@@ -75,10 +75,10 @@
    * The backdrop CATCHES taps while a round is open — and SWALLOWS them.
    *
    * It used to dismiss, and that is now the corner X's job alone: `.stage-slot`
-   * is deliberately `pointer-events: none`, so the vignette she is watching
-   * counted as backdrop and touching her own egg ended the page. Catching still
-   * matters, though: `none` would let taps fall through to the canvas and spin
-   * the camera under a live round.
+   * is deliberately `pointer-events: none`, so the vignette they are watching
+   * counted as backdrop and touching their own egg ended the page. Catching
+   * still matters, though: `none` would let taps fall through to the canvas
+   * and spin the camera under a live round.
    *
    * Only while open. Hidden, it must not swallow taps meant for the world.
    */
@@ -134,11 +134,11 @@
 /*
  * TWO EQUAL CHOICES, and this rule is the whole of that promise.
  *
- * A decline costs her nothing (runA.md:231), so "Not now" gets the same size,
+ * A decline costs them nothing (runA.md:231), so "Not now" gets the same size,
  * the same weight, the same radius and the same padding as "Yes please!" —
- * `.overlay-back`'s 75% opacity would say, without a word, that she has picked
- * the disappointing one. They differ in FILL only, which is what tells two
- * short phrases apart for a child who is still learning to read them.
+ * `.overlay-back`'s 75% opacity would say, without a word, that they have
+ * picked the disappointing one. They differ in FILL only, which is what tells
+ * two short phrases apart for a child who is still learning to read them.
  */
 .ask-offer-choice {
   flex: 1 1 9rem;
@@ -156,10 +156,10 @@
  * While a challenge is open the say card would collide with it — and so would
  * the album, which is not an `.overlay` and so was not covered.
  *
- * Fable caught this reviewing the pop-out: with a friend on screen, "Tap the egg
- * to read it home" sat behind her, competing with the card's own name and
- * species. It was always true of the album grid; blur and opaque paper hid it,
- * and a transparent pop-out does not.
+ * Fable caught this reviewing the pop-out: with a friend on screen, "Tap the
+ * egg to read it home" sat behind the friend, competing with the card's own
+ * name and species. It was always true of the album grid; blur and opaque
+ * paper hid it, and a transparent pop-out does not.
  *
  * Safe against the mirror this selector is warned about in HANDOFF §6 — closing
  * a panel REVEALS whatever copy was set behind it — because the album sets no
@@ -174,7 +174,7 @@ body:has(.album-pop:not(.hide)) .say { display: none; }
  * ...and so would the album button, which sits in exactly the corner the way
  * out now occupies. Two round buttons stacked in one corner is ambiguous at
  * best; worse, the one underneath opens a full-screen panel over a live round.
- * Her friends are not going anywhere — the corner belongs to the X until the
+ * Their friends are not going anywhere — the corner belongs to the X until the
  * page is finished.
  */
 body:has(.overlay:not(.hide)) .album-button { display: none; }
@@ -268,14 +268,14 @@ body:has(.overlay:not(.hide)) .album-button { display: none; }
 }
 
 /*
- * The minus sign, the first time she is ever dealt one (runA.md:236).
+ * The minus sign, the first time they are ever dealt one (runA.md:236).
  *
  * `hatch-pop`'s shape without `hatch-pop`'s transform: that one is written for
  * a fixed, centred card and carries `translate(-50%, -50%)` in both keyframes,
  * so borrowing it would fling the glyph out of the sum. One shot, `both`, and
  * nothing to clear afterwards — the round is mounted fresh every time, so the
  * class arrives with the element and leaves with it. It is decoration only:
- * the pad is live throughout and she can answer straight through the pop.
+ * the pad is live throughout and they can answer straight through the pop.
  */
 .op-debut { animation: op-debut-pop .55s var(--ease-pop) both; }
 
@@ -362,8 +362,8 @@ body:has(.overlay:not(.hide)) .album-button { display: none; }
 
 /*
  * A turn that would go nowhere is DIMMED, not hidden. A control that vanishes
- * moves the one beside it, so the forward arrow would slide under her finger
- * the moment she reached the last page.
+ * moves the one beside it, so the forward arrow would slide under their finger
+ * the moment they reached the last page.
  */
 .album-page-turn:disabled {
   opacity: .3;
@@ -432,7 +432,7 @@ body:has(.overlay:not(.hide)) .album-button { display: none; }
   cursor: pointer;
 }
 
-/* ---- a friend she has not met: a shape, and nothing to tap ---- */
+/* ---- a friend they have not met: a shape, and nothing to tap ---- */
 
 .album-blank {
   background: #eef1ea;
@@ -443,7 +443,7 @@ body:has(.overlay:not(.hide)) .album-button { display: none; }
 
 .album-silhouette {
   /*
-   * Blackened in CSS rather than re-rendered in black, so the day she finds this
+   * Blackened in CSS rather than re-rendered in black, so the day they find this
    * animal the picture is already cached and the slot swaps a filter rather than
    * fetching anything. Not fully opaque: a solid black cut-out reads as a hole
    * punched in the page, and this is meant to read as a promise.
@@ -486,10 +486,10 @@ body:has(.overlay:not(.hide)) .album-button { display: none; }
  *
  * The friend is drawn by the world's own renderer into the canvas, which is
  * BEHIND every piece of DOM on the page — so anything painted here is painted
- * over her. `.album` has both an opaque paper card and a 3px blur, which is why
- * the grid steps aside while this is up (see album.ts `popOpen`) rather than
- * sitting behind it. What belongs behind the friend is her island, and the island
- * is already being drawn there.
+ * over the friend. `.album` has both an opaque paper card and a 3px blur,
+ * which is why the grid steps aside while this is up (see album.ts `popOpen`)
+ * rather than sitting behind it. What belongs behind the friend is the child's
+ * island, and the island is already being drawn there.
  *
  * Same reasoning, and the same result, as `.stage-slot` and the hatch's
  * transparent container.
@@ -513,7 +513,7 @@ body:has(.overlay:not(.hide)) .album-button { display: none; }
   width: min(96vw, 66rem);
   height: min(84vh, 34rem);
   display: grid;
-  /* The friend gets the larger half: she is the reason the card opened. */
+  /* The friend gets the larger half: it is the reason the card opened. */
   grid-template-columns: 1.35fr 1fr;
   gap: 2vw;
   align-items: center;
@@ -543,7 +543,7 @@ body:has(.overlay:not(.hide)) .album-button { display: none; }
  * Item 7 gives a pet a `{setId, speciesId}` and this card starts reading "Cherry
  * — Fox", so the third fact is coming. Two facts centred in the panel would move
  * both of them down the day the colour arrives; top-aligned against a reserved
- * row, nothing shifts and the name stays exactly where her eye has learned it is.
+ * row, nothing shifts and the name stays exactly where their eye learned it is.
  */
 .album-facts {
   display: grid;
@@ -555,11 +555,11 @@ body:has(.overlay:not(.hide)) .album-button { display: none; }
 }
 
 /*
- * Declared rather than inherited. These are WORDS SHE READS, so the literacy
+ * Declared rather than inherited. These are WORDS THEY READ, so the literacy
  * stack is part of the content: 'Edu SA Beginner' gives the closed-loop `a` and
  * the hooked `l` Joe asked for, and Andika behind it is SIL's literacy face.
  * index.html sets the same stack on `body`, but a species name must not be one
- * refactor away from Roboto — which is exactly how every word she read was
+ * refactor away from Roboto — which is exactly how every word they read was
  * rendered for the first two phases.
  */
 .album-fact {
@@ -624,7 +624,7 @@ body:has(.overlay:not(.hide)) .album-button { display: none; }
   padding: 0;
 }
 
-/* Portrait, or anything narrow: the friend on top, her words underneath. */
+/* Portrait, or anything narrow: the friend on top, its words underneath. */
 @media (orientation: portrait), (max-width: 44rem) {
   .album-pop-card {
     grid-template-columns: 1fr;
@@ -831,7 +831,7 @@ body:has(.overlay:not(.hide)) .album-button { display: none; }
   opacity: .8;
 }
 
-/* ------------------------------------- what she is working on (A4 / A6) ---
+/* ----------------------------------- what they are working on (A4 / A6) ---
  *
  * The one panel here that is READ rather than answered: a mode switch, a
  * tickbox list and three measures per stage. So it is wider than the keypad,

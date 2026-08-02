@@ -51,7 +51,7 @@ const ringHex = (i: number): Axial => {
  * The island `walk.test.ts` builds for PB-052, reused verbatim.
  *
  * A grass island with a NOTCH in it: everything at two and three steps out,
- * plus the grass origin. The six hexes at one step are left as open sockets she
+ * plus the grass origin. The six hexes at one step are left as open sockets they
  * can tap, and the thirty tiles behind them are what unlocks rock.
  */
 function notchedIsland(): Island {
@@ -87,13 +87,13 @@ describe('sealsAPet: the six-rock trap, asked through the flow', () => {
     const five = flowOn(ringRocks(5))
     const four = flowOn(ringRocks(4))
 
-    // Thirty tiles behind the sockets: this is a girl who really can build rock.
+    // Thirty tiles behind the sockets: this is a child who really can build rock.
     expect(rockUnlocked(five)).toBe(true)
 
     /*
      * THE SEAL CLOSES ON THE LAST ONE. Five mountains leave one side of the
      * middle hex open, so a pet of radius zero still walks out; the sixth is the
-     * tap that strands her. Asserting both directions is what makes this a test
+     * tap that strands it. Asserting both directions is what makes this a test
      * of the QUESTION rather than of a coincidence — a `sealsAPet` that answered
      * true for every rock would pass the first line and fail the second.
      */
@@ -171,7 +171,7 @@ class MemStorage implements Storage {
 let mem: MemStorage
 beforeEach(() => { mem = new MemStorage() })
 
-/** The notched island with all six mountains up: PB-052 as she would leave it. */
+/** The notched island with all six mountains up: PB-052 as they would leave it. */
 const sealedFlow = (): Flow => flowOn(ringRocks(6))
 
 describe('a sealed island survives a save — brief §19', () => {
@@ -416,10 +416,10 @@ describe('PB-052 hazard: a new pet can hatch inside a sealed pocket', () => {
 
     const pet = f.pets[0]!
     const trapped = sealedLand(f).map(key)
-    // SHE IS IN THE POCKET. Hatched by the game, onto land she cannot leave.
+    // IT IS IN THE POCKET. Hatched by the game, onto land it cannot leave.
     expect(trapped).toContain(key(pet.at))
     expect(key(pet.at)).toBe('0,0')
-    // And no wider a pet than a fox helps: the pocket is shut for her too.
+    // And no wider a pet than a fox helps: the pocket is shut for it too.
     expect(sealedLand(f, WIDEST_PET).map(key)).toContain(key(pet.at))
   })
 })

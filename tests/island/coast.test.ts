@@ -190,7 +190,7 @@ describe('the coast models, measured from the assets', () => {
      * water arc up with the sea was wrong. The ramp spills onto the edges
      * either side of the water, so a model with two water edges has only two
      * edges left at full land height — and if the water is aimed at the sea,
-     * those sand shoulders are aimed at her fields.
+     * those sand shoulders are aimed at the child's fields.
      */
     for (const v of COAST_VARIANTS) {
       const edges = COAST_EDGES[v]
@@ -295,12 +295,12 @@ describe('waterMask — asked of the WATER', () => {
 })
 
 describe('lookFor', () => {
-  it('NEVER re-cuts land — a field she owns keeps its shape', () => {
+  it('NEVER re-cuts land — a field they own keeps its shape', () => {
     /*
      * The complaint that prompted this. Digging a pond used to reach into the
      * neighbouring field and carve a third of it away into sand and sea,
-     * changing land she had already paid for — and leaving a visible step
-     * where the sand ran out and the water hex began.
+     * changing land the child had already paid for — and leaving a visible
+     * step where the sand ran out and the water hex began.
      */
     const i = place(blob(), { q: 2, r: 0 }, 'water')
     for (const [k, type] of i.tiles) {
@@ -311,7 +311,7 @@ describe('lookFor', () => {
     }
   })
 
-  it('gives the POND the beach, turned to face her fields', () => {
+  it('gives the POND the beach, turned to face the child\'s fields', () => {
     // Two tiles: home rock and a pond beside it. The pond meets land on one
     // side and open water on five, so it takes a model with a five-wide
     // water arc... which does not exist, so it stays plain. The three-tile
@@ -329,9 +329,9 @@ describe('lookFor', () => {
      *
      * This used to draw as plain water: six green edges each dropping 0.2
      * straight into the sea. It now spends the widest land arc there is, so
-     * five of the six edges meet her fields at grass height or on the sand
-     * ramp, and only one is left as a step. It reads as a pond, which is what
-     * she dug.
+     * five of the six edges meet the child's fields at grass height or on the
+     * sand ramp, and only one is left as a step. It reads as a pond, which is
+     * what they dug.
      */
     const i = pondInLand()
     const look = lookFor(i, DIRECTIONS[0] as Axial)
@@ -395,9 +395,9 @@ describe("Joe's rule: green, then sand, then water", () => {
      * water. Never a tile edge of A against the sand or water of B."
      *
      * A green edge meeting water skips the sand entirely — a 0.2 cliff where
-     * there should be a beach. Across all sixty-four ways her fields can sit
-     * around a pond, that must not happen once, with the single exception
-     * below that no model in the pack can serve.
+     * there should be a beach. Across all sixty-four ways the child's fields
+     * can sit around a pond, that must not happen once, with the single
+     * exception below that no model in the pack can serve.
      */
     for (let mask = 0; mask < 63; mask++) {
       const shown = presented(mask)
@@ -408,7 +408,7 @@ describe("Joe's rule: green, then sand, then water", () => {
     }
   })
 
-  it('is flush against her fields wherever a model can be', () => {
+  it('is flush against the child\'s fields wherever a model can be', () => {
     /*
      * A run of one, two or three grass neighbours is an ordinary piece of
      * coastline, and the pack has a land arc for each. Those edges must be at
@@ -435,8 +435,8 @@ describe("Joe's rule: green, then sand, then water", () => {
   it('spends sand on the sea side rather than the green side', () => {
     /*
      * Where a lip is unavoidable the scorer must put it in the water, not
-     * against her fields. Counted across every configuration: the old rule
-     * (align the water arc to the sea) left 112 sand edges and 12 cliffs
+     * against the child's fields. Counted across every configuration: the old
+     * rule (align the water arc to the sea) left 112 sand edges and 12 cliffs
      * facing grass; this leaves 57 and 1.
      */
     let lips = 0, cliffs = 0
@@ -460,7 +460,7 @@ describe('the rotation convention, against the real matrix', () => {
      * `presentedBy` and every test helper above read the model with the SAME
      * expression, `(k - turns + 6) % 6`. Flip that sign in both and all of
      * them still pass while every coast hex in the game renders back to
-     * front — water arcs pointing inland at her fields. That is the
+     * front — water arcs pointing inland at the child's fields. That is the
      * mock-agreeing-with-the-mock failure this project has already paid for
      * four times over.
      *
@@ -516,8 +516,8 @@ describe('water meeting water', () => {
      * three in a row. Scoring each tile against the ASSUMPTION that every wet
      * neighbour is open water made the middle tile present grass-height land
      * at the very edge where its neighbour presented water — a 0.2 cliff
-     * between two tiles she dug as water, and lopsided, because the pond's
-     * other joint came out clean.
+     * between two tiles the child dug as water, and lopsided, because the
+     * pond's other joint came out clean.
      */
     for (let length = 2; length <= 5; length++) {
       const island = channel(length)
@@ -555,16 +555,16 @@ describe('no green walls in the water', () => {
    *
    * The cost of a mismatch used to be derived from the size of the height step,
    * which made the two directions symmetric when they are not — a green wall
-   * rising out of the sea cost 4 while a sandy lip against her fields cost 10,
+   * rising out of the sea cost 4 while a sandy lip against their fields cost 10,
    * so on a jagged coast the scorer shoved land into the water to keep the
    * grass edges perfect. Fable's review predicted exactly this and I recorded
    * it as an accepted trade rather than fixing it, which was the wrong call.
    *
    * The costs are a table now and a wall costs 40. It cannot be pushed higher:
    * measured across all sixty-four configurations, raising it to 100 cuts walls
-   * from 37 to 11 but takes CLIFFS — open water against her grass, the worst
-   * outcome there is — from 1 to 24, because plain water starts winning. Walls
-   * and cliffs trade against each other and cliffs matter more.
+   * from 37 to 11 but takes CLIFFS — open water against the child's grass, the
+   * worst outcome there is — from 1 to 24, because plain water starts winning.
+   * Walls and cliffs trade against each other and cliffs matter more.
    */
   const ponds: Record<string, Axial[]> = {
     'a blob of seven': [{ q: 0, r: 0 }, ...neighbours({ q: 0, r: 0 })],
@@ -584,7 +584,7 @@ describe('no green walls in the water', () => {
     return { tiles }
   }
 
-  /** Land standing against open water, and water standing against her grass. */
+  /** Land standing against open water, and water standing against the grass. */
   function faults(island: Island): { walls: number; cliffs: number } {
     const looks = looksFor(island)
     let walls = 0, cliffs = 0
@@ -605,7 +605,7 @@ describe('no green walls in the water', () => {
   }
 
   it('puts no land in the middle of an ordinary pond', () => {
-    // The shapes a child actually digs: a blob, and a lake she has widened.
+    // The shapes a child actually digs: a blob, and a lake they have widened.
     for (const [name, shape] of Object.entries(ponds)) {
       expect(faults(withPond(shape)), name).toEqual({ walls: 0, cliffs: 0 })
     }
@@ -630,9 +630,9 @@ describe('no green walls in the water', () => {
     }
   })
 
-  it('still keeps her grass edges green wherever a model allows', () => {
+  it('still keeps the child\'s grass edges green wherever a model allows', () => {
     // The other half: fixing the walls must not simply trade them for lips
-    // against her fields.
+    // against the child's fields.
     for (let start = 0; start < 6; start++) {
       for (let length = 1; length <= 3; length++) {
         let mask = 0
@@ -655,10 +655,10 @@ describe('no green walls in the water', () => {
  * beach hitting a full land tile, right?"*
  *
  * Right — and the way it is achieved is by restricting PLACEMENT rather than by
- * cutting her fields. So these tests do not construct islands; they BUILD them,
- * only ever through the rules the game applies to a tap, and then assert that no
- * bad joint exists anywhere. That is the difference between testing the scorer
- * and testing the promise.
+ * cutting the child's fields. So these tests do not construct islands; they
+ * BUILD them, only ever through the rules the game applies to a tap, and then
+ * assert that no bad joint exists anywhere. That is the difference between
+ * testing the scorer and testing the promise.
  */
 describe('an island built only through the placement rules', () => {
   /** Every clean joint rule, over a whole island, counted. */
@@ -695,15 +695,15 @@ describe('an island built only through the placement rules', () => {
    * Play the game: repeatedly pick a socket and a kind, and let the rules decide
    * what actually lands there. A seeded generator, so a failure is reproducible.
    *
-   * Returns the whole FLOW, not just the island, so a caller can ask questions of
-   * the game state — "could she still put a field down?" is a question about the
-   * placement rules, not about a tile map, and answering it from a map alone is
-   * exactly the shortcut that let three coast faults through.
+   * Returns the whole FLOW, not just the island, so a caller can ask questions
+   * of the game state — "could they still put a field down?" is a question
+   * about the placement rules, not about a tile map, and answering it from a
+   * map alone is exactly the shortcut that let three coast faults through.
    *
    * `watch` is called with the flow before the first tile and after every one, so
    * an invariant can be checked at every state the child would actually see
-   * rather than only at the end. `choose` is how she picks a socket, so a test can
-   * play a deliberate strategy rather than a random walk.
+   * rather than only at the end. `choose` is how they pick a socket, so a test
+   * can play a deliberate strategy rather than a random walk.
    */
   interface Strategy {
     watch?: (f: Flow, step: number) => void
@@ -712,12 +712,12 @@ describe('an island built only through the placement rules', () => {
      * Take the OPENING SCRIPT's path instead of a tap's: pick the kind with no
      * socket in hand, then site it.
      *
-     * Fred asks for land on her behalf and has nowhere in mind, so nothing
-     * filters the choice and `tileTypeFor` is the only thing standing between
-     * what was picked and what lands. Which is exactly why the rules live there
-     * and not in the offer — and a test that only ever goes through the offer
-     * cannot tell the difference, because the offer would have removed the button
-     * before the choke point was ever asked.
+     * Fred asks for land on the child's behalf and has nowhere in mind, so
+     * nothing filters the choice and `tileTypeFor` is the only thing standing
+     * between what was picked and what lands. Which is exactly why the rules
+     * live there and not in the offer — and a test that only ever goes through
+     * the offer cannot tell the difference, because the offer would have removed
+     * the button before the choke point was ever asked.
      */
     viaScript?: boolean
   }
@@ -803,16 +803,16 @@ describe('an island built only through the placement rules', () => {
   }, 30_000)
 
   /**
-   * Are her FIELDS walled off from themselves — can the island she has still grow?
+   * Are the child's FIELDS walled off from themselves — can their island still grow?
    *
    * Not "can a tile go somewhere", and the difference is the whole fault. Once a
-   * ring of ponds closes round her land, tiles can still be placed all day, and
-   * grass comes back too once the lake is a ring wider and there is a pond tile
-   * with no green edge yet — but it comes back ACROSS THE WATER. Her island is
-   * walled in permanently, because the ring tiles keep the green edge they have
-   * and any field outside would give them a second on the far side.
+   * ring of ponds closes round the child's land, tiles can still be placed all
+   * day, and grass comes back too once the lake is a ring wider and there is a
+   * pond tile with no green edge yet — but it comes back ACROSS THE WATER. The
+   * island is walled in permanently, because the ring tiles keep the green edge
+   * they have and any field outside would give them a second on the far side.
    *
-   * So the question is asked only of sockets that touch her fields, and it is
+   * So the question is asked only of sockets that touch their fields, and it is
    * asked through the choke point a tap goes through, because "grass is allowed
    * here" and "grass is what would actually land here" are different questions —
    * `mustBeWater` can override a socket `canBeGrass` was perfectly happy with.
@@ -823,18 +823,18 @@ describe('an island built only through the placement rules', () => {
         && tileTypeFor(f, s, 'grass') === 'grass')
 
   /**
-   * A child who only ever wants water, and only ever puts it against her island.
+   * A child who only ever wants water, and only puts it against their island.
    *
    * Joe, from playtesting: *"kids cant snooker their islands by surrounding it
    * with just water"*. This is that child. Picking sockets at random wanders out
-   * to sea, where water is free and nothing is ever at stake; hugging her fields
-   * is what actually rings the island, so the strategy prefers a socket touching
-   * her grass and only falls back to the open sea when there is none.
+   * to sea, where water is free and nothing is ever at stake; hugging their
+   * fields is what actually rings the island, so the strategy prefers a socket
+   * touching their grass, falling back to the open sea only when there is none.
    *
    * It matters that this is a STRATEGY and not more seeds. The random walk never
    * once walled an island in, at any wetness, over hundreds of seeds — the fault
    * Joe found in ten minutes of a six-year-old playing needs a player who wants
-   * water and wants it next to her island, which is what a six-year-old is.
+   * water and wants it next to their island, which is what a six-year-old is.
    */
   const hugTheLand: Strategy['choose'] = (open, f, rnd) => {
     const touching = open.filter(s =>
@@ -844,12 +844,12 @@ describe('an island built only through the placement rules', () => {
   }
 
   /**
-   * ...and a child playing to WIN at walling herself in.
+   * ...and a child playing to WIN at walling themselves in.
    *
    * Not a child, obviously. It is here because the floor is a number, and a
    * number is only as good as the worst player who meets it: this one taps
-   * whichever socket leaves her the fewest ways out, so the floor is held at its
-   * line for the whole game instead of drifting comfortably above it.
+   * whichever socket leaves them the fewest ways out, so the floor is held at
+   * its line for the whole game instead of drifting comfortably above it.
    */
   const worstCase: Strategy['choose'] = (open, f) => {
     let best = open[0] as Axial
@@ -883,18 +883,18 @@ describe('an island built only through the placement rules', () => {
     return best
   }
 
-  it('never walls her island in, however much water she asks for', () => {
+  it('never walls their island in, however much water they ask for', () => {
     /*
      * THE property, and it is deliberately stronger than the rule that satisfies
      * it: it counts nothing and knows nothing about dry sockets, it only says
-     * that at no point in a played island are her fields sealed off from every
-     * place they could grow. She can reach that state unaided and there is no
-     * undo, which is what makes it worth a floor rather than a nudge.
+     * that at no point in a played island are the child's fields sealed off from
+     * every place they could grow. They can reach that state unaided and there is
+     * no undo, which is what makes it worth a floor rather than a nudge.
      *
      * It fails without the floor at seed 1, in six taps: the home hex ringed by
-     * ponds, and nothing green can ever touch her land again. It also fails with
-     * the floor set to Joe's two rather than three, at seed 160 — which is the
-     * whole reason the seed range runs this far, and the reason this plays a
+     * ponds, and nothing green can ever touch their land again. It also fails
+     * with the floor set to Joe's two rather than three, at seed 160 — which is
+     * the whole reason the seed range runs this far, and the reason this plays a
      * strategy rather than trusting `LAND_FLOOR` to be a sensible-looking number.
      */
     /*
@@ -902,7 +902,7 @@ describe('an island built only through the placement rules', () => {
      * socket on every tap, so it buys far less coverage per second, and what it
      * is for is the shape of the play rather than the breadth of it.
      */
-    for (const [name, choose, seeds] of [['hugging her coast', hugTheLand, 170],
+    for (const [name, choose, seeds] of [['hugging the coast', hugTheLand, 170],
       ['playing to lose', worstCase, 25]] as const) {
       for (let seed = 1; seed <= seeds; seed++) {
         play(45, seed, 1, {
@@ -949,15 +949,15 @@ describe('an island built only through the placement rules', () => {
     }
   }, 30_000)
 
-  it('always leaves her a socket to tap — the floor never glows nothing', () => {
+  it('always leaves them a socket to tap — the floor never glows nothing', () => {
     /*
      * The other way to stop the game, and the one a floor is most likely to cause
      * by accident: refuse enough and nothing glows at all, which is every bit as
      * final as a moat and rather more baffling. This is here because the floor WAS
      * once written into `buildableSockets` and did exactly that — it refused the
-     * last socket her island could have grown from, turning "walled in after one
-     * more field" into "walled in now". Nothing invents a fallback, so this has to
-     * hold on its own.
+     * last socket their island could have grown from, turning "walled in after
+     * one more field" into "walled in now". Nothing invents a fallback, so this
+     * has to hold on its own.
      */
     for (const choose of [hugTheLand, undefined]) {
       for (let seed = 1; seed <= 24; seed++) {
@@ -972,20 +972,20 @@ describe('an island built only through the placement rules', () => {
     }
   }, 30_000)
 
-  it('leaves a socket she can GROW from glowing, not merely a socket', () => {
+  it('leaves a socket they can GROW from glowing, not merely a socket', () => {
     /*
      * The stronger form, and the one that says the guarantee is not vacuous.
      * `buildableSockets` refusing a socket is now possible — narrowly, where grass
      * is infeasible and water would cut the last corridor — and a guard that
-     * refused her last way out while leaving her a shore across the lake to build
-     * on would satisfy the test above perfectly and still have ended her island.
+     * refused their last way out while leaving a shore across the lake to build on
+     * would satisfy the test above perfectly and still have ended their island.
      *
-     * So this asks for a glowing socket that is BESIDE HER FIELDS and where grass
-     * is what would land. That is `coast.isGrowableWitness`, and the proof that one
-     * always glows is in `hasOutwardCorridor`: the mouth of the corridor is
-     * dry-empty, so nothing can refuse it.
+     * So this asks for a glowing socket that is BESIDE THEIR FIELDS and where
+     * grass is what would land. That is `coast.isGrowableWitness`, and the proof
+     * that one always glows is in `hasOutwardCorridor`: the mouth of the corridor
+     * is dry-empty, so nothing can refuse it.
      */
-    for (const [name, choose] of [['hugging her coast', hugTheLand],
+    for (const [name, choose] of [['hugging the coast', hugTheLand],
       ['hunting the corridor', corridorKiller]] as const) {
       for (let seed = 1; seed <= 12; seed++) {
         play(45, seed, 1, {
@@ -1004,7 +1004,7 @@ describe('an island built only through the placement rules', () => {
   it('keeps the outward corridor against a player hunting for it', () => {
     /*
      * The invariant itself, under the one strategy built to break it. The
-     * counterexample that defeated the floor is a water ring closing round her
+     * counterexample that defeated the floor is a water ring closing round their
      * fields; this plays that shape deliberately, at every tap, and the corridor is
      * what stops it — so if this ever goes red the guarantee has gone, whatever the
      * other tests say.
@@ -1013,7 +1013,7 @@ describe('an island built only through the placement rules', () => {
      * socket against a fresh flood fill is dear, and what this is for is the shape
      * of the attack rather than the breadth of it. The broad sweep is a search
      * harness rather than a gate — 120 greedy anti-play games and a beam search over
-     * some quarter of a million islands, none of which sealed her in.
+     * some quarter of a million islands, none of which sealed the child in.
      */
     for (const seed of [1, 7, 13, 29, 160]) {
       play(45, seed, 1, {
@@ -1027,7 +1027,7 @@ describe('an island built only through the placement rules', () => {
     }
   }, 30_000)
 
-  it('never shows her a button that does something else', () => {
+  it('never shows them a button that does something else', () => {
     /*
      * The offer and the outcome are now derived from one function, so this is a
      * property rather than a habit — but it is the property the whole one-button
@@ -1051,8 +1051,8 @@ describe('an island built only through the placement rules', () => {
 
   /* ------------------------------------------- the floor, close up */
 
-  it('counts the ways out of her fields the way Joe described them', () => {
-    // "land connections without water neighbours" — touching her grass, and no
+  it('counts the ways out of their fields the way Joe described them', () => {
+    // "land connections without water neighbours" — touching their grass, and no
     // pond in their own six. Fred's lonely rock has all six of them.
     expect(dryLandSockets(createIsland())).toHaveLength(6)
 
@@ -1068,9 +1068,9 @@ describe('an island built only through the placement rules', () => {
 
   it('reckons the same way out counts however it is arrived at', () => {
     /*
-     * `dryAfter` works the count out from the one she has rather than deriving it
-     * over a copy of the island, which is the only reason it is cheap enough to
-     * ask of every socket. So it has to agree with the slow way, everywhere.
+     * `dryAfter` works the count out from the one they have rather than deriving
+     * it over a copy of the island, which is the only reason it is cheap enough
+     * to ask of every socket. So it has to agree with the slow way, everywhere.
      */
     for (const seed of [3, 11, 19, 23]) {
       const island = build(30, seed, 0.6)
@@ -1098,11 +1098,11 @@ describe('an island built only through the placement rules', () => {
     }
   })
 
-  it('leaves water out at sea alone — the floor only guards her coast', () => {
+  it('leaves water out at sea alone — the floor only guards their coast', () => {
     /*
      * A floor that turned every pond into a field would pass the property test
-     * perfectly and ruin the game. Water that touches none of her ways out costs
-     * her nothing, so it is never turned back, however tight the island is.
+     * perfectly and ruin the game. Water that touches none of their ways out
+     * costs them nothing, so it is never turned back, however tight the island is.
      */
     let island = createIsland()
     // A finger of land, and a pond off the end of it with open sea beyond.
@@ -1137,7 +1137,7 @@ describe('an island built only through the placement rules', () => {
           /*
            * NO WATER — which is the invariant, rather than "exactly one button".
            * Rock arrived after this test and is dry land too: it cannot have water
-           * beside it, so it creates ways out of her fields exactly as a field
+           * beside it, so it creates ways out of their fields exactly as a field
            * does and satisfies the floor on its own terms. So where land is
            * forced, a mountain button is honest, and the loop above has already
            * proved every button lands as itself.
@@ -1156,14 +1156,14 @@ describe('an island built only through the placement rules', () => {
      * The two forcings do collide, and this is a real state of a real played
      * island — found by playing them, not composed, because the shape is not one
      * anybody would think to write down: twenty-eight tiles, and a socket out
-     * beyond her fields with two of her ponds beside it and none of her grass, so
-     * `mustBeWater` fires; and water there would take her below the floor, so the
-     * floor fires too.
+     * beyond their fields with two of their ponds beside it and none of their
+     * grass, so `mustBeWater` fires; and water there would take them below the
+     * floor, so the floor fires too.
      *
-     * The floor wins. A green plug in a channel is a wart she can look at; a wall
-     * round her island is the end of building it, and there is no undo. Ordered
-     * the other way the floor would be silent for exactly the taps that close
-     * water round her land, which are the only ones it exists for.
+     * The floor wins. A green plug in a channel is a wart they can look at; a
+     * wall round their island is the end of building it, and there is no undo.
+     * Ordered the other way the floor would be silent for exactly the taps that
+     * close water round their land, which are the only ones it exists for.
      */
     const island: Island = {
       tiles: new Map<string, TileType>(('0,0=grass 1,-1=water 2,-2=water -1,1=grass '
@@ -1175,10 +1175,10 @@ describe('an island built only through the placement rules', () => {
     }
     const contested: Axial = { q: 3, r: -2 }
 
-    // It really is the plug case: two of her ponds round it, and not one field.
+    // It really is the plug case: two of their ponds round it, and not one field.
     expect(mustBeWater(island, contested)).toBe(true)
     expect(canBeWater(island, contested)).toBe(true)
-    // ...and it really would take her below the floor.
+    // ...and it really would take them below the floor.
     expect(mustBeLand(island, contested)).toBe(true)
     expect(dryAfter(island, contested, 'water')).toBeLessThan(LAND_FLOOR)
 
@@ -1189,10 +1189,10 @@ describe('an island built only through the placement rules', () => {
 
   it('is stated as a look-ahead because the count steps over the line', () => {
     /*
-     * Why the rule asks "would this tile take her below the line" rather than "is
-     * she below it already". One pond can cost her three ways out at once, so the
-     * count does not fall THROUGH the line on its way down, it jumps clean past
-     * it — and a rule that waited for the line to be reached would never fire.
+     * Why the rule asks "would this tile take them below the line" rather than
+     * "are they below it already". One pond can cost them three ways out at once,
+     * so the count does not fall THROUGH the line on its way down, it jumps clean
+     * past it — and a rule that waited for the line to be reached would never fire.
      */
     const island = createIsland()
     expect(dryLandSockets(island)).toHaveLength(6)
@@ -1202,7 +1202,7 @@ describe('an island built only through the placement rules', () => {
     expect(dryAfter(island, at, 'water')).toBe(3)
   })
 
-  it('fills a gap between two of her ponds with water, not a green plug', () => {
+  it('fills a gap between two of their ponds with water, not a green plug', () => {
     // Joe: "specifically if 2 water and no land neighbours."
     const gap: Axial = { q: 1, r: 0 }
     // Built as a map, not with place(): createIsland's home hex is grass and
@@ -1236,7 +1236,7 @@ describe('an island built only through the placement rules', () => {
 
   it('refuses water where it would need a four-land-edge model', () => {
     /*
-     * The arithmetic, stated. A socket ringed by her fields cannot hold water,
+     * The arithmetic, stated. A socket ringed by their fields cannot hold water,
      * because no model in the pack has four land edges — so there is no
      * orientation that meets all of them and something would have to give.
      */
@@ -1260,8 +1260,8 @@ describe('the outward corridor, close up', () => {
      * question, not as well as it, and that is only sound because a corridor
      * implies a witness: its mouth is dry-empty, so `canBeGrass` there is
      * unconditionally true and `mustBeWater` unconditionally false, so grass is
-     * what lands; it is beside her fields by definition; and the corridor runs on
-     * past it, so it has an empty neighbour.
+     * what lands; it is beside their fields by definition; and the corridor runs
+     * on past it, so it has an empty neighbour.
      *
      * Checked over played islands rather than argued, because the argument is only
      * as good as the code agreeing with it.
@@ -1317,7 +1317,7 @@ describe('the outward corridor, close up', () => {
 
   it('reads a hypothetical island exactly as a real one', () => {
     /*
-     * `withTile` is a VIEW over her tile map rather than a copy of it — the guards
+     * `withTile` is a VIEW over the tile map rather than a copy of it — the guards
      * ask questions of a hypothetical island on every tap, and copying the map each
      * time is the quadratic `allows` was fixed to avoid, arrived at from the other
      * side. The saving costs one cast, because the lib types `keys`/`values`/
@@ -1355,7 +1355,7 @@ describe('the outward corridor, close up', () => {
   it('turns water into a field where a pond would cut the last way out', () => {
     /*
      * The guard doing its work at the choke point rather than in the outlines,
-     * which is the case that costs her nothing: the socket still glows, and the
+     * which is the case that costs them nothing: the socket still glows, and the
      * only difference is which button is on the panel.
      *
      * Built by playing rather than constructed, because a hand-built fixture for
@@ -1402,9 +1402,9 @@ describe('the outward corridor, close up', () => {
  *
  * A Fable review of the dry-connection floor falsified the property the floor was
  * written to guarantee: sixty-four taps, every one of them a button the offer
- * actually showed, ending with her fields sealed behind water. This test used to
- * assert that it succeeded — a limitation the project knew about rather than one
- * it had forgotten — and the assertion below is where that was recorded.
+ * actually showed, ending with their fields sealed behind water. This test used
+ * to assert that it succeeded — a limitation the project knew about rather than
+ * one it had forgotten — and the assertion below is where that was recorded.
  *
  * IT NO LONGER SUCCEEDS. The sequence is turned back on its FIFTY-SECOND tap, at
  * (3,0), and the island it leaves behind can still grow. Both halves are asserted,
@@ -1421,7 +1421,7 @@ describe('the outward corridor, close up', () => {
  * `coast.landedType` for why one ply was never going to be enough.
  *
  * Severity, for whoever reads this next: it took a greedy anti-play harvest plus a
- * six-ply search to find. Before the floor existed, SIX natural taps walled her in.
+ * six-ply search to find. Before the floor existed, SIX natural taps walled them in.
  */
 describe('the counterexample the floor could not stop', () => {
   /** Same question the played-island suite asks, asked from out here. */
@@ -1449,7 +1449,7 @@ describe('the counterexample the floor could not stop', () => {
     [3, -1, 'grass'], [5, -3, 'water'], [5, -2, 'water'], [4, -2, 'grass'],
   ]
 
-  it('is turned back, and leaves her an island that can still grow', () => {
+  it('is turned back, and leaves them an island that can still grow', () => {
     let f = createFlow()
     /** Where the game stopped playing along, and what it did about it. */
     let refused: string | null = null
@@ -1457,7 +1457,7 @@ describe('the counterexample the floor could not stop', () => {
       const [q, r, want] = SEALED[n] as [number, number, TileType]
       const at: Axial = { q, r }
       /*
-       * A tap she could not have made is a step the sequence no longer has. Only
+       * A tap they could not have made is a step the sequence no longer has. Only
        * a glowing socket can be tapped at all — `picking.nearestSocket` reads the
        * outlines, and those are `buildableSockets` — so this is the honest test of
        * reachability and it comes before the offer.
@@ -1468,7 +1468,7 @@ describe('the counterexample the floor could not stop', () => {
       }
       f = askForLand({ ...f, phase: 'free' }, at)
       if (f.phase !== 'placing') break
-      // ...and a button she could not have pressed is the other way to be refused.
+      // ...and a button they could not have pressed is the other way to be refused.
       if (!tileOffer(f).includes(want)) {
         refused = `tap ${n} at ${q},${r}: ${want} is not offered`
         break
@@ -1486,6 +1486,6 @@ describe('the counterexample the floor could not stop', () => {
      * failure later still shows up as a diff worth reading rather than a pass.
      */
     expect(refused).toBe('tap 51 at 3,0: the socket does not glow')
-    expect(fieldsCanGrow(f), 'and her fields can still grow').toBe(true)
+    expect(fieldsCanGrow(f), 'and their fields can still grow').toBe(true)
   })
 })

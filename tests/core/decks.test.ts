@@ -139,8 +139,8 @@ describe('makeMemoryDeck', () => {
   it('takes a history it did not deal itself', () => {
     /*
      * How the island survives a reload without a save change: the memory is
-     * primed from the pets she already owns. Remembering a, b, c must make the
-     * next three draws avoid them.
+     * primed from the pets the child already owns. Remembering a, b, c must
+     * make the next three draws avoid them.
      */
     const draw = makeMemoryDeck(mulberry32(23), ABC, 3)
     draw.remember(['a', 'b', 'c'])
@@ -235,7 +235,7 @@ describe('a short memory against a full deck, over 24 items', () => {
   const share = (a: readonly number[], p: (v: number) => boolean): number =>
     a.filter(p).length / a.length
 
-  it('leaves a favourite as likely to return as chance ever made her', () => {
+  it('leaves a favourite as likely to return as chance ever made it', () => {
     /*
      * Mean gap is ~24 under all three dealers, so the memory is not a tax on
      * anybody's favourite — it is purely a rearrangement.
@@ -255,8 +255,8 @@ describe('a short memory against a full deck, over 24 items', () => {
     /*
      * The full deck's gaps pile up around 24 — a quarter of them within ±4 of
      * it, and almost none short. That is a collection that reads as a rota. The
-     * window keeps chance's own long tail of short gaps, so an animal she loved
-     * can turn up again the same afternoon.
+     * window keeps chance's own long tail of short gaps, so a loved animal can
+     * turn up again the same afternoon.
      */
     const window5 = gaps(makeMemoryDeck(mulberry32(211), PACK, 5), 60000)
     const full = gaps(makeDeck(mulberry32(212), PACK), 60000)

@@ -124,14 +124,14 @@ describe('flow — the earn loop', () => {
   it('asking again once a plot is under construction re-opens the bank — PB-048', () => {
     /*
      * It used to open the next sum instead, and that resumption IS the bug Joe
-     * reported. A standing plot in free play is one she has walked away from —
-     * the sum overlay stays up across every sum of a tile, so there is no other
-     * way to be back on the island mid-build — and resuming it dropped her into
-     * a build she had left, off a tap she had aimed at an animal.
+     * reported. A standing plot in free play is one the child has walked away
+     * from — the sum overlay stays up across every sum of a tile, so there is
+     * no other way to be back on the island mid-build — and resuming it dropped
+     * them into a build they had left, off a tap they had aimed at an animal.
      *
      * His ruling: *"the progress towards reward is saved, the location and type
-     * is not."* So asking again asks WHERE and WHAT afresh, and every sum she has
-     * answered comes along untouched.
+     * is not."* So asking again asks WHERE and WHAT afresh, and every sum the
+     * child has answered comes along untouched.
      */
     // The intro tile is one sum, so it is paid off and out of the way; the
     // SECOND is priced above one sum, which is what leaves a plot standing with
@@ -149,7 +149,7 @@ describe('flow — the earn loop', () => {
     expect(g.challenge).toBeNull()
     expect(g.chosen).toBeNull()
     expect(g.pending).toEqual({ q: 1, r: -1 })
-    expect(g.sumProgress, 'nothing she has answered is spent').toBe(f.sumProgress)
+    expect(g.sumProgress, 'nothing the child has answered is spent').toBe(f.sumProgress)
   })
 
   it('refuses a sum when there is no plot to advance', () => {
@@ -157,7 +157,7 @@ describe('flow — the earn loop', () => {
     expect(tapSum(f)).toBe(f)
   })
 
-  describe('changing her mind at the offer', () => {
+  describe('changing their mind at the offer', () => {
     /*
      * Joe: "when user clicks on empty tile to do a tile challenge, he cannot
      * change his mind at the selecting of the tile type stage."
@@ -184,9 +184,9 @@ describe('flow — the earn loop', () => {
 
     it('never abandons a plot already under construction', () => {
       /*
-       * The dangerous case. A plot holds every sum she has spent on it, so a
-       * dismissal that dropped it would throw away real work — and a restored
-       * save can put the flow in 'placing' WITH a plot standing.
+       * The dangerous case. A plot holds every sum the child has spent on it,
+       * so a dismissal that dropped it would throw away real work — and a
+       * restored save can put the flow in 'placing' WITH a plot standing.
        */
       let f = askForLand(createFlow())
       f = placeTile(chooseTile(f, 'grass'), { q: 1, r: 0 })
@@ -198,7 +198,7 @@ describe('flow — the earn loop', () => {
       expect(back.plot).toEqual(f.plot)
     })
 
-    it('she can ask again straight afterwards', () => {
+    it('the child can ask again straight afterwards', () => {
       // A way out is only a way out if the way back in still works.
       const f = cancelPlacing(askForLand(createFlow(), { q: 1, r: 0 }))
       expect(askForLand(f, { q: 1, r: 0 }).phase).toBe('placing')
@@ -258,8 +258,8 @@ describe('flow — the earn loop', () => {
      * grass listed twice, from slice-1 §7's weighting of the first-run draw.
      * Joe: "the type strangely being land, water, land — I don't see why two
      * land options are needed?" Weighting a random draw is one thing; showing
-     * a child the same button twice and asking her to pick is another, and she
-     * cannot tell them apart because there is nothing to tell.
+     * a child the same button twice and asking them to pick is another, and
+     * they cannot tell the two apart because there is nothing to tell.
      *
      * It grows on its own when the biome ladder lands and there are spring,
      * desert and ice to choose from.
@@ -376,7 +376,7 @@ describe('flow — work in progress is never lost', () => {
     /*
      * How a save from the OLD flow lands here: it banked a finished tile,
      * which save.ts restores as fully-paid progress. Charging for it again
-     * would take back land she had already earned.
+     * would take back land the child had already earned.
      */
     let f = createFlow()
     f = { ...f, phase: 'placing', sumProgress: 999 }
@@ -391,7 +391,7 @@ describe('flow — work in progress is never lost', () => {
      * on the price and there was never a remainder to see. A pay-3 honeymoon sum
      * can overshoot, and §19 does not let the overshoot be swept up, so commit
      * now subtracts the price rather than zeroing. 999 is a synthetic
-     * overpayment; the change from it belongs to her.
+     * overpayment; the change from it belongs to the child.
      */
     expect(f.sumProgress).toBe(999 - price)
   })
@@ -422,19 +422,19 @@ describe('asking for land AT a socket', () => {
    * is supposed to go — that has already been selected."
    *
    * Quite so. Land used to be asked for by tapping any grass, so the game had
-   * no idea where she wanted it and had to ask a second question after she had
-   * picked a kind. Asking happens at a glowing socket now, so the answer is
-   * already in hand.
+   * no idea where the child wanted it and had to ask a second question after
+   * they had picked a kind. Asking happens at a glowing socket now, so the
+   * answer is already in hand.
    */
   const socket = { q: 1, r: 0 }
 
-  it('remembers which socket she asked at', () => {
+  it('remembers which socket the child asked at', () => {
     const f = askForLand(createFlow(), socket)
     expect(f.phase).toBe('placing')
     expect(f.pending).toEqual(socket)
   })
 
-  it('sites the plot the moment she picks a kind — no second tap', () => {
+  it('sites the plot the moment the child picks a kind — no second tap', () => {
     const asked = askForLand(createFlow(), socket)
     const sited = chooseTile(asked, 'water')
     expect(sited.plot).toEqual({ at: socket, type: 'water' })
@@ -445,9 +445,9 @@ describe('asking for land AT a socket', () => {
 
   it('still waits for a tap when nobody said where', () => {
     /*
-     * The opening script asks for land on her behalf and has nowhere in mind,
-     * so the two-step path has to keep working — this is not a replacement,
-     * it is a shortcut for the case where the answer is already known.
+     * The opening script asks for land on the child's behalf and has nowhere
+     * in mind, so the two-step path has to keep working — this is not a
+     * replacement, it is a shortcut where the answer is already known.
      */
     const asked = askForLand(createFlow())
     expect(asked.pending).toBeNull()
@@ -459,7 +459,7 @@ describe('asking for land AT a socket', () => {
 
   it('refuses a socket that is not one', () => {
     // A save can be hand-edited, and the island shrinks in nobody's memory but
-    // its own. An illegal site leaves her in the offer rather than anywhere odd.
+    // its own. An illegal site leaves the child in the offer, not anywhere odd.
     const asked = askForLand(createFlow(), { q: 9, r: 9 })
     const out = chooseTile(asked, 'grass')
     expect(out.plot).toBeNull()
@@ -468,11 +468,11 @@ describe('asking for land AT a socket', () => {
   it('RELOCATES a plot already under construction — PB-048', () => {
     /*
      * It used to refuse, on the ground that siting over a plot threw away both
-     * the spot she chose and every sum she had spent on it. Only half of that was
-     * ever true: `sumProgress` lives on the Flow, so the sums were never at risk
-     * and the spot was the only thing in the balance — and the spot is hers to
-     * change. Joe: *"the progress towards reward is saved, the location and type
-     * is not."*
+     * the spot the child chose and every sum they had spent on it. Only half of
+     * that was ever true: `sumProgress` lives on the Flow, so the sums were
+     * never at risk and the spot was the only thing in the balance — and the
+     * spot is theirs to change. Joe: *"the progress towards reward is saved,
+     * the location and type is not."*
      */
     const first = chooseTile(askForLand(createFlow(), socket), 'grass')
     // One sum short of paying for it, so there is real work to carry across and
@@ -482,7 +482,7 @@ describe('asking for land AT a socket', () => {
     const again = chooseTile({ ...paid, phase: 'placing', pending: { q: 0, r: 1 } }, 'grass')
     expect(again.plot).toEqual({ at: { q: 0, r: 1 }, type: 'grass' })
     expect(again.plot).not.toEqual(first.plot)
-    expect(again.sumProgress, 'the work follows her to the new socket').toBe(1)
+    expect(again.sumProgress, 'the work follows the child to the new socket').toBe(1)
   })
 })
 
@@ -545,8 +545,8 @@ describe('flow — the honeymoon', () => {
 
     expect(f.tilesEarned).toBe(1)
     expect(f.honeymoonTiles).toBe(1)
-    // The tile is REAL — she has the land — and the next one costs what this
-    // one did. That is the freeze, as a permanent offset.
+    // The tile is REAL — the child has the land — and the next one costs what
+    // this one did. That is the freeze, as a permanent offset.
     expect(count(f.island)).toBe(count(before.island) + 1)
     expect(sumsForTile(f)).toBe(price)
   })
@@ -583,7 +583,7 @@ describe('flow — the honeymoon', () => {
     /*
      * Prices are quantised to whole `pay.item` units, so pay-2 sums land ON the
      * price and commit had nothing to carry. A pay-3 sum can step over it, and
-     * the step-over is work she did. §19: nothing she owns is lost.
+     * the step-over is work the child did. §19: nothing they own is lost.
      */
     const before = dearTile()
     const price = sumsForTile(before)
@@ -612,12 +612,12 @@ describe('flow — the honeymoon', () => {
         paid += 3
       }
     }
-    // Every unit answered either bought a tile or is still standing to her name.
+    // Every unit answered either bought a tile or still stands to their name.
     expect(f.sumProgress).toBe(paid - spent)
-    expect(f.tilesEarned).toBe(6)          // the three she built, on top of 3
+    expect(f.tilesEarned).toBe(6)          // the three they built, on top of 3
     expect(f.honeymoonTiles).toBe(3)
-    // ...and all three were free of the curve, so she is still paying tile 4's
-    // price after building three of them.
+    // ...and all three were free of the curve, so the child is still paying
+    // tile 4's price after building three of them.
     expect(sumsForTile(f)).toBe(sumsForTile(dearTile()))
   })
 

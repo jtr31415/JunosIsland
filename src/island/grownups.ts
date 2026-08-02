@@ -12,8 +12,8 @@
  * code reads exactly as it did with the browser dialogs.
  *
  * Deliberately NOT part of `overlay.ts`. That owns the challenge surface —
- * what the child sees while she is working — and this is the one part of the
- * game she is not meant to be using.
+ * what the child sees while they are working — and this is the one part of the
+ * game they are not meant to be using.
  *
  * `showLearning` (A4/A6) is the exception to "dialogs": it is a panel a parent
  * READS as much as taps. It lives here anyway, because it is behind the same
@@ -69,7 +69,7 @@ const note = (text: string): HTMLElement => {
  * four digits deserve, and because a text input summons a full keyboard over
  * half the screen on the device this actually runs on.
  *
- * Resolves true when the PIN is right, false if she backs out. A wrong PIN
+ * Resolves true when the PIN is right, false if they back out. A wrong PIN
  * shakes and clears rather than closing: mistyping is not the same as changing
  * your mind, and a parent should not have to start the journey again.
  */
@@ -423,7 +423,7 @@ export const WORD_COLOUR_CHOICES: readonly Choice[] = [
   { id: 'green', label: 'All green', detail: 'gentler if red puts them off' },
 ]
 
-/* ------------------------------------------- A4/A6: what she is working on */
+/* ----------------------------------------- A4/A6: what they are working on */
 
 /**
  * The stages, in words a parent can act on.
@@ -585,7 +585,7 @@ function livePathSection(path: Path, deps: LearningDeps, h: Harness): HTMLElemen
    *
    * Every change here is "set it, wait for the disk, then show it", and a
    * second tap arriving inside that window would race the first one's revert.
-   * A parent tapping twice is not a bug she should pay for, so the second tap
+   * A parent tapping twice is not a bug they should pay for, so the second tap
    * is simply ignored until the first one has landed.
    */
   let busy = false
@@ -794,10 +794,10 @@ function reservedSection(path: ReservedPath): HTMLElement {
 }
 
 /**
- * What she is working on: the capability model and the report, in one panel.
+ * What they are working on: the capability model and the report, in one panel.
  *
  * A4 and A6 are one screen because they are one decision. The tickbox says
- * what she may be dealt and the three measures beside it are the only honest
+ * what they may be dealt and the three measures beside it are the only honest
  * grounds for moving it, so putting them on separate screens would mean asking
  * a parent to remember a number between two taps.
  *

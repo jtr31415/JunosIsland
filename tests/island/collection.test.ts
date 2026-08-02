@@ -7,19 +7,19 @@
  * answers an EARLIER report — "two cats spawned in a row" — and answers it with
  * `makeMemoryDeck`, a short window that forbids the last five hatches. That
  * fixes clumping and nothing else: a window of five over a pack of twenty-four
- * leaves nineteen candidates on every draw, and on an island where she already
- * owns eight of them, most of those nineteen are animals she has already got.
+ * leaves nineteen candidates on every draw, and on an island where the child
+ * already owns eight, most of those nineteen are animals they already have.
  * A duplicate was therefore not a collision at all. It was the ordinary case,
  * arriving on a schedule — roughly `owned / 19` of every hatch.
  *
  * That is the difference between a shuffling rule and a COLLECTING rule. A
- * collection is not "do not repeat yourself lately", it is "do not give her
- * what she already has", and no width of window expresses it, because the
- * window measures hatches and the rule is about her island.
+ * collection is not "do not repeat yourself lately", it is "do not give them
+ * what they already have", and no width of window expresses it, because the
+ * window measures hatches and the rule is about their island.
  *
  * So the dealer is the island's own, in `src/island/collection.ts`, and this
  * file is the proof. The end-to-end test below runs main.ts's real sequence
- * through the real `handleChallengePassed` and counts what lands on her island;
+ * through the real `handleChallengePassed` and counts what lands on the island;
  * it fails against the memory deck with an actual duplicate, which is what
  * makes it worth having.
  */
@@ -64,8 +64,8 @@ describe('a second animal of the same type must not spawn', () => {
      * THE REPORTED BUG, end to end, through the real state machine.
      *
      * main.ts's exact sequence — draw one ahead, hatch it, draw the next — run
-     * until she owns the whole pack. Every friend that lands on her island is
-     * counted, and no two of them may be the same animal.
+     * until the child owns the whole pack. Every friend landing on their island
+     * is counted, and no two of them may be the same animal.
      *
      * Six seeds, because a duplicate is a probabilistic event and one clean
      * stream would be evidence of nothing. Against the memory deck this fails
@@ -85,21 +85,21 @@ describe('a second animal of the same type must not spawn', () => {
 
       const got = flow.pets.map(p => p.species)
       expect(got, `seed ${seed}`).toHaveLength(SPECIES.length)
-      expect(new Set(got).size, `seed ${seed}: a duplicate reached her island`)
+      expect(new Set(got).size, `seed ${seed}: a duplicate reached their island`)
         .toBe(got.length)
       // And the collection is complete rather than merely unrepeated.
       expect([...got].sort()).toEqual([...SPECIES].sort())
     }
   })
 
-  it('is not fooled by a reload — it primes from the pets she owns', () => {
+  it('is not fooled by a reload — it primes from the pets they own', () => {
     /*
      * Nothing about the deck is persisted and nothing needs to be (PHASE3
      * -HANDOVER §6: a schema bump waits for the first `v*` tag). `flow.pets` is
      * already saved and is already the history, so the deck is primed from what
-     * is on her island. Without this the bug walks straight back in through the
-     * front door: close the tab owning eight animals, reopen, hatch a ninth she
-     * already has.
+     * is on their island. Without this the bug walks straight back in through
+     * the front door: close the tab owning eight animals, reopen, hatch a ninth
+     * they already have.
      */
     const owned = SPECIES.slice(0, 10) as unknown as string[]
     for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
@@ -112,7 +112,7 @@ describe('a second animal of the same type must not spawn', () => {
   })
 
   it('ignores a species in the save that is no longer in the pack', () => {
-    // Brief §19: nothing she owns is ever lost. A save naming an animal that
+    // Brief §19: nothing they own is ever lost. A save naming an animal that
     // has since been dropped must not throw on the way to the first hatch, and
     // must not eat one of the 24 slots either.
     const draw = islandDeck(11)
@@ -123,7 +123,7 @@ describe('a second animal of the same type must not spawn', () => {
   })
 })
 
-describe('when she has met every animal there is', () => {
+describe('when they have met every animal there is', () => {
   /*
    * PB-036, Joe's standing requirement: *"i cannot run out of animal rewards."*
    * Twenty-four species and a rule that forbids repeats have an obvious
@@ -133,10 +133,10 @@ describe('when she has met every animal there is', () => {
    * candidate that cannot exist.
    *
    * So the rule is explicitly conditional: no repeats WHILE THE PACK HOLDS
-   * ANYONE SHE HAS NOT MET. Once it does not, the deck falls back to exactly
+   * ANYONE THEY HAVE NOT MET. Once it does not, the deck falls back to exactly
    * the behaviour that shipped — a uniform draw with the short memory — so a
    * completed album keeps producing friends, with new names, and never the one
-   * she saw a moment ago. What she SHOULD see at that point is a product
+   * they saw a moment ago. What they SHOULD see at that point is a product
    * decision Joe has not made; this is the safe floor under it (JT-027).
    */
   const complete = (seed: number): ReturnType<typeof makeCollectionDeck> => {
@@ -153,7 +153,7 @@ describe('when she has met every animal there is', () => {
     expect(new Set(seq).size).toBe(SPECIES.length)
   })
 
-  it('still refuses the repeats she would actually notice', () => {
+  it('still refuses the repeats they would actually notice', () => {
     const draw = complete(34)
     const seq = Array.from({ length: 20000 }, draw)
     let closest = Infinity
@@ -223,7 +223,7 @@ describe('main.ts deals from the collection, not from a window', () => {
     expect(code).not.toMatch(/makeMemoryDeck<string>\(\s*defaultRng, SPECIES/)
   })
 
-  it('primes it from her own island, before the first draw', () => {
+  it('primes it from their own island, before the first draw', () => {
     const primed = code.indexOf('drawSpecies.remember(flow.pets.map(p => p.species))')
     const loaded = code.indexOf('flow = loaded.flow')
     const first = code.indexOf('let nextSpecies = drawSpecies()')

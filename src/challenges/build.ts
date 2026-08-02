@@ -10,7 +10,7 @@
  *
  * The rescue it replaces it with does the same job: the whole word again,
  * slowly, with the next tile the child needs gently highlighted. Help, not
- * shame (brief §19), and no worse audio than the prompt she already heard.
+ * shame (brief §19), and no worse audio than the prompt they already heard.
  *
  * fredTalk and FRED_SOUNDS are kept and still exported — the sequencing is
  * sound and a real recorded voice would make it excellent — but nothing calls
@@ -150,7 +150,7 @@ export function mountBuild(item: BuildItem, deps: ChallengeDeps): ChallengeHandl
         deps.onWrong()
         if (++wrongsB >= 3) {
           /* Three stumbles summon help: the word again, slowly, and a nudge
-             toward the tile she needs next. Never a scolding. */
+             toward the tile they need next. Never a scolding. */
           wrongsB = 0
           deps.holds.lockInput(Date.now() + 1800)
           rescue()

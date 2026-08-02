@@ -92,7 +92,7 @@ export const MOUNTAIN_HEXES: Array<{ name: string; weight: number; big?: boolean
  *
  * The growing plot and the finished hex are two different placement paths
  * (increments.ts and props.ts — HANDOFF §6), and for a mountain they must agree
- * EXACTLY: she watches a particular peak rise, and that is the peak she must
+ * EXACTLY: they watch a particular peak rise, and that is the peak they must
  * get. A second `pick` over the same table would be one edit away from
  * disagreeing, so there is one function and both callers use it.
  */

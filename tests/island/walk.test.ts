@@ -237,7 +237,7 @@ const ringHex = (i: number): Axial => {
 const mountains: KeepOut = (a, t) =>
   t === 'rock' ? keepOutRadius(mountainHexFor(a), mountainSpinFor(a)) : 0
 
-/** Grass origin, six rock neighbours: PB-052 as she built it. */
+/** Grass origin, six rock neighbours: PB-052 as the child built it. */
 function ringOfSix(): Island {
   let i = createIsland()                                   // origin is grass already
   for (let k = 0; k < 6; k++) i = place(i, ringHex(k), 'rock')
@@ -387,7 +387,7 @@ describe('PB-052: a ring of six mountains seals the hex in the middle', () => {
 
     // Five leaves a way out, so nothing is stranded yet...
     expect(sealedHexes(five, HEX_SIZE, mountains, 0)).toHaveLength(0)
-    // ...and the sixth is the tap that would strand her.
+    // ...and the sixth is the tap that would strand it.
     expect(wouldSeal(five, ringHex(5), 'rock', HEX_SIZE, mountains, 0)).toBe(true)
   })
 })
@@ -404,7 +404,7 @@ describe('PB-052 is live', () => {
   it('the placement path accepts all six rocks today, and the corridor proof cannot see it', () => {
     /*
      * A grass island with a notch in it: everything two and three steps out,
-     * plus the middle. The six hexes at one step are open sockets she can tap,
+     * plus the middle. The six hexes at one step are open sockets they can tap,
      * and there are 30 tiles behind them, which is what unlocks rock.
      */
     let island: Island = createIsland()

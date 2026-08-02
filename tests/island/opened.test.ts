@@ -31,7 +31,7 @@ const BASE = collection('base')?.members ?? []
 const pet = (species: string, n = 0): Pet =>
   ({ id: `${species}-${n}`, name: `friend ${n}`, species, at: { q: 0, r: 0 } })
 
-/** Every species of a collection, as if she had collected the lot. */
+/** Every species of a collection, as if the child had collected the lot. */
 const allOf = (id: string): string[] => [...(collection(id)?.members ?? [])]
 
 describe('what counts as owned', () => {
@@ -40,7 +40,7 @@ describe('what counts as owned', () => {
      * The whole of "one slot per species" as arithmetic. Four foxes is one fox
      * as far as an album is concerned, and if it were not, a child who had
      * exhausted the base pack could push a collection past 100% on duplicates
-     * and open an album for animals she had never met.
+     * and open an album for animals they had never met.
      */
     const owned = ownedByCollection(['animal-fox', 'animal-fox', 'animal-fox'])
     expect(owned[BASE_COLLECTION]).toBe(1)
@@ -55,8 +55,8 @@ describe('what counts as owned', () => {
 
 describe('a fresh island', () => {
   it('opens four albums straight away, base among them', () => {
-    // The first half of Joe's sentence. Under the cadence alone she would see
-    // one album until she owned twenty of the twenty-four.
+    // The first half of Joe's sentence. Under the cadence alone they would see
+    // one album until they owned twenty of the twenty-four.
     const opened = advance([], NOTHING_OPENED, rng())
     expect(opened.open).toHaveLength(MAX_ACTIVE)
     expect(opened.open[0]).toBe(BASE_COLLECTION)
@@ -109,7 +109,7 @@ describe('a fresh island', () => {
   })
 })
 
-describe('and then nothing, until she finishes one', () => {
+describe('and then nothing, until they finish one', () => {
   it('stays at four however many friends come home', () => {
     /*
      * The second half of the sentence, and the case that would break if the
@@ -126,8 +126,8 @@ describe('and then nothing, until she finishes one', () => {
     const opened = advance([], NOTHING_OPENED, rng())
     const after = advance(allOf(BASE_COLLECTION), opened, rng())
     expect(after.open).toHaveLength(MAX_ACTIVE + 1)
-    // The finished one is still there — see `albumsToShow`. She keeps her
-    // trophy; it simply stops occupying a slot.
+    // The finished one is still there — see `albumsToShow`. The child keeps
+    // their trophy; it simply stops occupying a slot.
     expect(after.open).toContain(BASE_COLLECTION)
     expect(activeCount(allOf(BASE_COLLECTION), after)).toBe(MAX_ACTIVE)
   })
@@ -269,7 +269,7 @@ describe('through the save and back', () => {
 
   it('a save written before this field existed reads as a fresh roster', () => {
     // The reason this is additive and not a version bump: an older save must
-    // open, not be refused. Refusing costs the child her island.
+    // open, not be refused. Refusing costs the child their island.
     const flow = { ...createFlow(), pets: [] as Pet[] }
     const save = toSave(flow, true) as unknown as Record<string, unknown>
     delete save.openCollections

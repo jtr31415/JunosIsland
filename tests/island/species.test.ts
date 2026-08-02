@@ -7,7 +7,7 @@
  * species and remembered nothing, so P(the next friend is the last friend) was
  * 1/24 — and over a collection of any size that is not rare at all. Two in a
  * row is the arithmetic working. It is also, to a six-year-old who has just
- * read a whole egg's worth of words, the game telling her it did not count.
+ * read a whole egg's worth of words, the game telling them it did not count.
  *
  * So the bug is real and the code was correct, which is the ordinary state of
  * affairs for randomness shown to a person.
@@ -32,7 +32,7 @@ const MEMORY = balance.pets.speciesMemory
  * The window, at the island's own numbers.
  *
  * This WAS the island's whole draw. Since 29 Jul it is the fallback inside
- * `makeCollectionDeck` — the branch that runs once she has met all 24 — so
+ * `makeCollectionDeck` — the branch that runs once they have met all 24 — so
  * every property below is still a property of the shipped game, and is the
  * only thing standing between a completed album and the clumping that Joe's
  * "two cats in a row" report was about. `collection.test.ts` owns the rule that
@@ -41,7 +41,7 @@ const MEMORY = balance.pets.speciesMemory
 const islandDeck = (seed: number): ReturnType<typeof makeMemoryDeck<string>> =>
   makeMemoryDeck<string>(mulberry32(seed), SPECIES, MEMORY)
 
-describe('the species she meets next', () => {
+describe('the species they meet next', () => {
   it('is chosen from a pack big enough for a window to be worth having', () => {
     expect(SPECIES).toHaveLength(24)
     expect(MEMORY).toBeGreaterThan(0)
@@ -53,7 +53,7 @@ describe('the species she meets next', () => {
     /*
      * The statistical claim, at the game's real numbers and stated as a
      * property rather than as one sampled sequence. 240,000 hatches is more
-     * than she will see in a childhood; four seeds, because one lucky stream
+     * than they will see in a childhood; four seeds, because one lucky stream
      * is not evidence.
      *
      * Seeded, so this is a large DETERMINISTIC sample: it cannot flake, and if
@@ -111,7 +111,7 @@ describe('the species she meets next', () => {
     /*
      * Why a window and not the whole pack. A full deck would put every animal
      * exactly one lap away; here a fifth of returns land within twelve hatches,
-     * so the cat she loved can turn up again while she still cares.
+     * so the cat they loved can turn up again while they still care.
      */
     const draw = islandDeck(21)
     const lastSeen = new Map<string, number>()
@@ -129,12 +129,12 @@ describe('the species she meets next', () => {
   })
 })
 
-describe('when she already owns all 24', () => {
+describe('when they already own all 24', () => {
   it('deals on, because the window knows nothing about ownership', () => {
     /*
      * A completed collection is a real state and the one that breaks a naive
-     * "deal the ones she has not got" rule outright — there are none left. The
-     * window is about the last few HATCHES rather than about what is on her
+     * "deal the ones they have not got" rule outright — there are none left. The
+     * window is about the last few HATCHES rather than about what is on their
      * island, which is exactly why it is the right thing to fall back TO: 19 of
      * the 24 stay eligible on every draw, for ever, so PB-036 holds and an egg
      * always has a friend in it.
@@ -162,16 +162,16 @@ describe('when she already owns all 24', () => {
 })
 
 describe('the memory survives a reload without touching the save', () => {
-  it('is primed from the pets she owns, newest last', () => {
+  it('is primed from the pets they own, newest last', () => {
     /*
      * `drawSpecies` state is NOT persisted, and deliberately is not: a save
      * schema bump waits for the first `v*` tag (PHASE3-HANDOVER §6). It does not
-     * need to be. `flow.pets` is already saved, already in the order she read
-     * them home, and is therefore the history — so the deck is primed from what
-     * she owns and the window straddles the reload for free.
+     * need to be. `flow.pets` is already saved, already in the order they were
+     * read home, and is therefore the history — so the deck is primed from what
+     * the child owns and the window straddles the reload for free.
      *
      * Without this, the reported bug returns by another door: close the tab
-     * after a cat, reopen, and the fresh deck may hand her a cat.
+     * after a cat, reopen, and the fresh deck may hand out a cat.
      */
     const owned = ['animal-cat', 'animal-dog', 'animal-fox', 'animal-bee', 'animal-cow']
     for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
@@ -182,7 +182,7 @@ describe('the memory survives a reload without touching the save', () => {
   })
 
   it('keeps only the last few of a long collection', () => {
-    // She may have fifty pets. Priming must not blank the pack.
+    // The child may have fifty pets. Priming must not blank the pack.
     const many = Array.from({ length: 50 }, (_, i) => SPECIES[i % 24] as string)
     const draw = islandDeck(5)
     draw.remember(many)
@@ -192,7 +192,7 @@ describe('the memory survives a reload without touching the save', () => {
   })
 
   it('shrugs off a species that is no longer in the pack', () => {
-    // Brief §19: nothing she owns can be lost. A save naming an animal that has
+    // Brief §19: nothing they own can be lost. A save naming an animal that has
     // since been dropped must not throw on the way to the first hatch.
     const draw = islandDeck(6)
     expect(() => draw.remember(['animal-dodo', 'animal-cat'])).not.toThrow()
@@ -231,7 +231,7 @@ describe('main.ts draws the species with a memory', () => {
     expect(code).toContain('balance.pets.speciesMemory')
   })
 
-  it('primes the memory from her own pets, before the first draw', () => {
+  it('primes the memory from their own pets, before the first draw', () => {
     const primed = code.indexOf('drawSpecies.remember(flow.pets.map(p => p.species))')
     const loaded = code.indexOf('flow = loaded.flow')
     const first = code.indexOf('let nextSpecies = drawSpecies()')
@@ -311,7 +311,7 @@ describe('the friend who is warmed is the friend who hatches', () => {
     expect(hatched).toEqual(warmed.slice(0, hatched.length))
     expect(warmed).toHaveLength(hatched.length + 1)
     expect(hatched.filter((s, i) => i > 0 && s === hatched[i - 1])).toHaveLength(0)
-    // And the very first hatch after the reload is not one she just had.
+    // And the very first hatch after the reload is not one they just had.
     expect(['animal-cat', 'animal-dog']).not.toContain(hatched[0])
   })
 })

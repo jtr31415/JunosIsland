@@ -565,7 +565,7 @@ export const canBeGrass = (island: Island, a: Axial): boolean =>
  * therefore still glowing right beside it. The old wall could refuse the child's
  * last way out; this one cannot, and that is a proof rather than a measurement.
  *
- * `always leaves her a socket to tap` is what holds that in the suite. See
+ * `always leaves them a socket to tap` is what holds that in the suite. See
  * `LAND_FLOOR` for why three and not two.
  */
 export const buildableSockets = (island: Island, open: readonly Axial[]): Axial[] =>

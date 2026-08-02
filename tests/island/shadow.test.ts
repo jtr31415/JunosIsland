@@ -351,9 +351,9 @@ describe('the shadow threshold sits in the measured gaps', () => {
   it('is cleared by the widest thing a grown plot can plant', () => {
     /*
      * The tight edge, and the reason the rule has a reach arm at all. A flat
-     * boulder on a plot she built is 0.144 tall — well under the height arm —
-     * and is saved only by being FITS.grown wide. If that entry ever narrows,
-     * this fails rather than the boulder quietly starting to float.
+     * boulder on a plot the child built is 0.144 tall — well under the height
+     * arm — and is saved only by being FITS.grown wide. If that entry ever
+     * narrows, this fails rather than the boulder quietly starting to float.
      */
     expect(FITS.grown[0] / 2).toBeGreaterThanOrEqual(SHADOW_MIN_REACH)
     // `varyMin`, not `VARY.feature.min` — the same false floor PB-009 was
@@ -538,15 +538,15 @@ describe('the tiles the island GROWS get shadows', () => {
   })
 })
 
-describe('the tiles she BUILDS get shadows too', () => {
+describe('the tiles they BUILD get shadows too', () => {
   beforeEach(() => { createLighting(null, MEADOW) })
 
   /*
    * There are two placement paths and fixing one is not fixing the other:
    * `props.ts` dresses tiles the island grows, `world/increments.ts` grows the
-   * ones she builds. Trees-inside-rocks was reported TWICE for exactly this
-   * reason (HANDOFF §6). Shadowing only the first would be the worst possible
-   * split, because the floating tiles would be the ones she made herself.
+   * ones the child builds. Trees-inside-rocks was reported TWICE for exactly
+   * this reason (HANDOFF §6). Shadowing only the first would be the worst
+   * possible split: the floating tiles would be the ones the child made.
    *
    * The seam is `adopt()`, which is where a grown plot stops moving and
    * becomes that tile's own scenery. A blob living inside the plot itself
@@ -563,7 +563,7 @@ describe('the tiles she BUILDS get shadows too', () => {
     return grown
   }
 
-  it('shadows the pieces she grew, by the same rule', () => {
+  it('shadows the pieces they grew, by the same rule', () => {
     const props = createPropField()
     const grown = grownPlot()
     props.adopt({ q: 1, r: 0 }, grown, 1.15)

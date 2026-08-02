@@ -13,9 +13,9 @@ import { clearOf } from '../../src/island/pets'
 /**
  * Joe, playing: "the vertical posts go half way into the sign, covering the
  * writing". They did — 0.065 of a 0.17-high board, and proud of the lettered
- * face rather than behind it, so they were drawn over her own name.
+ * face rather than behind it, so they were drawn over the child's own name.
  *
- * The sign is the one place the world says the island is hers, so the posts
+ * The sign is the one place the world says the island is theirs, so the posts
  * are pinned below the writing rather than merely nudged.
  */
 describe('the island sign', () => {
@@ -45,8 +45,8 @@ describe('the island sign', () => {
       /*
        * The whole of every post sits below the whole of the board. Not
        * "mostly below", and not "overlaps by less than the text height" —
-       * any overlap at all is a stake standing in front of her name, because
-       * the posts are deeper than the board and win the depth test.
+       * any overlap at all is a stake standing in front of the child's name,
+       * because the posts are deeper than the board and win the depth test.
        */
       expect(postBox.max.y).toBeLessThanOrEqual(boardBox.min.y + 1e-6)
     }
@@ -67,7 +67,7 @@ describe('the island sign', () => {
  * the sign. Each was a hand-built object that the scenery pipeline never sees,
  * so `props.obstacles()` knew nothing about it and `publishObstacles()` was
  * never told, and pets walked straight through the one thing on the island
- * with her name on it.
+ * with the child's name on it.
  */
 describe('the sign is solid', () => {
   /** A pet is about 0.24 tall and renders at 0.16 of its ~1.43-unit model. */

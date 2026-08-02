@@ -33,7 +33,7 @@ One orbitable diorama island built from hex tiles. Eggs arrive — from reading
 rewards, the daily visitor, and rare tile events — and **reading challenges
 hatch them** into cube pets that live on the island forever: wandering,
 tappable, name-sayable, dressable. **Maths challenges earn hex tiles** which the
-child places herself, growing the island and forming biomes. Pets have home
+child places themselves, growing the island and forming biomes. Pets have home
 biomes: a freshly hatched shark waits hopefully in the nursery until a water
 hex exists for it. Pets ask for words in speech bubbles. The album records
 everything. No levels, no doors, no navigation — the island *is* the
@@ -129,8 +129,8 @@ later as a special event.
   talked about. The alien-word generator therefore runs at **build time**,
   authoring a committed one-to-one table of ~1,000 names, rather than at
   hatch. Names are graded **by set** — set 1's twenty-four are decodable at
-  band 1 and each later set climbs — so the names she meets track her
-  reading as sets unlock, without the name ever depending on who she is.
+  band 1 and each later set climbs — so the names a child meets track their
+  reading as sets unlock, without the name ever depending on who they are.
   Consequence: set order is a reading ladder as well as an aesthetic one,
   and cannot be reshuffled later without reshuffling difficulty with it.
   The name is shown large at hatch, spoken by the teacher voice, tappable

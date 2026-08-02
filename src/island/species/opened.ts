@@ -27,11 +27,11 @@ import type { Rng } from '../../core/rng'
 /**
  * The one collection that is open before anything is earned.
  *
- * She is dealt from it on her very first egg (`collection.ts`, primed from the
- * live 24), so it is open by definition rather than by a draw — and Joe's ruling
- * of 1 Aug is that it occupies one of the four slots like any other album.
- * `unlock.ts` never opens it: `candidates` excludes `base` explicitly, so it can
- * only ever get into `open` from here.
+ * They are dealt from it on their very first egg (`collection.ts`, primed from
+ * the live 24), so it is open by definition rather than by a draw — and Joe's
+ * ruling of 1 Aug is that it occupies one of the four slots like any other
+ * album. `unlock.ts` never opens it: `candidates` excludes `base` explicitly, so
+ * it can only ever get into `open` from here.
  */
 export const BASE_COLLECTION = 'base'
 
@@ -47,7 +47,7 @@ export interface Opened {
 export const NOTHING_OPENED: Opened = { open: [BASE_COLLECTION], lastOpened: null }
 
 /**
- * How many members of each collection she owns, counting SPECIES, not pets.
+ * How many members of each collection they own, counting SPECIES, not pets.
  *
  * The distinction is the whole of Joe's "one slot per species" ruling expressed
  * as arithmetic, and it is load-bearing rather than tidy: `completion` divides
@@ -55,7 +55,7 @@ export const NOTHING_OPENED: Opened = { open: [BASE_COLLECTION], lastOpened: nul
  * four foxes and nothing else read as 4/24 through the base set — and at the
  * exhausted end of a pack, where `collection.ts` starts dealing duplicates
  * again, a count of pets could exceed the collection's size outright and open a
- * new album for animals she has not met. (`completion` clamps to 1, so the
+ * new album for animals they have not met. (`completion` clamps to 1, so the
  * damage would be silent rather than loud, which is worse.)
  *
  * A species with no known collection is ignored — a save from a later build can
@@ -87,7 +87,7 @@ export function stateOf(species: readonly string[], opened: Opened): UnlockState
 }
 
 /**
- * Everything that should be open right now, given what she owns.
+ * Everything that should be open right now, given what they own.
  *
  * THE ORDER OF THE THREE STEPS IS THE DESIGN, so it is written down rather than
  * left to be inferred:
@@ -129,8 +129,8 @@ export function stateOf(species: readonly string[], opened: Opened): UnlockState
  * arrival, not on an event.
  *
  * `base` is forced into `open` rather than assumed to be there, so a save that
- * lost it — hand-edited, or truncated — comes back with her own album rather
- * than a hole where the twenty-four she is actually collecting should be.
+ * lost it — hand-edited, or truncated — comes back with their own album rather
+ * than a hole where the twenty-four they are actually collecting should be.
  */
 export function advance(
   species: readonly string[], opened: Opened, rng: Rng,
@@ -201,10 +201,10 @@ export function advance(
  * The albums the child should be looking at, in the order they were opened.
  *
  * COMPLETED COLLECTIONS STAY. `activeIds` deliberately drops them — that is what
- * frees a slot — but an album she has finished is the one she is proudest of,
- * and hiding it the moment she completes it would take the trophy away at the
- * exact instant she earned it. So this returns everything open, which is four
- * while she is mid-collection and grows by one each time she finishes one.
+ * frees a slot — but an album they have finished is the one they are proudest
+ * of, and hiding it the moment they complete it would take the trophy away at
+ * the exact instant they earned it. So this returns everything open, which is
+ * four while they are mid-collection and grows by one each time they finish one.
  *
  * Ids this build cannot resolve are dropped HERE rather than on the way out of
  * the save — see `readOpened` in `save.ts` for why they are kept on disk.

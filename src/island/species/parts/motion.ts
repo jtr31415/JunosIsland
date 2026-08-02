@@ -293,8 +293,8 @@ export function resolveMotion(
  * `Math.random() * Math.PI * 2` at load. That is not merely undeterministic in
  * the test sense — it means a creature Juno has owned for a month is in a
  * different part of its wingbeat every time the island opens. Nobody would ever
- * report that as a bug and it is still the wrong behaviour: her friends should
- * be the same friends.
+ * report that as a bug and it is still the wrong behaviour: their friends
+ * should be the same friends.
  *
  * **Why the key is NOT the species id, which is the obvious answer and the wrong
  * one.** The reason a phase offset is wanted at all is so that two of the SAME

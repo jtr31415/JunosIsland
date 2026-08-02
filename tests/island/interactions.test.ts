@@ -17,9 +17,9 @@ import { count } from '../../src/island/world/grid'
  * A FAITHFUL `invite`, not a stub that always says the same thing.
  *
  * The real one in `main.ts` remembers the last thing Fred asked for and clears
- * that memory the moment she overrides it, so the sequence is ask, override,
- * ask, override. A `vi.fn()` returning `undefined` would make every tap an
- * override and every one of these tests pass for the wrong reason — which is
+ * that memory the moment the child overrides it, so the sequence is ask,
+ * override, ask, override. A `vi.fn()` returning `undefined` would make every
+ * tap an override and every one of these tests pass for the wrong reason —
  * HANDOFF §5, the mock that hid four dead features. Assert the contract.
  */
 function askOnce() {
@@ -123,7 +123,7 @@ describe('tapping Fred', () => {
   /*
    * He used to replay the whole opening, and Joe hit it mid-game: the intro
    * restarted, handed over an animal after one challenge and a tile after the
-   * next, in the middle of a session she was already playing. A tap on a
+   * next, in the middle of a session the child was already playing. A tap on a
    * friendly character has to be the smallest thing in the game.
    */
   it('hops and says his name, like any other friend', () => {
@@ -134,7 +134,7 @@ describe('tapping Fred', () => {
 
   it('changes nothing at all', () => {
     // Not "changes little" — a greeting must not move the flow one inch,
-    // whatever she happens to be in the middle of.
+    // whatever the child happens to be in the middle of.
     for (const f of [createFlow(), readyToPlace(), tapEgg(createFlow())]) {
       expect(handleWorldTap(f, { kind: 'fred' }, ports())).toBe(f)
     }
@@ -148,11 +148,11 @@ describe('tapping Fred', () => {
   })
 })
 
-describe('tapping her own land', () => {
+describe('tapping the child\'s own land', () => {
   /*
    * Joe: "annoying UX if you only want to look around the island." Any patch
    * of grass used to start a maths round, so turning the camera to look at
-   * what she had built handed her a sum instead.
+   * what the child had built handed them a sum instead.
    */
   it('starts no challenge when there is no plot under construction', () => {
     const p = ports()
@@ -167,7 +167,7 @@ describe('tapping her own land', () => {
    * nothing at all, and "look here" is the only thing it can unambiguously
    * mean — so that is what it now does. It moves the camera and NOTHING else.
    */
-  it('turns the island about the tile she tapped', () => {
+  it('turns the island about the tile the child tapped', () => {
     const p = ports()
     const f = createFlow()
     const next = handleWorldTap(f, { kind: 'tile', axial: { q: 3, r: -2 } }, p)
@@ -197,13 +197,13 @@ describe('tapping her own land', () => {
     expect(p.focusOn).not.toHaveBeenCalled()
   })
 
-  it('does NOT carry on a plot she walked away from — PB-048', () => {
+  it('does NOT carry on a plot the child walked away from — PB-048', () => {
     /*
      * It used to, and Joe reported what that costs: Juno taps an ANIMAL, misses
      * — `picking.ts` answers with whatever IS under the ray, so a near-miss is
-     * the tile her friend is standing on — and she is dropped into building a
-     * tile she had left. Her plot is still hers; she picks it back up by tapping
-     * a glowing socket, which asks her where and what afresh.
+     * the tile their friend is standing on — and they are dropped into building
+     * a tile they had left. The plot is still theirs; they pick it back up by
+     * tapping a glowing socket, which asks where and what afresh.
      */
     const p = ports()
     const f = midBuild()
@@ -217,10 +217,10 @@ describe('tapping her own land', () => {
   it('one tap, one thing: it moves the camera and opens nothing', () => {
     /*
      * A tap that both opened a round and swung the view would be the worst of
-     * both: she loses the place she was looking at AND is handed a sum she did
-     * not ask for. That rule is why the tile tap could not do two things at
-     * once — and since PB-048 the one thing it does is LOOK, whether a plot is
-     * standing or not.
+     * both: the child loses the place they were looking at AND is handed a sum
+     * they did not ask for. That rule is why the tile tap could not do two
+     * things at once — and since PB-048 the one thing it does is LOOK, whether
+     * a plot is standing or not.
      */
     const p = ports()
     const f = midBuild()
@@ -268,7 +268,7 @@ describe('tapping a socket', () => {
   })
 
   it('keeps the choice when the socket is not legal', () => {
-    // A mis-tap must never cost her the work (brief section 18)
+    // A mis-tap must never cost the child the work (brief section 18)
     const p = ports()
     const before = readyToPlace()
     const next = handleWorldTap(before, { kind: 'socket', axial: { q: 9, r: 9 } }, p)
@@ -334,8 +334,8 @@ describe('tapping the island', () => {
   it('does NOT open the bank from free play any more', () => {
     /*
      * Joe: "annoying UX if you only want to look around the island." Turning
-     * the camera to admire what she built used to hand her a maths round. The
-     * bank is opened from a socket now.
+     * the camera to admire what the child built used to hand them a maths
+     * round. The bank is opened from a socket now.
      */
     const p = ports()
     const f = createFlow()
@@ -346,9 +346,9 @@ describe('tapping the island', () => {
 
   it('does NOT open a sum once a plot is under construction either — PB-048', () => {
     /*
-     * The last route by which looking at her own island could hand her a maths
-     * round. A plot standing in free play is one she has walked away from, and
-     * the way back into it is a glowing socket.
+     * The last route by which looking at their own island could hand a child a
+     * maths round. A plot standing in free play is one they have walked away
+     * from, and the way back into it is a glowing socket.
      */
     const p = ports()
     const f = midBuild()
@@ -387,7 +387,7 @@ describe('finishing and leaving a challenge', () => {
     const mid = tapEgg({ ...building, phase: 'free' })
     const out = handleChallengeDismissed(mid)
     expect(out.phase).toBe('free')
-    expect(out.plot).toEqual(building.plot)      // the site is still hers
+    expect(out.plot).toEqual(building.plot)      // the site is still theirs
     expect(out.eggPresent).toBe(true)
     expect(out.pets).toHaveLength(0)
   })
@@ -418,8 +418,8 @@ describe('a completed round is never discarded', () => {
 
   it('builds one plot at a time, and never loses the one in progress', () => {
     // Found at the M1 gate in its earlier form: a surplus hid the offer and a
-    // tile she had earned became unreachable. The plot cannot be surplus —
-    // there is only ever one, and asking again advances it.
+    // tile the child had earned became unreachable. The plot cannot be surplus
+    // — there is only ever one, and asking again advances it.
     //
     // Asking now happens at a SOCKET; carrying on happens at either.
     const p = ports()
@@ -430,8 +430,8 @@ describe('a completed round is never discarded', () => {
     const plot = f.plot
     expect(plot).not.toBeNull()
 
-    // ...and looking at her own land neither starts a second one nor resumes
-    // this one (PB-048). The plot she is building is untouched by the tap.
+    // ...and looking at their own land neither starts a second one nor resumes
+    // this one (PB-048). The plot they are building is untouched by the tap.
     const seen = ports()
     const again = handleWorldTap({ ...f, phase: 'free' }, { kind: 'tile', axial: { q: 0, r: 0 } }, seen)
     expect(again.plot).toEqual(plot)
@@ -502,7 +502,7 @@ describe('what the ports are actually handed', () => {
     expect(next).toEqual(handed)
   })
 
-  it('a tap on her land with a plot standing hands the ports no round at all', () => {
+  it('a tap on the child\'s land with a plot standing hands no round at all', () => {
     /*
      * This used to assert that the RESUMED state handed to openSum would really
      * open. PB-048 deleted the resumption, so the contract that matters is the
@@ -517,7 +517,7 @@ describe('what the ports are actually handed', () => {
   })
 
   it('a socket tap with a plot standing hands say the question, not a sum', () => {
-    // The path that replaced it: she rechooses where and what, on entry.
+    // The path that replaced it: the child rechooses where and what, on entry.
     const p = ports()
     const f = midBuild()
     const next = handleWorldTap({ ...f, phase: 'free' }, { kind: 'socket', axial: { q: 1, r: -1 } }, p)
@@ -576,7 +576,7 @@ describe('a governor diverts a tap, it never strands one', () => {
  * skipped and the override is never silent — Joe asked for an announcement, and
  * this is how it stays one.
  */
-describe('she can ignore Fred and go ahead anyway', () => {
+describe('the child can ignore Fred and go ahead anyway', () => {
   it('opens the egg on the second tap even while the nursery is queued', () => {
     const p = ports({ eggsPaused: () => true })
     const before = createFlow()
@@ -605,7 +605,7 @@ describe('she can ignore Fred and go ahead anyway', () => {
     expect(second.phase).toBe('placing')
   })
 
-  it('asks again next time rather than waving her through in silence', () => {
+  it('asks again next time rather than waving the child through in silence', () => {
     /*
      * The memory clears ON the override, so every override costs one tap and
      * comes with Fred's line. A memory that persisted would make the second and
@@ -626,8 +626,8 @@ describe('she can ignore Fred and go ahead anyway', () => {
   it('does not let one governor unlock the other', () => {
     /*
      * Fred's memory is keyed on WHICH thing he asked for. Tapping the egg then
-     * the socket must not count as "she tapped twice"; each ask is overridden
-     * only by a repeat of itself.
+     * the socket must not count as "the child tapped twice"; each ask is
+     * overridden only by a repeat of itself.
      */
     const p = ports({ eggsPaused: () => true, landPaused: () => true })
     const f = createFlow()

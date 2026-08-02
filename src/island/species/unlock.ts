@@ -369,9 +369,9 @@ function draw(state: UnlockState, rng: Rng): string | null {
  * >>> Joe, on the album, 1 Aug: *"4 albums always on show, next one shows when
  * >>> one is completed."* Both halves of that sentence have to be true at once,
  * >>> and under `nextToOpen` alone the first one never is: a fresh island has
- * >>> only `base` open at 0%, nothing satisfies rule 2, and she would see ONE
- * >>> album until she owned twenty of the twenty-four — which is the opposite of
- * >>> the anticipation the whole feature is for.
+ * >>> only `base` open at 0%, nothing satisfies rule 2, and they would see ONE
+ * >>> album until they owned twenty of the twenty-four — which is the opposite
+ * >>> of the anticipation the whole feature is for.
  *
  * So the four are seeded AT THE CAP and the cadence takes over from there. That
  * is not a second policy fighting the first: starting full means `activeIds` is

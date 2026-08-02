@@ -13,7 +13,7 @@ import {
 describe('dayKey', () => {
   it('is the LOCAL calendar day, not the UTC one', () => {
     /*
-     * The distinction that matters. A child's day starts when she wakes up,
+     * The distinction that matters. A child's day starts when they wake up,
      * not at 1am British Summer Time — and a daily visitor arriving in the
      * middle of the night, or twice in one afternoon, is the bug this
      * prevents.

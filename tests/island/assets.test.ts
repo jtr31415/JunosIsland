@@ -64,7 +64,7 @@ describe('every asset the code names is on disk', () => {
     expect(missing(WATER_PIECES, fileFor)).toEqual([])
   })
 
-  it('has a glTF for everything a plot she built can grow', () => {
+  it('has a glTF for everything a plot they built can grow', () => {
     /* The SECOND placement path — the one that gets forgotten. HANDOFF §6. */
     expect(missing(Object.values(PALETTE).flat(), fileFor)).toEqual([])
   })

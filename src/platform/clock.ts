@@ -41,7 +41,7 @@ export interface Clock {
   /**
    * The LOCAL calendar day, as `YYYY-MM-DD`.
    *
-   * Local, emphatically, and not UTC. A child's day starts when she wakes up,
+   * Local, emphatically, and not UTC. A child's day starts when they wake up,
    * not at 1am British Summer Time — and the daily visitor arriving in the
    * middle of the night, or twice on the same afternoon, is exactly the class
    * of bug this exists to prevent.

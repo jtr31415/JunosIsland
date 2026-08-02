@@ -3,15 +3,15 @@
  *
  * How big a pet is to TAP, measured in the pixels a child's finger lands in.
  *
- * Joe, watching her play: "the tap area for a spawn animal needs to be a bit
- * larger. she wants to tap them but regularly misses and is taken to a
+ * Joe, watching the child play: "the tap area for a spawn animal needs to be a
+ * bit larger. she wants to tap them but regularly misses and is taken to a
  * challenge. it really frustrates her."
  *
  * Missing costs more here than a miss usually does. `pickFrom` answers with
  * whatever IS under the ray, so a near-miss is not nothing — it is the egg's
- * reading round, or a tile offer, or a half-built plot resuming into a sum. She
- * had just finished an hour of work and had gone looking round her island for
- * her animals, unprompted, which is the play the whole game is for.
+ * reading round, or a tile offer, or a half-built plot resuming into a sum. The
+ * child had just finished an hour of work and had gone looking round their
+ * island for their animals, unprompted, which is the play the whole game is for.
  *
  * So these tests are in SCREEN PIXELS, driving the real `THREE.Raycaster`
  * against the real pet field through the real `pickFrom`, from a camera set up
@@ -81,7 +81,7 @@ const pet = (id: string, species: string): Pet =>
  * The island's own camera: 46° fov, orbiting at polar 0.86.
  *
  * `distance` defaults to the shot the island opens on. It is a parameter
- * because `frame()` pulls the camera back as her island grows, and how big a
+ * because `frame()` pulls the camera back as the island grows, and how big a
  * pet is to tap at the far end of that pull-back is the whole of one of these
  * describes.
  */
@@ -123,7 +123,7 @@ function hexField(cells: Array<[number, number]>, lift: number, name: string): T
 }
 
 /**
- * A hex and its six neighbours, in world units — a patch of her island big
+ * A hex and its six neighbours, in world units — a patch of their island big
  * enough that a finger's width off a pet is still land rather than open sea.
  * Pointy-top, so neighbours sit √3·R apart across and 1.5·R up.
  */
@@ -141,7 +141,7 @@ const PATCH: Array<[number, number]> = (() => {
  * Two full rings of it — 19 hexes.
  *
  * At the 26-unit clamp a finger is worth 1.7 world units rather than 0.9, so
- * the seven-hex patch above simply runs out and "a finger away is her land"
+ * the seven-hex patch above simply runs out and "a finger away is their land"
  * would be answered by the sea. The island the pull-back exists for is bigger
  * than the island the opening shot frames.
  */
@@ -229,7 +229,7 @@ function rayThrough(cam: THREE.Camera, at: THREE.Vector3): THREE.Raycaster {
   return rayAt(cam, p.x, p.y)
 }
 
-/** The middle of the creature as she SEES it, which is what she aims at. */
+/** The middle of the creature as the child SEES it, and what they aim at. */
 function drawnCentre(field: Field, id: string): THREE.Vector3 {
   return new THREE.Box3().setFromObject(animalOf(field, id))
     .getCenter(new THREE.Vector3())
@@ -342,7 +342,7 @@ describe('a pet is big enough for a six-year-old to hit', () => {
      * after is: take the proxy away and ask the real picker the same question.
      * The creature's whole drawn box is about 26 pixels corner to corner, and
      * the disc a finger can reliably land in is 20.5 across. Against a
-     * fingertip nearer fifty, she was always going to miss.
+     * fingertip nearer fifty, they were always going to miss.
      */
     const field = await fieldWith(pet('a', 'animal-cow'))
     const cam = islandCamera()
@@ -374,11 +374,11 @@ describe('a pet is big enough for a six-year-old to hit', () => {
     }
   })
 
-  it('does not send a near-miss off to a challenge she did not ask for', async () => {
+  it('does not send a near-miss off to a challenge they did not ask for', async () => {
     /*
      * The symptom Joe reported, at the pixel that used to produce it: 18px out
      * from the middle of the creature — well inside a fingertip — over a socket
-     * she is not aiming at.
+     * the child is not aiming at.
      */
     const field = await fieldWith(pet('a', 'animal-cow'))
     const cam = islandCamera()
@@ -393,7 +393,7 @@ describe('a pet is big enough for a six-year-old to hit', () => {
   })
 })
 
-describe('and it stays that big as her island grows', () => {
+describe('and it stays that big as the island grows', () => {
   /**
    * The shot the real camera settles on once an island has `n` tiles.
    *
@@ -425,16 +425,16 @@ describe('and it stays that big as her island grows', () => {
     return d
   }
 
-  /** The furthest the island can ever be held from her, per `camera.ts`. */
+  /** The furthest away the island can ever be held, per `camera.ts`. */
   const CLAMP = DEFAULT_LIMITS.maxDistance
 
   it('was shrinking back toward the original bug as the camera pulled back', async () => {
     /*
      * The before, measured. A world-space sphere is a shrinking tap target:
-     * `frame()` pulls back as she builds, the frustum grows with distance, and
+     * `frame()` pulls back as they build, the frustum grows with distance, and
      * the 48px the proxy was sized for becomes 38px at fifteen tiles and 25px
-     * at the clamp — a whisker off the 20.5px that frustrated her in the first
-     * place, and it arrives exactly when her island is full of animals to hunt.
+     * at the clamp — a whisker off the 20.5px that frustrated them in the first
+     * place, and it arrives exactly when the island is full of animals to hunt.
      *
      * Guarded rather than asserted, like the 20px test above: this states what
      * a FIXED radius does, so it must go on saying it however the game is
@@ -450,7 +450,7 @@ describe('and it stays that big as her island grows', () => {
   })
 
   it('holds a 46px finger at the opening shot, part-grown, and at the clamp', async () => {
-    // 19 tiles is her island with two full rings round the home rock, and it
+    // 19 tiles is their island with two full rings round the home rock, and it
     // frames at 17.4 — the middle of Fable's three measurements.
     for (const d of [TAP_TARGET.distance, shotFor(19), CLAMP]) {
       const field = await fieldWith(pet('a', 'animal-cow'))
@@ -479,7 +479,7 @@ describe('and it stays that big as her island grows', () => {
      * the real camera above; this pins the RANGE the target has to hold across,
      * through the same expression `scene.ts` hands the pet field.
      *
-     * Measured, and they are real islands: her first tile is framed closer than
+     * Measured, and they are real islands: the first tile is framed closer than
      * the opening shot, two full rings is 17.4, and about sixty tiles is as far
      * back as the game will ever go. If any of that moves, the pixel
      * measurements below are being taken at shots the game no longer uses.
@@ -503,7 +503,7 @@ describe('and it stays that big as her island grows', () => {
     expect(pickRadiusAt(CLAMP)).toBeLessThan(incircle)
   })
 
-  it('leaves her own land tappable a finger away, even at the clamp', async () => {
+  it("leaves the child's own land tappable a finger away, even at the clamp", async () => {
     const field = await fieldWith(pet('a', 'animal-cow'))
     field.setCameraDistance(CLAMP)
     field.group.updateMatrixWorld(true)
@@ -517,7 +517,7 @@ describe('and it stays that big as her island grows', () => {
     }
   })
 
-  it('shrinks it again when she pinches in, so a pet never swallows its tile', async () => {
+  it('shrinks it again when the child pinches in, so a pet never swallows its tile', async () => {
     const field = await fieldWith(pet('a', 'animal-cow'))
     field.setCameraDistance(DEFAULT_LIMITS.minDistance)
     field.group.updateMatrixWorld(true)
@@ -614,7 +614,7 @@ describe('the proxy that does it is invisible, and stays pickable', () => {
   it('casts no shadow, and shares one geometry and one material with every pet', async () => {
     /*
      * Shared and never disposed per pet: freeing either would blank the tap
-     * target of every other pet at once, including friends she already owns
+     * target of every other pet at once, including friends already owned
      * (brief §19) — the same rule the set atlases and the cloned models follow.
      */
     const field = await fieldWith(
@@ -683,10 +683,10 @@ describe('a bigger pet target does not steal what it should not', () => {
       .toEqual({ kind: 'pet', id: 'a' })
   })
 
-  it('leaves her own land tappable a finger away from the pet', async () => {
+  it("leaves the child's own land tappable a finger away from the pet", async () => {
     /*
-     * "Zoom to location" is a tap on her own land, and it must survive a pet
-     * standing on that land. 60px out — a finger and a half — is her tile again.
+     * "Zoom to location" is a tap on the child's own land, and it must survive
+     * a pet standing on it. 60px out — a finger and a half — is the tile again.
      */
     const field = await fieldWith(pet('a', 'animal-cow'))
     const t = world(field, { tileCells: PATCH })
@@ -700,13 +700,13 @@ describe('a bigger pet target does not steal what it should not', () => {
   })
 })
 
-describe('the one thing she is always meant to be able to reach', () => {
+describe('the one thing the child is always meant to be able to reach', () => {
   /*
-   * picking.ts: "The egg is the one thing on the island she is always meant to
-   * be able to reach." That was written about a socket drawn behind it; a pet's
-   * tap proxy is the same problem from a new direction, and a worse one,
-   * because the thing in front of the egg is INVISIBLE. She aims at the egg,
-   * she can see nothing else there, and her friend bounces instead.
+   * picking.ts: "The egg is the one thing on the island they are always meant
+   * to be able to reach." That was written about a socket drawn behind it; a
+   * pet's tap proxy is the same problem from a new direction, and a worse one,
+   * because the thing in front of the egg is INVISIBLE. They aim at the egg,
+   * they can see nothing else there, and their friend bounces instead.
    *
    * It is not hypothetical: pets wander wherever the island is clear, `clearOf`
    * lets one stand exactly a keep-out away from the egg, and the proxy is a
@@ -718,12 +718,12 @@ describe('the one thing she is always meant to be able to reach', () => {
   function beside(eggGroup: THREE.Object3D, azimuth: number): { x: number; z: number } {
     // Exactly what `main.ts` publishes as the egg's keep-out, plus the pet's
     // own radius, which is what `clearOf` adds. Toward the camera, so the
-    // proxy is between her finger and the egg.
+    // proxy is between the child's finger and the egg.
     const keep = footprintBelow(eggGroup, WALKING_HEIGHT) + (1.43 * 0.16) / 2
     return { x: Math.cos(azimuth) * keep, z: Math.sin(azimuth) * keep }
   }
 
-  /** The middle of the egg as she sees it: the ovoid, not its ring on the grass. */
+  /** The middle of the egg as seen: the ovoid, not its ring on the grass. */
   function eggCentre(eggGroup: THREE.Object3D): THREE.Vector3 {
     const box = new THREE.Box3().setFromObject(eggGroup)
     return new THREE.Vector3(
@@ -794,7 +794,7 @@ describe('the one thing she is always meant to be able to reach', () => {
     }
   })
 
-  it('still hands her the pet where only the pet is, egg or no egg', async () => {
+  it('still hands the child the pet where only the pet is, egg or no egg', async () => {
     /*
      * The other half, and the reason this is not "the egg always wins". A tap
      * on the pet is still a tap on the pet, and the 46-pixel finger it grew is
@@ -850,7 +850,7 @@ describe('a flyer hovers over the tile without swallowing it', () => {
  * Every test above calls `field.setCameraDistance(...)` by hand, which proves a
  * PetField *can* hold a 47px target. None of them proves the GAME ever calls it.
  * Delete the wiring line in main.ts and all of them stay green while the tap
- * target silently goes back to shrinking as her island grows — the exact fault
+ * target silently goes back to shrinking as the island grows — the exact fault
  * this work exists to fix, reverted invisibly.
  *
  * That is HANDOFF §5's lesson, which this project has paid for four times: a

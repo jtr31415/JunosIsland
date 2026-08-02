@@ -22,7 +22,7 @@ export type Channel = 'production' | 'preview'
  * Anything unrecognised is treated as production.
  *
  * Failing towards the safe answer. A typo in an environment variable must not
- * be the reason an unfinished feature reaches her.
+ * be the reason an unfinished feature reaches the child.
  */
 export const CHANNEL: Channel =
   (typeof __CHANNEL__ === 'string' && __CHANNEL__ === 'preview') ? 'preview' : 'production'

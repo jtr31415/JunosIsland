@@ -15,8 +15,8 @@ spec's curves are fitted to it.
    (egg on the turntable), **one word**
    → egg cracks fully → hatch ceremony → first pet + name card (script 7).
 3. **Fred asks for space** (script 8) → the challenge stage opens, **one sum** → the
-   pick-of-three appears (grass, grass, water on first run) → she picks →
-   sockets pulse → she taps one → the whole plot **blooms in one fast
+   pick-of-three appears (grass, grass, water on first run) → the child picks →
+   sockets pulse → they tap one → the whole plot **blooms in one fast
    sequence** (all increments play back-to-back — maximum first-taste
    spectacle) → pet moves in if biome matches, else nursery want appears.
 4. **Free play begins.** Egg #2 drifts in within ~20s; the tile bank invites.

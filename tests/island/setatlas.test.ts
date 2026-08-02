@@ -17,8 +17,8 @@ describe('the natural set is untouched, not merely unchanged', () => {
     /*
      * The golden guarantee, and why it can be exact rather than a pixel
      * comparison: for the natural set there is nothing to compare, because
-     * nothing happens. A pet she already owns keeps the same material and the
-     * same texture it had before this engine existed.
+     * nothing happens. A pet the child already owns keeps the same material
+     * and the same texture it had before this engine existed.
      */
     const atlas = createSetAtlas()
     expect(await atlas.texture('natural', 'animal-fox')).toBeNull()
@@ -52,7 +52,7 @@ describe('caching', () => {
   })
 
   it('treats an unknown set as natural rather than failing', async () => {
-    // A save naming a set since removed must not stop her playing.
+    // A save naming a set since removed must not stop the child playing.
     const atlas = createSetAtlas()
     expect(await atlas.texture('a-set-that-was-removed', 'animal-fox')).toBeNull()
   })
@@ -172,8 +172,8 @@ describe('the material rules the GLBs impose', () => {
   it('does NOT dispose the material it replaces', async () => {
     /*
      * The landmine. What it replaces is the shared natural material, and
-     * disposing it breaks every other pet of the natural set — including ones
-     * she already owns (brief §19). The rule stage.showTemp already follows.
+     * disposing it breaks every other pet of the natural set — including
+     * ones the child already owns (brief §19), which stage.showTemp follows.
      */
     const { pet, source } = petLike()
     const spy = vi.spyOn(source, 'dispose')

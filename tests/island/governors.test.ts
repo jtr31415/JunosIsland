@@ -121,7 +121,7 @@ describe('the grace period', () => {
     expect(inGracePeriod(withPets(grow(createFlow(), 9), 6))).toBe(false)
   })
 
-  it('suppresses BOTH governors while it lasts, not just the one she is near', () => {
+  it('suppresses BOTH governors while it lasts, not just the one they are near', () => {
     /*
      * §5, and it is asserted over the whole opening rather than at one point,
      * because the two thresholds are DATA.
@@ -130,7 +130,7 @@ describe('the grace period', () => {
      * at two pets and four tiles no island small enough to be inside it could
      * reach either wall, so the suppression never actually suppressed anything
      * and the test was a floor under `balance.json` rather than under any state
-     * a child could stand in. At five animals and ten tiles she can be a long
+     * a child could stand in. At five animals and ten tiles they can be a long
      * way past the empty wall and still hear nothing — seven bare fields for two
      * friends is four steps out — so the `witnesses` count below is not
      * decoration: it fails if grace is ever narrowed back to where the
@@ -154,7 +154,7 @@ describe('the grace period', () => {
     /*
      * A real consequence of the ruling, and one worth stating out loud because
      * it is not obvious from either number on its own. Grace holds while pets
-     * <= 5 AND tiles <= 10, so at five animals or fewer she must own at least
+     * <= 5 AND tiles <= 10, so at five animals or fewer they must own at least
      * eleven fields to hear from Fred at all — and eleven fields house seven
      * animals before the crowded wall is anywhere near. The nursery queue is
      * therefore UNREACHABLE until the sixth friend comes home: for the whole of
@@ -245,7 +245,7 @@ describe('the governor lines', () => {
  * block tests is the SENTENCE — the thing a six-year-old actually hears, which
  * is where a template can go wrong in ways an integer cannot. A line that says
  * "1 more friends" to a child learning to read is a worse failure than a count
- * that is one out, because she will believe the spelling.
+ * that is one out, because they will believe the spelling.
  */
 describe('Fred names the number — JT-019', () => {
   const NUDGES = Object.keys(GOVERNOR_LINE) as Nudge[]
@@ -261,7 +261,7 @@ describe('Fred names the number — JT-019', () => {
     /*
      * The whole reason the templates spell both forms out instead of bolting an
      * `s` on: one is the count a child meets most often, because Fred speaks the
-     * moment she steps over the wall and one step is usually all she is out by.
+     * moment they step over the wall and one step is usually all they are out by.
      */
     expect(governorLine('space-surplus', 1))
       .toBe("Let's read with the egg — 1 more friend will fill it up!")
@@ -287,7 +287,7 @@ describe('Fred names the number — JT-019', () => {
   it('leaves the wriggle-break line exactly as written, whatever count it is handed', () => {
     /*
      * It reads the CHILD rather than the island (`createBreakWatch`), so there
-     * is no number to give her and nothing in the sentence to fill. The caller
+     * is no number to give them and nothing in the sentence to fill. The caller
      * hands it whatever `restoreCount` said — which is 0 — and it must come back
      * untouched rather than growing a stray digit.
      */
@@ -310,7 +310,7 @@ describe('Fred names the number — JT-019', () => {
   it('speaks a number that is the real way out, on a real island', () => {
     /*
      * End to end, which is the only place the count and the sentence meet: the
-     * island Fred is looking at, the number he says, and the island she reaches
+     * island Fred is looking at, the number he says, and the island they reach
      * by doing exactly what he asked. Both walls, and both grammatical numbers,
      * so the singular is proved on a state a child can actually stand in rather
      * than only on a literal.
@@ -415,7 +415,7 @@ describe('the corridor is a RATIO, not a fixed gap — Joe, 28 July', () => {
     expect(ceiling(pets) / pets).toBeGreaterThan(1.2)
   })
 
-  it('still pauses land eventually, so the island cannot run away from her', () => {
+  it('still pauses land eventually, so the island cannot run away from them', () => {
     const f = withPets(grow(createFlow(), 40), 2)
     expect(activeGovernor(f)).toBe('space-surplus')
     expect(landPaused(f)).toBe(true)
@@ -531,9 +531,9 @@ describe('the floor is a RATIO too — PB-039, moved by JT-012', () => {
   })
 
   it('leaves a wide corridor between the two walls at every size', () => {
-    // The two ends are separate ratios, so the room she has to play in must grow
-    // with the island rather than staying a fixed handful of hexes. Six upward,
-    // for the same reason as the block above: below it there is no wall to see.
+    // The two ends are separate ratios, so the room they play in must grow with
+    // the island rather than staying a fixed handful of hexes. Six upward, for
+    // the same reason as the block above: below it there is no wall to see.
     for (const pets of [6, 8, 10, 20]) {
       expect(ceiling(pets) - floor(pets), `${pets} pets`).toBeGreaterThan(2)
     }
@@ -548,13 +548,13 @@ describe('the floor is a RATIO too — PB-039, moved by JT-012', () => {
 })
 
 /**
- * No state she cannot leave — the doctrine, walked rather than argued.
+ * No state the child cannot leave — the doctrine, walked rather than argued.
  *
- * `governors.ts:8-14`: they are INVITATIONS, and an invitation she cannot accept
- * is a lockout with a friendly voice. Whatever Fred asks for must be the thing
- * that clears him, and ONE of it must be enough — a six-year-old who does two
- * sums and finds the same sentence waiting has learnt that the game does not
- * mean what it says.
+ * `governors.ts:8-14`: they are INVITATIONS, and an invitation they cannot
+ * accept is a lockout with a friendly voice. Whatever Fred asks for must be the
+ * thing that clears him, and ONE of it must be enough — a six-year-old who does
+ * two sums and finds the same sentence waiting has learnt that the game does
+ * not mean what it says.
  */
 describe('the tap is diverted, never stranded — PB-039, re-walked for JT-019', () => {
   /*
@@ -571,12 +571,12 @@ describe('the tap is diverted, never stranded — PB-039, re-walked for JT-019',
    * that overshoots is a game asking for work it does not need and a number that
    * falls short is a game that does not mean what it says.
    *
-   * She may still ignore him entirely and pay the surcharge instead (PB-042).
-   * What is asserted here is that the way out exists, is exactly as long as she
-   * was told, and never drops her into the OTHER governor on the way — which
-   * would satisfy the letter of the doctrine and none of it.
+   * They may still ignore him entirely and pay the surcharge instead (PB-042).
+   * What is asserted here is that the way out exists, is exactly as long as
+   * they were told, and never drops them into the OTHER governor on the way —
+   * which would satisfy the letter of the doctrine and none of it.
    */
-  it('lifts the nursery queue in exactly the fields Fred names, and hands her nothing else', () => {
+  it('lifts the nursery queue in exactly the fields Fred names, and hands them nothing else', () => {
     for (let tiles = 0; tiles <= 20; tiles++) {
       let f = grow(createFlow(), tiles)
       for (let pets = 1; pets <= 40; pets++) {
@@ -594,8 +594,8 @@ describe('the tap is diverted, never stranded — PB-039, re-walked for JT-019',
         // One fewer does NOT, so the number is not a rounded encouragement.
         expect(activeGovernor(grow(f, need - 1)), where).toBe('nursery-queue')
         // ...and the road out never runs through the other governor. Only what
-        // she does AFTER she is free is her own business: laying a further field
-        // would eventually empty the island, and Fred may say so.
+        // they do AFTER they are free is their own business: laying a further
+        // field would eventually empty the island, and Fred may say so.
         for (let n = 1; n <= need; n++) {
           expect(activeGovernor(grow(f, n)), `${where}, +${n} fields`)
             .not.toBe('space-surplus')
@@ -605,7 +605,7 @@ describe('the tap is diverted, never stranded — PB-039, re-walked for JT-019',
     }
   })
 
-  it('lifts the space surplus in exactly the friends Fred names, and hands her nothing else', () => {
+  it('lifts the space surplus in exactly the friends Fred names, and hands them nothing else', () => {
     for (let pets = 0; pets <= 12; pets++) {
       let f = withPets(createFlow(), pets)
       for (let tiles = 1; tiles <= 60; tiles++) {
@@ -621,7 +621,7 @@ describe('the tap is diverted, never stranded — PB-039, re-walked for JT-019',
         expect(landPaused(cleared), where).toBe(false)
         expect(activeGovernor(withPets(f, need - 1)), where).toBe('space-surplus')
         // The mirror, and the same caveat: hatching a friend BEYOND the number
-        // she was given may crowd the island, and Fred is entitled to mention it.
+        // they were given may crowd the island, and Fred may mention it.
         for (let n = 1; n <= need; n++) {
           expect(activeGovernor(withPets(f, n)), `${where}, +${n} friends`)
             .not.toBe('nursery-queue')
@@ -642,7 +642,7 @@ describe('the tap is diverted, never stranded — PB-039, re-walked for JT-019',
  * announcement."*
  *
  * So: an invitation first (the governors above, and PB-042 made them ignorable),
- * then a price that climbs the further out she runs, then a ceiling on the price
+ * then a price that climbs the further out they run, then a ceiling on the price
  * — "up to a point" at both ends. Nothing is ever barred.
  */
 describe('the surcharge past the walls — JT-012', () => {
@@ -670,9 +670,9 @@ describe('the surcharge past the walls — JT-012', () => {
      * corridor (1.5 / 3.0) is where Fred speaks and `price` (1.2 / 4.0) is where
      * the till opens, and the price walls sit strictly outside the warning ones.
      * So exactly one direction survives, and it is the direction that protects
-     * her — a price cannot rise unless Fred has already asked. The converse is
-     * now deliberately FALSE: there is a band in which she has been told and is
-     * being charged nothing.
+     * the child — a price cannot rise unless Fred has already asked. The
+     * converse is now deliberately FALSE: there is a band in which they have
+     * been told and are being charged nothing.
      *
      * WHICH IS WHY THE BAND IS COUNTED rather than merely permitted. An
      * implication on its own would still hold under the old one-wall code, so a
@@ -719,7 +719,7 @@ describe('the surcharge past the walls — JT-012', () => {
         }
       }
     }
-    expect(toldTileFree, 'no island where Fred asks her to read and land is list price')
+    expect(toldTileFree, 'no island where Fred asks for reading and land is list price')
       .toBeGreaterThan(0)
     expect(toldEggFree, 'no island where Fred asks for maths and the egg is list price')
       .toBeGreaterThan(0)
@@ -728,7 +728,7 @@ describe('the surcharge past the walls — JT-012', () => {
   it('reaches the price a child actually sees, at both walls', () => {
     /*
      * The wiring, pinned end to end rather than asserted as a property: the flow
-     * she is in, the steps it is out by, and the number of sums or pages the
+     * they are in, the steps it is out by, and the number of sums or pages the
      * overlay will count out. Prices are in units; one item pays two.
      *
      * BOTH FIXTURES MOVED, and by both rulings at once. The old pair — nine
@@ -753,7 +753,7 @@ describe('the surcharge past the walls — JT-012', () => {
     expect(sumsForTile(crowded)).toBe(tileCost(crowded.tilesEarned + 1))
 
     /*
-     * ...and the band between the two walls, which is what PB-042 bought her:
+     * ...and the band between the two walls, which is what PB-042 bought:
      * ten fields for eight friends is past the crowded WARNING wall and inside
      * the crowded PRICE wall, so Fred asks for maths and the egg costs exactly
      * what it has always cost.
@@ -828,21 +828,21 @@ describe('the surcharge past the walls — JT-012', () => {
 })
 
 /**
- * Brief §19, at a price that moves: nothing she owns can be lost.
+ * Brief §19, at a price that moves: nothing they own can be lost.
  *
- * A rise must never strand progress she has already banked toward a purchase,
- * and must never un-earn a tile or a friend. The two walls move in OPPOSITE
- * directions, so this needed checking honestly rather than asserting.
+ * A rise must never strand progress they have already banked toward a
+ * purchase, and must never un-earn a tile or a friend. The two walls move in
+ * OPPOSITE directions, so this needed checking honestly rather than asserting.
  *
  * The answer is that it cannot happen, and the reason is structural. A tile's
  * price rises with bare fields, and fields only rise by committing a plot —
- * which zeroes `sumProgress` and hands her the tile. An egg's price rises with
+ * which zeroes `sumProgress` and hands them the tile. An egg's price rises with
  * friends, and friends only arrive by hatching — which zeroes `readProgress` and
- * hands her the friend. So while she is part-paid toward either thing, the only
- * moves open to her are the ones the governor is asking for, and every one of
- * them makes the thing she is part-way through CHEAPER, never dearer.
+ * hands them the friend. So while they are part-paid toward either thing, the
+ * only moves open to the child are the ones the governor asks for, and every
+ * one of them makes the thing they are part-way through CHEAPER, never dearer.
  */
-describe('a price that rises never strands what she has banked — §19', () => {
+describe('a price that rises never strands what they have banked — §19', () => {
   it('never raises the tile price when a friend comes home', () => {
     // The direction that matters mid-round, over the whole grid.
     for (let fields = 0; fields <= 40; fields++) {
@@ -884,11 +884,11 @@ describe('a price that rises never strands what she has banked — §19', () => 
     expect(g.plot, 'still not paid off').not.toBeNull()
     const priced = sumsForTile(g)
 
-    // She does the thing Fred asked for instead: a friend comes home.
+    // The child does the thing Fred asked for instead: a friend comes home.
     const after = withPets(g, 1)
     expect(after.sumProgress, 'not one sum lost').toBe(banked)
-    expect(after.plot, 'the site she chose still stands').toEqual(g.plot)
-    expect(sumsForTile(after), 'and the price did not move under her').toBeLessThanOrEqual(priced)
+    expect(after.plot, 'the site they chose still stands').toEqual(g.plot)
+    expect(sumsForTile(after), 'and the price did not move under them').toBeLessThanOrEqual(priced)
     expect(after.tilesEarned).toBe(g.tilesEarned)
     expect(after.pets.length).toBe(g.pets.length + 1)
   })
@@ -907,7 +907,7 @@ describe('a price that rises never strands what she has banked — §19', () => 
     expect(banked).toBeGreaterThan(0)          // part-read, not yet hatched
     const priced = pagesForEgg(f)
 
-    // She does the thing Fred asked for instead: a field is laid.
+    // The child does the thing Fred asked for instead: a field is laid.
     const after = grow({ ...f, sumProgress: 0 }, 1)
     expect(after.readProgress, 'not one page lost').toBe(banked)
     expect(pagesForEgg(after), 'and the egg did not get dearer').toBeLessThanOrEqual(priced)

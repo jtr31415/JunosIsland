@@ -1,8 +1,8 @@
 /**
  * @vitest-environment jsdom
  *
- * The album pop-out (Phase 4): one friend, large and turning, with her name, her
- * species, a button that says both, and a way to go and find her.
+ * The album pop-out (Phase 4): one friend, large and turning, with the friend's
+ * name, its species, a button that says both, and a way to go and find it.
  *
  * Joe: *"some improvements to the album. if you click it, it should pop out
  * bigger with an option to find it on the map and a button to read its name. the
@@ -22,7 +22,7 @@
  *     is where a friend hatched; wandering lives on the scene-graph roots in
  *     `pets.ts` and is never written back. A version of this that flew to the
  *     hatch spot would look completely correct on the nine-hex island every test
- *     builds and be wrong on hers.
+ *     builds and be wrong on the child's.
  *   - **The album is built for real, WebGL and all.** It could not be, until now:
  *     the portrait renderer made its GL context in the constructor, so there was
  *     no album test at all and the one part of this file with decisions in it was
@@ -93,10 +93,10 @@ function setup(over: Partial<AlbumWorld> = {}) {
   const album = createAlbum(root, speech, world)
   const $ = (sel: string): HTMLElement | null => root.querySelector(sel)
   /*
-   * HER FRIENDS' CELLS ONLY. Since the album became a roster (1 Aug) the grid
-   * also holds a blank slot for every species she has not met, and every
-   * assertion in this file is about the ones she has — a `.album-cell` index
-   * that silently drifted onto a silhouette would pass or fail for reasons
+   * COLLECTED FRIENDS' CELLS ONLY. Since the album became a roster (1 Aug) the
+   * grid also holds a blank slot for every species the child has not met, and
+   * every assertion in this file is about the ones they have — a `.album-cell`
+   * index that silently drifted onto a silhouette would pass or fail for reasons
    * nothing here is testing. The blanks have their own tests.
    */
   const cells = (): HTMLElement[] =>
@@ -113,7 +113,7 @@ afterEach(() => { document.body.innerHTML = '' })
 
 describe('what a species is CALLED', () => {
   it('names every one of the twenty-four', () => {
-    // A friend with no species word is a blank line on her own card. There is no
+    // A friend with no species word is a blank line on its own card. There is no
     // partial version of this table that is acceptable.
     for (const id of SPECIES) {
       expect(SPECIES_NAME[id], `${id} has no display name`).toBeTruthy()
@@ -144,8 +144,8 @@ describe('what a species is CALLED', () => {
   it('shows SOMETHING for a species it has never heard of', () => {
     /*
      * A save from a future build, or a pack that gains a species before this
-     * table does. Brief §19: nothing she owns is lost, and a blank where her own
-     * friend's kind goes is a small version of losing it.
+     * table does. Brief §19: nothing the child owns is lost, and a blank where
+     * their own friend's kind goes is a small version of losing it.
      */
     expect(speciesName('animal-narwhal')).toBe('Narwhal')
     expect(speciesName('animal-sea-otter')).toBe('Sea otter')
@@ -159,8 +159,8 @@ describe('what a species is CALLED', () => {
 
 /* ------------------------------------------------------------------ */
 
-describe('tapping a friend pops her out', () => {
-  it('opens a card with her name AND her species on it', () => {
+describe('tapping a friend pops it out', () => {
+  it('opens a card with its name AND its species on it', () => {
     const { album, cells, $ } = setup()
     album.open([FOX], ['base'])
     cells()[0]?.click()
@@ -183,7 +183,7 @@ describe('tapping a friend pops her out', () => {
     album.open([FOX], ['base'])
     cells()[0]?.click()
     expect($('.album')?.classList.contains('hide')).toBe(true)
-    // ...and she is still in the album as far as anything else is concerned.
+    // ...and the friend is still in the album as far as anything else knows.
     expect(album.isOpen()).toBe(true)
   })
 
@@ -208,12 +208,12 @@ describe('tapping a friend pops her out', () => {
     expect($('.album')?.classList.contains('hide')).toBe(false)
   })
 
-  it('never stands a friend on the plinth after her card has gone', async () => {
+  it('never stands a friend on the plinth after its card has gone', async () => {
     /*
      * The model is a ~140KB fetch, so the card is up before anybody arrives on
-     * it. A resolve that lands after she has closed the card — or opened a
-     * different friend — must be dropped, or a pet turns up on somebody else's
-     * page. Nothing would fail; she would simply be there.
+     * it. A resolve that lands after the child has closed the card — or opened
+     * a different friend — must be dropped, or a pet turns up on somebody
+     * else's page. Nothing would fail; it would simply be there.
      */
     const held = deferred<THREE.Object3D>()
     const late = new THREE.Group()
@@ -228,12 +228,12 @@ describe('tapping a friend pops her out', () => {
     expect(late.parent).toBeNull()
   })
 
-  it('takes the friend OFF the turntable when the card closes, without disposing her',
+  it('takes the friend OFF the turntable when the card closes, without disposing it',
     async () => {
       /*
-       * She is a clone, sharing geometry and materials with every other pet of
-       * her species — including ones walking about the island right now. Freeing
-       * them would break friends she already owns (brief §19).
+       * The friend is a clone, sharing geometry and materials with every other
+       * pet of its species — including ones walking about the island right now.
+       * Freeing them would break friends the child already owns (brief §19).
        */
       const geometry = new THREE.BoxGeometry(1, 1, 1)
       const material = new THREE.MeshStandardMaterial()
@@ -314,8 +314,8 @@ describe('the friend turns', () => {
 
 /* ------------------------------------------------------------------ */
 
-describe('the button that reads her name', () => {
-  it('says her name', () => {
+describe('the button that reads its name', () => {
+  it('says its name', () => {
     const { album, cells, $, spoken } = setup()
     album.open([FOX], ['base'])
     cells()[0]?.click()
@@ -359,12 +359,12 @@ describe('the button that reads her name', () => {
 /* ------------------------------------------------------------------ */
 
 describe('find it on the map', () => {
-  it('flies to where she is NOW, not to where she hatched', () => {
+  it('flies to where the friend is NOW, not to where it hatched', () => {
     /*
      * The rule this feature turns on. `flow.pets[].at` is the hatch spot;
      * wandering happens on the live roots in `pets.ts` and is never written back
      * to the flow, so on any grown island the two are different tiles. Juno went
-     * looking round her island for her animals unprompted — that is what this
+     * looking round the island for their animals unprompted — that is what this
      * button is for, and the hatch spot is the wrong answer to it.
      */
     const { album, cells, $, focusOn } = setup({
@@ -381,7 +381,7 @@ describe('find it on the map', () => {
     expect(at.z).toBeCloseTo(-3.5, 6)
   })
 
-  it('looks at the GROUND under her, however high she is flying', () => {
+  it('looks at the GROUND under the friend, however high it is flying', () => {
     /*
      * A bee hovers at TREE_HEIGHT, and the camera's pivot is clamped
      * horizontally only — `clampGoal` does not touch y, because the island is
@@ -398,7 +398,7 @@ describe('find it on the map', () => {
     expect((focusOn.mock.calls[0]?.[0] as THREE.Vector3).y).toBe(0)
   })
 
-  it('falls back to where she hatched while her model is still in flight', () => {
+  it('falls back to where it hatched while the model is still in flight', () => {
     // Better than a button that does nothing on a slow tablet, and it can never
     // strand the camera: the pivot is clamped into the island's own footprint.
     const { album, cells, $, focusOn } = setup({
@@ -412,7 +412,7 @@ describe('find it on the map', () => {
     expect([at.x, at.y, at.z]).toEqual([-2.31, 0, 4])
   })
 
-  it('gets the album out of the way, so she can see where the camera went', () => {
+  it('gets the album out of the way, so the child can see where the camera went', () => {
     const { album, cells, $ } = setup({
       livePosition: () => new THREE.Vector3(1, 0, 1),
     })
@@ -491,11 +491,11 @@ describe('the card is laid out for THREE facts, not two', () => {
     expect(FACT_ROWS).toBe(3)
   })
 
-  it('sets the species in the literacy font, because it is a word she reads', () => {
+  it('sets the species in the literacy font, because the child reads it', () => {
     // Joe: "we need to change the font to something where the l has a little
     // hook and the a is not the carolingian derived type". index.html sets the
-    // same stack on body, but a species name must not be one refactor away from
-    // Roboto — which is how every word she read was rendered for two phases.
+    // same stack on body, but a species name must not be one refactor away
+    // from Roboto — how every word the child read was rendered for two phases.
     const here = dirname(fileURLToPath(import.meta.url))
     const css = readFileSync(resolve(here, '../../src/ui/tokens.css'), 'utf8')
     const block = css.slice(css.indexOf('.album-fact {'))
@@ -570,11 +570,11 @@ describe('main.ts wires the album to the live island', () => {
 describe('an album with no WebGL at all', () => {
   beforeEach(() => { /* jsdom has none, which is the point */ })
 
-  it('still opens, still names her friends, still pops out', () => {
+  it('still opens, still names the child\'s friends, still pops out', () => {
     /*
      * Not a hypothetical: the portrait renderer's context used to be created in
      * the constructor, so a browser at its context limit threw the whole album
-     * away — and the album is where a child goes to look at what she has earned.
+     * away — and the album is where a child goes to look at what they earned.
      * Thumbnails are the right thing to lose; nothing else is.
      */
     const { album, cells, $ } = setup()
