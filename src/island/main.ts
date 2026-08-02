@@ -62,6 +62,7 @@ import { toWorld } from './world/hex'
 import type { Axial } from './world/hex'
 
 import { createSpeaker } from '../platform/speech'
+import { createBakedSpeaker } from '../platform/voice'
 import { createSfx } from '../platform/audio'
 import { defaultRng } from '../core/rng'
 import { makeDeck } from '../core/decks'
@@ -151,7 +152,25 @@ async function boot(): Promise<void> {
   }
 
   const world = await createWorld(canvas)
-  const speech = createSpeaker()
+  /*
+   * Fred speaks in Oliver's voice where a clip of that sentence was baked, and
+   * in whatever voice the device has where one was not.
+   *
+   * `createBakedSpeaker` is a decorator, not a replacement: it is the same
+   * `Speaker` the game has always been handed, so every one of the call sites
+   * below is untouched and every line it cannot play reaches `createSpeaker`
+   * exactly as it did before. Eleven of Fred's seventeen ledger lines have
+   * clips; the teacher, the challenge words and the pet names have none and are
+   * not meant to. See `src/platform/voice-lines.ts` for the table and for why
+   * the other six cannot be baked at all.
+   *
+   * Kicked off here, this early, because `load()` fetches and decodes 628 KiB
+   * before any line can play as Oliver, and a line spoken before it lands falls
+   * back — correct, but audibly a different Fred. The wait below gives it the
+   * head start; the fallback covers it if that is not enough.
+   */
+  const speech = createBakedSpeaker(createSpeaker())
+  const voiceLoaded = speech.load()
   const sfx = createSfx()
 
   // The M0 learning engine, wired up exactly as the 2D game wires it.
@@ -2180,6 +2199,22 @@ async function boot(): Promise<void> {
     sign.setName(childName || 'my')
     if (childName) { document.title = `${childName}'s Island`; void persist() }
   }
+
+  /*
+   * Give the baked clips a moment to land before Fred opens his mouth.
+   *
+   * The opening is the one stretch where a half-loaded voice is audible as a
+   * fault rather than as a fallback: eight lines in a row, and a child who
+   * hears two of them in Oliver and the rest in the device's robot has been
+   * shown a bug, not a graceful degradation. On the common path this costs
+   * nothing — she has just typed her name, and the clips landed while she did.
+   *
+   * Raced against a cap, never awaited bare. `load()` cannot reject, but it can
+   * be slow on a cold cellular first run, and nothing about the story may wait
+   * on a network. If the cap wins, every line simply falls back, which is the
+   * behaviour the game shipped with.
+   */
+  if (!opening.seen()) await Promise.race([voiceLoaded, wait(1500)])
 
   if (!opening.seen()) {
     void runOpening()

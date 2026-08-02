@@ -65,8 +65,31 @@ export default defineConfig(({ command }) => ({
          * The pet models have the same gap and are deliberately NOT added here:
          * they are 3.21 MiB against a 5MB budget and warming them at runtime was
          * measured to close the render delay instead. See pets.ts `warm`.
+         *
+         * FRED'S BAKED VOICE MUST BE PRECACHED TOO, and `opus` is why it is in
+         * the list. The 41 clips are 628 KiB — a fifth of the pet pack — and
+         * unlike a pet model there is no "next one" to predict: the clip is
+         * needed the instant Fred opens his mouth, and the player has no network
+         * path to go and get it. Left out, the failure is invisible everywhere
+         * it would be caught: every test stays green, the dev server serves the
+         * files happily, and the only place it shows is a tablet in aeroplane
+         * mode, where Fred silently reverts to the device's robot voice. That is
+         * the same trap the font above was nearly lost to.
+         *
+         * This is not the ~5MB of voice.md §5.5 — that figure is the teacher's
+         * ~1,700 name and word clips, which are not baked and, when they are,
+         * should be weighed against the budget on their own terms.
+         *
+         * `voice/manifest.json` is named on its own line and MUST stay. It is
+         * the index: the player fetches it first and, without it, has no idea
+         * which clips exist or where — so 41 precached clips sit in the cache
+         * unreachable and Fred is robotic offline anyway. Precaching the audio
+         * and forgetting its index is the whole trap wearing a second coat.
+         * Named literally rather than as `**\/*.json` so that a data file
+         * dropped into publicDir later cannot join the offline bundle by
+         * accident; today it would be the only other match.
          */
-        globPatterns: ['**/*.{js,css,html,woff2}'],
+        globPatterns: ['**/*.{js,css,html,woff2,opus}', 'voice/manifest.json'],
         skipWaiting: true,
         clientsClaim: true,
         cleanupOutdatedCaches: true,
