@@ -19,20 +19,34 @@ import { mkdtempSync, rmSync, writeFileSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
+/*
+ * The workbench is plain ESM with no build step and no declarations, and
+ * `tsconfig.json` does not turn on `allowJs`, so importing it from a `.ts` test
+ * is an implicit `any` that `tsc --noEmit` refuses. Suppressed at the import
+ * rather than papered over with a hand-written `.d.ts`, which would be a second
+ * description of these modules that could quietly stop matching them.
+ */
 import { REPO } from '../../tools/workbench/seed.mjs'
-import {
-  scriptUnits, splitTemplate, ScriptError, DEFAULT_SCRIPT_DIR,
-} from '../../tools/workbench/script.mjs'
-import {
-  bakeHash, bakeOne, bakeState, castFor, outPath, ssml, readClip, BakeError,
-} from '../../tools/workbench/bake.mjs'
+// @ts-expect-error — see above; `script.mjs` ships no types.
+import { scriptUnits, splitTemplate, ScriptError, DEFAULT_SCRIPT_DIR } from '../../tools/workbench/script.mjs'
+// @ts-expect-error — see above; `bake.mjs` ships no types.
+import { bakeHash, bakeOne, bakeState, castFor, outPath, ssml, readClip, opusDurationMs, BakeError } from '../../tools/workbench/bake.mjs'
 
 /** The ledger itself, so the expectations below cannot rot away from it. */
 const ledger = JSON.parse(readFileSync(join(REPO, 'voice/scripts.json'), 'utf8'))
 
 /** Fred's units, off the real file — the default ask, and the only safe one. */
 const fred = scriptUnits(REPO)
-const byId = (id: string) => fred.find((u: any) => u.id === id)
+/*
+ * Named rather than found, so that a unit going missing reads as a missing unit
+ * instead of arriving here as a `TypeError` on the next property access.
+ */
+const byId = (id: string) => {
+  const unit = fred.find((u: any) => u.id === id)
+  if (!unit) throw new Error(`no unit with the id ${id} — the enumerator no longer produces it`)
+  return unit
+}
+const has = (id: string) => fred.some((u: any) => u.id === id)
 
 /** The placeholder casting from `seed.mjs`, which is what a run uses today. */
 const CAST = {
@@ -89,8 +103,8 @@ describe('the ledger, enumerated', () => {
     expect(byId('gov.nurseryQueue.tail.many').script).toBe('more tiles will do it.')
 
     /* The whole template is gone from the bake — only its pieces are baked. */
-    expect(byId('gov.spaceSurplus')).toBeUndefined()
-    expect(byId('gov.nurseryQueue')).toBeUndefined()
+    expect(has('gov.spaceSurplus')).toBe(false)
+    expect(has('gov.nurseryQueue')).toBe(false)
   })
 
   it('bakes the singular and the plural as two different clips', () => {
@@ -498,5 +512,92 @@ describe('baking one clip', () => {
       if (hadKey !== undefined) process.env.AZURE_SPEECH_KEY = hadKey
       rmSync(bare, { recursive: true, force: true })
     }
+  })
+})
+
+/*
+ * Two holes found while reviewing the file above, both fixed, and both about
+ * the same thing: a WRONG answer reaching the manifest or the clip rather than
+ * an error. `opusDurationMs`'s own docstring says a wrong `ms` is worse than an
+ * absent one, and a brace read aloud to a child is worse than a bake that
+ * refuses to run.
+ */
+describe('the two ways a bad clip used to get through', () => {
+  /** One Ogg page, built the same way the fixture above builds them. */
+  const pageOf = (type: number, granule: bigint, seq: number, body: Buffer) => {
+    const p = Buffer.alloc(28 + body.length)
+    p.write('OggS', 0, 'latin1')
+    p[4] = 0
+    p[5] = type
+    p.writeBigUInt64LE(granule, 6)
+    p.writeUInt32LE(0x4a554e4f, 14)
+    p.writeUInt32LE(seq, 18)
+    p[26] = 1
+    p[27] = body.length
+    body.copy(p, 28)
+    return p
+  }
+
+  const opusHeadOf = (preSkip: number) => {
+    const h = Buffer.alloc(19)
+    h.write('OpusHead', 0, 'latin1')
+    h[8] = 1
+    h[9] = 1
+    h.writeUInt16LE(preSkip, 10)
+    return h
+  }
+
+  it('refuses a slot left in the HEAD, not only in the tail', () => {
+    /*
+     * The sweep used to sit inside the noun-pair branch, so a template whose
+     * tail carried no `{a|b}` returned before the head was ever checked. Both
+     * of today's templates happen to carry noun pairs, which is exactly the
+     * luck that keeps a hole like this invisible until a new line arrives.
+     */
+    expect(() => splitTemplate('{who} says — {n} more friends arrive.'))
+      .toThrow(/a slot survived the cut/)
+
+    /* The legitimate single-tail template still cuts cleanly. */
+    expect(splitTemplate('Ready! {n} to go.')).toEqual([
+      { suffix: 'head', script: 'Ready!' },
+      { suffix: 'tail', script: 'to go.' },
+    ])
+  })
+
+  it('returns null rather than a duration it cannot stand behind', () => {
+    const head = opusHeadOf(312)
+
+    /* A page whose declared body runs off the end: a truncated download. */
+    const truncated = Buffer.alloc(27 + 1 + 19)
+    truncated.write('OggS', 0, 'latin1')
+    truncated[4] = 0
+    truncated[5] = 0x02
+    truncated.writeBigUInt64LE(0n, 6)
+    truncated[26] = 1
+    truncated[27] = 200 /* claims 200 bytes of body that are not there */
+    head.copy(truncated, 28)
+    expect(opusDurationMs(truncated)).toBeNull()
+
+    /* -1 is legal Ogg for a page completing no packet, and is not a duration. */
+    expect(opusDurationMs(Buffer.concat([
+      pageOf(0x02, 0n, 0, head),
+      pageOf(0x04, 0xffffffffffffffffn, 1, Buffer.from([0])),
+    ]))).toBeNull()
+  })
+
+  it('is not fooled by the bytes OggS appearing inside the audio', () => {
+    /*
+     * The scan used to run BACKWARDS for the bytes `OggS` and trust the first
+     * hit. Opus payload is arbitrary compressed data, so a payload containing
+     * that sequence was read as the final page header and a granule taken out
+     * of the audio — a plausible-looking wrong `ms` in the manifest, which is
+     * the one outcome the function is written to avoid.
+     */
+    const decoy = Buffer.concat([
+      pageOf(0x02, 0n, 0, opusHeadOf(312)),
+      pageOf(0x04, 24_312n, 1, Buffer.concat([Buffer.from('OggS', 'latin1'), Buffer.alloc(10)])),
+    ])
+    /* Followed forward, the true final granule is 24312 − 312 = 24000 → 500ms. */
+    expect(opusDurationMs(decoy)).toBe(500)
   })
 })

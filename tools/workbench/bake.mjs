@@ -47,8 +47,9 @@ export const bakeHash = (script, cast) =>
  * player's to insert, and it cannot subtract a gap Azure has already baked in.
  *
  * NOTE for whoever changes this function next: `bakeHash` covers script, voice,
- * rate and pitch — NOT the shape of this SSML. Change the markup and nothing
- * goes stale on its own; re-bake with `--force` deliberately.
+ * rate and pitch — NOT the shape of this SSML, NOT `FORMAT`, and NOT the `lang`
+ * default. Change any of those and every clip goes on reporting `baked` while
+ * being something else on disk; re-bake with `--force` deliberately.
  */
 export function ssml(script, cast, lang = 'en-GB') {
   const text = String(script).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -70,16 +71,48 @@ export function ssml(script, cast, lang = 'en-GB') {
  */
 export function opusDurationMs(buf) {
   const head = buf.indexOf('OpusHead', 0, 'latin1')
-  if (head === -1) return null
+  if (head === -1 || head + 12 > buf.length) return null
   const preSkip = buf.readUInt16LE(head + 10)
 
-  let last = -1
-  for (let i = buf.length - 4; i >= 0; i--) {
-    if (buf[i] === 0x4f && buf[i + 1] === 0x67 && buf[i + 2] === 0x67 && buf[i + 3] === 0x53) { last = i; break }
+  /*
+   * Walk the pages FORWARD, following each page's own segment table.
+   *
+   * This used to scan backwards for the bytes `OggS` and trust the first hit.
+   * Opus payload is arbitrary compressed data, so a payload that happens to
+   * contain `4F 67 67 53` was taken as the final page header and a garbage
+   * granule read out of it — a plausible-looking WRONG `ms` in the manifest,
+   * which this function's whole contract says is worse than an absent one. It
+   * could also throw: a truncated download whose last `OggS` fell within 14
+   * bytes of the end made `readBigUInt64LE` raise a RangeError rather than
+   * return null, and by then the clip is already on disk.
+   *
+   * Walking forward cannot be fooled, because a page's length is declared
+   * rather than searched for. Anything that does not parse as a clean chain of
+   * pages ending exactly at the last byte returns null.
+   *
+   * Verified equivalent: on all 41 of Fred's clips this agrees with the old
+   * backwards scan exactly, and in every one of them the backwards scan did
+   * happen to find the true final page.
+   */
+  let off = 0
+  let granule = null
+  while (off + 27 <= buf.length) {
+    if (buf.readUInt32BE(off) !== 0x4f676753) return null /* not 'OggS' */
+    if (buf[off + 4] !== 0) return null /* an Ogg version this code has not been taught */
+    const segments = buf[off + 26]
+    const tableEnd = off + 27 + segments
+    if (tableEnd > buf.length) return null
+    let body = 0
+    for (let i = 0; i < segments; i++) body += buf[off + 27 + i]
+    granule = buf.readBigUInt64LE(off + 6)
+    off = tableEnd + body
   }
-  if (last === -1) return null
-  const granule = Number(buf.readBigUInt64LE(last + 6))
-  return Math.max(0, Math.round((granule - preSkip) / 48))
+  /* A page ran past the end of the file: truncated, so we do not know the length. */
+  if (off !== buf.length || granule === null) return null
+  /* -1 is legal Ogg for a page completing no packet, and is not a duration. */
+  if (granule === 0xffffffffffffffffn) return null
+
+  return Math.max(0, Math.round((Number(granule) - preSkip) / 48))
 }
 
 export class BakeError extends Error {}

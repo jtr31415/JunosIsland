@@ -102,20 +102,34 @@ export function splitTemplate(text) {
 
   const noun = /\{([^}|]*)\|([^}]*)\}/.exec(tail)
   if (!noun) {
+    /*
+     * Kept as its own message because it is the more diagnostic one: a lone
+     * `{friend}` in a tail is a noun pair somebody forgot to write both halves
+     * of, and saying so is more use than the general sweep below saying a brace
+     * got through.
+     */
     if (isTemplate(tail)) throw new ScriptError(`unrecognised slot in a tail: ${JSON.stringify(tail)}`)
     pieces.push({ suffix: 'tail', script: tail })
-    return pieces
+  } else {
+    /*
+     * Both forms, always. This is the whole reason the ledger spells the noun out
+     * as `{friend|friends}` rather than the code bolting on an `s`: a plural rule
+     * in code is a rule that will one day meet a word it is wrong about, in front
+     * of a child who is reading it.
+     */
+    pieces.push({ suffix: 'tail.one', script: tail.replace(noun[0], noun[1]).trim() })
+    pieces.push({ suffix: 'tail.many', script: tail.replace(noun[0], noun[2]).trim() })
   }
 
   /*
-   * Both forms, always. This is the whole reason the ledger spells the noun out
-   * as `{friend|friends}` rather than the code bolting on an `s`: a plural rule
-   * in code is a rule that will one day meet a word it is wrong about, in front
-   * of a child who is reading it.
+   * The sweep runs over EVERY piece and on every path, head included.
+   *
+   * It used to sit inside the noun-pair branch, so a template whose tail had no
+   * `{a|b}` returned early and a slot in the HEAD went unchecked — Azure would
+   * have read the braces out loud. Today's two templates both carry noun pairs
+   * and so both reached the guard, which is exactly the kind of luck that hides
+   * a hole until the line nobody has written yet arrives.
    */
-  pieces.push({ suffix: 'tail.one', script: tail.replace(noun[0], noun[1]).trim() })
-  pieces.push({ suffix: 'tail.many', script: tail.replace(noun[0], noun[2]).trim() })
-
   const rest = pieces.map(p => p.script).find(isTemplate)
   if (rest) throw new ScriptError(`a slot survived the cut, so the line would be baked with braces in it: ${JSON.stringify(rest)}`)
   return pieces

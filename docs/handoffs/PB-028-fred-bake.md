@@ -11,6 +11,8 @@ and it governs everything below.*
 **41 clips of Fred exist on disk. Nothing in the game plays them.** That is the
 honest state, and the next piece of work is the player, not more baking.
 
+- **Tests:** `tests/tools/voice-script.test.ts` — 29 tests. Gates on the final
+  tree: **129 files / 2888 tests**, tsc 0, build/smoke/parity green.
 - **Clips:** `src/island/public/voice/script/*.opus` — 41 files, 547 KB,
   66.2 seconds of speech, Ogg-encapsulated Opus straight from Azure.
 - **Manifest:** `src/island/public/voice/manifest.json` — `id → {file, ms,
@@ -86,7 +88,7 @@ against the real file.
 
 ---
 
-## Three things I had to fix that were not in the brief
+## Five things I had to fix that were not in the brief
 
 ### 1. Azure pads every clip with about a second of silence
 
@@ -123,6 +125,37 @@ last page in every file (no false `OggS` match inside payload data), and every
 file's pages consume exactly its byte length. The coincidence is Azure emitting
 fixed 4213-byte pages, so page count quantises duration and length together.
 `opusDurationMs` is sound and `ms` is trustworthy.
+
+### 4. `splitTemplate` could still let a brace reach Azure
+
+The "a slot survived the cut" sweep only ran inside the noun-pair branch. A
+template whose tail had no `{a|b}` returned early, so a slot in the **head** was
+never checked — `splitTemplate('{who} says — {n} more friends arrive.')` handed
+back `head: '{who} says —'` and Azure would have read the braces out loud.
+Both of today's templates happen to carry noun pairs, so both reached the guard.
+**That is luck, not correctness**, and it is the exact shape of hole that stays
+invisible until the line nobody has written yet arrives. The sweep now runs over
+every piece on every path.
+
+### 5. `opusDurationMs` could return a confident wrong answer, or throw
+
+Three faults in one backwards byte-scan, all of them contradicting the
+function's own docstring:
+
+- It searched raw bytes for `OggS` from the end and trusted the first hit.
+  Opus payload is arbitrary compressed data, so a payload containing that
+  sequence was read as the final page header and a **garbage granule taken out
+  of the audio** — a plausible-looking wrong `ms` in the manifest.
+- A truncated download whose last `OggS` fell within 14 bytes of the end made
+  `readBigUInt64LE` raise a **RangeError** rather than return null, by which
+  point the clip is already on disk.
+- A final granule of `-1` — legal Ogg for a page completing no packet — became
+  `1.8e19`, which `Math.max(0, …)` does not catch.
+
+It now walks pages **forward**, following each page's own declared segment
+table, and returns null for anything that is not a clean chain ending exactly at
+the last byte. A page's length is declared rather than searched for, so it
+cannot be fooled. **Verified equivalent on all 41 real clips** before and after.
 
 ---
 
@@ -234,6 +267,17 @@ family, rather than silently baking nothing.
   anywhere by this run.
 - **`joe/voices.json` is a live file Joe edits in the workbench UI**, and the UI
   saves the whole file. Treat it like `joe/tasks.json`.
+- **Run the gates on the tree you are actually going to commit.** I ran tsc,
+  build, smoke and parity while a subagent was still writing the test file, so
+  four of the five gates never saw it — and the version I committed **failed
+  tsc**, because importing the workbench's untyped `.mjs` from a `.ts` test is
+  `TS7016` under this repo's settings (no `allowJs`). Two `@ts-expect-error`
+  directives at the imports fix it, which is the precedent in `tests/island/*`.
+  A gate run that predates the code it is meant to cover is not a gate run.
+- **Do not commit while a subagent is mid revert-check.** I committed in a
+  window where the agent had deliberately broken `script.mjs` to watch a test go
+  red. The commit happened to catch the intact version and I verified the blob,
+  but that was luck. Wait for the agent to report before staging.
 
 ## Decisions
 
