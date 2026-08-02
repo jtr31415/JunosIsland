@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "nextId": 76,
+  "nextId": 77,
   "cards": [
     {
       "id": "PB-001",
@@ -538,6 +538,13 @@
       "run": "",
       "title": "A save's pet list is the one field read back without sanitising",
       "detail": "Measured under PB-070: fromSave does `Array.isArray(save.pets) ? save.pets : []` and trusts every record inside, while readPlot, readOnceFlags, readOpened and readAttainment all sanitise what they read. It was harmless while a species could only be one of 24 known ids; now that the deal pool grows with sign-off, a stale or hand-edited save can carry a species nothing can build. pets.ts now says so loudly rather than silently, which is the safety net — but the read is still the asymmetry."
+    },
+    {
+      "id": "PB-076",
+      "state": "done",
+      "run": "",
+      "title": "Push it to the game wrote nothing, and said it worked",
+      "detail": "Joe edited the hedgehog, pressed Push, and was told in green that it was in the game; nothing reached src/. push.mjs refuses to write a species module that already exists, and all thirty assembled species already exist, so the only file any push ever wrote was the MOVES table — and the client judged success by the absence of an error key rather than by whether the species file was written, so a 200 whose own say field read \"Nothing was written\" printed as success. Fixed three ways: an explicit replace intent on the request lets an edit SPLICE its definition block back into the existing file, preserving every byte outside it (the hedgehog carries 222 lines of argued prose above its definition, and regenerating the file would have eaten all of it); pushOutcome now calls any push that did not write place 1 a failure, in red, naming the file that did not change; and the emitter was itself lossy — nine of the thirty species lost authored precision to a 6dp rounder on a round trip, and CreatureDef.motion was silently dropped from DEF_KEYS. Round trip is now provably lossless 30/30, guarded by tests/tools/editor-round-trip.test.ts."
     }
   ]
 }
