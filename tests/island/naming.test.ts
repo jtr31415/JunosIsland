@@ -488,7 +488,7 @@ describe('joe/names-audit.json', () => {
     // three. They have no row here BECAUSE they have no build, which is this
     // test's own rule working — a row for an unbuildable species would ask Joe to
     // audit and voice-bake a name for a creature that cannot exist.
-    expect(audit.names).toHaveLength(30)
+    expect(audit.names).toHaveLength(44)
   })
 
   it('gives every creature its own name, so the playground question works', () => {
