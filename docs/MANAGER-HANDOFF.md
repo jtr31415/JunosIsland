@@ -1,6 +1,131 @@
 # Manager handoff
 
-> ## ⚠ START HERE — the album stops showing animals nobody built, 3 Aug 2026
+> ## ⚠ START HERE — the unlocker counts the animals that exist, 3 Aug 2026
+>
+> *Written by the JT-047 manager. **This block is the current one.** Everything
+> below it is history, including the ones that call themselves current.*
+>
+> Branch **`worktree-agent-aed7f7adf06d658d3`**, branched at **`c6cb2e3`** (local
+> `main`, verified an ancestor of HEAD before the first edit). Three commits:
+> `64ca164` the change, `bc8a56b` the backlog card, `26a83ca` a regression fix
+> found in review. This block is the fourth. **Nothing pushed, nothing merged.**
+>
+> ### Gates — all six green, run after the last commit
+>
+> ```
+> npm test    175 files, 4077 passed | 1 skipped, 0 FAILED
+> tsc         0 errors
+> build       ok (PWA precache 50 entries)
+> smoke       all boot checks passed
+> parity      every step renders identically
+> channel     channel check passed
+> ```
+>
+> Baseline was 4055/4053 with `editor-round-trip` (PB-082) expected to fail. **It
+> passed both full runs here** — it is a load-dependent timeout, not a real
+> failure, and its budget was NOT widened.
+>
+> ### What completion reads now, and for whom
+>
+> Joe: *"the unlocker and counters on the page should go of the number of animals
+> pushed on that collection at any one time. i might make some more, needs to be
+> dynamic."*
+>
+> `completion()` divided by the ROSTER. `album.ts:874` already counted the BUILT
+> members, so the album said Night Time was **"13 of 13"** while the unlocker read
+> **13/16 = 81%**, never completed it, never freed its slot, and never opened her
+> next album. Africa was 1 of 16 and uncompletable by any amount of play.
+>
+> It now divides by `UnlockState.built`. **`completion()` has no caller in `src/`
+> outside `unlock.ts`** — it feeds exactly two things, and both are gates, not
+> displays: `isComplete()` (which frees an active slot) and rule 2 of
+> `nextToOpen()` (the 80% trigger). Nothing else in the tree keys off a collection
+> being finished — no ceremony, no reward, no biome ladder. That was surveyed, not
+> assumed.
+>
+> **THE SEAM, AND DO NOT COLLAPSE IT.** `built.ts` costs three.js twice over
+> (`kit.ts` and `registry.ts`), and `save.ts` imports `opened.ts` — so importing
+> it into `unlock.ts`/`opened.ts` puts a renderer in the save path. The counts are
+> **injected**: `main.ts` fills a `Record<collectionId, count>` from `builtIn()`
+> on every arrival and threads it through. That is the seam `UnlockState.roster`
+> has used since phase 2. There is still exactly one predicate.
+>
+> ### Could an unlock be lost? Yes — and it is the thing to re-check
+>
+> The unlock itself was **already safe**: `openCollections` is a real persisted
+> save field, appended to and never recomputed (`save.ts` says why — recomputing
+> would deal a different three albums every load).
+>
+> But two real losses were found and closed:
+>
+> 1. **The earned SLOT was not ratcheted.** `built` can FALL as well as rise, so a
+>    collection is 14 of 14 and COMPLETE today and 14 of 16 tomorrow. It would
+>    become active again, the count would return to `MAX_ACTIVE`, and `nextToOpen`
+>    would return null **forever** until she caught up. That lands at the moment
+>    the feature exists for: she finishes an album, and the one rule the game
+>    teaches — finish one, a new one appears — silently fails because of a content
+>    push nobody at the screen can see. `Opened.completed` is now an append-only
+>    record, persisted as `completedCollections`, cleared by a wipe. `isComplete()`
+>    is "complete now OR ever", which ratchets the slot AND the 80% trigger in one
+>    place so they cannot disagree. **Joe raised this exact worry himself in
+>    JT-030** — *"a finished thing becoming unfinished may still feel like a
+>    loss"*.
+> 2. **Deriving the hold broke forward compatibility, and I nearly shipped it.**
+>    See `26a83ca`. `heldBack()` says true for any id with no built count —
+>    including a collection from a LATER build. `advance()` pruned it, and
+>    `main.ts` writes the result back through `toSave`, so it was gone from disk
+>    **forever**. The old hand-written list held only known ids, so this could not
+>    happen before. The prune now refuses to judge an id this build does not know.
+>
+> ### What a child sees when a completed album gains a new animal
+>
+> **The counter moves and everything she earned stays.** She is honestly shown
+> "13 of 14" and can go and collect the new ones; the album reopens visibly. Only
+> the slot accounting ratchets. New animals in a finished album are a gift on top
+> of her trophy, never a lien against her next one. This is a DECISION and it is
+> tested — `tests/island/species-completion.test.ts` asserts both halves, and one
+> test builds the same state with and without the record so the ratchet is proved
+> to be the thing doing the work.
+>
+> ### `NOT_BUILT_YET` is deleted, and this was urgent
+>
+> Its tripwire measured `shippedIn()` — REGISTERED RECORDS, and **a record is not
+> an animal**. Collections are built by committing all sixteen records in one
+> commit and the species files afterwards, one at a time. **On the day Farm's
+> records land, that test would have gone red telling the Farm manager to release
+> Farm to the cadence with zero animals built** — an album whose every frame the
+> album view refuses to draw. The hold is now `heldBack()`, derived live. Build an
+> animal and the cadence offers the collection; there is no string to remember.
+>
+> ### Stale claims: three fixed, two left deliberately
+>
+> - **FIXED** `collections/africa.ts` — claimed "FOURTEEN of sixteen" while
+>   holding **one**. `eedb6ef` deleted thirteen quadruped records and left the
+>   prose; the test it cited (`species-africa.test.ts`) does not exist either.
+> - **FIXED** `unlock.ts` `fillToCap` — pool said six collections wide; it is
+>   **four** (`garden`, `home-pets`, `night-time`, `africa`). Farm makes it five.
+> - **FIXED** `built.ts` — still described the divergence this run closed.
+> - **LEFT** `collections/farm.ts` — the live Farm manager owns that file, and its
+>   claim is already hedged correctly.
+> - **LEFT** `types.ts:202` / `roster.ts:63` — both still say "85% cadence" where
+>   the shipped dial is 80. `roster.ts` is forbidden to edit and neither was in
+>   scope. Small, real, and still open.
+>
+> ### Where the next manager starts
+>
+> **`joe/tasks.json` is UNTOUCHED and JT-047 is still `open` with an empty
+> `note`.** The ruling reached this run through the drumbeat, not the workbench,
+> and that note field is Joe's. Somebody should close it. **JT-030 is also worth
+> his eye**: its wedge half ("a partial collection holds a slot forever") is now
+> dissolved by arithmetic — Night Time is 13 of 13, completes, and frees its slot
+> — so what remains of JT-030 is purely the LOOK question of whether a partial
+> album should be offered at all. That is cheaper than when he was asked it.
+>
+> `docs/HANDOFF.md` §6 gained three landmines from this run: `shippedIn` vs
+> `isBuilt`, why `unlock.ts`/`opened.ts` must stay three-free and how to feed
+> them, and that completion can fall so anything it pays for must ratchet.
+
+> ## Superseded — the album stops showing animals nobody built, 3 Aug 2026
 >
 > *Written by the manager that fixed the empty slots. **This block is the current
 > one.** Everything below it is history, including the ones that call themselves
