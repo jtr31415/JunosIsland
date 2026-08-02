@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "nextId": 78,
+  "nextId": 79,
   "cards": [
     {
       "id": "PB-001",
@@ -552,6 +552,13 @@
       "run": "",
       "title": "The editor round-trips through evaluated numbers, so an edit flattens every expression",
       "detail": "THE SENTENCE THAT MATTERS: the editor loads a species as EVALUATED numbers, so any expression in a definition is lost on any edit — splice or regenerate, it makes no difference. 14 of the 30 files bind file-local constants to expressions (const EAR_SINK = 0.125 / 0.359219; const COIL_SINK = (COIL_THICK - HULL_BOTTOM_Y) / COIL_THICK; at: [0, HULL_MID_Y + 0.1, 0.5]) and a push flattens them to literals, leaving those locals unread and the derivation unreadable: bushbaby, civet, corn-snake, crocodile, firefly, glow-worm, goldfish, kiwi, mole, nightjar, opossum, raccoon, slow-worm, tarsier. PB-076 ships staleBindings, which NAMES the exact dead lines for Joe — that is mitigation, not a fix, and it is why pushing was safe to turn on. The route is def.ts:1313: have defineCreature register the def beside the build it returns, so the editor opens the SOURCE definition rather than a reconstruction, which closes all 14 at once. Different blast radius from PB-076 and it changes what an edit means, so it is Joe's call to start it, not ours."
+    },
+    {
+      "id": "PB-078",
+      "state": "done",
+      "run": "",
+      "title": "A pet's name came off an unfiltered coin toss, and one in 678 was obscene",
+      "detail": "Joe's six-year-old was dealt a rabbit called Defuck. The live hatch used petName(defaultRng) - unseeded Math.random - and src/core/names.ts's FORBIDDEN list carries shit, cock, dick, piss and arse but not fuck and not cunt, so 640 distinct obscene names were reachable at one hatch in 678. Fixed per Joe's ruling (\"no dont change the generator, we hard fix the first 24 animals instead\") by wiring the hatch to the frozen per-species allocation, which screened clean on all 320 names, plus a standing screen gate in the island layer. Forward-only: a pet already in a save keeps its name, which is JT-045. NOTE: the commits for this work say PB-076, which was taken by the push fix already pushed to origin. This record moved to PB-078; its commit messages were left alone rather than rewriting public history."
     }
   ]
 }
