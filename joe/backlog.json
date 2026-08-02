@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "nextId": 75,
+  "nextId": 76,
   "cards": [
     {
       "id": "PB-001",
@@ -479,7 +479,7 @@
     {
       "id": "PB-067",
       "title": "Sign-off needs the animal moving on hex tiles, not standing on a turntable",
-      "detail": "Joe, 2 Aug: \"i need to see the animals in the game environment, so in the editor i need to see it on like 7 hex tiles bouncing around like it would in the game. the it gets signed off.\" So this GATES sign-off rather than following it — he judges an animal moving, at distance, on ground, not still on a grey stage. The behaviour already exists in pets.ts (goal, restFor, bounce, and the hover for flyers) and the editor stage is tools/workbench/public/editor/stage.ts. Bring the island’s own wander loop to the editor rather than writing a second one; a second one drifts, and then he is signing off a thing that does not exist. MEASURED THIS RUN, and it makes this card bigger than it reads: no hand-assembled animal can be a live pet at all today. pets.ts builds a pet only from pets/<id>.glb, so an assembled species 404s and sync() silently drops it (pets.ts:777); dealing draws only from the 24 Kenney ids (main.ts:481). So the wander loop cannot yet show ANY of the 30 animals awaiting sign-off, and the preview must not be faked around that — giving pets.ts an assembly path is the first half of this card.",
+      "detail": "Joe, 2 Aug: \"i need to see the animals in the game environment, so in the editor i need to see it on like 7 hex tiles bouncing around like it would in the game. the it gets signed off.\" So this GATES sign-off rather than following it — he judges an animal moving, at distance, on ground, not still on a grey stage. The behaviour already exists in pets.ts (goal, restFor, bounce, and the hover for flyers) and the editor stage is tools/workbench/public/editor/stage.ts. Bring the island’s own wander loop to the editor rather than writing a second one; a second one drifts, and then he is signing off a thing that does not exist. MEASURED THIS RUN, and it makes this card bigger than it reads: no hand-assembled animal can be a live pet at all today. pets.ts builds a pet only from pets/<id>.glb, so an assembled species 404s and sync() silently drops it (pets.ts:777); dealing draws only from the 24 Kenney ids (main.ts:481). So the wander loop cannot yet show ANY of the 30 animals awaiting sign-off, and the preview must not be faked around that — giving pets.ts an assembly path is the first half of this card. AMENDED 2 Aug: the first half is done under PB-070 — pets.ts has an assembly path, so the wander loop can now show all thirty. What is left of this card is the editor preview itself, and its one real problem is unchanged: the editor shows an UNSAVED draft, so prototype()'s id lookup will not find the draft geometry.",
       "state": "open",
       "run": ""
     },
@@ -493,15 +493,15 @@
     {
       "id": "PB-069",
       "title": "Confine sea creatures to water, and keep land animals out of it",
-      "detail": "Joe, 2 Aug, explicitly LATER: \"later we will confine sea creatures to water tiles only and stop land animals from going into the water.\" Both directions, not one. Belongs with habitats (PB-017) and the biome ladder (PB-022), and it should read the same per-species field that PB-068 creates rather than a second one beside it.",
+      "detail": "Joe, 2 Aug, explicitly LATER: \"later we will confine sea creatures to water tiles only and stop land animals from going into the water.\" Both directions, not one. Belongs with habitats (PB-017) and the biome ladder (PB-022), and it should read the same per-species field that PB-068 creates rather than a second one beside it. NOTE ON IDS: commit 58f3ef7 says fix(PB-069) and is not this card — it is the flat-card standoff, PB-071.",
       "state": "open",
       "run": ""
     },
     {
       "id": "PB-070",
       "title": "A signed-off animal still cannot be dealt, so sign-off alone does not put it in the game",
-      "detail": "Dealing draws from SPECIES, the 24 Kenney GLB ids (main.ts:481), never from the 54-record registry — measured, and no test asserts the two pools agree. So even once Joe signs off the 30 hand-assembled animals they can never reach a child. The standing order says a signed-off animal ships with the next push, always, and today that order cannot be honoured. Needs the assembly path from PB-067 first, then the deal pool widened to signed-off species only.",
-      "state": "open",
+      "detail": "Dealing draws from SPECIES, the 24 Kenney GLB ids (main.ts:481), never from the 54-record registry — measured, and no test asserts the two pools agree. So even once Joe signs off the 30 hand-assembled animals they can never reach a child. The standing order says a signed-off animal ships with the next push, always, and today that order cannot be honoured. Needs the assembly path from PB-067 first, then the deal pool widened to signed-off species only. DONE 2 Aug: pets.ts prototype() now builds an assembled species from parts instead of fetching a GLB, main.ts deals from dealPool(SPECIES) = the pack plus every registered species Joe has signed off, and src/ reads that from a generated mirror (src/island/species/signed-off.json) the workbench regenerates on his tick, so no step stands between signing off and shipping. sync() no longer swallows a failed build. Proved end to end by tests/island/deal-assembled.test.ts: deal, hatch, render, walk, save, reload. NOTE ON IDS: commit 6d672e6 says fix(PB-070) and is not this card — it is the editor card drawer, PB-071.",
+      "state": "done",
       "run": ""
     },
     {
@@ -531,6 +531,13 @@
       "run": "",
       "title": "Farm: build all 16 species by hand assembly",
       "detail": "Ship 5, currently 0/16 — all sixteen were kit-built and are deleted. To build: sheep, goat, horse, donkey, goose, turkey, llama, alpaca, rooster, ox, mule, chicken, guinea fowl, quail, water buffalo, pigeon. HOOVES ARE RULED ON — Joe: \"just use a two tone leg for hooves\". legs already take a paint, so a hooved species is legs: { paint: { base: \"limb\", patch: { below: \"hoof\", at: 0.25 } } } — Paint.patch needs no triangle edge to cut along, so no geometry is added. Three constraints: at is a fraction of the part own height and must sit on the 1/16 grid (0.125, 0.1875, 0.25); the patch applies to the BASE slot only, so do not combine it with byBand; spin a patched part and the boundary spins with it. This is a general tool, not a hoof workaround — it is also fur socks, pale paws, a bird feet against its legs, a dark-stockinged fawn. JT-041 as amended by JT-043 applies: improvise by sizing and rotation, never author a named part."
+    },
+    {
+      "id": "PB-075",
+      "state": "open",
+      "run": "",
+      "title": "A save's pet list is the one field read back without sanitising",
+      "detail": "Measured under PB-070: fromSave does `Array.isArray(save.pets) ? save.pets : []` and trusts every record inside, while readPlot, readOnceFlags, readOpened and readAttainment all sanitise what they read. It was harmless while a species could only be one of 24 known ids; now that the deal pool grows with sign-off, a stale or hand-edited save can carry a species nothing can build. pets.ts now says so loudly rather than silently, which is the safety net — but the read is still the asymmetry."
     }
   ]
 }
