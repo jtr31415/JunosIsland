@@ -95,6 +95,7 @@ export { CANARY_ASSEMBLY } from './animal-canary'
 export { CHICKEN_ASSEMBLY } from './animal-chicken'
 export { SHEEP_ASSEMBLY } from './animal-sheep'
 export { HORSE_ASSEMBLY } from './animal-horse'
+export { GOOSE_ASSEMBLY } from './animal-goose'
 /* -- append the next species' line directly above this one -- */
 
 import { assembledBuilds } from './register'
