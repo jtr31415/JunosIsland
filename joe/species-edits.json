@@ -1,5 +1,240 @@
 {
   "schemaVersion": 1,
-  "nextId": 1,
-  "drafts": []
+  "nextId": 4,
+  "drafts": [
+    {
+      "speciesId": "animal-squirrel",
+      "from": "animal-squirrel",
+      "fromKind": "built",
+      "collection": "",
+      "givenName": "",
+      "fact": "",
+      "factSource": "",
+      "def": {
+        "palette": {
+          "coat": 12871983,
+          "belly": 16511458,
+          "limb": 10242590,
+          "tuft": 7222291,
+          "pupil": 5001054
+        },
+        "belly": 0.5,
+        "tail": {
+          "part": "box-23",
+          "spin": [
+            {
+              "axis": "x",
+              "deg": 45
+            }
+          ],
+          "at": [
+            0,
+            0.55,
+            -0.4875
+          ]
+        },
+        "ears": {
+          "part": "wedge-06",
+          "paint": {
+            "base": "coat",
+            "byBand": {
+              "1": "belly"
+            }
+          }
+        },
+        "snout": "tube-01",
+        "extras": [
+          {
+            "name": "tuft",
+            "part": "cone-01",
+            "paint": "tuft",
+            "kind": "pair",
+            "at": [
+              0.336,
+              1.585699,
+              0.320549
+            ]
+          }
+        ],
+        "flag": "The raised tail makes this the TALLEST animal here: 1.98 against the pack's 1.43-2.02, and width/height 0.63 against the pack's mean 0.97. Every number in the tail is the pack's own — the fox's brush, the cube's own 45-degree rear chamfer, the fox's own burial depth — so nothing is tuned; the height is what those numbers give. Burying it deeper than the fox did would bring it to 1.79 and stockier, at the cost of the plume standing clear of the back. Joe's call. Front-to-back it is SHORTER than the fox (0.92 keep-out against 1.15), because the tail goes up where the fox's goes back."
+      },
+      "warnings": [],
+      "state": "draft",
+      "note": "",
+      "id": "SD-001"
+    },
+    {
+      "speciesId": "animal-goldfish",
+      "from": "animal-goldfish",
+      "fromKind": "built",
+      "collection": "",
+      "givenName": "",
+      "fact": "",
+      "factSource": "",
+      "def": {
+        "palette": {
+          "coat": 15234346,
+          "belly": 16246472,
+          "fin": 15900756,
+          "scale": 13128731,
+          "pupil": 5001054
+        },
+        "hull": "box-20",
+        "legs": false,
+        "belly": 0.375,
+        "eyes": {
+          "part": "plate-08",
+          "y": 0.89375
+        },
+        "extras": [
+          {
+            "name": "mouth",
+            "part": "plate-03",
+            "paint": "pupil",
+            "at": [
+              0,
+              0.686849,
+              0.635
+            ]
+          },
+          {
+            "part": "bespoke-triangle-01",
+            "name": "bespoke-triangle-01",
+            "at": [
+              0,
+              0.8875,
+              -0.8
+            ],
+            "stretch": [
+              1,
+              0.45,
+              0.45
+            ],
+            "spin": [
+              {
+                "axis": "z",
+                "deg": 90
+              }
+            ]
+          }
+        ],
+        "ridge": {
+          "part": "wedge-04",
+          "paint": "scale",
+          "name": "scale",
+          "count": 4,
+          "rows": [
+            "chamfer"
+          ],
+          "span": 0.5
+        },
+        "flag": "NEW PALETTE, UNREVIEWED — the first goldfish ever built, and the first colours ever proposed for it: nothing in home-pets.ts signed these off. And the TAIL is a look, not a measurement: the pack has no fin, flipper or fluke at all, so this is the lion's tail standing in for a caudal fin. Whether it reads as one at tablet distance is Joe's call."
+      },
+      "warnings": [
+        {
+          "axiom": "scale",
+          "severity": "note",
+          "path": {
+            "role": "extras",
+            "index": 1
+          },
+          "text": "\"bespoke-triangle-01\" carries a stretch, NON-UNIFORM [1.000, 0.450, 0.450]. bespoke-triangle-01 is a PRIMITIVE — no donor, no role, and none of the pack's proportions to depart from — so resizing it is what it is for. The solid is RE-CUT at the new size rather than scaled, so its chamfer is regenerated with it and stays a 45° cut of a quarter of the smallest dimension, which is `box-03`'s own."
+        }
+      ],
+      "state": "draft",
+      "note": "",
+      "id": "SD-002"
+    },
+    {
+      "speciesId": "animal-fennec-fox",
+      "from": "animal-fennec-fox",
+      "fromKind": "built",
+      "collection": "night-time",
+      "givenName": "Neegab",
+      "fact": "",
+      "factSource": "",
+      "def": {
+        "palette": {
+          "coat": 14204302,
+          "belly": 16248797,
+          "mark": 3813672,
+          "limb": 13216892,
+          "pupil": 5001054
+        },
+        "belly": 0.5,
+        "eyes": {
+          "part": "plate-14"
+        },
+        "tail": {
+          "part": "box-23",
+          "paint": {
+            "base": "coat",
+            "byBand": {
+              "5": "mark"
+            }
+          }
+        },
+        "snout": "tube-01",
+        "nose": {
+          "part": "box-22",
+          "paint": "mark",
+          "sink": 0.5
+        },
+        "flag": "THE HEIGHT IS THE TIGHTEST NUMBER IN THIS COLLECTION and it is worth your eye: this animal stands 2.0100 against the pack's own ceiling of 2.02, a margin of 0.0100, and every millimetre of it is EAR. `box-06` is the bunny's upright ear and the biggest in the bank at 0.913 tall — the next is the tiger's at 0.389 — and it is placed by the pack's own numbers, not tuned: the bunny wears it on this same 1.250 cube, so joining at the cube's top face and sinking the bunny's own 0.366259 lands the centre on 1.553395 against the bank's recorded 1.553396. NOTHING MAY BE ADDED ABOVE IT — the tail deliberately trails rather than being carried up the rear chamfer the way the squirrel's is, because that alone reaches 1.976 on an earless hull. If you want this animal shorter it takes a SHORTER EAR, never a shaved hull: there is no hull stretch and there will not be one. One thing the bank cannot say: a fennec's ear is pale inside with a darker rim, and `box-06` has exactly ONE atlas band over all 60 of its triangles — the only two ears carrying Kenney's own inner-ear cut are less than half its height. So the ear is painted pale ENTIRE, which is a look and it is yours. NEW PALETTE, UNREVIEWED: this species has never been in a collection file, so these five colours are the first ever proposed for it. Nothing was authored and nothing was stretched.",
+        "extras": [
+          {
+            "part": "wedge-06",
+            "name": "wedge-06",
+            "at": [
+              0.2375,
+              1.45,
+              0.325
+            ],
+            "stretch": [
+              1.35,
+              4,
+              1
+            ]
+          },
+          {
+            "part": "wedge-06",
+            "name": "wedge-06-2",
+            "at": [
+              -0.275,
+              1.4375,
+              0.325
+            ],
+            "stretch": [
+              1.35,
+              4,
+              1
+            ]
+          }
+        ]
+      },
+      "warnings": [
+        {
+          "axiom": "scale",
+          "severity": "warn",
+          "path": {
+            "role": "extras",
+            "index": 0
+          },
+          "text": "\"wedge-06\" carries a stretch, NON-UNIFORM [1.350, 4.000, 1.000]. Rule 4 is placement by TRANSLATION: exactly one node in the pack's 133 carries a scale at all. §3 measured stretch as safe on ears and snouts and says so about those two kinds only. It is NON-UNIFORM, so the authored proportions of the shape itself are changed — which is the thing Joe rejected by name on the hedgehog's hull."
+        },
+        {
+          "axiom": "scale",
+          "severity": "warn",
+          "path": {
+            "role": "extras",
+            "index": 1
+          },
+          "text": "\"wedge-06-2\" carries a stretch, NON-UNIFORM [1.350, 4.000, 1.000]. Rule 4 is placement by TRANSLATION: exactly one node in the pack's 133 carries a scale at all. §3 measured stretch as safe on ears and snouts and says so about those two kinds only. It is NON-UNIFORM, so the authored proportions of the shape itself are changed — which is the thing Joe rejected by name on the hedgehog's hull."
+        }
+      ],
+      "state": "draft",
+      "note": "",
+      "id": "SD-003"
+    }
+  ]
 }
