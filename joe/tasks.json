@@ -593,6 +593,20 @@
       "check": "",
       "note": "Just use a two tone leg for hooves.",
       "state": "done"
+    },
+    {
+      "id": "JT-045",
+      "type": "ruling",
+      "title": "Juno still owns a pet called Defuck. Do we rename it in her save? (PB-076)",
+      "detail": "THE FIX THAT SHIPPED. The hatch no longer draws a random name; a new friend now takes its species' frozen, screened name (the bunny is Chudup). Measured: the old unseeded draw could produce 640 distinct obscene names, one hatch in 678, because src/core/names.ts blocks shit/cock/dick/piss/arse but not fuck or cunt. All 320 allocated names screen clean, and tests/island/name-screen.test.ts now fails loudly if that ever stops being true. Commits 69eb970 and 075c565.\n\nWHAT IT DOES NOT DO. The fix is FORWARD-ONLY. A pet already in a save keeps the name it was born with: save.ts reads pets back verbatim, and every display path reads pet.name off the stored record rather than deriving it from the species. Pet.id embeds the name too (pet3-Defuck). So if the Defuck rabbit is still on Juno's island, IT IS STILL CALLED THAT, and no amount of further naming work changes that by itself.\n\nTHE QUESTION, and it is yours because it changes what a child experiences: do you want her existing pet renamed in place? Options. (a) DO NOTHING - it is one pet, she may have forgotten it, and any rewrite of a save is a risk to the thing brief 19 protects. (b) RENAME IN PLACE - a one-off migration that rewrites pet.name and pet.id for any stored pet whose name fails the screen, keeping the pet, its species, its position and its place in the album. The pet is never lost, replaced or re-hatched. This is buildable and testable but it is the only code in the project that would ever edit a name a child already owns, and that is precisely the thing naming.ts was written to forbid. Nothing has been built on either option yet - this is genuinely open.\n\nA SECOND, SMALLER THING while you are here. A name is now per SPECIES, not per pet, which is what roster section 3 asked for. The deck deals without replacement for the first 24 pets, so nothing changes until a child owns 25; after that two pets of one species carry one name (the album already routes the duplicate to More friends, and pet ids stay unique, so nothing breaks - it just reads oddly). JT-027 says a new collection opens at 80 percent, which pushes this further out, and JT-029 already suggests the fix in your own words: add something like 'the great' to their original name. Say the word and that becomes a card; it is not built.",
+      "blocks": [
+        "PB-076"
+      ],
+      "artefact": "",
+      "doneRule": "manual",
+      "check": "",
+      "note": "",
+      "state": "open"
     }
   ],
   "archive": []
