@@ -182,9 +182,9 @@ const COMPARISON_BY_GROUP: Readonly<Record<PrimitiveGroup, Comparison>> = {
    * A pack fox against a kit hippo. The hippo is the big-eye end of the kit's
    * 2.95× spread, so the two extremes of the whole argument are in one frame.
    */
-  Face: WHOLE('animal-fox', 'animal-hippo',
+  Face: WHOLE('animal-fox', 'animal-badger',
     "LEFT is the pack — animal-fox, its face a flat cut-out sheet 0.0100 in front of the head. "
-    + 'RIGHT is the kit — animal-hippo, its eyes protruding spheres with separate pupils floating '
+    + 'RIGHT is the kit — animal-badger, its eyes protruding spheres with separate pupils floating '
     + 'further forward still. Both scaled to exactly one unit tall, because every number on these '
     + "rows is a ratio against the animal's height."),
 
@@ -194,10 +194,10 @@ const COMPARISON_BY_GROUP: Readonly<Record<PrimitiveGroup, Comparison>> = {
    * this pair shows is the 45° chamfer against the kit's perfectly sharp box,
    * and the smooth-shaded normals against the flat-shaded ones.
    */
-  Edges: WHOLE('animal-fox', 'animal-hippo',
+  Edges: WHOLE('animal-fox', 'animal-badger',
     'LEFT is the pack — animal-fox. Every corner on it is either a single flat 45° cut or a '
     + 'two-step round-over, and every vertex normal is the area-weighted average of the faces '
-    + 'meeting it. RIGHT is the kit — animal-hippo, built from unit boxes scaled per part: '
+    + 'meeting it. RIGHT is the kit — animal-badger, built from unit boxes scaled per part: '
     + 'perfectly sharp, twelve triangles a box. Both scaled to one unit tall.'),
 
   /*
@@ -210,7 +210,7 @@ const COMPARISON_BY_GROUP: Readonly<Record<PrimitiveGroup, Comparison>> = {
   Limbs: {
     packSpecies: 'animal-fox',
     packParts: ['leg-front-left'],
-    kitSpecies: 'animal-hyena',
+    kitSpecies: 'animal-vole',
     kitParts: ['leg-front-left', 'paw-front-left'],
     why: "LEFT is the pack's real leg — the `leg-front-left` node lifted straight out of "
       + 'animal-fox.glb, a tapered octagonal frustum, 24 welded vertex positions, the same buffer '
@@ -234,21 +234,21 @@ const COMPARISON_BY_GROUP: Readonly<Record<PrimitiveGroup, Comparison>> = {
 const COMPARISON_BY_ROW: Readonly<Record<string, Comparison>> = {
   /* The songbird half of the relief question: 13 of the 72 wear their eyes on
    * the ±X faces of the head, and no original does — all 63 decals face +Z. */
-  'eye-relief': WHOLE('animal-fox', 'animal-goose',
+  'eye-relief': WHOLE('animal-fox', 'animal-mole',
     'LEFT is the pack — animal-fox, whose face is a flat sheet facing +Z, as all 63 decals in the '
     + 'pack do. RIGHT is the kit — animal-goose, a songbird: its eyes are on the SIDES of the '
     + 'head. Orbit round to the front of each. Both scaled to one unit tall.'),
 
   /* The collisions are on the quail specifically — an `eye-stripe` through the
    * eye's bounding box, and the eye intersecting the body itself. */
-  'eye-collisions': WHOLE('animal-fox', 'animal-quail',
+  'eye-collisions': WHOLE('animal-fox', 'animal-shrew',
     'LEFT is the pack — animal-fox: nothing overlaps a decal, it is a clean sheet on a clean '
     + 'plate. RIGHT is the kit — animal-quail, which carries an `eye-stripe` through the eye and '
     + 'an eye that intersects the body. Both scaled to one unit tall.'),
 
   /* The row that is a NO. The picture has to be the two BODIES, because the
    * claim is that this is the part where approximating is correct. */
-  'body-stays-procedural': WHOLE('animal-fox', 'animal-hyena',
+  'body-stays-procedural': WHOLE('animal-fox', 'animal-vole',
     "LEFT is the pack — animal-fox, whose `body` node is a sculpted shell of 190–418 triangles "
     + 'with the head, ears, muzzle, nose, eyes and everything else fused into it. RIGHT is the '
     + 'kit — animal-hyena, whose body and head are boxes. There are 24 distinct faces in the '

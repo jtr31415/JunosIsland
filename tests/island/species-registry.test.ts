@@ -84,17 +84,30 @@ describe('the species registry', () => {
     // `wing`, `horn` and `claw` roles occur zero times in the bank.
     // `species-night-time.test.ts` measures that absence rather than asserting
     // it, so the day a wing is banked the ruling reopens by itself.
-    expect(REGISTRY.size).toBe(113)
+    // 54 SINCE LATER THE SAME DAY, and the −59 is the whole kit route being
+    // RETIRED. Joe, having looked at them: *"only the garden animals have been
+    // built to spec. the ones i can see in outline in the album for africa and
+    // home pets are the old blocky ones that can be deleted to be honest"*, then
+    // *"remove all the blocky ones from the game completely, including the
+    // album."* Deleting rather than replacing was safe only because he confirmed
+    // the fact that made it safe — *"she has not collected any of them yet"* —
+    // so no save points at one and §19 is untouched.
+    //
+    // The number went DOWN and that is the point rather than a regression: he
+    // wants a clean baseline to rebuild from on the assembly route. Every
+    // survivor below is hand-assembled, except `base`, which is Kenney's own
+    // pack and was never ours.
+    expect(REGISTRY.size).toBe(54)
     expect(shippedIn('base')).toHaveLength(24)
     expect(shippedIn('garden')).toHaveLength(14)      // COMPLETE — the slow worm is assembled
-    expect(shippedIn('home-pets')).toHaveLength(16)   // COMPLETE — corn snake and goldfish assembled
-    expect(shippedIn('woodland')).toHaveLength(16)    // COMPLETE
-    expect(shippedIn('africa')).toHaveLength(14)      // 16 rostered, ostrich + vulture want wings
-    expect(shippedIn('farm')).toHaveLength(16)        // COMPLETE
+    expect(shippedIn('home-pets')).toHaveLength(2)    // corn snake + goldfish; 14 kit-built deleted
+    expect(shippedIn('woodland')).toHaveLength(0)     // all 16 were kit-built
+    expect(shippedIn('africa')).toHaveLength(1)       // crocodile; 13 kit-built deleted
+    expect(shippedIn('farm')).toHaveLength(0)         // all 16 were kit-built
     expect(shippedIn('night-time')).toHaveLength(13)  // 16 rostered; bat, sugar glider, scorpion
   })
 
-  it('leaves 207 species rostered but unshipped, on purpose', () => {
+  it('leaves 266 species rostered but unshipped, on purpose', () => {
     // The gap is the point. Nobody should "finish" the registry — a species
     // without a built kit renders as nothing, which is worse than absent.
     //
@@ -118,10 +131,10 @@ describe('the species registry', () => {
     // remaining 207 are a schedule rather than a wall.
     const rostered = COLLECTIONS.flatMap(c => c.members)
     expect(rostered).toHaveLength(320)
-    expect(rostered.filter(id => !speciesRecord(id))).toHaveLength(207)
+    expect(rostered.filter(id => !speciesRecord(id))).toHaveLength(266)
   })
 
-  it('has FOUR complete collections now — garden, home-pets, woodland and farm', () => {
+  it('has ONE complete collection — garden, the only one built the way Joe wanted', () => {
     // This test used to assert ZERO, and said in its own comment: "if this test
     // ever goes red, a second kit landed and that question became live." That
     // is exactly what happened, so it is inverted rather than deleted — the
@@ -159,11 +172,23 @@ describe('the species registry', () => {
     // makes JT-030 (may a collection unlock with a hole in it?) live again in the
     // hardest form: for Home Pets the answer could be dodged by building the
     // last two animals, and here it cannot.
+    // AND THEN THERE WAS ONE. Later on 2 Aug Joe retired the kit route outright
+    // and had the 59 kit-built species deleted, so farm and woodland lost all
+    // sixteen each and home-pets lost fourteen. Everything above is kept rather
+    // than rewritten because it is the reasoning that produced those four, and
+    // because the thing it got wrong is worth seeing: the count was never the
+    // achievement. A collection is complete when Joe wants what is in it, and
+    // three of these four were complete only in the sense that a kit had
+    // finished spending itself on them.
+    //
+    // GARDEN IS THE ONE THAT SURVIVED, and it survived because it is the only
+    // collection built the way he wanted in the first place. That is the whole
+    // lesson of the day in one array.
     const complete = COLLECTIONS
       .filter(c => c.id !== 'base')
       .filter(c => c.members.every(id => speciesRecord(id)))
       .map(c => c.id)
-    expect([...complete].sort()).toEqual(['farm', 'garden', 'home-pets', 'woodland'])
+    expect([...complete].sort()).toEqual(['garden'])
   })
 
   it('names the seven base animals roster §5 gives a threat badge', () => {

@@ -316,14 +316,22 @@ describe('"avoid consecutive collections that may be perceived as related"', () 
     // (Before PB-058 this case was staged on three of the four Red List tiers;
     // they are all unbuilt and therefore held back, so the pool it needs has to
     // be built out of collections that actually have animals in them.)
-    const left = ['woodland']
+    // STAGED THE OTHER WAY ROUND since 2 Aug. It used to leave woodland as the
+    // one unopened collection, which stopped working the moment woodland lost
+    // all sixteen of its kit-built species and joined NOT_BUILT_YET — a held
+    // collection is never a candidate, so the pool emptied instead of falling
+    // back. `temperate` is garden and woodland alone, and garden is now the only
+    // built one, so the pair can only be staged with garden as the TARGET.
+    // The behaviour under test is unchanged: the last thing opened is in the
+    // same group as the only thing left, and it opens it anyway.
+    const left = ['garden']
     const open = COLLECTIONS.map((c) => c.id).filter((id) => !left.includes(id))
-    const s = state({ open, owned: allOwned(open), lastOpened: 'garden' })
+    const s = state({ open, owned: allOwned(open), lastOpened: 'woodland' })
     expect(candidates(s)).toEqual(left)
     expect(RELATED_GROUP['woodland']).toBe(RELATED_GROUP['garden'])
 
     const got = nextToOpen(s, mulberry32(10))
-    expect(got).toBe('woodland')
+    expect(got).toBe('garden')
   })
 })
 

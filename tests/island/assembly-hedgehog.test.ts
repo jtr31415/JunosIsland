@@ -979,8 +979,22 @@ describe('the roster stays the authority on names and facts', () => {
      * `build`. The point is unchanged: an id with no assembly throws by NAME
      * rather than returning null (§9.3).
      */
-    expect(speciesRecord('animal-otter')?.build).toBeDefined()
-    expect(speciesRecord('animal-otter')?.assembly).toBeUndefined()
-    expect(() => buildAssembled('animal-otter')).toThrow(/animal-otter/)
+    /*
+     * AND NOW IT IS `animal-robin`, because on 2 Aug the otter was deleted with
+     * the other 58 kit-built species and the premise went with it: there is no
+     * longer ANY shipped species with a `build` and no `assembly`. All thirteen
+     * that still carry a kit build are Garden animals that carry an assembly
+     * too, and the assembly is what renders (`album.ts:179` tries it first).
+     *
+     * So the two lines that made §9.2's point from the other side are gone
+     * rather than rewritten — there is nothing left to make it with. What
+     * survives is the invariant that actually matters and is unaffected by any
+     * of it: §9.3, an id with no assembly THROWS BY NAME rather than returning
+     * null. `animal-robin` is rostered and unbuilt, which is the plainest
+     * possible case of that, and it will stay plain — it is in `birds`, which
+     * cannot be built at all until the bank has a wing.
+     */
+    expect(speciesRecord('animal-robin')).toBeUndefined()
+    expect(() => buildAssembled('animal-robin')).toThrow(/animal-robin/)
   })
 })

@@ -149,7 +149,22 @@ describe('and then nothing, until they finish one', () => {
     const two = opened.open.slice(0, 2)
     const owned = [...allOf(two[0] as string), ...allOf(two[1] as string)]
     opened = advance(owned, opened, rng())
-    expect(opened.open).toHaveLength(MAX_ACTIVE + 2)
+
+    /*
+     * DERIVED, not `MAX_ACTIVE + 2`, since 2 Aug. Two completions used to earn
+     * two more albums outright, and that assumed there were always two more to
+     * give. Deleting the 59 kit-built species left FIVE collections with any
+     * animals in them at all — base, garden, home-pets, africa, night-time — so
+     * the loop now runs out of pool before it runs out of entitlement.
+     *
+     * Computed rather than typed as 5 so this corrects itself the moment a
+     * collection is rebuilt on the assembly route, which is the whole plan. The
+     * behaviour under test is unchanged: it catches up on both completions at
+     * once rather than one per call, and that is what the `Math.min` still
+     * proves as long as the pool is the binding limit.
+     */
+    const withAnimals = COLLECTIONS.filter(c => shippedIn(c.id).length > 0).length
+    expect(opened.open).toHaveLength(Math.min(MAX_ACTIVE + 2, withAnimals))
   })
 })
 

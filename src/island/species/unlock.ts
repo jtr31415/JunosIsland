@@ -151,6 +151,16 @@ export const HELD_BACK_BY_JOE: readonly string[] = ['legendary', 'dinosaurs', 'p
 export const NOT_BUILT_YET: readonly string[] = [
   'birds', 'ocean', 'critters', 'ice', 'outback', 'jungle', 'raptors',
   'near-threatened', 'vulnerable', 'endangered', 'critically-endangered',
+  /* Farm and Woodland went BACKWARDS into this list on 2 Aug 2026, which the
+   * comment above did not anticipate — it says this list "shrinks when a
+   * modeller finishes a collection" and assumed that was the only direction.
+   *
+   * Both were 16 of 16 and both were entirely kit-built, and Joe retired that
+   * route: *"remove all the blocky ones from the game completely, including the
+   * album."* So they are back to nothing built, which is exactly what this list
+   * is for, and the tripwire test caught the omission by name rather than
+   * letting the album offer a child sixteen empty frames. */
+  'woodland', 'farm',
 ]
 
 /**
