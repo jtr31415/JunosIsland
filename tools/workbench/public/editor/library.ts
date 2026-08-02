@@ -391,6 +391,9 @@ const naturalCompare = (a: string, b: string): number => {
  */
 const NO_ROLE = 'unsorted'
 
+/** The header a roleless AUTHORED row gets: `Primitives (3)` via `plural`. */
+const PRIMITIVE = 'primitive'
+
 export const groupShapes = (rows: readonly ShapeRow[]): readonly ShapeGroup[] => {
   const byRole = new Map<string, ShapeRow[]>()
   const push = (role: string, r: ShapeRow): void => {
@@ -399,7 +402,23 @@ export const groupShapes = (rows: readonly ShapeRow[]): readonly ShapeGroup[] =>
     else bucket.push(r)
   }
   for (const r of rows) {
-    if (r.roles.length === 0) push(NO_ROLE, r)
+    /*
+     * A roleless row is bucketed by whether it is AUTHORED, and `primitive` on
+     * that side is a UI LABEL — **NOT a `PartRole`.** Nothing in the data claims
+     * it and nothing here writes it down: `PartRole` is declared in
+     * `bank.generated.ts`, which is generated and never hand-edited, and it is
+     * documented as what a part WAS in the animal it came out of. The three base
+     * shapes came out of no animal, which is exactly why their `roles` and their
+     * `provenance` are both empty — and no role plus no provenance is precisely
+     * what a primitive is. So the header is derived from those two empty arrays
+     * rather than being a category smuggled in beside the measured ones.
+     *
+     * `NO_ROLE` stays alive as the guard it was written to be, and keeps the
+     * other side: a bank shape that arrived one day with no role is an accident,
+     * and `Unsorteds` reads as one, which is right. It read as one over Joe's own
+     * square, triangle and circle too, and those are not accidents.
+     */
+    if (r.roles.length === 0) push(r.authored ? PRIMITIVE : NO_ROLE, r)
     else for (const role of r.roles) push(role, r)
   }
   return [...byRole.keys()]

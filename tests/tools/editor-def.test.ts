@@ -613,6 +613,18 @@ describe('the axioms warn, and never block', () => {
   const of = (ws: { axiom: string }[], axiom: string): { axiom: string; severity?: string }[] =>
     ws.filter(w => w.axiom === axiom)
 
+  /**
+   * The non-uniform clause of the `scale` warning, VERBATIM.
+   *
+   * A literal in a test is usually a smell; here it is the assertion. Two claims
+   * below turn on this exact sentence — that a lifted part still gets it, and that
+   * a primitive does not — and "does not get it" is only meaningful against the
+   * words themselves. Matching a paraphrase would let a reworded departure through
+   * the `not.toContain` while it still told Joe he was breaking something.
+   */
+  const DEPARTS = 'It is NON-UNIFORM, so the authored proportions of the shape itself are '
+    + 'changed — which is the thing Joe rejected by name on the hedgehog\'s hull.'
+
   it('a clean definition is silent', () => {
     expect(warningsFor(BASE)).toEqual([])
     expect(warningsFor(BASE, BASE)).toEqual([])
@@ -706,6 +718,11 @@ describe('the axioms warn, and never block', () => {
     const sw = of(warningsFor(snout), 'scale')
     expect(sw[0]!.severity).toBe('note')
     expect(warningsFor(snout)[0]!.text).toContain('NON-UNIFORM')
+    /* A LIFTED part's proportions are Kenney's, so a non-uniform stretch really
+     * does change evidence, and it says so in the words Joe used. Pinned verbatim
+     * because the primitive case below is defined as the ABSENCE of this sentence:
+     * a paraphrase there would pass a `not.toContain` while still saying it. */
+    expect(warningsFor(snout)[0]!.text).toContain(DEPARTS)
 
     /* Every other part: §3 measured stretch as safe on those two kinds only. */
     const extra = setStretch(BASE, { role: 'extras', index: 0 }, [1.2, 1.2, 1.2])
@@ -714,6 +731,61 @@ describe('the axioms warn, and never block', () => {
     /* A stretch of exactly 1 is not a stretch. */
     expect(of(warningsFor(setStretch(BASE, { role: 'ears' }, [1, 1, 1])), 'scale')).toEqual([])
     expect(of(warningsFor(BASE), 'scale')).toEqual([])
+  })
+
+  /**
+   * A PRIMITIVE HAS NO PROPORTIONS TO DEPART FROM, so the sentence above is not
+   * merely unhelpful on one — it is false.
+   *
+   * Joe asked for the triangle, the circle and the square with "ability for me to
+   * resize", and `primitiveStretched` re-cuts the solid from a box of the new size
+   * rather than multiplying baked positions, so the chamfer is regenerated and the
+   * result is a shape that was authored AT that size. Warning him off the one thing
+   * he asked those shapes for — in the words of a ruling about a shared authored
+   * HULL losing its cube — would read as a rule he is breaking.
+   *
+   * The last two assertions are the ones that matter: the lifted behaviour is
+   * unchanged, and both arms of `warningsFor` (a feature slot and an extra) are
+   * covered, because the part id has to be reachable at both.
+   */
+  it('scale: a stretched PRIMITIVE is a note about the re-cut, never a departure', () => {
+    const block: CreatureDef = {
+      ...BASE,
+      extras: [{ name: 'block', part: 'bespoke-square-01', paint: 'tip', at: [0, 1.43125, 0.2] }],
+    }
+    const stretched = setStretch(block, { role: 'extras', index: 0 }, [1, 1, 2.4])
+    const w = of(warningsFor(stretched), 'scale')
+    expect(w).toHaveLength(1)
+    /* An extra is `safe: false` and 2.4x, so the lifted rules would have said
+     * `warn` here — the severity IS the behaviour under test. */
+    expect(w[0]!.severity, 'a resize Joe asked for is not something to defend').toBe('note')
+
+    const text = warningsFor(stretched).find(x => x.axiom === 'scale')!.text
+    expect(text, 'the primitive warning still names the stretch it is about')
+      .toContain('NON-UNIFORM')
+    expect(text).not.toContain(DEPARTS)
+    expect(text, 'a primitive has no authored proportions').not.toContain('authored proportions')
+    expect(text, 'the hedgehog ruling is about a shared authored hull, not this')
+      .not.toContain('hedgehog')
+    expect(text, 'and it says the useful true thing instead').toContain('RE-CUT')
+
+    /* The other arm: a FEATURE slot, where the id comes off `asDef(v).part`. */
+    const snoutDef: CreatureDef = { ...BASE, snout: { part: 'bespoke-triangle-01' } }
+    const spread = setStretch(snoutDef, { role: 'snout' }, [2, 1, 1])
+    const sw = of(warningsFor(spread), 'scale')
+    expect(sw).toHaveLength(1)
+    expect(sw[0]!.severity).toBe('note')
+    const stext = warningsFor(spread).find(x => x.axiom === 'scale')!.text
+    expect(stext).not.toContain(DEPARTS)
+    expect(stext).toContain('bespoke-triangle-01')
+
+    /* `bespoke-sphere-01` is authored and is NOT one of the three: it was lifted
+     * from nothing but it was commissioned as a nose, it carries `roles: ['nose']`,
+     * and `isPrimitive` is false for it. It keeps the lifted warning. */
+    const sphere: CreatureDef = { ...BASE, nose: { part: 'bespoke-sphere-01' } }
+    const squashed = setStretch(sphere, { role: 'nose' }, [1, 1, 1.6])
+    const ntext = warningsFor(squashed).find(x => x.axiom === 'scale')!.text
+    expect(ntext, 'only the three base shapes are exempt').toContain(DEPARTS)
   })
 
   it('palette-order: removal and reordering are loud, appending is silent', () => {
