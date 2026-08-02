@@ -312,7 +312,7 @@ describe('"avoid consecutive collections that may be perceived as related"', () 
   it('FALLS BACK to a related collection rather than returning null', () => {
     // Everything open and finished except Woodland, and the last thing opened
     // was Garden — the same `temperate` walk. Avoiding the group would empty
-    // the pool, so it opens a related page rather than leaving her with none.
+    // the pool, so it opens a related page rather than leaving them with none.
     // (Before PB-058 this case was staged on three of the four Red List tiers;
     // they are all unbuilt and therefore held back, so the pool it needs has to
     // be built out of collections that actually have animals in them.)

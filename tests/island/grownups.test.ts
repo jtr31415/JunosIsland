@@ -208,7 +208,7 @@ describe('what the panel puts on screen', () => {
 
   it('changes the line the moment a parent takes the path off Auto', async () => {
     // The mode switch is six inches above this line. A line written once at
-    // open time would tell him his tap did nothing.
+    // open time would tell them their tap did nothing.
     const { deps } = makeDeps()
     const root = open(deps)
     expect(autoLine(root, 'sums')).toBe('What Auto would do: watching')
@@ -539,7 +539,7 @@ describe('the wipe screen', () => {
      * The anti-mis-tap guarantee, and the reason it is first. A wipe screen
      * that opened with anything already ticked would let one stray thumb on
      * the red button take a child's animals — which is the single thing brief
-     * §19 is most emphatic she cannot lose.
+     * §19 is most emphatic they cannot lose.
      */
     const { root, rows } = openWipe()
     expect(rows).toHaveLength(3)
@@ -624,7 +624,7 @@ describe('the wipe screen', () => {
     expect(body).toContain('cannot be undone')
   })
 
-  it('counts her friends and her land in the confirm, rather than saying "data"', async () => {
+  it('counts their friends and their land in the confirm, rather than saying "data"', async () => {
     const { root, rows } = openWipe()
     tap(tickOf(rows[0]))
     tap(dangerIn(root))
@@ -638,7 +638,7 @@ describe('the wipe screen', () => {
   it('names the child in the name row when there is a name to give back', () => {
     const { rows } = openWipe()
     expect(rows[2].textContent).toContain('Juno')
-    // And says nothing about a name she has not given yet.
+    // And says nothing about a name they have not given yet.
     document.body.innerHTML = ''
     const unnamed = openWipe({ pets: 0, tiles: 1, childName: '' })
     expect(unnamed.rows[2].textContent).not.toContain('called')
@@ -649,9 +649,9 @@ describe('the wipe screen', () => {
     // expected to infer it from the layout.
     const { rows } = openWipe()
     expect(rows[0].textContent?.toLowerCase())
-      .toContain('what she is working on stays')
+      .toContain('what they are working on stays')
     expect(rows[1].textContent?.toLowerCase())
-      .toContain('her island, her animals and her name all stay')
+      .toContain('their island, their animals and their name all stay')
     expect(rows[2].textContent?.toLowerCase()).toContain('nothing else changes')
   })
 

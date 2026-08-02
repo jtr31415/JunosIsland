@@ -801,9 +801,9 @@ async function boot(): Promise<void> {
      * Joe's card: *"it should be at least a question to the adult ... wipe
      * should offer 3 options with tick boxes: 1. wipe island and animals, 2
      * wipe academic progress ... 3 wipe kids name."* It used to be
-     * all-or-nothing, so a parent who wanted her maths to start over had to
-     * destroy her animals to get there — and animals are the thing brief §19
-     * is most emphatic she cannot lose.
+     * all-or-nothing, so a parent who wanted their child's maths to start over
+     * had to destroy the child's animals to get there — and animals are the
+     * thing brief §19 is most emphatic a child cannot lose.
      *
      * `askWipe` includes its own confirm and only resolves after it, so a
      * value here means a grown-up has seen the ticked list read back and said
@@ -2207,7 +2207,7 @@ async function boot(): Promise<void> {
    * fault rather than as a fallback: eight lines in a row, and a child who
    * hears two of them in Oliver and the rest in the device's robot has been
    * shown a bug, not a graceful degradation. On the common path this costs
-   * nothing — she has just typed her name, and the clips landed while she did.
+   * nothing — the child was typing their name while the clips landed.
    *
    * Raced against a cap, never awaited bare. `load()` cannot reject, but it can
    * be slow on a cold cellular first run, and nothing about the story may wait

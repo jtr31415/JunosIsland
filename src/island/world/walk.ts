@@ -50,7 +50,7 @@
  *
  * Joe ruled PB-052 as JT-033: *"C - just relocate the animal from a trapped
  * position, that is no issue at all"*. So nothing here refuses a placement and
- * nothing here is a guard — she may still ring a hex with six mountains, and
+ * nothing here is a guard — a child may still ring a hex with six mountains, and
  * `sealsAPet` stays the query it always was. What recovery needs on top of
  * detection is a DESTINATION, and that is `rescueHexFor` at the foot of the
  * file. Moving the pet is the pet layer's job; naming the hex is this one's,
@@ -315,8 +315,8 @@ export function wouldSeal(
  * "nothing stands here", asked of the same table that decided it was sealed.
  *
  * Ties are broken by coordinate so the answer is the same on every machine and
- * on every reload: a rescue that lands somewhere different each time she opens
- * the game is a pet that will not stay put.
+ * on every reload: a rescue that lands somewhere different each time the child
+ * opens the game is a pet that will not stay put.
  */
 export function rescueHexFor(
   island: Island, from: Axial, hexSize: number, keepOut: KeepOut, petRadius: number,

@@ -260,7 +260,7 @@ export const MOUNTAIN_FALLBACKS: ReadonlyArray<{ name: string; weight: number; b
  *
  * THE PLOT IS NOT AFFECTED. `plot.ts` names its peak through `mountainHexFor`
  * and the finished build arrives via `props.adopt`, which never goes near the
- * refusal path — so the peak she watched rise is still the peak she gets.
+ * refusal path — so the peak the child watched rise is still the peak they get.
  */
 export const mountainFallbackFor = (a: Axial): string =>
   pick(MOUNTAIN_FALLBACKS, hash(a) >>> 3).name

@@ -433,8 +433,8 @@ export function clearOf(
  * Joe ruled it as JT-033 and his ruling is much smaller than the fix the card
  * proposed: *"C - just relocate the animal from a trapped position, that is no
  * issue at all"*. So there is no walkability layer wired into placement, no
- * corridor check, and no rock tap that silently becomes grass. She may build
- * the ring. If a friend ends up inside it, the friend is moved.
+ * corridor check, and no rock tap that silently becomes grass. The child may
+ * build the ring. If a friend ends up inside it, the friend is moved.
  *
  * WHY THE WHOLE REMEDY LIVES IN THIS FILE, and nothing of it in `flow.ts`:
  * `flow.pets[].at` is the HATCH hex and is never written back as a pet wanders
@@ -443,9 +443,9 @@ export function clearOf(
  * that was already out walking when the sixth mountain landed. Doing it here
  * instead is STATELESS: `sync` re-sites every pet from `at` on load, so the
  * check runs again on every load, an island that is ALREADY sealed is repaired
- * the next time she opens the game, and no save changes shape. It also picks up
- * the hazard the card raised separately — `firstFreeSpot` can hatch a new pet
- * straight into a sealed pocket, and under recovery that fixes itself.
+ * the next time the child opens the game, and no save changes shape. It also
+ * picks up the hazard the card raised separately — `firstFreeSpot` can hatch a
+ * new pet straight into a sealed pocket, and under recovery that fixes itself.
  */
 
 /**
@@ -477,8 +477,8 @@ function rescueFrom(
  *
  * Nearest owned centre, which for a hex lattice IS the cell the point falls in
  * — the cells are the Voronoi regions of their centres. Restricting it to the
- * tiles she owns means a pet nudged a little off the edge answers with the tile
- * it came off rather than with open sea, which is what the caller wants.
+ * tiles a child owns means a pet nudged a little off the edge answers with the
+ * tile it came off rather than with open sea, which is what the caller wants.
  */
 function hexUnder(
   island: Island, hexSize: number, x: number, z: number,
@@ -732,8 +732,8 @@ export function createPetField(base = '', rng: Rng = defaultRng): PetField {
    * about as often as not, because most of the island is not the hex we chose.
    * The centre first, then the six facings at half a hex out, then the centre
    * anyway. DETERMINISTIC on purpose — a pet rescued to a different spot every
-   * time she opens the game is a pet that will not stay put, and `sync` re-runs
-   * this on every load.
+   * time the child opens the game is a pet that will not stay put, and `sync`
+   * re-runs this on every load.
    *
    * The last resort cannot be "nowhere": `clearOf` runs on the next frame and
    * will slide the pet off anything it has been set down inside, which is the

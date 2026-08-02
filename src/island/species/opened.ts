@@ -96,16 +96,16 @@ export function stateOf(species: readonly string[], opened: Opened): UnlockState
  *      unbuilt collections to `HELD_BACK` stops them being DRAWN; it does
  *      nothing whatever about the ones a child has already been given. Juno's
  *      live save has up to three of them open right now, and they are wedged
- *      there forever rather than merely ugly: `completion` divides what she owns
- *      by the collection's ROSTER size (sixteen), never by the number actually
- *      shipped (zero), so an empty collection sits at 0% permanently, never
- *      completes, never stops counting as ACTIVE, and therefore holds one of
- *      Joe's four slots for good. Three such albums and she has one working slot
- *      and will never be given a new album again. Nothing downstream saves her:
- *      `readOpened` keeps the id, this function used to copy it through
- *      verbatim, `candidates` only ever filtered what could be OPENED, and
- *      `albumsToShow` happily draws it. So it has to be undone here, once, on
- *      the way past.
+ *      there forever rather than merely ugly: `completion` divides what a child
+ *      owns by the collection's ROSTER size (sixteen), never by the number
+ *      actually shipped (zero), so an empty collection sits at 0% permanently,
+ *      never completes, never stops counting as ACTIVE, and therefore holds one
+ *      of Joe's four slots for good. Three such albums and the child has one
+ *      working slot and will never be given a new album again. Nothing
+ *      downstream saves them: `readOpened` keeps the id, this function used to
+ *      copy it through verbatim, `candidates` only ever filtered what could be
+ *      OPENED, and `albumsToShow` happily draws it. So it has to be undone here,
+ *      once, on the way past.
  *   1. THE CADENCE NEXT. `nextToOpen` is Joe's ratified rule and gets first
  *      refusal on every slot. Called in a loop, not once, because a single call
  *      answers "does anything open now" and a save can arrive several
@@ -149,7 +149,7 @@ export function advance(
    *
    *   (a) the collection is in `HELD_BACK`, so the cadence would refuse to draw
    *       it today; and
-   *   (b) she owns NOTHING from it.
+   *   (b) the child owns NOTHING from it.
    *
    * For a collection with no shipped species (b) is always true — no model
    * means no pet means no species means no count — so on today's data the
@@ -158,17 +158,17 @@ export function advance(
    * proof rots. `HELD_BACK` is a union (see `unlock.ts`), and Joe's half of it
    * is not about models at all: the day he releases `legendary` he may well do
    * it while a child already has some of it open and half collected, and an
-   * (a)-only prune would quietly take her unicorns off the shelf. With (b) in
+   * (a)-only prune would quietly take their unicorns off the shelf. With (b) in
    * place the rule is lossless BY CONSTRUCTION rather than by an argument about
-   * what happens to be true this week. If she owns anything in a held-back
+   * what happens to be true this week. If a child owns anything in a held-back
    * collection, it keeps its album and its slot, and the cadence simply never
-   * offers her a second one like it.
+   * offers them a second one like it.
    *
    * `base` is never pruned. It is not in `HELD_BACK` so (a) already excludes it,
    * but it is spelled out because base going missing is the one failure here
-   * nobody would forgive — it is the album she has actually been collecting
-   * since her first egg — and a guard that is obvious to read is worth more than
-   * one that has to be traced through two files.
+   * nobody would forgive — it is the album the child has actually been
+   * collecting since their first egg — and a guard that is obvious to read is
+   * worth more than one that has to be traced through two files.
    *
    * `lastOpened` is deliberately left alone even when it names something pruned.
    * `RELATED_GROUP` is total over every non-base id, so the relatedness rule

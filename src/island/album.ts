@@ -104,8 +104,8 @@ import type { Speaker } from '../platform/speech'
  *
  * ONE HONEST REMAINDER, measured and left alone: a full base page still does ~24
  * synchronous `toDataURL` PNG encodes, which is main-thread work that no amount of
- * model reuse removes. The prefetch in `turn()` moves them off the turn she is
- * making rather than deleting them. If a real tablet still janks, chunking the
+ * model reuse removes. The prefetch in `turn()` moves them off the turn the child
+ * is making rather than deleting them. If a real tablet still janks, chunking the
  * encodes or moving to `createImageBitmap` is the next lever — not a new pipeline.
  *
  * @param preview The island's own `pets.preview`. It hands back a fresh CLONE
@@ -141,7 +141,7 @@ function createPortraitRenderer(
    * the work has completed, so two callers who overlap both do the whole job —
    * the model, the render and the PNG encode — and neither ever knows. That used
    * to be a rare race; the prefetch in `turn()` makes overlap the normal case,
-   * since a page being warmed ahead of her is the same page she is about to open.
+   * since a page warmed ahead of the child is the same page they are about to open.
    */
   const cache = new Map<string, Promise<string | null>>()
 
@@ -223,7 +223,7 @@ function createPortraitRenderer(
    *
    * Nothing here is disposed on the way out. The model is a clone from the
    * island's cache and shares its geometry and materials with every pet of the
-   * species walking about outside — including ones she already owns — so
+   * species walking about outside — including ones the child already owns — so
    * `scene.remove` is the entire cleanup, exactly as it always was and for the
    * reason `AlbumWorld.preview` and brief §19 give.
    */
@@ -904,30 +904,30 @@ export function createAlbum(
       }
 
       /**
-       * Warm the page she has not turned to yet. PB-055.
+       * Warm the page the child has not turned to yet. PB-055.
        *
        * Joe: *"when opening the animals in the album there can be a load lag"*.
        * The portraits are cached for the session, so the lag is only ever the
-       * FIRST look at a page — which is exactly the moment she is watching. This
-       * spends the quiet time after a turn on the next page's pictures, so the
-       * turn she is about to make finds them already taken.
+       * FIRST look at a page — which is exactly the moment the child is watching.
+       * This spends the quiet time after a turn on the next page's pictures, so
+       * the turn they are about to make finds them already taken.
        *
        * Three things it must not become:
        *
        *   - NOT EVERY PAGE. Only `at + 1`. Building all five pages up front is
        *     precisely the cost the paging commit removed (see the note above
        *     `pages`), and a child who never turns past the first page should not
-       *     pay for four rosters she is not looking at.
+       *     pay for four rosters they are not looking at.
        *   - NOT THE ORPHANS PAGE, which is not a collection and holds pets whose
        *     portraits the roster pages have already asked for.
        *   - NOT AT THE EXPENSE OF THIS TURN. Idle time where the browser offers
        *     it, a macrotask where it does not (jsdom, older Safari), so the page
-       *     she IS looking at is drawn and interactive before this starts.
+       *     they ARE looking at is drawn and interactive before this starts.
        *
        * Fire and forget, and it may never reject: nobody awaits it, and the
        * unhandled rejection would land in the middle of an animation. `shoot`
        * evicts its own failures, so a page warmed on a dropped connection is
-       * simply cold again when she gets there.
+       * simply cold again when the child gets there.
        */
       const warmNext = (): void => {
         const members = at + 1 < pages.length

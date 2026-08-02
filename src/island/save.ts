@@ -385,19 +385,19 @@ export function fromSave(save: IslandSave | null): Loaded {
  * options with tick boxes: 1. wipe island and animals, 2 wipe academic
  * progress ... 3 wipe kids name."* Before this the wipe was one button that
  * took everything, so a parent who wanted a fresh maths start had to destroy
- * her animals to get it.
+ * the child's animals to get it.
  *
  * THE THREE ARE INDEPENDENT, and that independence is the card. A child who
- * keeps her animals but restarts her maths, and a child who keeps her maths
- * and starts a fresh island, must both come out the far side intact — see
- * `wipeSave` for which field belongs to which box and why.
+ * keeps their animals but restarts their maths, and a child who keeps their
+ * maths and starts a fresh island, must both come out the far side intact —
+ * see `wipeSave` for which field belongs to which box and why.
  */
 export interface WipeChoice {
-  /** Her island, her animals, and the work banked toward the next of each. */
+  /** Their island and animals, and the work banked toward the next of each. */
   island: boolean
   /** Everything the harness measures: the ladder, the stage stats, the offer. */
   academic: boolean
-  /** What she is called. */
+  /** What they are called. */
   name: boolean
 }
 
@@ -416,35 +416,35 @@ export interface WipeChoice {
  * 1. THE ECONOMY GOES WITH THE ISLAND, NOT WITH THE ACADEMIC BOX.
  *    `readProgress`, `sumProgress`, `tilesEarned`, `honeymoonTiles` and
  *    `bankedTiles` are EARNED WORK toward the next egg and the next tile, not
- *    a measurement of how she is doing. Brief §19 says earned work is hers, so
- *    "wipe academic progress" — which is a request to re-measure her, not to
- *    charge her again — must not take it. A fresh island naturally starts with
- *    a fresh purse, so it goes there.
+ *    a measurement of how they are doing. Brief §19 says earned work is
+ *    theirs, so "wipe academic progress" — which is a request to re-measure
+ *    the child, not to charge them again — must not take it. A fresh island
+ *    naturally starts with a fresh purse, so it goes there.
  *
  * 2. THE ACADEMIC BOX DOES NOT TOUCH `honeymoonTiles`, though it does clear
  *    `honeymoonFrom` inside the attainment record. The two are not two halves
  *    of one switch. `honeymoonFrom` is a live discount that ends when the
  *    measurement it was granted against is thrown away; `honeymoonTiles` is a
- *    PRICE OFFSET for tiles she already bought (see `flow.sumsForTile`), and
- *    zeroing it would silently re-price every tile she has left. That is the
+ *    PRICE OFFSET for tiles the child bought (see `flow.sumsForTile`), and
+ *    zeroing it would silently re-price every tile they have left. That is the
  *    exact half-wipe this card exists to prevent, just pointing the other way.
  *
  * 3. `onceFlags` GO WITH THE ACADEMIC BOX. They are the once-only teaching
- *    moments (INTRO-TEN and its successors), keyed to where she is on the
- *    ladder. Reset the ladder and leave them, and she re-climbs to the rung
- *    that introduces tens having been told the game already showed her — a
- *    save that says she has seen something she has not.
+ *    moments (INTRO-TEN and its successors), keyed to where the child is on
+ *    the ladder. Reset the ladder and leave them, and the child re-climbs to
+ *    the rung that introduces tens having been told the game already showed
+ *    them — a save that says they have seen something they have not.
  *
  * AND ONE TRAP, which cost the best part of an hour: a fresh island is written
  * here as `createFlow()`'s ONE grass tile, never as `tiles: []`. `fromSave`
  * treats an empty tile array as "no save at all" and its fresh branch returns
  * `childName: ''` — so an island wipe expressed as an empty array would
- * silently take her name with it, which is precisely the coupling the three
+ * silently take their name with it, which is precisely the coupling the three
  * boxes exist to break. Do not "simplify" this to an empty array.
  *
  * Whatever no box claims survives every combination, deliberately:
  * `calmColours` is a colour-comfort setting a grown-up chose and none of the
- * three asked about, and `persistGranted` is a browser answer, not hers.
+ * three asked about, and `persistGranted` is a browser answer, not a child's.
  */
 export function wipeSave(save: IslandSave | null, what: WipeChoice): IslandSave | null {
   if (!save) return null
@@ -466,10 +466,10 @@ export function wipeSave(save: IslandSave | null, what: WipeChoice): IslandSave 
     // A new island gets its opening, exactly as the first one did.
     out.openingSeen = false
     /*
-     * The album roster is a fact about the animals she owns, so it cannot
-     * outlive them: left alone it would show collections standing open with
-     * nothing in them, and `lastOpened` pointing at a collection that is no
-     * longer hers. `advance` re-seeds on the next load from the pets she has.
+     * The album roster is a fact about the animals the child owns, so it
+     * cannot outlive them: left alone it would show collections standing open
+     * with nothing in them, and `lastOpened` pointing at a collection that is
+     * no longer theirs. `advance` re-seeds on the next load from the pets left.
      */
     out.openCollections = [...NOTHING_OPENED.open]
     out.lastOpened = NOTHING_OPENED.lastOpened
@@ -506,9 +506,9 @@ export function wipeSave(save: IslandSave | null, what: WipeChoice): IslandSave 
  * Through the store, not by reaching into localStorage — removing the one key
  * stopped working the moment there were two copies (see the note this replaced
  * in `main.ts`). An ordinary `put` is enough and is what every other change to
- * her island already uses: it lands in both copies and in the ring, so the
- * newest thing any recovery path can find is the wiped save. Only a wipe with
- * nothing on disk to wipe falls back to `removeProfile`.
+ * the child's island already uses: it lands in both copies and in the ring,
+ * so the newest thing any recovery path can find is the wiped save. Only a
+ * wipe with nothing on disk to wipe falls back to `removeProfile`.
  */
 export async function wipeIsland(
   store: SaveStore, profileId: string, what: WipeChoice,

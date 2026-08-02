@@ -203,7 +203,7 @@ export function buildCatalogue(): Entry[] {
 
   for (const [type, list] of Object.entries(PALETTE)) {
     list.forEach((id, i) => {
-      /* The SECOND placement path — what a tile she BUILT grows, step by step. */
+      /* The SECOND placement path — what a tile a child BUILT grows, step by step. */
       add(m, id, 'props', 'tile features', `PALETTE.${type}[${i}] · ${INCREMENTS[(i % 8) + 1]}`)
     })
   }

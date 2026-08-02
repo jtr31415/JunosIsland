@@ -389,21 +389,21 @@ function draw(state: UnlockState, rng: Rng): string | null {
  * >>> everything this function can ever draw is `garden`, `home-pets`,
  * >>> `woodland`, `africa` and `farm` — five. A fresh island opens `base` plus
  * >>> three of those to reach the cap of four, which leaves exactly TWO in
- * >>> reserve for the whole of the rest of the game: she completes an album, one
- * >>> of the two opens, she completes another, the last one opens, and after
- * >>> that the cadence has nothing left to give until a modeller ships a
- * >>> collection. That is not a fault in this function, it is the true state of
- * >>> the registry, and it is a great deal better than opening her an album of
- * >>> sixteen empty frames — but it is the number to look at first when someone
+ * >>> reserve for the whole of the rest of the game: the child completes an
+ * >>> album, one of the two opens, they complete another, the last one opens,
+ * >>> and after that the cadence has nothing left to give until a modeller ships
+ * >>> a collection. That is not a fault in this function, it is the true state of
+ * >>> the registry, and it is a great deal better than opening a child an album
+ * >>> of sixteen empty frames — but it is the number to look at first when someone
  * >>> asks why the album stopped growing.
  * >>>
  * >>> A POOL SMALLER THAN THE CAP DEGRADES SILENTLY, ON PURPOSE. It neither
  * >>> throws nor spins: `draw` returns null the instant `candidates` is empty
  * >>> (the `pool.length === 0` guard), and the `room--` bound below caps the loop
  * >>> at the pool's size however far off the cap we still are. A child on a build
- * >>> where nothing at all was buildable would simply see her own base album and
- * >>> no others. Fewer albums is a disappointment; a hang or a crash on the way
- * >>> to her island is not, and that is the trade being made.
+ * >>> where nothing at all was buildable would simply see their own base album
+ * >>> and no others. Fewer albums is a disappointment; a hang or a crash on the
+ * >>> way to their island is not, and that is the trade being made.
  *
  * TERMINATES BY CONSTRUCTION even though it is a loop with a draw in it: every
  * id drawn is added to `open`, `candidates` excludes anything open, so the pool

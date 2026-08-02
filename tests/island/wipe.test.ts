@@ -2,9 +2,9 @@
  * PB-047 — what a wipe actually wipes.
  *
  * "Start again" used to be one red button that took everything. Joe's card
- * splits it into three tick-boxes — her island and animals, what she is
- * working on, her name — and THE INDEPENDENCE IS THE WHOLE CARD: ticking one
- * must not quietly take another with it.
+ * splits it into three tick-boxes — their island and animals, what they are
+ * working on, their name — and THE INDEPENDENCE IS THE WHOLE CARD: ticking
+ * one must not quietly take another with it.
  *
  * So these tests are mostly a matrix. For each box, and for each pair, they
  * build a lived-in save, wipe, put it back through the loader the game itself
@@ -17,7 +17,7 @@
  * Everything goes through the REAL `fromSave`, not through an inspection of
  * the blob, because the blob is not what the game reads. That is not
  * pedantry: `fromSave`'s fresh branch drops `childName` when the tile array is
- * empty, so an island wipe written the obvious way would silently take her
+ * empty, so an island wipe written the obvious way would silently take their
  * name — a coupling invisible to any test that only looked at the JSON.
  */
 import { describe, it, expect, beforeEach } from 'vitest'
@@ -58,7 +58,7 @@ function playedFlow(): Flow {
   f = askForLand({ ...f, phase: 'free' })
   f = placeTile(chooseTile(f, 'water'), { q: 1, r: 0 })
   while (f.plot) f = challengePassed(tapSum({ ...f, phase: 'free' }))
-  // Part-paid work toward the next of each, and a honeymoon behind her.
+  // Part-paid work toward the next of each, and a honeymoon behind them.
   return { ...f, readProgress: 5, sumProgress: 3, honeymoonTiles: 1 }
 }
 
@@ -120,7 +120,7 @@ const wipeAndLoad = (what: Partial<WipeChoice>) =>
 const untouched = () => fromSave(lived())
 
 describe('the island and animals box', () => {
-  it('takes her island, her animals and the work saved toward the next of each', () => {
+  it('takes their island, their animals and the work saved toward the next of each', () => {
     const after = wipeAndLoad({ island: true })
     expect(after.flow.pets).toEqual([])
     // One grass tile at the origin: exactly what a brand-new island starts as.
@@ -139,34 +139,34 @@ describe('the island and animals box', () => {
     expect(wipeAndLoad({ island: true }).openingSeen).toBe(false)
   })
 
-  it('closes the album roster, which is a fact about animals she no longer has', () => {
+  it('closes the album roster, which is a fact about animals they no longer have', () => {
     /*
      * Left alone it would show collections standing open with nothing in them
-     * and `lastOpened` pointing at a collection that is not hers any more.
+     * and `lastOpened` pointing at a collection that is not theirs any more.
      * `advance` re-seeds from the pets on the next load.
      */
     expect(untouched().opened.lastOpened).toBe('collection-woodland')
     expect(wipeAndLoad({ island: true }).opened).toEqual(NOTHING_OPENED)
   })
 
-  it('DOES NOT TAKE HER NAME — the trap this whole card exists to break', () => {
+  it('DOES NOT TAKE THEIR NAME — the trap this whole card exists to break', () => {
     /*
      * `fromSave` treats an empty tile array as "no save at all", and its fresh
      * branch hands back `childName: ''`. So an island wipe written as
-     * `tiles: []` would destroy her name without anybody ticking the name box.
+     * `tiles: []` would destroy their name without anybody ticking the name box.
      * This is the tripwire on that; see the note in `save.ts:wipeSave`.
      */
     expect(wipeAndLoad({ island: true }).childName).toBe(NAME)
   })
 
-  it('does not touch a single field of what she is working on', () => {
+  it('does not touch a single field of what they are working on', () => {
     expect(wipeAndLoad({ island: true }).attainment).toEqual(untouched().attainment)
     expect(wipeAndLoad({ island: true }).onceFlags).toEqual(LIVED_IN_FLAGS)
   })
 })
 
 describe('the academic progress box', () => {
-  it('puts her back to the start of Year 1, which is a virgin record', () => {
+  it('puts them back to the start of Year 1, which is a virgin record', () => {
     // Joe: "reset to essentially start of y1 level". `createAttainment()` IS
     // that: sums 1, reading 1, building 1, mode auto, nothing measured.
     expect(wipeAndLoad({ academic: true }).attainment).toEqual(createAttainment())
@@ -175,7 +175,7 @@ describe('the academic progress box', () => {
   it('leaves no corner of the harness record behind', () => {
     /*
      * Field by field, because a half-cleared record is the specific failure
-     * that produces a child whose measured ability disagrees with her ticks —
+     * that produces a child whose measured ability disagrees with their ticks —
      * a fresh ladder priced off last month's EWMA.
      */
     const after = wipeAndLoad({ academic: true }).attainment
@@ -198,7 +198,7 @@ describe('the academic progress box', () => {
     }
   })
 
-  it('un-ticks the rungs she had climbed, back to the three a new island starts on', () => {
+  it('un-ticks the rungs they had climbed, back to the three a new island starts on', () => {
     const before = untouched().attainment
     const after = wipeAndLoad({ academic: true }).attainment
     const ticks = (a: Attainment): string[] =>
@@ -209,17 +209,17 @@ describe('the academic progress box', () => {
     expect(ticks(after)).toEqual(ticks(createAttainment()))
   })
 
-  it('clears the once-only teaching moments, so she is introduced to tens again', () => {
+  it('clears the once-only teaching moments, so they are introduced to tens again', () => {
     /*
-     * They are keyed to where she is on the ladder. Reset the ladder and leave
-     * them and she re-climbs to the rung that introduces tens carrying a save
-     * that says the game already showed her.
+     * They are keyed to where the child is on the ladder. Reset the ladder and
+     * leave them and the child re-climbs to the rung that introduces tens
+     * carrying a save that says the game already showed it to them.
      */
     expect(untouched().onceFlags).toEqual(LIVED_IN_FLAGS)
     expect(wipeAndLoad({ academic: true }).onceFlags).toEqual([])
   })
 
-  it('leaves her island, her animals and her work exactly where they were', () => {
+  it('leaves their island, their animals and their work exactly where they were', () => {
     const after = wipeAndLoad({ academic: true })
     const before = untouched()
     expect(after.flow.pets).toEqual(before.flow.pets)
@@ -232,15 +232,15 @@ describe('the academic progress box', () => {
     expect(after.opened).toEqual(before.opened)
   })
 
-  it('leaves her name alone', () => {
+  it('leaves their name alone', () => {
     expect(wipeAndLoad({ academic: true }).childName).toBe(NAME)
   })
 
-  it('does not re-price the land she has left', () => {
+  it('does not re-price the land they have left', () => {
     /*
      * `honeymoonFrom` (a live discount, cleared here) and `honeymoonTiles` (a
-     * price offset for tiles she already bought) are NOT two halves of one
-     * switch. Zeroing the offset would quietly make her next tile dearer —
+     * price offset for tiles they already bought) are NOT two halves of one
+     * switch. Zeroing the offset would quietly make their next tile dearer —
      * the same half-wipe this card is about, pointing the other way.
      */
     const before = untouched().flow
@@ -251,7 +251,7 @@ describe('the academic progress box', () => {
 })
 
 describe('the name box', () => {
-  it('forgets what she is called, so she is asked again', () => {
+  it('forgets what they are called, so they are asked again', () => {
     expect(wipeAndLoad({ name: true }).childName).toBe('')
   })
 
@@ -267,16 +267,16 @@ describe('the name box', () => {
 })
 
 describe('the boxes in combination', () => {
-  it('leaves what she is working on when the other two go', () => {
-    // A child who keeps her maths and starts a fresh island.
+  it('leaves what they are working on when the other two go', () => {
+    // A child who keeps their maths and starts a fresh island.
     const after = wipeAndLoad({ island: true, name: true })
     expect(after.attainment).toEqual(untouched().attainment)
     expect(after.flow.pets).toEqual([])
     expect(after.childName).toBe('')
   })
 
-  it('leaves her animals when the other two go', () => {
-    // A child who keeps her animals but restarts her maths.
+  it('leaves their animals when the other two go', () => {
+    // A child who keeps their animals but restarts their maths.
     const after = wipeAndLoad({ academic: true, name: true })
     expect(after.flow.pets).toEqual(untouched().flow.pets)
     expect(after.flow.pets.length).toBeGreaterThan(0)
@@ -284,7 +284,7 @@ describe('the boxes in combination', () => {
     expect(after.childName).toBe('')
   })
 
-  it('leaves her name when the other two go', () => {
+  it('leaves their name when the other two go', () => {
     const after = wipeAndLoad({ island: true, academic: true })
     expect(after.childName).toBe(NAME)
     expect(after.flow.pets).toEqual([])
@@ -310,7 +310,7 @@ describe('the boxes in combination', () => {
     /*
      * Colour comfort is an accessibility choice a grown-up made and none of
      * the three questions mentioned, and `persistGranted` is the browser's
-     * answer rather than hers — re-asking for storage would be a worse
+     * answer rather than the child's — re-asking for storage would be a worse
      * experience for no gain.
      */
     const all = wipeAndLoad({ island: true, academic: true, name: true })
@@ -333,7 +333,7 @@ describe('wipeIsland, over a real store', () => {
     await wipeIsland(store, PROFILE, box({ academic: true }))
     const after = await loadIsland(store, PROFILE)
     expect(after.attainment).toEqual(createAttainment())
-    // And her island survived the trip through the disk, not only through JS.
+    // And their island survived the trip through the disk, not only through JS.
     expect(after.flow.pets.length).toBeGreaterThan(0)
     expect(after.childName).toBe(NAME)
   })

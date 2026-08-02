@@ -86,7 +86,7 @@ const ringHex = (i: number): Axial => {
  * The island `sealing.test.ts` and `walk.test.ts` build for PB-052, reused
  * verbatim so all three files are talking about the same board: a grass island
  * with a NOTCH in it, everything at two and three steps out plus the origin,
- * and the six hexes at one step left as sockets she can turn to rock.
+ * and the six hexes at one step left as sockets they can turn to rock.
  */
 function notchedIsland(): Island {
   let island: Island = createIsland()
@@ -228,7 +228,7 @@ describe('rescueHexFor names somewhere a pet could actually walk', () => {
     const to = rescueHexFor(island, { q: 0, r: 0 }, HEX, keepOutFor, 0)
     expect(to).not.toBeNull()
     const a = to as Axial
-    // The destination is land she owns, is NOT itself sealed, and is not the
+    // The destination is land they own, is NOT itself sealed, and is not the
     // pocket we are trying to get out of.
     expect(island.tiles.has(key(a))).toBe(true)
     expect(sealedKeys(island).has(key(a))).toBe(false)
@@ -245,7 +245,7 @@ describe('rescueHexFor names somewhere a pet could actually walk', () => {
      */
     expect(keepOutFor(a, island.tiles.get(key(a)) as 'grass')).toBe(0)
     // Nearest open ground on this board is two steps out; three would be the
-    // far shore, and a rescue that flings her friend across the island reads as
+    // far shore, and a rescue that flings the friend across the island reads as
     // losing it (brief §19).
     expect(distance({ q: 0, r: 0 }, a)).toBe(2)
   })
@@ -338,7 +338,7 @@ describe('a pet already wandering when the ring closes gets out as well', () => 
   it('notices that rerolling the goal never helps, and relocates', () => {
     /*
      * The sequence a child actually produces: the bunny is out on the grass,
-     * she taps the sixth socket, and the wall closes around it. `sync` has
+     * they tap the sixth socket, and the wall closes around it. `sync` has
      * already run and will not run again for that pet — `live` skips it — so
      * the only code that can ever notice is the stuck handler.
      */
@@ -352,7 +352,7 @@ describe('a pet already wandering when the ring closes gets out as well', () => 
       expect(key(hexUnder(open, where(field, 'p1').x, where(field, 'p1').z)))
         .toBe('0,0')
 
-      // She lays the sixth mountain. From here the pocket is shut.
+      // They lay the sixth mountain. From here the pocket is shut.
       field.setObstacles(mountainsOf(shut))
       expect([...sealedKeys(shut)]).toEqual(['0,0'])
 

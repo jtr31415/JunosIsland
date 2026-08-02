@@ -267,26 +267,26 @@ interface WipeRow {
 const wipeRows = (s: WipeSummary): WipeRow[] => [
   {
     key: 'island',
-    label: 'Her island and her animals',
+    label: 'Their island and their animals',
     detail: `${friendCount(s.pets)} and ${landCount(s.tiles)}, and the work saved up`
       + ' toward the next of each. The story plays again from the top.'
-      + ' What she is working on stays exactly where it is.',
-    going: `her island and her animals — ${friendCount(s.pets)}, ${landCount(s.tiles)}`,
+      + ' What they are working on stays exactly where it is.',
+    going: `their island and their animals — ${friendCount(s.pets)}, ${landCount(s.tiles)}`,
   },
   {
     key: 'academic',
-    label: 'What she is working on',
+    label: 'What they are working on',
     detail: 'Back to the start of Year 1: every tick, and everything the game has'
-      + ' worked out about how she is getting on. Her island, her animals and'
-      + ' her name all stay.',
-    going: 'what she is working on — back to the start of Year 1',
+      + ' worked out about how they are getting on. Their island, their animals'
+      + ' and their name all stay.',
+    going: 'what they are working on — back to the start of Year 1',
   },
   {
     key: 'name',
-    label: 'Her name',
-    detail: (s.childName ? `She is called ${s.childName}. ` : '')
-      + 'She is asked again next time she plays. Nothing else changes.',
-    going: s.childName ? `her name — ${s.childName}` : 'her name',
+    label: 'Their name',
+    detail: (s.childName ? `They are called ${s.childName}. ` : '')
+      + 'They are asked again next time they play. Nothing else changes.',
+    going: s.childName ? `their name — ${s.childName}` : 'their name',
   },
 ]
 
@@ -645,9 +645,9 @@ function livePathSection(path: Path, deps: LearningDeps, h: Harness): HTMLElemen
    *
    * The line's fourth branch is the mode, and the mode switch is six inches
    * above it. A line computed at open time would go on saying "watching" the
-   * instant a parent moved the path to Hold — which is the panel telling him
-   * his tap did nothing, about the one control here whose whole purpose is to
-   * stop Auto.
+   * instant a parent moved the path to Hold — which is the panel telling them
+   * their tap did nothing, about the one control here whose whole purpose is
+   * to stop Auto.
    */
   redraws.push(() => {
     auto.textContent =
