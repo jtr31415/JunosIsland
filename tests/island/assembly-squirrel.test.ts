@@ -53,7 +53,30 @@ import { assertAssembly } from './assembly-assert'
 assertAssembly({
   id: 'animal-squirrel',
   parts: ['box-01', 'box-03', 'box-23', 'cone-01', 'plate-01', 'tube-01', 'wedge-06'],
-  height: 1.9763,
+  // RE-PINNED 1.9763 -> 1.7191, and it is the ONLY number in this block that
+  // moved. Joe opened this animal in the editor, changed it, and pushed it into
+  // the game (`84cd17a`); the push placed the tail instead of solving it, so
+  // `chamfer: true` became `at: [0, 0.55, -0.4875]`. The part list, the vertex
+  // count and the triangle count are untouched, because nothing was added or
+  // taken away — the same shapes are somewhere else.
+  //
+  // Two things about this number that the suite below reports rather than
+  // absorbs, and they are both failures, not footnotes:
+  //
+  //   - The tail no longer sets the height. It tops out at 1.2450, which is
+  //     0.334 BELOW the ears; the tallest things on the animal are now the two
+  //     ear tufts, at 1.7191. The species' own `flag` still reads "1.98" and
+  //     still gives the raised tail as the reason.
+  //   - 0.00625 of the 0.257 drop is not the tail at all. The same push wrote
+  //     `legs: { x: 0.2625, y: 0.1875, z: 0.25 }`, taking the leg row off the
+  //     pack's own y = 0.18125. That sinks each leg 0.4285 of its height into
+  //     the belly against the bank's measured maximum of 0.408163, and it drops
+  //     the whole animal 0.00625 when it is grounded. It is a gate and it is red
+  //     below. Put the row back and this pin becomes 1.7254; it is pinned here at
+  //     what the animal measures today, not at what it would measure once the
+  //     gate is honoured, because a pin that describes a hypothetical animal
+  //     describes nothing.
+  height: 1.7191,
   verts: 452,
   tris: 597,
   // The tail is the biggest thing after the hull — it is meant to be — but a

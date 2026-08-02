@@ -21,18 +21,29 @@ import {
 import { PARTS_BANK, partById } from '../../src/island/species/parts/bank.generated'
 import { assertAssembly } from './assembly-assert'
 
+/*
+ * `tube-03` REPLACED `box-18` AT 84cd17a, and the counts moved with it. Joe
+ * opened this animal in the workbench editor and pushed it back with the
+ * elephant-trunk stub gone and the DEER'S NOSE worn backwards off the rump in its
+ * place, at 0.6 scale. `tube-03` is 40 vertices and 22 triangles against
+ * `box-18`'s 72 and 80, so the animal lost 32 vertices and 58 triangles without
+ * losing a tail. See the tail block at the bottom of this file for what it is now
+ * and where it is joined.
+ */
 assertAssembly({
   id: 'animal-tortoise',
-  parts: ['box-01', 'box-03', 'box-18', 'box-19', 'plate-01', 'wedge-08'],
+  parts: ['box-01', 'box-03', 'box-19', 'plate-01', 'tube-03', 'wedge-08'],
   // The scutes stand 0.050 proud of the cube's top face, so this animal clears
-  // the 1.43125 floor by exactly their thickness and nothing else.
+  // the 1.43125 floor by exactly their thickness and nothing else. Unmoved by the
+  // push: the tail never reached above the hull and still does not.
   height: 1.48125,
-  verts: 582,
-  tris: 654,
+  verts: 550,
+  tris: 596,
   // Stronger than the generic 3, and it is the whole argument of this species:
   // the shell-ring is a RIM on the body, not a second body.
   massRatio: 3.5,
-  // The flat turn on the rim, the 180 on the tail, and the two scute rows.
+  // The flat turn on the rim, the 180 on the tail — now about x, on `tube-03` —
+  // and the two scute rows.
   spinsAtLeast: 4,
 })
 
@@ -144,8 +155,10 @@ describe('animal-tortoise: the shell-ring is a RIM, and rule 3 is why', () => {
   })
 
   it('is joined on the SAME line the carapace colour changes on', () => {
-    // The one chosen number in the file, and it is chosen to agree with the paint.
-    // 6/16 of the hull's own height is world y = 0.65, and the rim straddles it.
+    // The rim's own chosen number, and it is chosen to agree with the paint. 6/16
+    // of the hull's own height is world y = 0.65, and the rim straddles it. (It
+    // was the ONLY chosen number in the file until 84cd17a; the tail Joe's push
+    // brought back carries two more, and the tail block below says which.)
     expect(TORTOISE_ASSEMBLY.hull.paint.patch).toEqual({ below: 'belly', at: 0.375 })
     const line = HULL_BOTTOM_Y + 0.375 * 1.25
     expect(line).toBeCloseTo(0.65, 9)
@@ -215,26 +228,54 @@ describe('animal-tortoise: the scutes are §8\'s idiom, and they buy a quarter t
 })
 
 describe('animal-tortoise: the rest is the pack\'s, and the tail\'s name is Kenney\'s', () => {
-  it('wears the elephant\'s TRUNK backwards, which is the bank\'s only stub tail', () => {
-    const stub = partById('box-18')!
-    // The bank calls it `tail` because Kenney's node was called `tail`. It is the
-    // trunk. Pinned so nobody re-derives the surprise (§3.1: a part's identity is
-    // its placement, not the label it arrived with).
-    expect(stub.roles).toEqual(['tail'])
-    expect(stub.provenance).toHaveLength(1)
-    expect(stub.provenance[0]!.species).toBe('elephant')
-    const tail = feature('tail')
-    expect(tail.spin).toEqual([{ axis: 'y', deg: 180 }])
-    // Donor transfer: the rear face, and the two coordinates the join does not
-    // move are the bank's own recorded offset for the shape.
+  it('wears the DEER\'S NOSE backwards as its tail, and no longer the trunk', () => {
+    /*
+     * REWRITTEN AT 84cd17a. This block used to say: the tail is `box-18`, the
+     * elephant's TRUNK under Kenney's wrong name, spun 180 about y and joined at
+     * the rear face by donor transfer — the bank's own recorded height, sunk the
+     * elephant's own nothing, reaching its own 0.425211 behind the body.
+     *
+     * Joe opened this animal in the workbench editor and pushed it back with that
+     * feature gone. What is on the rump now is `tube-03`, whose ONLY bank role is
+     * `nose` and whose one donor is the DEER's, turned 180 about x so it points
+     * backwards, at 0.6 on every axis. §3.1 is the reason that is a tail and not a
+     * mistake — a part's identity is where you put it, not the label it arrived
+     * with — and it is the same argument that made the elephant's trunk a tail
+     * here in the first place. The name it carries is the editor's: the feature is
+     * called `tube-03` after its own part, not `tail`, so `feature('tail')` no
+     * longer resolves and neither does `getObjectByName('tail')`.
+     *
+     * `box-18` is still the bank's only stub tail and this species no longer wears
+     * it. The vole, the badger and the terrapin do, and their files carry that
+     * measurement now.
+     */
+    expect(TORTOISE_ASSEMBLY.features.some(f => f.part === 'box-18')).toBe(false)
+    expect(TORTOISE_ASSEMBLY.features.some(f => f.name === 'tail')).toBe(false)
+
+    const nose = partById('tube-03')!
+    expect(nose.roles).toEqual(['nose'])
+    expect(nose.provenance).toHaveLength(1)
+    expect(nose.provenance[0]!.species).toBe('deer')
+    const tail = feature('tube-03')
+    expect(tail.spin).toEqual([{ axis: 'x', deg: -180 }])
+    expect(tail.stretch).toEqual([0.6, 0.6, 0.6])
+    /* NOT a donor transfer, and this is the honest way to say so. The height and
+     * the join z are Joe's own from the editor: the deer wears this shape at
+     * y = 0.757432 on z = +0.740710, and neither number is here. -0.5875 is 0.0375
+     * IN FRONT of the rear face, so the join is embedded rather than flush. The
+     * sink is the one thing that did transfer — the deer buries this shape by
+     * nothing at all, and neither does this. */
     if (tail.placement.kind === 'single') {
-      expect(tail.placement.at).toEqual([0, stub.offset[1], -0.625])
+      expect(tail.placement.at).toEqual([0, 0.4375, -0.5875])
+      expect(tail.placement.at[1]).not.toBeCloseTo(nose.offset[1]!, 3)
+      expect(tail.placement.at[2]).not.toBe(-0.625)
     }
-    expect(tail.sink).toBe(stub.attachment!.sunkFractionMean)
+    expect(tail.sink).toBe(nose.attachment!.sunkFractionMean)
     expect(tail.sink).toBe(0)
-    // 0.425 behind the body: a stub, not a whip.
+    // 0.101 behind the body, against the trunk's 0.425: a quarter of the stub it
+    // replaced, and the shortest thing this collection calls a tail.
     const g = build()
-    expect(box(g, 'hull').min.z - box(g, 'tail').min.z).toBeCloseTo(0.425211, 4)
+    expect(box(g, 'hull').min.z - box(g, 'tube-03').min.z).toBeCloseTo(0.101340, 4)
   })
 
   it('has NO ears, and says so by having no ear feature at all', () => {
@@ -253,8 +294,19 @@ describe('animal-tortoise: the rest is the pack\'s, and the tail\'s name is Kenn
   })
 
   it('paints the shell as one system: the rim and the scutes are one hue', () => {
+    /* A SIXTH SLOT APPEARED AT 84cd17a AND IT IS NOT A HUE. The five named slots
+     * are the species' colour vocabulary — coat, belly, horn, limb, pupil — and
+     * the workbench editor's push added `tube-03`, a slot named after the PART
+     * that uses it rather than after anything it means, holding 0xd7c79c, which is
+     * `belly` again to the bit. So the palette now has a duplicate colour under a
+     * machine name, and the tail is the only feature that reads it. Pinned as it
+     * stands rather than quietly dropped; it is worth Joe's eye, because `limb`
+     * (0x6b6455, "duller skin: legs and tail") is the slot a tail was meant to
+     * take and it is still there, unused by any tail. */
     expect(Object.keys(TORTOISE_ASSEMBLY.palette))
-      .toEqual(['coat', 'belly', 'horn', 'limb', 'pupil'])
+      .toEqual(['coat', 'belly', 'horn', 'limb', 'pupil', 'tube-03'])
+    expect(TORTOISE_ASSEMBLY.palette['tube-03']).toBe(TORTOISE_ASSEMBLY.palette['belly'])
+    expect(feature('tube-03').paint).toEqual({ base: 'tube-03' })
     expect(feature('rim').paint).toEqual({ base: 'horn' })
     expect(feature('scute-top').paint).toEqual({ base: 'horn' })
     expect(feature('scute-chamfer').paint).toEqual({ base: 'horn' })
@@ -266,9 +318,17 @@ describe('animal-tortoise: the rest is the pack\'s, and the tail\'s name is Kenn
 
   it('fits between two trees — the rim is wide, and it is still under the fox\'s', () => {
     const s = new THREE.Box3().setFromObject(build()).getSize(new THREE.Vector3())
-    // `pets.ts:652` charges keep-out from max(width, depth) / 2. The depth is the
-    // 1.404 rim plus the 0.425 stub; the fox's own 1.15 is the pack's worst.
+    /* `pets.ts:652` charges keep-out from max(width, depth) / 2. The fox's own
+     * 1.15 is the pack's worst and the gate below is the claim.
+     *
+     * 0.714 SINCE 84cd17a, WAS 0.876. The rim has not moved: it is 1.404 in both
+     * x and z, and the rim alone would cost 0.702. What moved is the DEPTH. The
+     * elephant stub used to reach 0.425 behind the hull and so 0.348 behind the
+     * rim's own rear edge, making 1.752 of depth; the `tube-03` Joe's push put
+     * there reaches 0.101 behind the hull, which is 0.024 behind the rim. So the
+     * rim is now very nearly the whole footprint, and this animal costs less room
+     * than it was asserted to rather than more. */
     expect(Math.max(s.x, s.z) / 2).toBeLessThan(1.15)
-    expect(Math.max(s.x, s.z) / 2).toBeCloseTo(0.876, 3)
+    expect(Math.max(s.x, s.z) / 2).toBeCloseTo(0.714, 3)
   })
 })

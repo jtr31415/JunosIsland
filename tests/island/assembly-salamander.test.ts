@@ -14,7 +14,11 @@
  *      rejected candidate and the reason get pinned so the next builder does not
  *      helpfully "fix" it back; this is that pin.
  *   2. **Every card lands edge-on to a face the pack had already sized it to.**
- *      Eight flat marking sheets, zero thickness, on the pack's own 0.635 shell.
+ *      Eight flat marking sheets, zero thickness, on the pack's own 0.635 shell —
+ *      and, since Joe's editor push (`84cd17a`), a ninth: the bee's face plate on
+ *      the midline of the face, below the eye cards. It arrived carrying the
+ *      editor's own defaults for its name and its palette slot, so what it is and
+ *      where it lands are recorded below rather than left to be guessed at.
  *   3. **What actually separates it from the newt** — which is not the tail, and
  *      this file says so out loud rather than claiming a difference nobody can
  *      see at 0.16 scale.
@@ -30,10 +34,15 @@ import { assertAssembly } from './assembly-assert'
 
 assertAssembly({
   id: 'animal-salamander',
-  parts: ['box-01', 'box-03', 'plate-01', 'plate-10', 'plate-11', 'wedge-18'],
+  // `plate-03` is the ninth card. Joe added it in the editor and pushed it in
+  // `84cd17a`; the face-card test below says where it lands and what it costs.
+  parts: ['box-01', 'box-03', 'plate-01', 'plate-03', 'plate-10', 'plate-11', 'wedge-18'],
   height: 1.71,
-  verts: 432,
-  tris: 582,
+  // Re-pinned off the built animal after that push. Was 432/582; the face card
+  // is 14 welded vertices and 12 triangles, so both moved by exactly its own
+  // cost and both are still well inside rule 9's 405-1626 and 422-951 bands.
+  verts: 446,
+  tris: 594,
   // The tiger's whip is the biggest thing after the hull and it is a sixteenth
   // of it — everything else on this animal is a sheet with no volume at all.
   massRatio: 16,
@@ -148,7 +157,42 @@ describe('animal-salamander: the tail is a donor transfer and nothing else', () 
   })
 })
 
-describe('animal-salamander: eight flat cards on the pack\'s own 0.635 shell', () => {
+describe('animal-salamander: nine flat cards on the pack\'s own 0.635 shell', () => {
+  it('carries a NINTH card since the push — the bee\'s face plate, on the eye plane', () => {
+    // Added in the editor and pushed in `84cd17a`, and it arrived with the
+    // editor's defaults intact: the part id doing duty as the feature name AND as
+    // a palette slot. Recording it here is what stops it reading as a mystery.
+    const card = partById('plate-03')!
+    const face = feature('plate-03')
+    expect(face.part).toBe('plate-03')
+    // Another zero-thickness cut-out sheet, and the pack never buried one, so
+    // this one is unsunk like the other eight.
+    expect(card.roles).toEqual(['card'])
+    expect(card.size[2]).toBe(0)
+    expect(card.attachment!.sunkFractionMean).toBe(0)
+    expect(face.sink).toBe(0)
+    // Placed on the bank's own recorded offset for the card, untouched — which
+    // puts it on the midline and on the same 0.635 shell everything else here
+    // lands on, so it does not float and does not z-fight the face it marks.
+    expect(face.placement).toEqual({
+      kind: 'single', at: [0, card.offset[1], EYE_CARD_Z],
+    })
+    const g = build()
+    const b = boxOf(g, 'plate-03')
+    expect(b.min.z).toBeCloseTo(CARD_SHELL, 6)
+    expect(b.max.z).toBeCloseTo(CARD_SHELL, 6)
+    expect(b.min.x).toBeCloseTo(-b.max.x, 9)
+    // Below the eye cards, not beside them: a yellow blaze on the muzzle rather
+    // than a tenth blotch. 0.7372 against the eye card's own 0.7735.
+    expect(b.max.y).toBeLessThan(boxOf(g, 'eye-r').min.y)
+    expect(b.max.y).toBeCloseTo(0.73722, 5)
+    // And the slot it paints from is a DUPLICATE of `mark` — the same hex, on its
+    // own texture row. Said out loud because a sixth slot is a sixth row of the
+    // shared atlas bought for a colour the animal already had.
+    expect(SALAMANDER_ASSEMBLY.palette['plate-03'])
+      .toBe(SALAMANDER_ASSEMBLY.palette['mark'])
+  })
+
   it('takes marking sheets that have NO thickness, and gives them none', () => {
     for (const id of ['plate-10', 'plate-11']) {
       const card = partById(id)!

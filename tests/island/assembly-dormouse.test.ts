@@ -21,15 +21,42 @@ import { speciesRecord } from '../../src/island/species/registry'
 import type { KitPalette } from '../../src/island/species/types'
 import { assertAssembly } from './assembly-assert'
 
+/*
+ * RE-PINNED, all four of them, and for one reason: Joe opened this animal in the
+ * workbench editor, changed it, and pushed it into the game (`84cd17a`). His
+ * geometry stands. These four are DESCRIPTIONS — they record what was built, and
+ * what was built is no longer what they said.
+ *
+ * What they now describe is not a small move, and it is worth reading before the
+ * numbers:
+ *
+ *   - **`box-23`, the fox's brush, IS NO LONGER ON THIS SPECIES.** In its place
+ *     is `wedge-07`, the cat's and the monkey's tail, carried as an extra named
+ *     after its own part id at the shape's own recorded [0, 1.186701, -0.625] and
+ *     sunk its own measured 0.159043.
+ *   - The height went **1.5012 -> 1.7100**, and the part that sets it changed
+ *     with it: the ears still top out at 1.5012, but the new tail reaches 1.7100
+ *     and is now the tallest thing on the animal. `garden.ts` still claims 1.5
+ *     for this species, so the record and the model are 0.21 apart.
+ *   - **414 -> 464 vertices and 610 -> 730 triangles**, which is the cat's tail
+ *     being a 212-triangle shape where the fox's brush was 92. Both counts are
+ *     still inside rule 9's 405-1626 and 422-951, so the budget GATES either side
+ *     of the exact pins pass on their own and nothing here is being excused.
+ *
+ * The suite below does not accept the swap. The tail is this species' entire
+ * separator from the squirrel, and the assertions that say so are gates: they are
+ * left red on purpose. Re-pinning here only stops the shared harness reporting
+ * the same news four more times.
+ */
 assertAssembly({
   id: 'animal-dormouse',
-  parts: ['box-01', 'box-02', 'box-03', 'box-23', 'box-26', 'plate-01'],
-  height: 1.5012,
-  verts: 414,
-  tris: 610,
-  // Nothing on this animal is turned, and that is the point: the squirrel wears
-  // this same tail on a 45-degree spin up the rear chamfer. Said out loud,
-  // because rule 4's "no node carries a rotation" passes vacuously without it.
+  parts: ['box-01', 'box-02', 'box-03', 'box-26', 'plate-01', 'wedge-07'],
+  height: 1.7100,
+  verts: 464,
+  tris: 730,
+  // Still nothing on this animal is turned — the tail that replaced the brush is
+  // placed, not spun — and rule 4's "no node carries a rotation" still has to be
+  // claimed out loud here or it passes vacuously.
   spinsAtLeast: 0,
 })
 
@@ -235,13 +262,24 @@ describe('animal-dormouse: what it did not have to say, and what it costs', () =
     expect(whole.max.y - whole.min.y).toBeCloseTo(1.5, 2)
   })
 
-  it('fits between two trees — a trailing brush costs depth, and this is what it costs', () => {
+  it('fits between two trees — the tail costs depth, and this is what it costs', () => {
     const s = new THREE.Box3().setFromObject(build()).getSize(new THREE.Vector3())
-    // `pets.ts:652` charges keep-out from max(width, depth) / 2. Every millimetre
-    // of the 2.14 depth is the pack's own — the fox's sink, the koala's nose, the
-    // cube's rear face — and it is still inside the fox's own 1.15, which is the
-    // pack's worst and the number the island already copes with.
-    expect(Math.max(s.x, s.z) / 2).toBeCloseTo(1.069, 2)
+    // `pets.ts:652` charges keep-out from max(width, depth) / 2, so depth is the
+    // number a tail carried backwards is paid for in.
+    //
+    // RE-PINNED 1.069 -> 0.928, a description of a changed animal: Joe swapped
+    // the tail in the editor and pushed it (`84cd17a`). The fox's brush left and
+    // the cat's `wedge-07` arrived, which is 0.555 deep where the brush was 0.910
+    // and is carried up rather than trailed, so the whole animal went from 2.14
+    // deep to 1.856. Every millimetre of that is still the pack's own — the new
+    // tail's own measured sink, the koala's nose, the cube's rear face.
+    //
+    // The line under it is the GATE and it is the one that matters: inside the
+    // fox's own 1.15, the pack's worst and the number the island already copes
+    // with. It passed at 1.069 and it passes at 0.928, so the swap bought this
+    // animal depth it did not need — the cost of the swap is elsewhere, in the
+    // gates at the top of this file, and it is not paid here.
+    expect(Math.max(s.x, s.z) / 2).toBeCloseTo(0.928, 2)
     expect(Math.max(s.x, s.z) / 2).toBeLessThan(1.15)
   })
 

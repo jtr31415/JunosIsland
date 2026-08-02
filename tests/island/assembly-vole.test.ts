@@ -116,13 +116,21 @@ describe('animal-vole: the tail is the elephant\'s TRUNK, and Kenney\'s name is 
     const g = build()
     const hull = boxOf(g, 'hull')
     const t = boxOf(g, 'tail')
-    // Wholly behind the hull's rear plane, and reaching 0.4252 further back —
-    // the shape's own depth, so nothing was scaled to get there.
+    /* Wholly behind the hull's rear plane, and reaching 0.1913 further back.
+     *
+     * SHRUNK SINCE 84cd17a, AND THE STUB IS NOW SCALED. Joe opened this animal in
+     * the workbench editor and pushed it back carrying `stretch: [0.45, 0.45,
+     * 0.45]` on the tail. The reach is therefore no longer the shape's own
+     * 0.425211 depth — which is what the old 0.425211 here was saying, and it was
+     * saying it precisely to show that nothing had been scaled. It is 0.45 of that
+     * depth, 0.191340, and the height below is 0.45 of the shape's own 0.623004.
+     * The uniform scale is the whole of the change: the join plane has not moved
+     * and the facing has not moved. */
     expect(t.max.z).toBeCloseTo(hull.min.z, 6)
-    recovers(t.min.z, hull.min.z - 0.425211, 'the stub reaches its own depth back')
-    // A stub, not a whip: it is taller than it is long, which no other tail in
-    // the bank is.
-    expect(t.max.y - t.min.y).toBeCloseTo(0.623004, 5)
+    recovers(t.min.z, hull.min.z - 0.191340, 'the stub reaches 0.45 of its depth back')
+    // Still a stub and not a whip: taller than it is long, which no other tail in
+    // the bank is. A uniform scale cannot change that, and this is what says so.
+    expect(t.max.y - t.min.y).toBeCloseTo(0.280350, 5)
     expect(t.max.y - t.min.y).toBeGreaterThan(t.max.z - t.min.z)
   })
 
@@ -158,13 +166,20 @@ describe('animal-vole: the tail is the elephant\'s TRUNK, and Kenney\'s name is 
       if (Math.abs(pos.getZ(i) - maxZ) > 1e-4) continue
       lo = Math.min(lo, pos.getY(i)); hi = Math.max(hi, pos.getY(i))
     }
-    // The join cross-section, in world y. Sunk zero, it sits ON the plane — so
-    // it has to be inside the FLAT part of that plane or its lower edge hangs
-    // over a chamfer that has already fallen away.
-    expect(lo + centre.y).toBeCloseTo(0.494918, 5)
-    expect(hi + centre.y).toBeCloseTo(0.793719, 5)
-    expect(lo + centre.y).toBeGreaterThan(FLAT_LO)   // by 0.00115
-    expect(hi + centre.y).toBeLessThan(FLAT_HI)
+    /* The join cross-section, in world y. Sunk zero, it sits ON the plane — so
+     * it has to be inside the FLAT part of that plane or its lower edge hangs
+     * over a chamfer that has already fallen away.
+     *
+     * BOTH NUMBERS MOVED AT 84cd17a, and neither of them is this test's claim.
+     * Joe's editor push gave the tail `at: [0, 0.725, -0.625]` and a 0.45 scale,
+     * so the section is both higher and 0.45 as deep: 0.1345 of run where it used
+     * to be 0.2988, and it clears the bottom of the flat face by 0.2369 where the
+     * transfer used to clear it by 0.00115. The claim is the two gates below, and
+     * §3 is satisfied with far more room than before, not less. */
+    expect(lo + centre.y).toBeCloseTo(0.730685, 5)
+    expect(hi + centre.y).toBeCloseTo(0.865145, 5)
+    expect(lo + centre.y).toBeGreaterThan(FLAT_LO)   // by 0.2369
+    expect(hi + centre.y).toBeLessThan(FLAT_HI)      // by 0.2536
   })
 })
 
@@ -317,11 +332,17 @@ describe('animal-vole: rule 9 has a FLOOR, and this is the animal that found it'
 
   it('fits between two trees more easily than the mouse does', () => {
     const s = new THREE.Box3().setFromObject(build()).getSize(new THREE.Vector3())
-    // `pets.ts:652` charges keep-out from max(width, depth) / 2. The stub tail
-    // and the absent ears make this the tightest Garden animal so far: 0.888
-    // against the mouse's 0.984 and the fox's own 1.15, which is the pack's
-    // worst and the number the island already copes with.
-    expect(Math.max(s.x, s.z) / 2).toBeCloseTo(0.888, 2)
+    /* `pets.ts:652` charges keep-out from max(width, depth) / 2. The stub tail and
+     * the absent ears are what make this animal cheap to walk past.
+     *
+     * 0.771 SINCE 84cd17a, WAS 0.888. Joe shrank the stub to 0.45 in the workbench
+     * editor and pushed it, which takes 0.234 off the DEPTH and is all of the
+     * difference — the width is the cube's own 1.250 and has not moved, so the
+     * binding dimension is still the depth. It has more room than it was asserted
+     * to have, not less, and the gate below is the claim: comfortably under the
+     * mouse's 0.984, and further under the fox's own 1.15, which is the pack's
+     * worst and the number the island already copes with. */
+    expect(Math.max(s.x, s.z) / 2).toBeCloseTo(0.771, 2)
     expect(Math.max(s.x, s.z) / 2).toBeLessThan(0.984)
   })
 })
