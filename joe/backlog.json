@@ -318,7 +318,7 @@
     {
       "id": "PB-045",
       "title": "Let her change her mind after picking the wrong tile type (#32)",
-      "detail": "CARDED 29 Jul PURELY TO CLOSE IT - docs/BACKLOG.md only, no card until now. BUILT (efff9fa) in the shape the original entry proposed: chooseTile swaps plot.type in place and re-runs tileTypeFor, keeping plot.at and sumProgress so a change of mind costs her nothing already earned - flow.ts:520-548, re-entry by tapping the plot at flow.ts:553-557. Tests at tests/island/retype.test.ts, including 'choosing again swaps the build without costing her anything' at :101. That no-cost property is brief 19 and is what the test is actually pinning.",
+      "detail": "CARDED 29 Jul PURELY TO CLOSE IT - docs/BACKLOG.md only, no card until now. BUILT (efff9fa) in the shape the original entry proposed: chooseTile swaps plot.type in place and re-runs tileTypeFor, keeping plot.at and sumProgress so a change of mind costs her nothing already earned - flow.ts:520-548, re-entry by tapping the plot at flow.ts:553-557. Tests at tests/island/retype.test.ts, including 'choosing again swaps the build without costing them anything' at :101. That no-cost property is brief 19 and is what the test is actually pinning.",
       "state": "done",
       "run": "A"
     },
