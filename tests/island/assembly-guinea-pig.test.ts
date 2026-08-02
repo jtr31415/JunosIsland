@@ -70,6 +70,57 @@ const points = (id: string): [number, number, number][] => {
 const feature = (name: string): typeof GUINEA_PIG_ASSEMBLY.features[number] =>
   GUINEA_PIG_ASSEMBLY.features.find(f => f.name === name)!
 
+/* --- the three helpers the eye-clearance test needs, and nothing else uses --- */
+
+type Tri = [THREE.Vector3, THREE.Vector3, THREE.Vector3]
+
+/** Every triangle of a built node, in world space. */
+const worldTris = (o: THREE.Object3D): Tri[] => {
+  const out: Tri[] = []
+  o.updateMatrixWorld(true)
+  o.traverse((n) => {
+    const m = n as THREE.Mesh
+    if (!m.isMesh) return
+    const pos = m.geometry.getAttribute('position')
+    const idx = m.geometry.getIndex()
+    const count = idx ? idx.count : pos.count
+    for (let i = 0; i < count; i += 3) {
+      out.push([0, 1, 2].map((k) => {
+        const vi = idx ? idx.getX(i + k) : i + k
+        return new THREE.Vector3(pos.getX(vi), pos.getY(vi), pos.getZ(vi))
+          .applyMatrix4(m.matrixWorld)
+      }) as Tri)
+    }
+  })
+  return out
+}
+
+/**
+ * The frontmost z at which a line up the +z axis through `(x, y)` crosses a mesh
+ * — i.e. the surface the viewer sees there. `NaN` when the line misses it.
+ *
+ * A ray/plane solve rather than a bounding box, because the whole question this
+ * file answers is that `box-41`'s bounding box is NOT its surface.
+ */
+const surfaceZ = (tris: Tri[], x: number, y: number): number => {
+  let best = Number.NaN
+  for (const [a, b, c] of tris) {
+    const d = (b.y - c.y) * (a.x - c.x) + (c.x - b.x) * (a.y - c.y)
+    if (Math.abs(d) < 1e-12) continue                     // edge-on to the ray
+    const l1 = ((b.y - c.y) * (x - c.x) + (c.x - b.x) * (y - c.y)) / d
+    const l2 = ((c.y - a.y) * (x - c.x) + (a.x - c.x) * (y - c.y)) / d
+    const l3 = 1 - l1 - l2
+    if (l1 < -1e-9 || l2 < -1e-9 || l3 < -1e-9) continue  // outside the triangle
+    const z = l1 * a.z + l2 * b.z + l3 * c.z
+    if (Number.isNaN(best) || z > best) best = z
+  }
+  return best
+}
+
+/** A triangle's area projected onto the xy plane — the area a viewer in front sees. */
+const areaXY = ([a, b, c]: Tri): number =>
+  Math.abs((b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y)) / 2
+
 describe('animal-guinea-pig: the tail that is not there, and must not be added', () => {
   it('has no tail feature and wears no shape the pack used as a tail', () => {
     // Said three ways, because a guinea pig's whole share of the six-rodent
@@ -139,6 +190,102 @@ describe('animal-guinea-pig: box-41 has a MUZZLE in its shell, not a flat front'
     // And this is not a card being borrowed onto a hull it never met: sixteen
     // species donate `plate-01` and the TIGER, whose hull this is, is one of them.
     expect(card.provenance.map(q => q.species)).toContain('tiger')
+  })
+
+  it('stands both eye cards CLEAR of the hull surface — the check the suite cannot make', () => {
+    // **THIS IS THE ONE `assertAssembly` CANNOT CATCH.** `assembly-assert.ts` asks
+    // whether an eye card's z EQUALS `EYE_CARD_Z` and stops there; it never asks
+    // whether the HULL is in front of the card at that (x, y). So a card buried
+    // inside a shell passes every shared invariant and the whole suite stays green
+    // while the animal has no eyes. It is the same class of fault as the mouth bug
+    // `CARD_STANDOFF` fixed — a card coplanar with the face it joined, z-fighting
+    // into invisibility — and it can only be caught by measuring the built geometry,
+    // which is what this test does and why it lives here and not there.
+    //
+    // The question is real on THIS hull and on no other in the pack: `box-41` is the
+    // only shell whose bounding-box front (0.725) stands PROUD of `EYE_CARD_Z`
+    // (0.6350), and z is not a field on an eye, so if the surface under the card
+    // were really at 0.725 the pair would sit 0.090 INSIDE the head with no dial to
+    // pull them out. Measured, it is not: 0.725 belongs to the muzzle boss on the
+    // midline, and at the card's own (x, y) the surface is the broad face.
+    const g = build()
+    const hull = worldTris(g.getObjectByName('hull')!)
+    for (const nm of ['eye-r', 'eye-l']) {
+      const p = world(g, nm)
+      const z = surfaceZ(hull, p.x, p.y)
+      expect(Number.isNaN(z), `${nm} is not over the hull at all`).toBe(false)
+      // The broad face, not the bounding box: 0.625, the same plane as `box-03`.
+      expect(z).toBeCloseTo(HULL_FRONT_Z_USUAL, 4)
+      // POSITIVE margin, said as a floor first and then as the exact number, so a
+      // later change that shaves it reads as "the eye is being buried" and not as a
+      // constant that drifted.
+      expect(p.z - z, `${nm} is buried ${(z - p.z).toFixed(4)} inside the hull`)
+        .toBeGreaterThan(0)
+      expect(p.z - z).toBeCloseTo(CARD_STANDOFF, 4)
+    }
+  })
+
+  it('lets the muzzle clip only the pupil\'s inner-lower corner, and pins how much', () => {
+    // The honest remainder of the test above. The card is 0.400 x 0.320 and the
+    // muzzle boss is 0.40 across on the midline, so the two do OVERLAP at the card's
+    // inner-lower corner — where the boss stands at 0.725 and the card at 0.635, a
+    // 0.090 burial. Measured over the card's own 27 triangles it is 3.5% of the card
+    // and 8.1% of the pupil: the corner of the dark blob nearest the nose is tucked
+    // behind the muzzle, and the eye reads. Pinned as a BOUND rather than praised, so
+    // that a later change to the eye's x or y — the only two dials it has — cannot
+    // walk the pair into the boss without this going red.
+    const g = build()
+    const hull = worldTris(g.getObjectByName('hull')!)
+    const eye = g.getObjectByName('eye-r')!
+    const card = worldTris(eye)
+    const bands = partById('plate-01')!.bands
+    expect(card).toHaveLength(bands.length)          // triangle order is the bank's
+    const cardZ = card[0]![0].z
+    expect(cardZ).toBeCloseTo(EYE_CARD_Z, 4)
+
+    const N = 16
+    let area = 0, hidden = 0, pupil = 0, pupilHidden = 0
+    let worst = Infinity
+    const seen: THREE.Vector2[] = []
+    for (let t = 0; t < card.length; t++) {
+      const tri = card[t]!
+      const a = areaXY(tri)
+      let inside = 0, all = 0
+      for (let i = 0; i < N; i++) {
+        for (let j = 0; j < N - i; j++) {
+          const u = (i + 1 / 3) / N, v = (j + 1 / 3) / N, w = 1 - u - v
+          const x = tri[0].x * u + tri[1].x * v + tri[2].x * w
+          const y = tri[0].y * u + tri[1].y * v + tri[2].y * w
+          const z = surfaceZ(hull, x, y)
+          all++
+          if (Number.isNaN(z)) continue
+          if (cardZ - z < worst) worst = cardZ - z
+          if (cardZ - z <= 0) { inside++; seen.push(new THREE.Vector2(x, y)) }
+        }
+      }
+      area += a
+      hidden += a * (inside / all)
+      if (bands[t] === 15) { pupil += a; pupilHidden += a * (inside / all) }
+    }
+    // Small, and real — both directions, because "0%" would mean the muzzle had
+    // moved and "20%" would mean the eye had.
+    expect(hidden / area).toBeGreaterThan(0)
+    expect(hidden / area).toBeLessThan(0.05)
+    expect(pupilHidden / pupil).toBeLessThan(0.10)
+    // The deepest the hull ever stands in front of this card, and it is exactly the
+    // boss's own 0.100 of relief less the card's 0.010 of daylight.
+    expect(worst).toBeCloseTo(HULL_FRONT_Z_USUAL - hullFrontZ('box-41') + CARD_STANDOFF, 4)
+
+    // And it is the MUZZLE doing it and nothing else: every hidden sample lies
+    // inside the boss's own footprint — |x| <= 0.200 and below its apex, which is
+    // 0.0625 above the hull's centre. Nothing on the flat face or the chamfer is in
+    // front of this card anywhere.
+    const apex = partById('box-41')!.offset[1]! + 0.0625
+    expect(seen.length).toBeGreaterThan(0)
+    for (const q of seen) {
+      expect(Math.abs(q.x)).toBeLessThanOrEqual(0.2 + 1e-6)
+      expect(q.y).toBeLessThanOrEqual(apex + 1e-6)
+    }
   })
 
   it('hangs the nose on the muzzle at the TIGER\'s burial, not at the shape\'s mean', () => {
