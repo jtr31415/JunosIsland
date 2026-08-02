@@ -28,6 +28,7 @@ import { HOME_PETS_SPECIES } from './collections/home-pets'
 import { WOODLAND_SPECIES } from './collections/woodland'
 import { AFRICA_SPECIES } from './collections/africa'
 import { FARM_SPECIES } from './collections/farm'
+import { NIGHT_TIME_SPECIES } from './collections/night-time'
 import type { Species } from './types'
 
 /**
@@ -118,9 +119,30 @@ export const PHASE2_SPECIES: readonly Species[] = [
  */
 export const PHASE3_SPECIES: readonly Species[] = [...FARM_SPECIES]
 
+/**
+ * NIGHT TIME — the first collection built end to end on the ASSEMBLY route, and
+ * the first with no kit build anywhere in it.
+ *
+ * It gets its own export rather than joining `PHASE3_SPECIES` because it is not
+ * the same kind of thing. Every record above this line came out of a kit and
+ * carries a `build` object of proportions; every record in this one carries an
+ * `assembly` picked up by id off `parts/assembled/register.ts` and no `build` at
+ * all. Joe ruled on 2 August that the kit route is finished — *"the old blocky
+ * ones that can be deleted to be honest. do not build any more of them"* — so
+ * this constant is where every collection from here on lands, and the three
+ * above it are the ones awaiting his deletion.
+ *
+ * THIRTEEN OF SIXTEEN, and the shortfall is measured rather than pending:
+ * `animal-bat` and `animal-sugar-glider` want a membrane and `animal-scorpion`
+ * wants a pincer, and the `wing`, `horn` and `claw` roles occur zero times in
+ * the bank. `collections/night-time.ts` carries the ruling and
+ * `tests/island/species-night-time.test.ts` measures the absence every run.
+ */
+export const NIGHT_TIME_COLLECTION: readonly Species[] = [...NIGHT_TIME_SPECIES]
+
 /** Everything that has actually shipped: the frozen 24 plus the built collections. */
 export const SHIPPED_SPECIES: readonly Species[] = [
-  ...BASE_SPECIES, ...PHASE2_SPECIES, ...PHASE3_SPECIES,
+  ...BASE_SPECIES, ...PHASE2_SPECIES, ...PHASE3_SPECIES, ...NIGHT_TIME_COLLECTION,
 ]
 
 /** Every species that has actually shipped, by id. */

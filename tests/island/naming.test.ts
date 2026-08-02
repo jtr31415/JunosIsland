@@ -477,7 +477,18 @@ describe('joe/names-audit.json', () => {
     // by `speciesId`, so a regeneration never costs him a verdict he has
     // already given. That is the contract `tools/workbench/merge.mjs:92-107`
     // describes and it is why this file can grow under him safely.
-    expect(audit.names).toHaveLength(76)
+    // 89 since 2 Aug, and the +13 is NIGHT TIME — the first time this bench has
+    // grown by a whole collection rather than by one or two stragglers. Read that
+    // against the sentence above: the assembly route is not inherently
+    // one-at-a-time, it was being USED that way. Measured once for the collection
+    // and dispatched in parallel, it produced thirteen animals in one run.
+    //
+    // Thirteen and not sixteen: `animal-bat` and `animal-sugar-glider` want a
+    // membrane and `animal-scorpion` wants a pincer, and the bank has none of the
+    // three. They have no row here BECAUSE they have no build, which is this
+    // test's own rule working — a row for an unbuildable species would ask Joe to
+    // audit and voice-bake a name for a creature that cannot exist.
+    expect(audit.names).toHaveLength(89)
   })
 
   it('gives every creature its own name, so the playground question works', () => {

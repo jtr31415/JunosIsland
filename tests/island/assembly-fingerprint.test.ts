@@ -73,6 +73,40 @@ const PINNED: Readonly<Record<string, string>> = {
   // models on 2 Aug.
   'animal-goldfish': '58c690f8271aaca6',
   'animal-crocodile': 'c4bafe77662805a1',
+
+  /*
+   * NIGHT TIME, all thirteen, read off `npm run pets:creature` in one pass on
+   * 2 Aug once every species file existed.
+   *
+   * The first WHOLE COLLECTION to be pinned here at once, where everything above
+   * arrived one or two animals at a time. That is worth knowing when one of them
+   * moves: these thirteen were built in parallel against a single shared
+   * measuring pass over the bank, so a change that moves several of them at once
+   * is far more likely to be a change to `creature.ts`, `assembly.ts` or the bank
+   * than thirteen independent species edits. Above this line the opposite is
+   * true.
+   *
+   * Every one is a first pin — the hash of the animal as it was built, recorded
+   * rather than chosen — so none is evidence of anything yet. What they buy is
+   * the second run.
+   *
+   * Roster order for `night-time`. The three absences are `animal-bat`,
+   * `animal-sugar-glider` and `animal-scorpion`, which want a membrane and a
+   * pincer; `species-night-time.test.ts` measures that.
+   */
+  'animal-raccoon': '38e0f457d798b77d',
+  'animal-wolf': '7774b15b1f2f3fa9',
+  'animal-firefly': '219cdcb7f56bc655',
+  'animal-opossum': 'a9b74dc642a99724',
+  'animal-nightjar': '851c64f6e11330a0',
+  'animal-tarsier': 'fcf3ef0666903d78',
+  'animal-bushbaby': 'e82b0bf31b1a6cb5',
+  'animal-fennec-fox': '2705ac21add47c67',
+  'animal-civet': '97e2efd0654bbb1e',
+  'animal-aye-aye': 'b8e2fa1e6a95a604',
+  'animal-kiwi': '01a430e204093614',
+  'animal-kinkajou': '07ed048ed805402c',
+  'animal-glow-worm': 'ba579cc94d23eee3',
 }
 
 describe('every assembled species has a pinned fingerprint', () => {

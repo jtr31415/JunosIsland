@@ -117,8 +117,39 @@ export const HELD_BACK_BY_JOE: readonly string[] = ['legendary', 'dinosaurs', 'p
  * other switch. Build the species, delete the string, and the cadence starts
  * offering it the next time a child finishes an album.
  */
+/*
+ * `night-time` LEFT THIS LIST ON 2 AUGUST 2026, and it is the first id ever
+ * deleted from it. Thirteen of its sixteen are built on the assembly route and
+ * `shippedIn('night-time').length` is 13, so the derivation above is what took
+ * it out — the tripwire in `species-unlock.test.ts` failed by name ("night-time
+ * now has models") and this deletion is the whole of the response.
+ *
+ * IT LEAVES WITH A HOLE IN IT, which no collection released here has done
+ * before, and that is worth knowing rather than smoothing over. `animal-bat`,
+ * `animal-sugar-glider` and `animal-scorpion` want a membrane and a pincer, and
+ * the bank has neither, so this collection **cannot be completed on the current
+ * parts bank at all**. Two consequences follow and both are real:
+ *
+ *   - `album.ts` draws one frame per ROSTER member, so a child opening Night
+ *     Time sees sixteen frames of which three can never be filled. That is a
+ *     smaller version of the PB-058 bug this list exists for — three empty
+ *     squares rather than sixteen — but it is the same bug, and it is the first
+ *     time it ships.
+ *   - `completion()` divides by ROSTER size, so this collection can never reach
+ *     100%, never goes inactive, and therefore holds one of `MAX_ACTIVE`'s four
+ *     slots permanently. That is exactly the trap the goldfish run recorded for
+ *     Home Pets and closed by building its last two animals. Here it cannot be
+ *     closed that way.
+ *
+ * **So JT-030 — may a collection unlock with a hole in it? — is now live in its
+ * hardest form and it is Joe's.** It is not settled by this deletion: the
+ * alternative was to hold a collection of thirteen finished animals off the
+ * cadence indefinitely for three that no amount of work can produce, which is
+ * worse for a child and hides the question rather than asking it. If he rules
+ * the other way, putting `night-time` back is one string.
+ */
 export const NOT_BUILT_YET: readonly string[] = [
-  'birds', 'ocean', 'critters', 'night-time', 'ice', 'outback', 'jungle', 'raptors',
+  'birds', 'ocean', 'critters', 'ice', 'outback', 'jungle', 'raptors',
   'near-threatened', 'vulnerable', 'endangered', 'critically-endangered',
 ]
 
