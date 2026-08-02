@@ -20,9 +20,24 @@
  * and `advance` below is the one place they meet.
  */
 import { COLLECTIONS, SPECIES_COLLECTION } from './roster'
-import { activeIds, fillToCap, nextToOpen, HELD_BACK } from './unlock'
+import { activeIds, fillToCap, nextToOpen, heldBack, isComplete } from './unlock'
 import type { UnlockState } from './unlock'
 import type { Rng } from '../../core/rng'
+
+/**
+ * How many members of each collection are BUILT, by collection id.
+ *
+ * >>> THIS IS A PARAMETER AND NOT AN IMPORT, AND THAT IS THE DESIGN. The honest
+ * >>> answer lives in `built.ts`, which costs three.js through both `kit.ts` and
+ * >>> `registry.ts`. This module's header promises no three.js, and `save.ts`
+ * >>> imports this module — so importing `built.ts` here would put a renderer
+ * >>> inside the save path and inside every headless test that touches it.
+ * >>> `main.ts` already pays for three and is where the map is filled.
+ *
+ * There is still exactly ONE predicate. Nobody re-derives "built" anywhere; it
+ * is computed once from `built.ts`'s `builtIn` and threaded through.
+ */
+export type BuiltCounts = Readonly<Record<string, number>>
 
 /**
  * The one collection that is open before anything is earned.
@@ -41,10 +56,33 @@ export interface Opened {
   open: readonly string[]
   /** The id drawn most recently. Only the relatedness rule reads it. */
   lastOpened: string | null
+  /**
+   * EVERY COLLECTION THIS ISLAND HAS EVER FINISHED. Append-only. THE RATCHET.
+   *
+   * JT-047. `completion` divides by the BUILT members now, and Joe has said he
+   * *"might make some more"* — so a collection is 14 of 14 and COMPLETE today
+   * and 14 of 16 and INCOMPLETE tomorrow. This field is the memory that stops
+   * that costing a child something she earned, and it has to be a memory
+   * because after the push "she has 13 of 14" and "she once had all of them"
+   * are the same present state. There is nothing left to derive it from.
+   *
+   * `unlock.ts`'s `isComplete` reads it and ratchets both consequences at once
+   * — the freed active slot and the 80% trigger. The COUNTER is not ratcheted
+   * and must never be: she is honestly shown "13 of 14" and can go and collect
+   * the new ones. See `UnlockState.everCompleted` for the argument in full.
+   *
+   * IT IS CLEARED BY A WIPE, with `open` and for the same reason. It must NOT
+   * be kept in `onceFlags`, which survive a wipe — a stale completion on a
+   * fresh island would free a slot and satisfy the trigger with no animals
+   * owned at all.
+   */
+  completed: readonly string[]
 }
 
 /** A fresh island: base and nothing else. `advance` fills the other three. */
-export const NOTHING_OPENED: Opened = { open: [BASE_COLLECTION], lastOpened: null }
+export const NOTHING_OPENED: Opened = {
+  open: [BASE_COLLECTION], lastOpened: null, completed: [],
+}
 
 /**
  * How many members of each collection they own, counting SPECIES, not pets.
@@ -77,12 +115,16 @@ export function ownedByCollection(
 }
 
 /** The snapshot `unlock.ts` reasons over, assembled from what this island has. */
-export function stateOf(species: readonly string[], opened: Opened): UnlockState {
+export function stateOf(
+  species: readonly string[], opened: Opened, built: BuiltCounts,
+): UnlockState {
   return {
     open: opened.open,
     owned: ownedByCollection(species),
     lastOpened: opened.lastOpened,
     roster: COLLECTIONS,
+    built,
+    everCompleted: opened.completed,
   }
 }
 
@@ -92,20 +134,26 @@ export function stateOf(species: readonly string[], opened: Opened): UnlockState
  * THE ORDER OF THE THREE STEPS IS THE DESIGN, so it is written down rather than
  * left to be inferred:
  *
- *   0. THE PRUNE, AND ONLY FOR SAVES WRITTEN BEFORE PB-058. Adding the twelve
- *      unbuilt collections to `HELD_BACK` stops them being DRAWN; it does
- *      nothing whatever about the ones a child has already been given. Juno's
- *      live save has up to three of them open right now, and they are wedged
- *      there forever rather than merely ugly: `completion` divides what a child
- *      owns by the collection's ROSTER size (sixteen), never by the number
- *      actually shipped (zero), so an empty collection sits at 0% permanently,
- *      never completes, never stops counting as ACTIVE, and therefore holds one
- *      of Joe's four slots for good. Three such albums and the child has one
- *      working slot and will never be given a new album again. Nothing
- *      downstream saves them: `readOpened` keeps the id, this function used to
- *      copy it through verbatim, `candidates` only ever filtered what could be
- *      OPENED, and `albumsToShow` happily draws it. So it has to be undone here,
- *      once, on the way past.
+ *   0. THE PRUNE, AND ONLY FOR SAVES WRITTEN BEFORE PB-058. `heldBack` stops an
+ *      unbuilt collection being DRAWN; it does nothing whatever about the ones a
+ *      child has already been given. Juno's live save has up to three of them
+ *      open right now, and they are ugly — an album whose every frame is empty —
+ *      so they are taken back here, once, on the way past. Nothing downstream
+ *      does it for us: `readOpened` keeps the id, this function used to copy it
+ *      through verbatim, `candidates` only ever filtered what could be OPENED,
+ *      and `albumsToShow` happily draws it.
+ *
+ *      >>> UNTIL JT-047 THIS STEP WAS ALSO LOAD-BEARING FOR A SECOND REASON,
+ *      >>> AND IT NO LONGER IS. `completion` used to divide by the collection's
+ *      >>> ROSTER size (sixteen) rather than by the number actually built
+ *      >>> (zero), so a dead album sat at 0% forever, never completed, never
+ *      >>> stopped counting as ACTIVE, and held one of Joe's four slots for
+ *      >>> good. Three such albums and the child had one working slot and would
+ *      >>> never be given a new album again. That wedge is now closed by
+ *      >>> arithmetic instead: a collection with nothing built reads as 1 and so
+ *      >>> occupies no slot at all (`unlock.ts`'s `completion`). The prune
+ *      >>> survives because an empty album is still not a gift, not because the
+ *      >>> cadence depends on it.
  *   1. THE CADENCE NEXT. `nextToOpen` is Joe's ratified rule and gets first
  *      refusal on every slot. Called in a loop, not once, because a single call
  *      answers "does anything open now" and a save can arrive several
@@ -122,8 +170,8 @@ export function stateOf(species: readonly string[], opened: Opened): UnlockState
  * IDEMPOTENT ON A STEADY STATE, INCLUDING ACROSS THE PRUNE: called twice with
  * the same pets it returns the same `open` the second time, because four are
  * active and all three steps decline. The prune does not break that and cannot
- * oscillate, because everything it removes is in `HELD_BACK` and everything step
- * 2 puts back is drawn from `candidates`, which filters `HELD_BACK` out — so no
+ * oscillate, because everything it removes is in `heldBack` and everything step
+ * 2 puts back is drawn from `candidates`, which filters `heldBack` out — so no
  * id the prune drops can ever be re-drawn into the hole it left, and the second
  * call finds nothing to prune. It matters because `main.ts` calls this on every
  * arrival, not on an event.
@@ -133,7 +181,7 @@ export function stateOf(species: readonly string[], opened: Opened): UnlockState
  * than a hole where the twenty-four they are actually collecting should be.
  */
 export function advance(
-  species: readonly string[], opened: Opened, rng: Rng,
+  species: readonly string[], opened: Opened, rng: Rng, built: BuiltCounts,
 ): Opened {
   const was = opened.open.includes(BASE_COLLECTION)
     ? [...opened.open]
@@ -147,7 +195,7 @@ export function advance(
    * child owns may be lost — so it is not an optimisation and it is not
    * optional:
    *
-   *   (a) the collection is in `HELD_BACK`, so the cadence would refuse to draw
+   *   (a) the collection is in `heldBack`, so the cadence would refuse to draw
    *       it today; and
    *   (b) the child owns NOTHING from it.
    *
@@ -155,7 +203,7 @@ export function advance(
    * means no pet means no species means no count — so on today's data the
    * prune is provably lossless and (a) alone would do the same work. The guard
    * is here because "provably" is doing a lot of work in that sentence and the
-   * proof rots. `HELD_BACK` is a union (see `unlock.ts`), and Joe's half of it
+   * proof rots. `heldBack` is a union (see `unlock.ts`), and Joe's half of it
    * is not about models at all: the day he releases `legendary` he may well do
    * it while a child already has some of it open and half collected, and an
    * (a)-only prune would quietly take their unicorns off the shelf. With (b) in
@@ -164,7 +212,7 @@ export function advance(
    * collection, it keeps its album and its slot, and the cadence simply never
    * offers them a second one like it.
    *
-   * `base` is never pruned. It is not in `HELD_BACK` so (a) already excludes it,
+   * `base` is never pruned. It is not in `heldBack` so (a) already excludes it,
    * but it is spelled out because base going missing is the one failure here
    * nobody would forgive — it is the album the child has actually been
    * collecting since their first egg — and a guard that is obvious to read is
@@ -177,24 +225,80 @@ export function advance(
    */
   const owned = ownedByCollection(species)
   const open = was.filter(id =>
-    id === BASE_COLLECTION || !HELD_BACK.includes(id) || (owned[id] ?? 0) > 0,
+    id === BASE_COLLECTION || !heldBack(built, id) || (owned[id] ?? 0) > 0,
   )
+
+  /*
+   * Step 0.5. RECORD ANY COMPLETION, BEFORE ANYTHING SPENDS IT. JT-047.
+   *
+   * This runs before the cadence deliberately. A completion is what PAYS for
+   * the album step 1 is about to open, so it has to be on the books first —
+   * and once written it is never removed, which is the whole of the ratchet.
+   *
+   * `isComplete` is asked with an EMPTY history on purpose, so that this loop
+   * only ever adds genuinely LIVE completions; anything recorded on an earlier
+   * arrival is already in the set and stays there untouched. `Set` keeps it
+   * append-only and duplicate-free however many times `advance` runs, which is
+   * once per arrival and again on every hatch.
+   *
+   * >>> THE `built > 0` GUARD IS NOT BELT AND BRACES. `completion` returns 1
+   * >>> for a collection with NOTHING BUILT — that rule exists to stop a dead
+   * >>> album wedging one of `MAX_ACTIVE`'s four slots open forever, and it is
+   * >>> right for that job. It would be very wrong here. Without this guard, a
+   * >>> collection whose models were all deleted (PB-036 did exactly that to
+   * >>> fifty-nine species without touching the roster) would be written into
+   * >>> the permanent record as FINISHED, and when Joe rebuilt it she would own
+   * >>> 3 of 14 in a collection the game considered complete for good.
+   * >>>
+   * >>> Freeing a slot is a reading of the present and may be revised. This
+   * >>> record is a claim about her past, and nothing that never had an animal
+   * >>> in it can be something she finished.
+   *
+   * Only collections she has actually OPENED are considered at all.
+   *
+   * >>> IT RUNS TWICE, BEFORE AND AFTER THE OPENING STEPS, AND BOTH ARE NEEDED.
+   * >>> Before, because a completion is what PAYS for the album step 1 is about
+   * >>> to open, so it must be on the books first. After, because a collection
+   * >>> can be opened by steps 1 and 2 and be complete THE INSTANT IT OPENS —
+   * >>> she may already own every animal in it, having been dealt them from a
+   * >>> collection that had not yet been given to her as an album. With only the
+   * >>> first pass that completion went unrecorded until her NEXT arrival, so a
+   * >>> `built` count that rose in between would find no record and take back a
+   * >>> slot she had earned. Caught by the idempotence test, which is what that
+   * >>> test is for: `advance` runs on every arrival and must settle in one.
+   */
+  const completed = new Set(opened.completed)
+  const record = (ids: readonly string[]): void => {
+    const now = stateOf(species, { open: ids, lastOpened: last, completed: [] }, built)
+    for (const id of ids) {
+      if ((built[id] ?? 0) > 0 && isComplete(now, id)) completed.add(id)
+    }
+  }
+  record(open)
 
   // Step 1. The cadence, until it has nothing more to say.
   for (;;) {
-    const id = nextToOpen(stateOf(species, { open, lastOpened: last }), rng)
+    const id = nextToOpen(
+      stateOf(species, { open, lastOpened: last, completed: [...completed] }, built), rng,
+    )
     if (id === null) break
     open.push(id)
     last = id
   }
 
   // Step 2. The seeding, which on any island past its first four does nothing.
-  for (const id of fillToCap(stateOf(species, { open, lastOpened: last }), rng)) {
+  const seed = fillToCap(
+    stateOf(species, { open, lastOpened: last, completed: [...completed] }, built), rng,
+  )
+  for (const id of seed) {
     open.push(id)
     last = id
   }
 
-  return { open, lastOpened: last }
+  // And again, for anything the two steps above opened that was already finished.
+  record(open)
+
+  return { open, lastOpened: last, completed: [...completed] }
 }
 
 /**
@@ -215,6 +319,8 @@ export function albumsToShow(opened: Opened): readonly string[] {
 }
 
 /** How many of the shown albums are still being worked on. For tests and debug. */
-export function activeCount(species: readonly string[], opened: Opened): number {
-  return activeIds(stateOf(species, opened)).length
+export function activeCount(
+  species: readonly string[], opened: Opened, built: BuiltCounts,
+): number {
+  return activeIds(stateOf(species, opened, built)).length
 }

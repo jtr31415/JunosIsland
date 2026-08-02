@@ -17,51 +17,86 @@
  * will look like a missing filter to whoever reads this next, and a test that
  * names it is cheaper than a bug report.
  *
- * Two fixtures below build a `Collection` with a different member count by
- * SLICING a real roster row (`sized`, `emptied`). No collection and no id is
- * invented — the real roster has no row whose size makes 80% land on a whole
- * animal, so an exact-boundary test needs a ten-member row to exist.
+ * >>> THE DENOMINATOR IS `state.built`, NOT THE ROSTER, SINCE JT-047. Every
+ * >>> fraction in this file is owned-over-BUILT, so `BUILT` below is the real
+ * >>> measurement taken from `built.ts` — the one predicate — rather than a
+ * >>> number typed out here. Tests that need a count the registry does not
+ * >>> currently have OVERRIDE ONE ENTRY of that map (`{ ...BUILT, garden: 10 }`)
+ * >>> instead of slicing a roster row, which is what the deleted `sized` and
+ * >>> `emptied` fixtures used to do. The reason those fixtures existed survives
+ * >>> the change — no real collection has a size that puts 80% on a whole animal,
+ * >>> so an exact-boundary test still needs a ten-member denominator to exist —
+ * >>> and the hypothetical is now a count rather than an invented `Collection`.
+ * >>> No collection and no id is invented anywhere in this file.
+ *
+ * >>> THE POOL IS FOUR COLLECTIONS WIDE TODAY. `garden`, `home-pets`,
+ * >>> `night-time` and `africa` are the only non-base collections with a single
+ * >>> animal built (pinned in `tests/island/species-built.test.ts`), so they are
+ * >>> the only ones the cadence can offer. Several tests below used to be staged
+ * >>> on `ocean`, `ice`, `outback`, `farm` and `woodland`; those all read as
+ * >>> UNBUILT now, which under JT-047 means they read as COMPLETE and free their
+ * >>> slot, so a board built out of them proves the opposite of what it says.
+ * >>> Where the case under test needs a wider pool than four, the test hands in
+ * >>> its own `built` map and says so.
  */
 import { describe, it, expect } from 'vitest'
 import {
-  OPEN_AT, MAX_ACTIVE, HELD_BACK, HELD_BACK_BY_JOE, NOT_BUILT_YET, RELATED_GROUP,
+  OPEN_AT, MAX_ACTIVE, HELD_BACK_BY_JOE, RELATED_GROUP, heldBack,
   completion, isComplete, activeIds, candidates, nextToOpen, fillToCap,
 } from '../../src/island/species/unlock'
 import type { UnlockState } from '../../src/island/species/unlock'
 import { COLLECTIONS, collection } from '../../src/island/species/roster'
+import { builtIn } from '../../src/island/species/built'
 import { shippedIn } from '../../src/island/species/registry'
-import type { Collection } from '../../src/island/species/types'
 import { mulberry32 } from '../../src/core/rng'
 
-const size = (id: string) => collection(id)!.members.length
+/**
+ * HOW MANY MEMBERS OF EACH COLLECTION ARE ACTUALLY BUILT. The live measurement.
+ *
+ * `unlock.ts` is pure and takes this by injection because `built.ts` costs
+ * three.js twice over; a test file pays for three happily, so this is the same
+ * map `main.ts` fills at runtime, built from the same single predicate. Nothing
+ * here re-derives "built" — that divergence is the whole bug JT-047 closed.
+ */
+const BUILT: Record<string, number> = {}
+for (const c of COLLECTIONS) BUILT[c.id] = builtIn(c.id).length
+
+/** How many members of a collection are built — the denominator of `completion`. */
+const built = (id: string) => BUILT[id] ?? 0
 /** The smallest owned count that reaches `OPEN_AT` for this collection. */
-const atOpen = (id: string) => Math.ceil(OPEN_AT * size(id))
+const atOpen = (id: string) => Math.ceil(OPEN_AT * built(id))
 const CONSERVATION = ['near-threatened', 'vulnerable', 'endangered', 'critically-endangered']
 
-/** Every non-base collection with at least one species actually built, from the registry. */
-const buildable = (): readonly string[] =>
-  COLLECTIONS.map((c) => c.id).filter((id) => id !== 'base' && shippedIn(id).length > 0)
+/**
+ * Every non-base collection the cadence can actually offer, for a given board.
+ *
+ * DERIVED FROM `heldBack`, which is the module's own answer, rather than from a
+ * second reading of the registry. The old version of this helper asked
+ * `shippedIn(id).length > 0` — see the tripwire block near the bottom for why
+ * that was the wrong question and what it would have done the day Farm lands.
+ */
+const offerable = (b: Readonly<Record<string, number>> = BUILT): readonly string[] =>
+  COLLECTIONS.map((c) => c.id).filter((id) => id !== 'base' && !heldBack(b, id))
 
-/** Every collection with NOTHING built, from the registry. The thing PB-058 is about. */
-const unbuilt = (): readonly string[] =>
-  COLLECTIONS.map((c) => c.id).filter((id) => shippedIn(id).length === 0)
-
+/**
+ * The board. `built` defaults to the live measurement, `everCompleted` to none.
+ *
+ * An EMPTY history is the right default for every test here: it makes each one
+ * read the LIVE present, so a fraction that says 100% says it because of what
+ * the child owns today. The ratchet is JT-047's own subject and is asserted
+ * where it is the thing under test, never leaked in as a default.
+ */
 function state(o: Partial<UnlockState> & { open: readonly string[] }): UnlockState {
-  return { owned: {}, lastOpened: null, roster: COLLECTIONS, ...o }
+  return {
+    owned: {}, lastOpened: null, roster: COLLECTIONS, built: BUILT, everCompleted: [], ...o,
+  }
 }
-
-/** A roster where one real collection has been cut down to `n` of its own members. */
-function sized(id: string, n: number): readonly Collection[] {
-  const real = collection(id)!
-  const cut: Collection = { ...real, members: real.members.slice(0, n) }
-  return COLLECTIONS.map((c) => (c.id === id ? cut : c))
-}
-
-const emptied = (id: string) => sized(id, 0)
 
 /** Every id owned in full, so nothing is active and everything is at 100%. */
-function allOwned(ids: readonly string[]): Record<string, number> {
-  return Object.fromEntries(ids.map((id) => [id, size(id)]))
+function allOwned(
+  ids: readonly string[], b: Readonly<Record<string, number>> = BUILT,
+): Record<string, number> {
+  return Object.fromEntries(ids.map((id) => [id, b[id] ?? 0]))
 }
 
 describe('the dials are the numbers Joe gave, spelled out', () => {
@@ -74,13 +109,26 @@ describe('the dials are the numbers Joe gave, spelled out', () => {
     expect([...HELD_BACK_BY_JOE].sort()).toEqual(['dinosaurs', 'legendary', 'prehistoric'])
   })
 
-  it('composes HELD_BACK as the union of the two holds, with no id counted twice', () => {
-    // The three are ALSO unbuilt today, so a naive concatenation would double
-    // them and quietly make `HELD_BACK.length` lie to anything that counts it.
-    expect([...HELD_BACK].sort())
-      .toEqual([...new Set([...HELD_BACK_BY_JOE, ...NOT_BUILT_YET])].sort())
-    expect(HELD_BACK).toHaveLength(new Set(HELD_BACK).size)
-    expect(HELD_BACK).not.toContain('base')
+  it('asks the two holds as one predicate, so neither can be counted twice', () => {
+    /*
+     * THIS USED TO CHECK A LIST AND NOW CHECKS A FUNCTION, and the double-count
+     * it was written to catch cannot happen any more. `HELD_BACK` was the union
+     * of Joe's three and a hand-written `NOT_BUILT_YET`, and because Joe's three
+     * are ALSO unbuilt a naive concatenation doubled them and made
+     * `HELD_BACK.length` lie to anything that counted it. `heldBack` returns a
+     * boolean per id, so there is no length to lie with — but the two halves are
+     * still named separately in the source, because Joe releasing a collection
+     * and a modeller building one are different acts by different people.
+     */
+    for (const c of COLLECTIONS) {
+      expect(heldBack(BUILT, c.id), c.id)
+        .toBe(HELD_BACK_BY_JOE.includes(c.id) || built(c.id) === 0)
+    }
+    // `base` is not held back by either half — it is excluded from the draw by
+    // `candidates` naming it, which is a different mechanism and stays separate.
+    expect(heldBack(BUILT, 'base')).toBe(false)
+    // An id the roster never heard of has nothing built, so it is refused.
+    expect(heldBack(BUILT, 'atlantis')).toBe(true)
   })
 
   it('groups every collection except base, so the relatedness rule can never hit a gap', () => {
@@ -112,47 +160,68 @@ describe('"at 80% completion a new collection opens up"', () => {
   })
 
   it('is inclusive at exactly 80%, and 70% is not enough', () => {
-    // Ten of Garden's own members, so 8 is exactly 0.80 and 7 is 0.70.
-    const roster = sized('garden', 10)
-    const at = state({ open: ['garden'], owned: { garden: 8 }, roster })
-    const under = state({ open: ['garden'], owned: { garden: 7 }, roster })
+    // TEN BUILT MEMBERS OF GARDEN, so 8 is exactly 0.80 and 7 is 0.70. No real
+    // collection has a built count that puts 80% on a whole animal, so the
+    // boundary needs a denominator of ten to exist — and since JT-047 the
+    // denominator is this map, so it is supplied here rather than by cutting a
+    // roster row down to size. Garden really does have fourteen built today.
+    const built10 = { ...BUILT, garden: 10 }
+    const at = state({ open: ['garden'], owned: { garden: 8 }, built: built10 })
+    const under = state({ open: ['garden'], owned: { garden: 7 }, built: built10 })
     expect(completion(at, 'garden')).toBe(0.80)
     expect(nextToOpen(at, mulberry32(2))).not.toBeNull()
     expect(nextToOpen(under, mulberry32(2))).toBeNull()
   })
 
   it('opens nothing when nothing is open, and nothing when the child owns nothing', () => {
+    // BOTH OPEN COLLECTIONS MUST HAVE ANIMALS IN THEM for this to prove
+    // anything. It used to name `ocean`, which has nothing built and therefore
+    // reads as 100% complete (`completion` returns 1 for an empty denominator),
+    // so it would satisfy the trigger and the second assertion would be testing
+    // the opposite of its own sentence.
     expect(nextToOpen(state({ open: [] }), mulberry32(3))).toBeNull()
-    expect(nextToOpen(state({ open: ['garden', 'ocean'] }), mulberry32(3))).toBeNull()
+    expect(nextToOpen(state({ open: ['garden', 'home-pets'] }), mulberry32(3))).toBeNull()
   })
 
   it('any open collection can be the one that trips it, not just the newest', () => {
+    // Home Pets is one of sixteen built — barely started, and certainly not the
+    // thing tripping it. Garden at 80% is. (`ocean` used to play this part and
+    // cannot any more: with nothing built it reads as complete.)
     const s = state({
-      open: ['garden', 'ocean'],
-      owned: { garden: atOpen('garden'), ocean: 1 },
-      lastOpened: 'ocean',
+      open: ['garden', 'home-pets'],
+      owned: { garden: atOpen('garden'), 'home-pets': 1 },
+      lastOpened: 'home-pets',
     })
     expect(nextToOpen(s, mulberry32(4))).not.toBeNull()
   })
 })
 
 describe('"never more than 4 collections active"', () => {
-  const fourActive = ['garden', 'ocean', 'ice', 'outback']
+  /*
+   * THE FOUR ARE THE FOUR THAT EXIST. This used to be garden, ocean, ice and
+   * outback; three of those have nothing built, so under JT-047 they read as
+   * 100% and are NOT active at all — a board made of them would have one active
+   * collection in it and would prove nothing about a cap of four. These are the
+   * only four non-base collections with an animal in them today.
+   */
+  const fourActive = ['garden', 'home-pets', 'night-time', 'africa']
 
   it('counts active as opened-and-not-complete', () => {
+    // Base is the completed fifth: twenty-four owned of twenty-four built, which
+    // is a real completion rather than the vacuous one an empty collection gives.
     const s = state({
-      open: [...fourActive, 'farm'],
-      owned: { ...allOwned(['farm']), garden: 2 },
+      open: ['base', ...fourActive],
+      owned: { ...allOwned(['base']), garden: 2 },
     })
     expect(activeIds(s)).toEqual(fourActive)
-    expect(isComplete(s, 'farm')).toBe(true)
+    expect(isComplete(s, 'base')).toBe(true)
   })
 
   it('blocks a fifth even when an open collection is past 80%', () => {
     const s = state({
       open: fourActive,
-      owned: { garden: atOpen('garden'), ocean: atOpen('ocean') },
-      lastOpened: 'outback',
+      owned: { garden: atOpen('garden'), 'home-pets': atOpen('home-pets') },
+      lastOpened: 'africa',
     })
     expect(activeIds(s)).toHaveLength(MAX_ACTIVE)
     expect(nextToOpen(s, mulberry32(5))).toBeNull()
@@ -160,9 +229,9 @@ describe('"never more than 4 collections active"', () => {
 
   it('counts base as an active collection like any other while it is unfinished', () => {
     const s = state({
-      open: ['base', 'garden', 'ocean', 'ice'],
+      open: ['base', 'garden', 'home-pets', 'night-time'],
       owned: { base: atOpen('base') },
-      lastOpened: 'ice',
+      lastOpened: 'night-time',
     })
     expect(activeIds(s)).toHaveLength(MAX_ACTIVE)
     expect(nextToOpen(s, mulberry32(6))).toBeNull()
@@ -177,15 +246,18 @@ describe('"never more than 4 collections active"', () => {
 })
 
 describe('"at 4 open collections active a new one opens up only when another is completed"', () => {
-  const four = ['garden', 'ocean', 'ice', 'outback']
+  // Base plus three, so `africa` is the one left in reserve for the completion
+  // to buy. See the note on `fourActive` above for why the old ocean/ice/outback
+  // board cannot stage this any more.
+  const four = ['base', 'garden', 'home-pets', 'night-time']
 
   it('releases exactly one when one of the four is finished, and then blocks again', () => {
     // Same four, but Garden is now complete: three active, and the finished one
     // is sitting at 100%, which is what satisfies the 80% trigger.
     const released = state({
       open: four,
-      owned: { ...allOwned(['garden']), ocean: 3 },
-      lastOpened: 'outback',
+      owned: { ...allOwned(['garden']), 'home-pets': 3 },
+      lastOpened: 'night-time',
     })
     expect(activeIds(released)).toHaveLength(3)
     const opened = nextToOpen(released, mulberry32(7))
@@ -203,10 +275,23 @@ describe('"at 4 open collections active a new one opens up only when another is 
   })
 
   it('a second completion buys a second opening', () => {
+    /*
+     * THE ONLY TEST HERE THAT NEEDS A POOL WIDER THAN THE REGISTRY HAS. Five
+     * collections open with two of them finished leaves nothing in reserve
+     * today: base plus the four buildable ones IS every collection the cadence
+     * can offer, so a real board would return null for want of stock rather
+     * than for want of entitlement, and the test would pass for the wrong
+     * reason. So `farm` and `woodland` — real roster rows, both at zero built
+     * since PB-036 deleted the kit route — are given animals for this one
+     * assertion. Farm is being built right now; on the day it lands this map
+     * stops being hypothetical and can go.
+     */
+    const built6 = { ...BUILT, farm: 16, woodland: 16 }
     const s = state({
-      open: [...four, 'farm'],
-      owned: allOwned(['garden', 'ocean']),
-      lastOpened: 'farm',
+      open: ['base', 'garden', 'home-pets', 'night-time', 'africa'],
+      owned: allOwned(['garden', 'home-pets'], built6),
+      lastOpened: 'africa',
+      built: built6,
     })
     expect(activeIds(s)).toHaveLength(3)
     expect(nextToOpen(s, mulberry32(8))).not.toBeNull()
@@ -221,20 +306,29 @@ describe('"hold legendary, dinosaurs and prehistoric for now"', () => {
         owned: { garden: atOpen('garden') },
         lastOpened: 'garden',
       })
-      expect(HELD_BACK).not.toContain(nextToOpen(s, mulberry32(seed)))
+      const got = nextToOpen(s, mulberry32(seed))
+      expect(got, `seed ${seed}`).not.toBeNull()
+      expect(HELD_BACK_BY_JOE).not.toContain(got)
+      // And not held back by the other half either: whatever it offers has an
+      // animal in it. Both halves are one predicate now — see `heldBack`.
+      expect(heldBack(BUILT, got!), `${got} was offered`).toBe(false)
     }
   })
 
   it('returns null rather than reaching for them when they are all that is left', () => {
-    const rest = COLLECTIONS.map((c) => c.id).filter((id) => id !== 'base' && !HELD_BACK.includes(id))
-    const s = state({ open: rest, owned: allOwned(rest), lastOpened: 'critically-endangered' })
+    const rest = offerable()
+    const s = state({ open: rest, owned: allOwned(rest), lastOpened: 'africa' })
     expect(candidates(s)).toEqual([])
     expect(nextToOpen(s, mulberry32(9))).toBeNull()
   })
 
   it('keeps them out of the candidate list even before the draw', () => {
     const s = state({ open: ['garden'], owned: { garden: atOpen('garden') } })
-    for (const held of HELD_BACK) expect(candidates(s)).not.toContain(held)
+    for (const c of COLLECTIONS) {
+      if (!heldBack(BUILT, c.id)) continue
+      expect(candidates(s), c.id).not.toContain(c.id)
+    }
+    for (const id of HELD_BACK_BY_JOE) expect(candidates(s)).not.toContain(id)
   })
 })
 
@@ -245,29 +339,53 @@ describe('"avoid consecutive collections that may be perceived as related"', () 
    * pool it chose from, which is what lets the assertion below be honest about
    * the fallback rather than just tolerant of it.
    */
-  function run(seed: number): { id: string; pool: readonly string[] }[] {
+  function run(
+    seed: number, b: Readonly<Record<string, number>> = BUILT,
+  ): { id: string; pool: readonly string[] }[] {
     const rng = mulberry32(seed)
     let open: string[] = ['base']
-    let owned: Record<string, number> = allOwned(['base'])
+    let owned: Record<string, number> = allOwned(['base'], b)
     let last: string | null = null
     const steps: { id: string; pool: readonly string[] }[] = []
     for (let i = 0; i < 30; i++) {
-      const s = state({ open, owned, lastOpened: last })
+      const s = state({ open, owned, lastOpened: last, built: b })
       const pool = candidates(s)
       const id = nextToOpen(s, rng)
       if (id === null) break
       steps.push({ id, pool })
       open = [...open, id]
-      owned = { ...owned, [id]: size(id) }
+      owned = { ...owned, [id]: b[id] ?? 0 }
       last = id
     }
     return steps
   }
 
   it('never opens two of the same group in a row while an alternative exists', () => {
+    /*
+     * >>> THIS RUNS ON A WIDENED POOL, AND IT HAS TO, or it asserts nothing.
+     * >>> The four collections with animals in them today — garden, home-pets,
+     * >>> night-time, africa — are in FOUR DIFFERENT groups (temperate,
+     * >>> domestic, nocturnal, exotic-hot), so on the live registry there is no
+     * >>> pair the rule could ever be asked about and every walk passes
+     * >>> vacuously. A test that passes because its body is unreachable claims
+     * >>> cover it does not have, which this file has already been bitten by
+     * >>> once (see the Red List test below).
+     * >>>
+     * >>> So `farm` and `woodland` are given their sixteen. They are the exact
+     * >>> pairs the table's `domestic` and `temperate` rows exist for — farm with
+     * >>> home-pets, woodland with garden — and both are real roster rows that
+     * >>> had all sixteen until PB-036 deleted the kit route on 2 August. This is
+     * >>> the board this test ran on until that commit, restored as a
+     * >>> hypothesis; it becomes the real board again as they are rebuilt.
+     */
+    const built6 = { ...BUILT, farm: 16, woodland: 16 }
+    const groups = new Set(offerable(built6).map((id) => RELATED_GROUP[id]))
+    expect(groups.size, 'the pool has no two collections in one group to test with')
+      .toBeLessThan(offerable(built6).length)
+
     for (let seed = 0; seed < 60; seed++) {
-      const steps = run(seed)
-      expect(steps.length).toBe(COLLECTIONS.length - 1 - HELD_BACK.length)
+      const steps = run(seed, built6)
+      expect(steps.length).toBe(offerable(built6).length)
       for (let i = 1; i < steps.length; i++) {
         const prev = RELATED_GROUP[steps[i - 1]!.id]
         const alternatives = steps[i]!.pool.filter((id) => RELATED_GROUP[id] !== prev)
@@ -282,27 +400,27 @@ describe('"avoid consecutive collections that may be perceived as related"', () 
      * THIS REPLACES A TEST THAT HAD QUIETLY GONE VACUOUS, and it is written out
      * rather than deleted so the next reader knows the cover was lost on
      * purpose. It used to walk the whole roster asserting two conservation
-     * tiers never opened one after the other. Since PB-058 all four tiers are
-     * in `NOT_BUILT_YET` — not one of them has a single model built — so the
-     * walk can never reach one and the assertion inside the loop stopped
-     * running. A test that passes because its body is unreachable claims cover
-     * it does not have, which is worse than no test, so this asserts the thing
-     * that IS true: the tiers are unreachable, and the reason is the hold, not
-     * the grouping.
+     * tiers never opened one after the other. Since PB-058 not one of the four
+     * tiers has a single model built, so the hold refuses all four, the walk can
+     * never reach one, and the assertion inside the loop stopped running. A test
+     * that passes because its body is unreachable claims cover it does not have,
+     * which is worse than no test, so this asserts the thing that IS true: the
+     * tiers are unreachable, and the reason is the hold, not the grouping.
      *
-     * The grouping rule itself is still genuinely proved, by the test above,
-     * on the pairs that ARE reachable — garden and woodland are both
-     * `temperate`, home-pets and farm are both `domestic`, and all four are
-     * built — so the rule has live cover even while the tiers do not.
+     * The grouping rule itself is proved by the test above — which since JT-047
+     * has to stage its own pool to do it, because the four collections that ARE
+     * built land in four different groups. That is a narrowing of live cover and
+     * it is stated there rather than hidden here.
      *
-     * The day a tier ships, its id leaves `NOT_BUILT_YET`, the first assertion
-     * here goes red by name, and the back-to-back tiers test belongs back in.
+     * The day a tier gets its first animal, `heldBack` stops refusing it on its
+     * own, the first assertion here goes red by name, and the back-to-back tiers
+     * test belongs back in.
      */
     for (const id of CONSERVATION) {
       expect(
-        HELD_BACK,
+        heldBack(BUILT, id),
         `${id} is drawable again — restore the "two Red List tiers back to back" test`,
-      ).toContain(id)
+      ).toBe(true)
     }
     for (let seed = 0; seed < 60; seed++) {
       for (const step of run(seed)) expect(CONSERVATION).not.toContain(step.id)
@@ -318,10 +436,12 @@ describe('"avoid consecutive collections that may be perceived as related"', () 
     // be built out of collections that actually have animals in them.)
     // STAGED THE OTHER WAY ROUND since 2 Aug. It used to leave woodland as the
     // one unopened collection, which stopped working the moment woodland lost
-    // all sixteen of its kit-built species and joined NOT_BUILT_YET — a held
-    // collection is never a candidate, so the pool emptied instead of falling
-    // back. `temperate` is garden and woodland alone, and garden is now the only
-    // built one, so the pair can only be staged with garden as the TARGET.
+    // all sixteen of its kit-built species — a collection with nothing built is
+    // never a candidate, so the pool emptied instead of falling back.
+    // `temperate` is garden and woodland alone, and garden is now the only built
+    // one, so the pair can only be staged with garden as the TARGET.
+    // Every other collection is open here and every open one reads as finished,
+    // so the cap is not what is refusing and the draw is genuinely reached.
     // The behaviour under test is unchanged: the last thing opened is in the
     // same group as the only thing left, and it opens it anyway.
     const left = ['garden']
@@ -347,11 +467,12 @@ describe('"random order" — the caller\'s seeded stream and nothing else', () =
   it('spreads across every page the pool can offer, as the seed changes', () => {
     /*
      * This used to assert "more than five distinct answers" and that number is
-     * now unreachable: PB-058 cut the drawable pool to five collections, of
-     * which the relatedness rule drops one here. So the assertion is stated
-     * against the pool itself rather than against a count — every candidate is
-     * reached and nothing outside it ever is, which is what "random order"
-     * actually promises and which survives the pool changing size again.
+     * long unreachable: the drawable pool is FOUR collections, one of which is
+     * already open here, and the relatedness rule can drop another. So the
+     * assertion is stated against the pool itself rather than against a count —
+     * every candidate is reached and nothing outside it ever is, which is what
+     * "random order" actually promises and which survives the pool changing size
+     * again, in either direction.
      */
     const pool = candidates(s()).filter((id) => RELATED_GROUP[id] !== RELATED_GROUP['garden'])
     const seen = new Set<string | null>()
@@ -367,19 +488,39 @@ describe('"random order" — the caller\'s seeded stream and nothing else', () =
   })
 })
 
-describe('a collection with no members does not divide by zero', () => {
-  const roster = emptied('ocean')
-
+describe('a collection with nothing BUILT does not divide by zero', () => {
+  /*
+   * THE CASE IS REAL NOW RATHER THAN STAGED, which is why the roster fixture
+   * that used to cut Ocean down to nothing has gone. Ocean has sixteen rostered
+   * members and not one of them built, and since JT-047 the denominator is the
+   * built count, so `ocean` IS the empty case on the live registry. Sixteen
+   * collections are in the same position today.
+   *
+   * Reading 1 rather than 0 is deliberate and is the trap `opened.ts` documents
+   * at its step 0: 0 would wedge a dead album open forever holding one of
+   * `MAX_ACTIVE`'s four slots, and three of those left Juno's save with one
+   * working slot for the rest of the game.
+   */
   it('reads as complete rather than NaN, and frees its active slot', () => {
-    const s = state({ open: ['ocean'], roster })
+    const s = state({ open: ['ocean'] })
+    expect(built('ocean')).toBe(0)
     expect(completion(s, 'ocean')).toBe(1)
     expect(Number.isNaN(completion(s, 'ocean'))).toBe(false)
     expect(isComplete(s, 'ocean')).toBe(true)
     expect(activeIds(s)).toEqual([])
   })
 
+  it('is never OFFERED either, so it can neither hold a slot nor be drawn into one', () => {
+    // The other half of the same guard: reading as complete would be an odd
+    // thing to say about a collection the cadence could still deal out. It
+    // cannot — `heldBack` refuses anything with an empty denominator.
+    const s = state({ open: ['garden'], owned: { garden: atOpen('garden') } })
+    expect(heldBack(BUILT, 'ocean')).toBe(true)
+    expect(candidates(s)).not.toContain('ocean')
+  })
+
   it('still lets the cadence run', () => {
-    const s = state({ open: ['ocean'], roster, lastOpened: 'ocean' })
+    const s = state({ open: ['ocean'], lastOpened: 'ocean' })
     expect(nextToOpen(s, mulberry32(11))).not.toBeNull()
   })
 
@@ -389,50 +530,109 @@ describe('a collection with no members does not divide by zero', () => {
     expect(activeIds(s)).toEqual(['garden'])
   })
 
-  it('clamps an owned count above the collection size', () => {
-    const s = state({ open: ['garden'], owned: { garden: size('garden') + 99 } })
+  it('clamps an owned count above the number built', () => {
+    // The case PB-036 made reachable without touching a save: fifty-nine species
+    // were deleted, so a child can own more of a collection than is built.
+    const s = state({ open: ['garden'], owned: { garden: built('garden') + 99 } })
     expect(completion(s, 'garden')).toBe(1)
   })
 })
 
-describe('the hold on unbuilt collections is derived from the registry, not remembered', () => {
+describe('the hold on unbuilt collections is derived live, and a record is not an animal', () => {
   /*
-   * THIS BLOCK IS THE WHOLE ANSWER TO "how will anyone know to update that
-   * list?", and it is the reason `NOT_BUILT_YET` is allowed to be twelve hand
-   * written strings in a pure module instead of a call to `shippedIn`.
+   * >>> WHAT THIS BLOCK USED TO BE, AND WHY IT IS NOT THAT ANY MORE. It was the
+   * >>> tripwire on `NOT_BUILT_YET`, a hand-written list of the collections with
+   * >>> nothing built that `unlock.ts` carried because it is pure and could not
+   * >>> import the registry. The tripwire recomputed the list here, in a file
+   * >>> that may import anything, so that nobody had to REMEMBER the list
+   * >>> existed. THE LIST IS GONE — JT-047 injects `state.built` instead, so the
+   * >>> hold is derived from the same counts `completion` divides by and cannot
+   * >>> rot — and with the list gone the tripwire has nothing to guard.
+   * >>>
+   * >>> IT IS RECORDED RATHER THAN QUIETLY DELETED BECAUSE IT MEASURED THE WRONG
+   * >>> THING, and that mistake is easy to make again. It asked
+   * >>> `shippedIn(id).length`, which counts REGISTERED RECORDS — and a record is
+   * >>> not an animal. `built.ts` sets this out at length: `define.ts` omits an
+   * >>> assembly it cannot find and says nothing, so a `Species` record for a
+   * >>> creature nobody has modelled is legal, silent and counted; and the method
+   * >>> the last three collections were built by writes ALL of a collection's
+   * >>> records in one commit and the species files afterwards, one at a time.
+   * >>> So on the day Farm's sixteen records land, the old test would have gone
+   * >>> red saying "farm now has models — take it out of NOT_BUILT_YET so the
+   * >>> cadence can start offering it", with ZERO farm animals built. Whoever
+   * >>> obeyed it would have handed a child sixteen empty frames — the exact bug
+   * >>> the list existed to prevent, walked back in through the front door.
    *
-   * `unlock.ts` cannot import `registry.ts` — the registry reaches three.js
-   * through `collections/garden.ts` and the unlock rules are deliberately pure —
-   * so the derivation cannot be performed where the list lives. It is performed
-   * HERE instead, in a file that may import anything, and the list is checked
-   * against it. Nobody has to remember `NOT_BUILT_YET` exists: the day a
-   * modeller commits the first ocean species, this block goes red and names the
-   * collection and says what to do about it.
+   * What replaces it is the INVARIANT rather than the reminder: the hold is
+   * exactly "nothing built, or one of Joe's three", measured against the live
+   * registry so that it stays true as Farm lands and needs no edit when it does.
    */
-  it('holds back every collection that has no models at all', () => {
-    for (const id of unbuilt()) {
+  it('holds back exactly the collections with nothing built, plus Joe\'s three', () => {
+    const held = COLLECTIONS.map((c) => c.id).filter((id) => heldBack(BUILT, id))
+    const nothingBuilt = COLLECTIONS.map((c) => c.id).filter((id) => builtIn(id).length === 0)
+    expect([...held].sort()).toEqual([...new Set([...nothingBuilt, ...HELD_BACK_BY_JOE])].sort())
+    for (const id of nothingBuilt) {
       const frames = collection(id)!.members.length
       expect(
-        HELD_BACK,
-        `${id} has no species built, so opening it shows a child ${frames} empty `
-          + 'frames. Add it to NOT_BUILT_YET in src/island/species/unlock.ts.',
-      ).toContain(id)
+        heldBack(BUILT, id),
+        `${id} has no species built, so opening it would show a child ${frames} empty frames`,
+      ).toBe(true)
     }
   })
 
-  it('names a collection the day it ships, so the list cannot silently rot', () => {
-    for (const id of NOT_BUILT_YET) {
-      expect(
-        shippedIn(id).length,
-        `${id} now has models — take it out of NOT_BUILT_YET in `
-          + 'src/island/species/unlock.ts so the cadence can start offering it.',
-      ).toBe(0)
+  it('offers every collection that has an animal in it and is not one of Joe\'s three', () => {
+    /*
+     * THE HALF THAT SURVIVES AS FARM LANDS, and the reason nothing has to be
+     * remembered: build one animal and the cadence starts offering the
+     * collection on its own. Asserted against the real registry both ways round,
+     * so neither a collection with animals going unoffered nor an empty one
+     * being offered can pass.
+     */
+    const s = state({ open: ['base'], owned: { base: atOpen('base') } })
+    for (const c of COLLECTIONS) {
+      if (c.id === 'base') continue
+      const live = builtIn(c.id).length > 0 && !HELD_BACK_BY_JOE.includes(c.id)
+      expect(heldBack(BUILT, c.id), c.id).toBe(!live)
+      if (live) {
+        expect(candidates(s), `${c.id} has animals but is never offered`).toContain(c.id)
+      } else {
+        expect(candidates(s), `${c.id} is offered with nothing in it`).not.toContain(c.id)
+      }
     }
+    expect([...candidates(s)].sort()).toEqual([...offerable()].sort())
   })
 
-  it('holds back nothing else: the union is exactly the unbuilt plus Joe\'s three', () => {
-    expect([...HELD_BACK].sort())
-      .toEqual([...new Set([...unbuilt(), ...HELD_BACK_BY_JOE])].sort())
+  it('cannot be fooled by records: `heldBack` is only ever handed built counts', () => {
+    /*
+     * The distinction stated on the predicate rather than on data, because
+     * TODAY NO COLLECTION CAN SHOW IT: every collection with a registry record
+     * also has a model, so `shippedIn` and `builtIn` happen to agree everywhere
+     * (base 24, garden 14, home-pets 16, night-time 13, africa 1, the rest zero
+     * — pinned in `tests/island/species-built.test.ts` and
+     * `tests/island/species-registry.test.ts`). The measurement below says so
+     * out loud instead of a loop that would run zero times and claim cover.
+     *
+     * `heldBack`'s SIGNATURE is what makes the confusion unrepeatable: it takes
+     * a map of built counts and has no way to ask how many records exist. Farm
+     * is the case that is coming — sixteen records, zero models — and on that
+     * day the first assertion here goes red, the hold stays correct without an
+     * edit, and the right response is to move `farm` into the second list rather
+     * than to touch `unlock.ts`.
+     */
+    const recordsWithoutModels = COLLECTIONS.map((c) => c.id)
+      .filter((id) => shippedIn(id).length > 0 && builtIn(id).length === 0)
+    expect(
+      recordsWithoutModels,
+      'a collection now has records and no models — the hold is still right to '
+        + 'refuse it; this measurement is what needs updating, not unlock.ts',
+    ).toEqual([])
+
+    // Farm today: no records, no models, held back. The assertion that matters
+    // is that the SECOND clause is what does the refusing, and it still will
+    // when the sixteen records land.
+    expect(built('farm')).toBe(0)
+    expect(heldBack(BUILT, 'farm')).toBe(true)
+    expect(HELD_BACK_BY_JOE).not.toContain('farm')
   })
 })
 
@@ -440,19 +640,22 @@ describe('the draw can neither starve nor deadlock on the pool PB-058 leaves it'
   it('offers exactly the collections that have animals in them, and nothing else', () => {
     // The card's acceptance test, said as plainly as it can be said: whatever
     // the cadence is willing to open, a child opening it finds animals there.
+    // `builtIn`, not `shippedIn` — see the block above for the difference and
+    // why it is not a pedantic one.
     const s = state({ open: ['base'], owned: { base: atOpen('base') } })
-    expect([...candidates(s)].sort()).toEqual([...buildable()].sort())
-    for (const id of candidates(s)) expect(shippedIn(id).length).toBeGreaterThan(0)
+    expect([...candidates(s)].sort()).toEqual([...offerable()].sort())
+    for (const id of candidates(s)) expect(builtIn(id).length).toBeGreaterThan(0)
   })
 
   it('fills a fresh island to the cap and then stops, rather than looping', () => {
-    // base plus three is four active. The pool is five, so two are held in
-    // reserve for the only two completions the cadence can still reward.
+    // base plus three is four active. THE POOL IS FOUR, so exactly one is held
+    // in reserve for the only completion the cadence can still reward — it was
+    // five and two until PB-036 took the kit route away from farm and woodland.
     const s = state({ open: ['base'] })
     const drawn = fillToCap(s, mulberry32(12))
     expect(drawn).toHaveLength(MAX_ACTIVE - 1)
     expect(new Set(drawn).size).toBe(drawn.length)
-    for (const id of drawn) expect(buildable()).toContain(id)
+    for (const id of drawn) expect(offerable()).toContain(id)
 
     // Called again on the filled state it has nothing to add.
     const filled = state({ open: ['base', ...drawn], lastOpened: drawn[drawn.length - 1]! })
@@ -462,15 +665,16 @@ describe('the draw can neither starve nor deadlock on the pool PB-058 leaves it'
 
   it('returns null and an empty fill when the pool is exhausted, rather than spinning', () => {
     /*
-     * The hostile case: nothing left that could be opened. `HELD_BACK` is a
-     * frozen export and cannot be mutated to stage it, so the equivalent is
-     * built the honest way — every buildable collection is already open, and
-     * every open collection is finished, so the cap is NOT what is refusing.
-     * Rule 2 is satisfied by the completed collections, the draw is reached,
-     * and it declines because there is genuinely nothing to give.
+     * The hostile case: nothing left that could be opened. The hold cannot be
+     * mutated to stage it — it is derived from the built counts now, and those
+     * are a measurement — so the equivalent is built the honest way: every
+     * offerable collection is already open, and every open collection is
+     * finished, so the cap is NOT what is refusing. Rule 2 is satisfied by the
+     * completed collections, the draw is reached, and it declines because there
+     * is genuinely nothing to give.
      */
-    const open = ['base', ...buildable()]
-    const s = state({ open, owned: allOwned(open), lastOpened: 'farm' })
+    const open = ['base', ...offerable()]
+    const s = state({ open, owned: allOwned(open), lastOpened: 'africa' })
     expect(activeIds(s)).toEqual([])
     expect(candidates(s)).toEqual([])
     expect(nextToOpen(s, mulberry32(13))).toBeNull()

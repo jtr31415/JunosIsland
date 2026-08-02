@@ -28,6 +28,8 @@ import type { Nudge } from './governors'
 import { OPENING, HATCH_LINES, TILE_QUESTION, fill } from './script'
 import { loadIsland, saveIsland, wipeIsland } from './save'
 import { advance, albumsToShow } from './species/opened'
+import { COLLECTIONS } from './species/roster'
+import { builtIn } from './species/built'
 import { createHarness } from './harness'
 import type { Path } from './harness'
 import { openingGate } from './opening'
@@ -371,10 +373,36 @@ async function boot(): Promise<void> {
    * declared after would be a temporal-dead-zone fault waiting for the first
    * save that beats this line.
    */
-  let opened = advance(loaded.flow.pets.map(p => p.species), loaded.opened, defaultRng)
+  /**
+   * HOW MANY ANIMALS ARE ACTUALLY BUILT IN EACH COLLECTION. JT-047.
+   *
+   * Joe: *"the unlocker and counters on the page should go of the number of
+   * animals pushed on that collection at any one time. i might make some more,
+   * needs to be dynamic."* So the unlocker's sums are denominated in animals
+   * that EXIST, not in the roster's ambition — Night Time is 13 of 13 and not
+   * 13 of 16, and the album's heading and the unlock rules finally agree
+   * because both now read `built.ts` and nothing re-derives it.
+   *
+   * FILLED HERE BECAUSE THIS IS WHERE THREE.JS IS ALREADY PAID FOR. `built.ts`
+   * reaches three through `kit.ts` and `registry.ts`; `unlock.ts` and
+   * `opened.ts` both promise to stay pure and `save.ts` imports the latter, so
+   * the map is built at this edge and threaded inwards. That is the same seam
+   * `UnlockState.roster` has used since phase 2.
+   *
+   * COMPUTED ON EVERY ARRIVAL AND NEVER PERSISTED, which is what "dynamic"
+   * means here: an animal added between two sessions changes the sums with no
+   * migration and nothing to invalidate. It is a `const` only for the life of
+   * this page — the registry cannot change under a running tab.
+   */
+  const builtCounts: Record<string, number> = {}
+  for (const c of COLLECTIONS) builtCounts[c.id] = builtIn(c.id).length
+
+  let opened = advance(
+    loaded.flow.pets.map(p => p.species), loaded.opened, defaultRng, builtCounts,
+  )
   /** Fold in anything a new friend has just unlocked. Idempotent; see `advance`. */
   const refreshAlbums = (): void => {
-    opened = advance(flow.pets.map(p => p.species), opened, defaultRng)
+    opened = advance(flow.pets.map(p => p.species), opened, defaultRng, builtCounts)
   }
 
   let persistGranted: PersistState = loaded.persistGranted

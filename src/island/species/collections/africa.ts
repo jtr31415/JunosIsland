@@ -2,17 +2,31 @@
  * Africa — roster row 4, ship 7, name band `medium`.
  *
  * PB-036 phase 2. `roster.ts` says which sixteen species this collection holds;
- * this file says what thirteen of them ARE. The other three are not here and
- * that is the ruling, not an oversight — see NOT BUILT below. `registry.ts`
- * already states the shape of that gap: "A species in the roster with no record
- * here is a species that has not shipped."
+ * this file says what ONE of them is. `registry.ts` already states the shape of
+ * that gap: "A species in the roster with no record here is a species that has
+ * not shipped."
  *
- * NOT BUILT, deliberately, and not to be filled in without building a kit first:
+ * >>> THIS FILE HELD FOURTEEN RECORDS UNTIL 2 AUGUST 2026 AND NOW HOLDS ONE.
+ * >>> Everything below the import is `animal-crocodile`. Thirteen quadruped
+ * >>> records were DELETED by PB-036 (`eedb6ef`) when Joe retired the kit-built
+ * >>> route — *"remove all the blocky ones from the game completely, including
+ * >>> the album"* — and the prose in this header was not updated with them, so
+ * >>> it went on claiming "FOURTEEN of sixteen" for a file holding one. That is
+ * >>> the whole of what JT-047 corrected here; no record changed.
  *
- *   - `animal-ostrich` — two legs, a neck longer than its body, no tail as this
- *     kit means the word. Wants `songbird`/`bespoke`.
- *   - `animal-vulture` — hooked beak, broad wings, tail fan. Wants `raptor`,
- *     declared in `types.ts` and not built.
+ * SO AFRICA IS 1 OF 16, and the fifteen absences are of two different kinds,
+ * which is worth keeping apart because they are undone by different work:
+ *
+ *   - THIRTEEN were built once, on the quadruped kit, and were deleted. They
+ *     come back when somebody builds them on the assembly route, the way the
+ *     crocodile came back. Nothing about them is a design question.
+ *   - TWO WERE NEVER BUILT AT ALL, deliberately, and must not be filled in
+ *     without building a kit first:
+ *
+ *       - `animal-ostrich` — two legs, a neck longer than its body, no tail as
+ *         this kit means the word. Wants `songbird`/`bespoke`.
+ *       - `animal-vulture` — hooked beak, broad wings, tail fan. Wants
+ *         `raptor`, declared in `types.ts` and not built.
  *
  * BOTH WANT WINGS, AND THE BANK HAS NONE. Measured, not assumed: the `wing` role
  * is declared in `bank.generated.ts` and occurs zero times in the data, alongside
@@ -27,11 +41,15 @@
  * stand under the body and its skull is a cube — is not overturned by that; it is
  * satisfied by it. Its record below carries no `build` at all.
  *
- * Africa therefore ships PARTIAL, FOURTEEN of sixteen, and
- * `tests/island/species-africa.test.ts` asserts the two remaining absences by
- * name so nobody half-fills the collection later by improvising a shape for
- * them. That improvisation is the exact failure roster §1's "kits before
- * species" rules out.
+ * Africa therefore ships PARTIAL, ONE of sixteen. The count is asserted in
+ * `tests/island/species-built.test.ts`'s PINNED table (`['africa', 16, 1]`), so
+ * a number here going stale again fails a test rather than sitting in a comment.
+ *
+ * (`tests/island/species-africa.test.ts` is cited by no test runner and does not
+ * exist — it went with the thirteen records. It used to assert the two absences
+ * by name so nobody half-filled the collection by improvising a shape for them.
+ * That improvisation is still the exact failure roster §1's "kits before
+ * species" rules out, and the paragraph above is now the only thing saying so.)
  *
  * WHAT THE NUMBERS MEAN. Every field except `height` is a multiplier off the
  * kit's reference silhouette (`kits/quadruped.ts` REF), which is fox-shaped on
@@ -68,8 +86,14 @@ import type { Species } from '../types'
 export const AFRICA_SPECIES: readonly Species[] = [
 
   /*
-   * THE CROCODILE — the fourteenth, and the first of this collection's three
-   * absences to be filled.
+   * THE CROCODILE — once the fourteenth of fourteen, and now the only one.
+   *
+   * It was written as the first of this collection's three absences to be
+   * filled. It ended up the sole survivor instead: the thirteen quadrupeds it
+   * joined were deleted the same week, and this record outlived them precisely
+   * BECAUSE it took the assembly route rather than the kit. That is not luck,
+   * it is the reason the route was taken, and it is the argument for building
+   * the other thirteen the same way rather than reviving the kit.
    *
    * It has no `build` and no numbers here at all, which is the whole point. The
    * ruling above still stands word for word — the quadruped kit stands its legs
