@@ -39,11 +39,12 @@ import {
 /**
  * Every assembled species, and the creature it builds today.
  *
- * The hedgehog's and the squirrel's are the CONVERSION EVIDENCE: both were
- * hand-written `AssemblyBuild` records and are now `defineCreature` definitions,
- * and these are the hashes the hand-written records produced. They did not
- * change. Every vertex, normal, uv, index and node translation of both animals is
- * the same as the day Joe reviewed them.
+ * The squirrel's is the CONVERSION EVIDENCE: it was a hand-written
+ * `AssemblyBuild` record and is now a `defineCreature` definition, and this is
+ * the hash the hand-written record produced. It did not change. Every vertex,
+ * normal, uv, index and node translation is the same as the day Joe reviewed it.
+ * The hedgehog's was that too, until Joe changed the animal himself on 2 August;
+ * see the note on its entry below.
  *
  * The other eleven are the FAN-OUT's pins, read off `npm run pets:creature` in
  * one pass once all eleven species files existed. Every one is a first pin — the
@@ -52,7 +53,18 @@ import {
  * these eleven moving is a change to that animal, by name, with both hashes.
  */
 const PINNED: Readonly<Record<string, string>> = {
-  'animal-hedgehog': 'a839dd97acf556e9',
+  /* RE-PINNED ON PURPOSE, 2 August, and this is the pin doing its job:
+   * `a839dd97acf556e9` was the hedgehog wearing `bespoke-sphere-01` on its nose —
+   * the one authored shape this method ever put on a shipped animal. Joe replaced
+   * it with `box-09`, the bunny's own nose, THROUGH THE EDITOR, and pushed it into
+   * the game; `382e9a9` is that push and carries his words. Asked whether the
+   * sphere had gone by accident he said *"yes, i changed the nose to something
+   * more fitting."* So this hash moved because the ANIMAL changed, by its author,
+   * deliberately — which is the only reason a hash here is ever allowed to move.
+   * It is 26 vertices and 48 triangles lighter, and 10 verts / 25 tris off the
+   * whole creature. Re-captured from `creatureFingerprint('animal-hedgehog')` in
+   * the same commit as the tests that describe the new nose. */
+  'animal-hedgehog': '1d26c188381e9eba',
   'animal-squirrel': '6a9ea9c7855c48c5',
   'animal-mouse': '896afcc9e7c39067',
   /* Moved once, on purpose, and this is the pin doing its job: `c54d4a52d6fce328`

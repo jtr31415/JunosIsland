@@ -8,8 +8,8 @@
  * below. They used to be four hundred lines of this file, re-derived again in the
  * squirrel's, and about to be re-derived eleven more times.
  *
- * What is left here is the hedgehog: Joe's revised spike layout, the nose he
- * overruled rule 1 for, and the pupil re-derived from the real `.glb` files. Four
+ * What is left here is the hedgehog: Joe's revised spike layout, the nose tip he
+ * has now ruled on twice, and the pupil re-derived from the real `.glb` files. Four
  * dead features shipped in this repo behind tests that only proved a mock ran, so
  * nothing below asserts that a function was called. Every assertion measures the
  * geometry that came out and compares it to a number measured off Kenney's own
@@ -29,9 +29,15 @@
  *   3. THE SPINES POINT BACKWARDS. Measured off the built vertices, not trusted
  *      from the spec, and compared against the unspun part to prove the spin is
  *      what turned them.
- *   4. THE NOSE IS AUTHORED AND JOE SAID SO. The bank's own answer was right on
- *      every measured axis and reads as a tongue; this file is the record of
- *      that, and it is what stops the next builder putting `wedge-10` back.
+ *   4. THE NOSE TIP IS `box-09`, FROM THE BANK, AND NOTHING HERE IS AUTHORED.
+ *      Joe overruled rule 1 for this one part on 29 July and reversed himself on
+ *      2 August, from the editor: *"yes, i changed the nose to something more
+ *      fitting."* The tests that pinned the bespoke sphere ON THIS ANIMAL are
+ *      deleted rather than bent, because the decision they existed to pin was
+ *      overturned by the person who took it. What survives is the record of why
+ *      the bank's own first answer was rejected — `wedge-10` was right on every
+ *      measured axis and reads as a TONGUE — because that is still what stops the
+ *      next builder searching the bank and putting `wedge-10` on the nose.
  *   5. THE PUPIL IS THE PACK'S. Re-derived on every run from the 24 real `.glb`
  *      files and the real `colormap.png`, because "we measured it once" is
  *      exactly the claim `parts-bank.test.ts` refuses to take on trust.
@@ -65,18 +71,22 @@ import { assertAssembly } from './assembly-assert'
  */
 assertAssembly({
   id: 'animal-hedgehog',
-  parts: ['box-01', 'box-03', 'cone-01', 'cone-06', 'plate-01'],
-  // Rule 1 overruled, once, by Joe, having seen the alternative. See below.
-  authored: ['bespoke-sphere-01'],
+  parts: ['box-01', 'box-03', 'box-09', 'cone-01', 'cone-06', 'plate-01'],
+  // NOTHING IS AUTHORED HERE ANY MORE, and the absent claim is the assertion:
+  // `assertAssembly` compares the animal's bespoke set against `authored ?? []`,
+  // so omitting it pins the set as EMPTY. Rule 1 was overruled once, by Joe, for
+  // the nose tip — and on 2 August he reversed it himself from the editor, so
+  // `box-09` from the bank now stands where `bespoke-sphere-01` did.
   height: 1.7069,
-  // 754 verts and 1,046 triangles. The WELD is what keeps twenty spikes inside
-  // rule 9's vertex budget at all: unwelded they are 20 x 68 = 1,360 on their
-  // own, against a measured body ceiling of 1,114.
-  verts: 754,
-  tris: 1046,
+  // 744 verts and 1,021 triangles, down from 754 and 1,046: the bespoke sphere
+  // was 26 verts and 48 triangles, and `box-09` costs 16 and 23. The WELD is what
+  // keeps twenty spikes inside rule 9's vertex budget at all: unwelded they are
+  // 20 x 68 = 1,360 on their own, against a measured body ceiling of 1,114.
+  verts: 744,
+  tris: 1021,
   // TRIANGLES ARE OVER, DELIBERATELY, AND THIS IS THE RECORD OF IT. The pack
   // measures 422-951 per model; twenty spikes at 34 triangles each is 680 and the
-  // animal comes to 1,046. No pack animal wears twenty protrusions, so the
+  // animal comes to 1,021. No pack animal wears twenty protrusions, so the
   // envelope is the one Joe's count leaves. Pinned exactly rather than relaxed,
   // so a further regression is still red, and named in the species' `flag` so he
   // sees it in the viewer rather than in a test file.
@@ -296,31 +306,17 @@ describe('a hull is the standard size, and there is no dial that says otherwise'
 
 /* -------------------------------------------------------------- lineage --- */
 
-describe('nothing in the hedgehog is authored except the one thing Joe asked for', () => {
-  it('builds the authored sphere at the authored radius, to its own count', () => {
-    // `assertAssembly` has already checked that this is the ONLY shape on the
-    // animal the bank cannot account for, that it is in `authored.ts`, that it
-    // has no donor and that it never leaked into `PARTS_BANK`. What is left is
-    // the geometry itself.
-    const g = build()
-    const m = named(g, 'nose-tip')[0]!
-    const p = authoredById(m.userData['part'] as string)!
-    // Not `fingerprint` here: a sphere's every vertex is the same distance from
-    // its centre, so the fingerprint is one value repeated and float32 storage
-    // puts a 0.0625 radius exactly on the snapping boundary. The direct check is
-    // both stronger and stable — every built vertex is on the authored radius,
-    // and the count is the authored count.
-    const built = posOf(m)
-    expect(built, m.name).toHaveLength(p.verts)
-    // The geometry is origin-centred, so distance from zero IS the radius.
-    for (const q of built) {
-      expect(Math.hypot(q[0], q[1], q[2])).toBeCloseTo(p.size[0] / 2, 5)
-    }
-    // And the flag names it, in Joe's own words, where he reads them.
-    expect(HEDGEHOG_ASSEMBLY.flag).toMatch(/RULE 1 OVERRULED, BY JOE/)
-    expect(HEDGEHOG_ASSEMBLY.flag).toMatch(/AUTHORED/)
-  })
-
+/*
+ * `builds the authored sphere at the authored radius, to its own count` lived
+ * here and is DELETED, not repaired. It pinned the one bespoke shape this method
+ * ever put on a shipped animal, and Joe took that shape off the animal himself on
+ * 2 August. A test whose subject the author has withdrawn is not a test with a
+ * stale number in it. The sphere's own geometry is still pinned — it still exists
+ * in `authored.ts` and is still selectable in the editor — in
+ * `tests/island/authored-primitives.test.ts`, which is where a test of a part no
+ * species wears belongs.
+ */
+describe('nothing in the hedgehog is authored at all, and the bank stays sealed', () => {
   it('keeps authored geometry out of every search, so nobody finds it by accident', () => {
     // Rule 1 is adapt-before-author. A `bespoke-*` shape that turned up in a
     // query result would let the next species author its way past rule 1 without
@@ -467,7 +463,102 @@ describe('the nose is higher, and the height is derived (Joe, 16:53)', () => {
   })
 })
 
-describe('the nose tip is a BESPOKE SPHERE, because Joe overruled rule 1', () => {
+/*
+ * THE BESPOKE SPHERE BLOCK LIVED HERE AND IS DELETED, NOT REPAIRED.
+ *
+ * `the nose tip is a BESPOKE SPHERE, because Joe overruled rule 1` pinned three
+ * things: that the tip was `bespoke-sphere-01`, that its centre sat on the
+ * snout's own measured apex at `sink: 0.5`, and that it was pink. On 2 August Joe
+ * changed the nose from the editor and pushed it into the game, and the answer he
+ * gave when asked whether the sphere had gone by accident was *"yes, i changed
+ * the nose to something more fitting."* So the decision those tests existed to
+ * hold down was overturned by the person who took it, and a test in that position
+ * is not a test with a stale number in it — there is nothing left for it to
+ * guard. Bending them into assertions about `box-09` would have kept the names
+ * and lost the meaning.
+ *
+ * Nothing below asserts the ABSENCE of a sphere. `assertAssembly` pins the
+ * animal's bespoke set as empty (no `authored` claim at the top of this file),
+ * and what follows says what IS on the nose. The sphere itself still exists in
+ * `authored.ts` and its geometry is still pinned, in
+ * `tests/island/authored-primitives.test.ts` — it is Joe's part to retire, not a
+ * test's.
+ */
+describe('the nose tip is box-09, the bunny\'s own nose (Joe, 2 August, from the editor)', () => {
+  it('wears a real bank part in the nose role, so rule 1 needs no exception now', () => {
+    // The whole weight of this block. The tip used to be the ONE shape in this
+    // method the pack did not give us; it is now a part the pack filed as a NOSE
+    // and shipped on a real animal. Rule 1 is adapt-before-author, and this is
+    // the adapt — arrived at by Joe in the editor rather than by a query.
+    const g = build()
+    const tip = named(g, 'box-09')[0]!
+    expect(tip.userData['part']).toBe('box-09')
+    const p = partById('box-09')!
+    expect(p.roles).toContain('nose')
+    expect(p.provenance.map(q => q.species)).toEqual(['bunny'])
+    // Bank, not authored set — the two are disjoint and this one is on the bank
+    // side of the line, which is why the animal now carries no `flag` exception.
+    expect(authoredById('box-09')).toBeUndefined()
+    expect(HEDGEHOG_ASSEMBLY.features.some(f => f.part === 'bespoke-sphere-01')).toBe(false)
+  })
+
+  it('is the bunny\'s geometry unaltered — no stretch, no spin, no re-cut', () => {
+    const g = build()
+    const tip = named(g, 'box-09')[0]!
+    // Rotation-invariant, so it holds without consulting the declared placement:
+    // whatever the builder did to site it, it did not deform it.
+    expect(fingerprint(posOf(tip))).toEqual(fingerprint(referenced(partById('box-09')!)))
+    expect(tip.userData['stretch']).toEqual([1, 1, 1])
+    expect(tip.userData['spin']).toEqual([])
+    expect(tip.userData['mirror']).toBe(false)
+  })
+
+  it('is buried by the pack\'s own recorded burial for the shape, which is none', () => {
+    // `box-09`'s measured `sunkFraction` is 0.000 on all three of min, mean and
+    // max — the bunny joins this part flush to its face and buries nothing of it.
+    // The hedgehog does the same, so the sink is the pack's number and not a
+    // preference. That is the derivation §3's "nothing floats" is checked against
+    // below rather than a licence to skip it.
+    const p = partById('box-09')!
+    expect(p.attachment!.axis).toBe('z')
+    expect(p.attachment!.dir).toBe(1)
+    expect(p.attachment!.sunkFractionMean).toBe(0)
+    const g = build()
+    expect(named(g, 'box-09')[0]!.userData['sink']).toBe(p.attachment!.sunkFractionMean)
+  })
+
+  it('stands proud of the snout without floating off it (§3)', () => {
+    const g = build()
+    const tip = worldBox(named(g, 'box-09')[0]!)
+    const snout = worldBox(named(g, 'snout')[0]!)
+    // Measured, not asserted from the spec: the tip's front face reaches beyond
+    // the beak's apex, so it reads as a nose tip and not as a decal...
+    expect(tip.max.z).toBeGreaterThan(snout.max.z)
+    // ...and its back face is still inside the beak, so there is no gap. The
+    // sphere managed this with `sink: 0.5` on a bbox-centred shape; a flush box
+    // manages it because Joe sited it 0.046 back from the apex by hand.
+    expect(tip.min.z).toBeLessThan(snout.max.z)
+    expect(tip.min.z).toBeGreaterThan(snout.min.z)
+    // On the midline, like every feature that is not a pair.
+    expect(world(named(g, 'box-09')[0]!).x).toBeCloseTo(0, 9)
+  })
+
+  it('is the SAME TAN as the coat, and that is Joe\'s answer, not a mistake', () => {
+    // THIS TEST EXISTS TO STOP SOMEBODY "FIXING" IT. The old tip was pink
+    // (0xe792bd) and the new slot is byte-identical to `coat`, which from inside
+    // the code is indistinguishable from a palette entry someone forgot to fill
+    // in. Asked directly whether that was intended, Joe said: *"yes i have used
+    // the same colour."* So the hedgehog's nose is deliberately the same tan as
+    // its face, and this equality is the pin on that.
+    expect(HEDGEHOG_ASSEMBLY.palette['box-09']).toBe(0xb2946c)
+    expect(HEDGEHOG_ASSEMBLY.palette['box-09']).toBe(HEDGEHOG_ASSEMBLY.palette['coat'])
+    // And it is a texture lookup, never a material tint: one material, one map.
+    const g = build()
+    const tipMat = (named(g, 'box-09')[0]!.material as THREE.MeshStandardMaterial)
+    expect(tipMat).toBe(g.getObjectByName('hull')!['material' as never])
+    expect(tipMat.color.getHex()).toBe(0xffffff)
+  })
+
   it('records why the bank\'s own answer was rejected, so nobody re-runs it', () => {
     // The query was right on every axis it has and the part still reads as a
     // TONGUE. This assertion is the record of that, and it is what stops the
@@ -487,66 +578,6 @@ describe('the nose tip is a BESPOKE SPHERE, because Joe overruled rule 1', () =>
     expect(HEDGEHOG_ASSEMBLY.flag).toMatch(/tongue/i)
   })
 
-  it('is a real sphere, generated rather than typed, and small', () => {
-    const s = authoredById('bespoke-sphere-01')!
-    // Round to a thousandth on all three axes, and every vertex the same
-    // distance from the centre — which is what makes it a sphere rather than a
-    // blob somebody typed.
-    expect(s.size[0]).toBeCloseTo(0.125, 3)
-    expect(s.size[1]).toBeCloseTo(0.125, 3)
-    expect(s.size[2]).toBeCloseTo(0.125, 3)
-    const radii = new Set(referenced(s).map(p => Math.hypot(p[0], p[1], p[2]).toFixed(6)))
-    expect(radii.size).toBe(1)
-    expect(Number([...radii][0])).toBeCloseTo(0.0625, 6)
-    // Smooth-shaded on exact normals (rule 7): a sphere's normal IS its point
-    // over its radius, so no normal is averaged and no corner is split.
-    for (let i = 0; i < s.positions.length; i += 3) {
-      for (let c = 0; c < 3; c++) {
-        expect(s.normals[i + c]).toBeCloseTo(s.positions[i + c]! / 0.0625, 6)
-      }
-    }
-    // 2/16 on the pack's grid, and under its own smallest solid nose-tips.
-    expect(s.size[1] * 16).toBeCloseTo(2, 6)
-    expect(s.size[1]).toBeLessThan(partById('box-09')!.size[1])
-    expect(s.size[1]).toBeLessThan(partById('box-22')!.size[1])
-    expect(s.tris).toBe(48)
-    expect(s.verts).toBe(26)
-  })
-
-  it('sits with its CENTRE on the snout\'s own measured apex', () => {
-    const g = build()
-    const tip = named(g, 'nose-tip')[0]!
-    const snout = named(g, 'snout')[0]!
-    expect(tip.userData['part']).toBe('bespoke-sphere-01')
-    // The apex of `cone-06` is its front-most welded point, measured at local
-    // (0, +0.1122, +0.1434) off the bank's own numbers.
-    const beak = partById('cone-06')!
-    let apex: P3 = [0, 0, -Infinity]
-    for (const p of referenced(beak)) if (p[2] > apex[2]) apex = p
-    expect(world(tip).y).toBeCloseTo(world(snout).y + apex[1], 3)
-    // `sink: 0.5` on a bbox-centred shape puts the centre ON the join point, so
-    // exactly half stands proud. For a sphere that is the one placement that
-    // needs no number, and this is it measured rather than asserted.
-    const j = tip.userData['joinedAt'] as [number, number, number]
-    expect(tip.position.z).toBeCloseTo(j[2], 9)
-    expect(worldBox(tip).max.z).toBeGreaterThan(worldBox(snout).max.z)
-    // Nothing floats (§3): the back half is inside the snout.
-    expect(worldBox(tip).min.z).toBeLessThan(worldBox(snout).max.z)
-  })
-
-  it('is PINK by texture lookup, and the pink is the pack\'s own (rule 8)', () => {
-    const pink = HEDGEHOG_ASSEMBLY.palette['nose']!
-    const [r, gc, b] = [(pink >> 16) & 255, (pink >> 8) & 255, pink & 255]
-    // Red-dominant, blue above green: a pink, not a red and not a mauve.
-    expect(r).toBeGreaterThan(b)
-    expect(b).toBeGreaterThan(gc)
-    expect(pink).toBe(0xe792bd)
-    // And it is a texture lookup, never a material tint: one material, one map.
-    const g = build()
-    const tipMat = (named(g, 'nose-tip')[0]!.material as THREE.MeshStandardMaterial)
-    expect(tipMat).toBe(g.getObjectByName('hull')!['material' as never])
-    expect(tipMat.color.getHex()).toBe(0xffffff)
-  })
 })
 
 /* ------------------------------------------------------ repeat-and-sink --- */

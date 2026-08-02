@@ -160,8 +160,25 @@
  *     it. §8 gives no derivable y, which is exactly why it comes from the one
  *     donor that wears this exact part on this exact hull.
  *
- *   - **The nose tip is AUTHORED, and it is the first thing this method has ever
- *     authored.** Joe first asked for "a pink pointy element to the nose. small
+ *   - **THE NOSE TIP — READ THIS FIRST, THE REST OF THIS BULLET IS HISTORY.** On
+ *     **2 August** Joe changed this nose himself, in the editor, and pushed it
+ *     into the game (`382e9a9`, the first animal ever to make that trip). The tip
+ *     is now **`box-09`, the bunny's own nose** from the pack, at `[0, 0.775,
+ *     0.7625]`, painted from a slot of its own that is byte-identical to `coat`.
+ *     Both halves of that were confirmed by him in his own words — *"yes, i
+ *     changed the nose to something more fitting"* and, on the colour, *"yes i
+ *     have used the same colour."* **So there is no authored geometry on this
+ *     animal at all, and rule 1 needs no exception here.**
+ *
+ *     Everything below in this bullet describes the animal from 29 July to 2
+ *     August. It is kept because it is the reason the hedgehog looked as it did
+ *     and because a ruling of Joe's is not deleted quietly — but it is
+ *     SUPERSEDED, by him, and it is not a description of the code beneath it.
+ *     `box-09` costs 23 triangles and 16 welded vertices against the sphere's 48
+ *     and 26, which is where 25 triangles of the creature's count went.
+ *
+ *   - **The nose tip WAS AUTHORED, and it was the first thing this method ever
+ *     authored.** *(Superseded 2 August — see above.)* Joe first asked for "a pink pointy element to the nose. small
  *     sphere will do", and the bank answered: `findShapes({ maxLongest: 0.22 })`
  *     — a size window, no name, no role, no form — returned ten shapes, of which
  *     `wedge-10` is the dog's and monkey's **nose-tip**, 0.120 x 0.108 x 0.164,
@@ -215,6 +232,17 @@
  *     record** in `collections/garden.ts` — "Buff face, dark spines" — plus the
  *     measured pupil and the measured nose pink. Nothing here is a new colour.
  *
+ *     **`nose: 0xe792bd` IS NOW ORPHANED and is retained on purpose.** Nothing
+ *     paints it since 2 August; the slot it served went with the sphere. It costs
+ *     one atlas row. It is left in place because REMOVING A SLOT IS NOT A FREE
+ *     EDIT — insertion order IS the atlas layout (`assembly.ts:504` takes
+ *     `Object.keys(spec.palette)`, `texture.ts:167` puts slot `i` of `n` at
+ *     `(i + 0.5) / n`), so dropping `nose` moves every UV on the animal. Measured
+ *     for THIS species: no rendered colour would change, because the name-to-row
+ *     map is rebuilt from this same object in the same call that bakes the
+ *     texture (`assembly.ts:361`), so it is safe here — but it is Joe's slot and
+ *     his call whether it goes.
+ *
  * Result: 1.707 tall, feet on zero, inside the pack's measured 1.43-2.02.
  */
 import { defineCreature } from '../creature'
@@ -227,7 +255,7 @@ export const HEDGEHOG_ASSEMBLY = defineCreature('animal-hedgehog', {
     limb: 0x6b533a,
     eye: 0xf4e6cc,
     pupil: PACK_PUPIL,  // the pack's own measured pupil; see texture.ts
-    nose: 0xe792bd,
+    nose: 0xe792bd,  // ORPHANED since 2 Aug and kept on purpose; see the prose above
     'box-09': 0xb2946c,
   },
 
@@ -235,17 +263,28 @@ export const HEDGEHOG_ASSEMBLY = defineCreature('animal-hedgehog', {
   snout: { part: 'cone-06', paint: { base: 'limb', byBand: { 15: 'spine' } } },
   ridge: { part: 'cone-01', paint: 'spine', count: 4, spin: [{ axis: 'y', deg: 180 }] },
   extras: [{ part: 'box-09', name: 'box-09', at: [0, 0.775, 0.7625], paint: 'box-09' }],
-  flag: 'RULE 1 OVERRULED, BY JOE: the nose is AUTHORED geometry — a bespoke 0.125 '
-    + 'sphere, the only shape in this method the pack did not give us. His words, 29 '
+  flag: 'THE NOSE TIP IS box-09, THE BUNNY\'S OWN NOSE, and JOE PUT IT THERE — on 2 '
+    + 'August, in the editor, and pushed it into the game. Asked whether the sphere '
+    + 'that used to be here had gone by accident: "yes, i changed the nose to something '
+    + 'more fitting." Asked whether the new colour was meant to be byte-identical to '
+    + 'the coat: "yes i have used the same colour." So the nose is DELIBERATELY the '
+    + 'same tan as the face. Do not repaint it pink and do not restore the sphere. '
+    + 'Nothing on this animal is authored any more, and rule 1 needs no exception here. '
+    + 'HISTORY, SUPERSEDED BY THE ABOVE — from 29 July to 2 August this tip WAS '
+    + 'authored geometry, a bespoke 0.125 sphere, the only shape this method ever put '
+    + 'on a shipped animal that the pack did not give us, because Joe overruled rule 1 '
+    + 'for it having seen the bank\'s own answer. His words, 29 '
     + 'July: "all good but the pink tongue as the nose. create a bespoke sphere for '
-    + 'that." The bank\'s own answer was wedge-10, the dog and monkey nose-tip, right '
+    + 'that." The bank had returned wedge-10, the dog and monkey nose-tip, the right '
     + 'size and measurably the right pink — and it reads as a TONGUE, which no '
-    + 'measurement catches. See authored.ts. Spines are cone-01 — the bee and '
+    + 'measurement catches. That ruling is why the animal looked as it did, and it was '
+    + 'overturned by its own author, not by us. The sphere still exists in authored.ts '
+    + 'and no species wears it. Spines are cone-01 — the bee and '
     + 'caterpillar antenna — not the hog ear. The query returns the hog ear and the hog '
     + 'tusk too; the measurements chose against both. cone-01 tapers to a true point, '
     + 'stands 0.400 tall and costs 34 triangles against the hog ear\'s 62. Joe\'s call to '
     + 'overturn. RULE 9 STRAINED: twenty spikes is 680 triangles, and the whole animal '
-    + 'comes to 1,046 against the pack\'s measured 422-951. Rule 9\'s own budget is '
+    + 'comes to 1,021 against the pack\'s measured 422-951. Rule 9\'s own budget is '
     + 'vertices and this is well inside it; no pack animal wears twenty protrusions, so '
     + 'the triangle envelope is the one Joe\'s count leaves.',
 })

@@ -294,6 +294,42 @@ describe('the three rules authored.ts lives under still hold', () => {
     expect(sphere.shape.taper).toBe(0)
   })
 
+  /*
+   * REHOMED FROM `tests/island/assembly-hedgehog.test.ts`, 2 August.
+   *
+   * This was `is a real sphere, generated rather than typed, and small` and it
+   * lived in the hedgehog's file because the hedgehog was the only species that
+   * ever wore `bespoke-sphere-01`. Joe took it off the hedgehog from the editor,
+   * so NO species wears it now — but the part still exists, is still registered
+   * in `AUTHORED_PARTS`, and is still a selectable row in his editor's shape
+   * library. Retiring it is his call and not a test's, so the pin moves here
+   * rather than dying with the block that described the nose it used to be.
+   */
+  it('keeps the sphere a real sphere, generated rather than typed, and small', () => {
+    const s = AUTHORED_PARTS.find(p => p.id === 'bespoke-sphere-01')!
+    // Round to a thousandth on all three axes, and every vertex the same
+    // distance from the centre — which is what makes it a sphere rather than a
+    // blob somebody typed.
+    expect(s.size[0]).toBeCloseTo(0.125, 3)
+    expect(s.size[1]).toBeCloseTo(0.125, 3)
+    expect(s.size[2]).toBeCloseTo(0.125, 3)
+    const radii = new Set(vertsOf(s).map(p => Math.hypot(p[0], p[1], p[2]).toFixed(6)))
+    expect(radii.size).toBe(1)
+    expect(Number([...radii][0])).toBeCloseTo(0.0625, 6)
+    // Smooth-shaded on exact normals (rule 7): a sphere's normal IS its point
+    // over its radius, so no normal is averaged and no corner is split.
+    for (let i = 0; i < s.positions.length; i += 3) {
+      for (let c = 0; c < 3; c++) {
+        expect(s.normals[i + c]).toBeCloseTo(s.positions[i + c]! / 0.0625, 6)
+      }
+    }
+    // 2/16 on the pack's grid, and under its own smallest solid nose-tips —
+    // including `box-09`, which is the part that has now replaced it.
+    expect(s.size[1] * 16).toBeCloseTo(2, 6)
+    expect(s.size[1]).toBeLessThan(partById('box-09')!.size[1])
+    expect(s.size[1]).toBeLessThan(partById('box-22')!.size[1])
+  })
+
   it('declares its attachment rather than measuring one, and says so in the numbers', () => {
     for (const id of PRIMITIVE_IDS) {
       const p = AUTHORED_PARTS.find(q => q.id === id)!
