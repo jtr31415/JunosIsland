@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "nextId": 61,
+  "nextId": 62,
   "cards": [
     {
       "id": "PB-001",
@@ -197,8 +197,8 @@
     {
       "id": "PB-028",
       "title": "The splice law has not reached the voice",
-      "detail": "Amended brief §3 rewrites opening beats 6 and 7. The text half folds into item 11 (PB-020); the voice half needs this bake pipeline and Joe's key.",
-      "state": "open",
+      "detail": "Amended brief §3 rewrites opening beats 6 and 7. The text half folds into item 11 (PB-020); the voice half needs this bake pipeline and Joe's key. DONE 2 Aug 2026, and the card was WRONG about its own blocker: it said the voice half needed \"this bake pipeline and Joe’s key\". The key had been in .env and live all along. What was missing was that bake.mjs had no consumer for voice/scripts.json at all — it read lessons only — which is why no audio had ever shipped. Both halves now exist: 41 Fred clips baked as en-GB-OliverNeural, and a player that reaches them. 11 of Fred’s 17 utterances play as Oliver; the other 6 fall back to speechSynthesis because the code still puts a dynamic name inside his sentence, which is PB-020/item 11’s job. Teacher, challenge words and pet names are untouched and unbaked.",
+      "state": "done",
       "run": ""
     },
     {
@@ -400,8 +400,8 @@
     },
     {
       "title": "Gender in the game",
-      "detail": "Make it gender agnostic - users (children) should be referred to as \"they\". Fred stays male, other animals have no gender, teacher has a female voice but otherwise their gender is irrelevant. the owl later shall be female, if we ever use her",
-      "state": "open",
+      "detail": "Make it gender agnostic - users (children) should be referred to as \"they\". Fred stays male, other animals have no gender, teacher has a female voice but otherwise their gender is irrelevant. the owl later shall be female, if we ever use her DONE 2 Aug 2026. Only SIX gendered strings were ever visible to a human, all in the grown-ups panel, none child-facing. The spoken script needed nothing at all — the splice law had already got there — proved by diffing all 17 spoken text fields and finding them byte-identical, so this card was never blocked on the Azure key despite looking like it was. The real defect was prose: 1,621 gendered lines across 123 files down to 52 across 18, every survivor deliberate (34 are verbatim Joe quotations, left exactly as he said them). The deliverable is tests/copy/pronouns.test.ts, which scans every string literal in src/ and immediately earned its keep: PB-047 had shipped TWELVE new gendered strings into the wipe screen while this branch was being written, and the guard went red naming each one.",
+      "state": "done",
       "run": "",
       "id": "PB-056"
     },
@@ -431,6 +431,13 @@
       "id": "PB-060",
       "title": "A task can be ticked done while its own check is red — voicesCast has never run",
       "detail": "JT-003 was marked done with all three voices still cast:false, and joe/voices.json kept placeholder Ryan/Sonia while Joe's actual casting (oliver/olivia/thomas) sat only in the task's note field. Cause: checks.mjs:16 early-returns {ok:true} for any doneRule that is not 'artefact', and JT-003 is 'manual'. JT-003 is voicesCast's ONLY user, so that validator has never executed once. Proved by running it both ways against the old file: as declared it returns ok:true; as 'artefact' it returns 'still on placeholder voices: fred, teacher, owl'. Two ways out and it is a design call: flip JT-003 to 'artefact', or let checkTask run validators for manual tasks in warn-only mode, which matches the file's stated design that the Done button warns and never refuses. voices.json is already corrected; this card is about the hole, not the data. Second hole, found separately and worth fixing at the same time: even if voicesCast did run, it only tests the cast boolean — it never compares joe/voices.json against the ruling written in the task note, which is where the oliver/olivia/thomas casting actually lived. A check that asks \"did someone tick a box\" cannot catch \"the box was ticked and the file was never written\".",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-061",
+      "title": "Fred’s mouth and the hatch ceremony still guess at timings that are now known",
+      "detail": "Fred’s jaw-flap is driven by text length (main.ts:1757, main.ts:1584) and the hatch ceremony’s follow-ups are wall-clock, both because nothing knew how long a line actually lasted. The manifest now carries a measured ms for every clip, read from the Opus granule rather than estimated, so both could be driven by real duration. For the 6 lines still on speechSynthesis there is no duration to read, so whatever replaces the guess has to keep the guess as its fallback rather than assume a clip exists.",
       "state": "open",
       "run": ""
     }
