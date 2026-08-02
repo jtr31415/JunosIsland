@@ -592,8 +592,8 @@
       "id": "PB-083",
       "title": "Three more places still count the roster where they now mean the built animals",
       "detail": "The album was fixed to show a frame only for a species somebody has built (species/built.ts, one predicate). Three siblings were deliberately left alone. unlock.ts:292 completion() still divides by the roster, so Night Time is \"13 of 13\" in the album and 81% to the unlocker and the next collection never arrives — that one is a ruling, JT-047. unlock.ts's NOT_BUILT_YET is still a hand-written list where built.ts is now derivable, and it cannot import it because unlock.ts is deliberately three.js-free. Two headers are also stale: collections/africa.ts says \"ships PARTIAL, FOURTEEN of sixteen\" when it is one, and unlock.ts's fillToCap note says the pool is six collections wide when it is four.",
-      "state": "open",
-      "run": ""
+      "state": "done",
+      "run": "64ca164"
     }
   ]
 }
