@@ -97,17 +97,21 @@ describe('the species registry', () => {
     // wants a clean baseline to rebuild from on the assembly route. Every
     // survivor below is hand-assembled, except `base`, which is Kenney's own
     // pack and was never ours.
-    expect(REGISTRY.size).toBe(54)
+    // AND THEN IT WENT BACK UP, which is what the baseline was for. PB-073 built
+    // Home Pets' fourteen missing species by hand assembly, one per commit, so
+    // this collection is 16 of 16 again — this time every member assembled and
+    // not one of them spent by a kit. 54 + 14 = 68.
+    expect(REGISTRY.size).toBe(68)
     expect(shippedIn('base')).toHaveLength(24)
     expect(shippedIn('garden')).toHaveLength(14)      // COMPLETE — the slow worm is assembled
-    expect(shippedIn('home-pets')).toHaveLength(2)    // corn snake + goldfish; 14 kit-built deleted
+    expect(shippedIn('home-pets')).toHaveLength(16)   // COMPLETE — all 16 hand-assembled (PB-073)
     expect(shippedIn('woodland')).toHaveLength(0)     // all 16 were kit-built
     expect(shippedIn('africa')).toHaveLength(1)       // crocodile; 13 kit-built deleted
     expect(shippedIn('farm')).toHaveLength(0)         // all 16 were kit-built
     expect(shippedIn('night-time')).toHaveLength(13)  // 16 rostered; bat, sugar glider, scorpion
   })
 
-  it('leaves 266 species rostered but unshipped, on purpose', () => {
+  it('leaves 252 species rostered but unshipped, on purpose', () => {
     // The gap is the point. Nobody should "finish" the registry — a species
     // without a built kit renders as nothing, which is worse than absent.
     //
@@ -129,12 +133,17 @@ describe('the species registry', () => {
     // dispatched in parallel, it built thirteen in a single run — which is why
     // this is the first drop of more than four in the assembly era, and why the
     // remaining 207 are a schedule rather than a wall.
+    // 252 since 3 Aug, and the −14 is HOME PETS, built the same way Night Time
+    // was: measured once for the whole collection, then dispatched one species
+    // per worker in parallel. That is now twice, so it is a method rather than a
+    // fluke — the wall is a schedule, and the schedule is roughly a collection
+    // per run.
     const rostered = COLLECTIONS.flatMap(c => c.members)
     expect(rostered).toHaveLength(320)
-    expect(rostered.filter(id => !speciesRecord(id))).toHaveLength(266)
+    expect(rostered.filter(id => !speciesRecord(id))).toHaveLength(252)
   })
 
-  it('has ONE complete collection — garden, the only one built the way Joe wanted', () => {
+  it('has TWO complete collections — garden, and home-pets rebuilt properly', () => {
     // This test used to assert ZERO, and said in its own comment: "if this test
     // ever goes red, a second kit landed and that question became live." That
     // is exactly what happened, so it is inverted rather than deleted — the
@@ -184,11 +193,26 @@ describe('the species registry', () => {
     // GARDEN IS THE ONE THAT SURVIVED, and it survived because it is the only
     // collection built the way he wanted in the first place. That is the whole
     // lesson of the day in one array.
+    // AND NOW THERE ARE TWO, which is the same assertion inverted a third time
+    // and is worth keeping for that reason alone. HOME PETS IS BACK, and the
+    // distinction the paragraph above draws is exactly what makes it a different
+    // event from the first time: it was complete once because a kit had finished
+    // spending itself on it, and it is complete now because fourteen animals were
+    // each measured, argued and built one at a time (PB-073).
+    //
+    // So the array is no longer a count of finished collections, it is a list of
+    // collections built the way Joe wanted. That is the only sense in which this
+    // number has ever meant anything, and the second entry is the first evidence
+    // that the first one was repeatable.
+    //
+    // NOTE both are UNSIGNED beyond Garden: completeness here means every
+    // rostered member has a record, not that Joe has approved them. He signs off
+    // in the editor and that gate is his alone.
     const complete = COLLECTIONS
       .filter(c => c.id !== 'base')
       .filter(c => c.members.every(id => speciesRecord(id)))
       .map(c => c.id)
-    expect([...complete].sort()).toEqual(['garden'])
+    expect([...complete].sort()).toEqual(['garden', 'home-pets'])
   })
 
   it('names the seven base animals roster §5 gives a threat badge', () => {

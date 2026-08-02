@@ -607,6 +607,21 @@
       "check": "",
       "note": "",
       "state": "open"
+    },
+    {
+      "id": "JT-046",
+      "type": "ruling",
+      "title": "JT-040 now governs fourteen animals, not one — do these substitutions read? (PB-073) [raised as JT-045 in its commits; that id was taken, so this is JT-046]",
+      "detail": "JT-040 asked whether the LION'S TAIL reads as the goldfish's fin, and it is still open. That question is no longer about one fish. JT-043 told builders to improvise a missing part by sizing and rotation rather than stop, and fourteen Home Pets animals have now been built on exactly that licence, so JT-040's answer is the answer for all of them. Rather than ask again, here is the whole list to judge at once, worst-first — every one is a bank part worn as something it was not: (1) THE WING, box-06, the BUNNY'S EAR laid along the flank and sunk 8/16, on the budgie and the cockatiel, and the canary and lovebird will copy it — the bank has no wing shape at all, and it is solid rather than a flat card because the island camera looks DOWN and a zero-thickness wing is edge-on and gone; (2) THE MANE, a bespoke-square-01 re-cut to 0.125 x 0.500 x 0.625 standing along the pony's crest, plus a second as a forelock turned onto the chamfer — a ridge cannot wear a primitive (PB-077) so it is hand-sited; (3) THE CREST, cone-01, the BEE'S ANTENNA, standing on the cockatiel's crown — one of only two shapes in the bank with taper 0, the other being the beak; (4) THE NECK, box-18, the ELEPHANT'S TRUNK worn forwards and unspun on the terrapin, the same shape the tortoise wears spun 180 as a stub tail; (5) THE SHELL, box-11, the CATERPILLAR'S body segment laid flat as the terrapin's carapace; (6) THE GECKO'S SMILE, two plate-03 mouth cards mirrored and abutted at the midline to make one line 37.9% of the head wide; (7) THE TUBERCLES, box-08, the BUNNY'S MUZZLE, nine of them along the gecko's back. If the class reads, Farm's sixteen can be built the same way immediately. If it does not, the ones you reject should be named individually, because they are independent choices and only some of them are likely to be wrong.",
+      "blocks": [
+        "PB-073",
+        "PB-074"
+      ],
+      "artefact": "src/island/species/parts/assembled/",
+      "doneRule": "manual",
+      "check": "",
+      "note": "",
+      "state": "open"
     }
   ],
   "archive": []

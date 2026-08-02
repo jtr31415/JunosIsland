@@ -1,5 +1,164 @@
 # Manager handoff
 
+> ## ⚠ START HERE — state at handover, 3 Aug 2026 (early hours)
+>
+> *Written by the manager that built Home Pets. **This block is the current one.**
+> Everything below it is history, including the two that call themselves current
+> — they were, last night.*
+>
+> ### What this run did
+>
+> **PB-073 is DONE: Home Pets is 16 of 16**, and every member is hand-assembled.
+> Fourteen species built, one commit each. Branch
+> **`worktree-agent-a9e00de76daaef78b`**, branched at `ce919c2`. **Nothing is
+> pushed and nothing is merged** — that is the drumbeat's job.
+>
+> hamster · guinea pig · budgie · gerbil · pony · ferret · gecko · chinchilla ·
+> canary · cockatiel · terrapin · rat · lovebird · degu
+>
+> **All five gates green on the final tree**, working tree clean:
+> `npm test` **3861 passed / 165 files** (baseline was 3362 / 151) · `tsc` **0
+> errors** · `build` OK · `smoke` "all boot checks passed" · `parity` "every step
+> renders identically".
+>
+> ### DO THIS FIRST: get JT-045 answered, before building Farm
+>
+> **JT-040 — "does the lion's tail read as a goldfish's fin?" — is still OPEN.**
+> My brief told me it was Joe's own settled precedent. It is not; he was asked and
+> has not answered. Fourteen animals are now built on that licence and Farm would
+> be sixteen more.
+>
+> **JT-045** puts the whole class in front of him at once, worst-first, so one
+> answer settles all of it: the WING that is the bunny's ear (`box-06`, all four
+> cage birds), the MANE that is a re-cut primitive, the CREST that is the bee's
+> antenna, the NECK that is the elephant's trunk worn forwards, the SHELL that is
+> the caterpillar's body segment, the gecko's SMILE of two mouth cards abutted,
+> and nine TUBERCLES that are the bunny's muzzle. It asks him to name individually
+> any he rejects, because they are independent choices.
+>
+> Building Farm before that answer risks doing sixteen animals twice.
+>
+> ### A LIVE DEFECT ON TWO SIGNED-OFF ANIMALS — PB-075
+>
+> **`box-31` is an OPEN SHELL.** Four of its 77 edges are used by one triangle,
+> forming a **1.000 x 1.000 aperture in the FRONT of the head** where the lion's
+> `blade-05` plate belongs. The material is `THREE.FrontSide`
+> (`assembly.ts:509-511` never sets `side`), so it is **see-through to the sky**.
+>
+> In the album portrait (6.4 degrees elevation, 32.4 yaw — the picture a child
+> looks at) **27.2% of the shrew and 30.9% of the newt is background.** The frog
+> is safe; it already wears `blade-05`. The terrapin was fixed the same way this
+> run for eighteen triangles.
+>
+> **I did not touch the shrew or the newt.** They are signed off, and changing a
+> signed-off animal is Joe's call. The fix is known and costs 18 triangles.
+>
+> Why nothing caught it: `assembly-assert.ts` reads bounding boxes, matches
+> vertices against the bank, and counts triangles. The hull IS a faithful
+> `box-31`, hole and all, so a missing face moves none of the three, and
+> `groupFingerprint` froze the hole rather than reporting it. **The suite checks
+> that a thing is where it was put, never that it can be seen** — the same
+> blindness as the mouth that z-fought into invisibility for weeks. A sweep found
+> this is the only hull in the pack that renders a hole; 55 of 94 bank parts have
+> open edges, so open edges are not the signal, an EXPOSED one is.
+>
+> ### Bounding boxes lie on this pack — it cost three builders real time
+>
+> **A hull's bounding box is not its surface.** Measured this run:
+> - **`box-41`'s FRONT** — its 0.725 belongs only to a muzzle boss spanning
+>   |x| <= 0.200. Three builders refused the hull believing eye cards would sit
+>   0.090 inside the head; they land on the flat plate behind it at 0.625,
+>   clearing by exactly `CARD_STANDOFF`. Pinned in `assembly-guinea-pig.test.ts`.
+> - **`box-41`'s SIDES** — reaches 0.675 only on two pads; the flank is 0.625.
+> - **`box-41`'s CROWN** — 1.43125 on the midline but 1.48125 over two pads at
+>   |z| 0.20-0.25, so a back card at 1.44125 buries from |z| 0.07 out.
+> - **`box-21` is NOT "TALLER, and nothing else"** as `hulls.ts:189` claims. Below
+>   local y +0.4975 it IS the cube; above are two LUGS at |x| 0.218-0.454 — the
+>   fox's ears, exactly what `box-12` was for the badger. That is **PB-076**.
+> - Useful the other way: **`box-41`'s six flat plates ARE `box-03`'s six flat
+>   plates** at identical world coordinates, so joins transfer between them.
+>
+> ### What Farm can take straight off the shelf
+>
+> - **HOOVES (JT-044) are built.** `animal-pony.ts` is the precedent and
+>   `assembly-pony.test.ts` is the documentation. `at: 0.25` is derived, not
+>   preferred: `box-01`'s foot bevel is 0.0625 tall and it reaches full width at
+>   0.204082 of its height, so 3/16 lands inside the bevel and 4/16 clears it by
+>   0.014 onto the straight shank. **Caveat:** `patchUv`'s half-texel end clamp
+>   puts the DRAWN boundary at 0.07712 against the ideal 0.076563. Recognise it.
+> - **It is also right to REFUSE a two-tone leg.** The ferret declined with
+>   arithmetic — a sable ferret's leg carries no boundary, so any stocking the
+>   tool can draw is a marking the animal does not have. Farm's ox and water
+>   buffalo should think the same way.
+> - **The WING idiom**, if JT-045 survives: `box-06` along the flank as a SOLID,
+>   `axis:'z', dir:-1`, `spin:[{z,-90},{y,-90}]`, `sink: 0.5`,
+>   `at:[0.625, 0.80625, 0]`. **Never a flat card** — the cards are zero-thickness
+>   and the island camera looks DOWN, so a card wing is edge-on and gone. Farm has
+>   seven birds.
+> - **`cone-06` is the parrot's own hooked beak.** **`box-18` is the elephant's
+>   TRUNK**, the only `z +1` tail, and worn forwards it is a neck.
+> - **A `ridge` cannot wear a JT-041 primitive** (`creature.ts:761` resolves with
+>   `partById` alone). That is **PB-077**, and Farm wants three manes and a crest.
+>
+> ### SHIPPING A SPECIES IS MORE THAN BUILDING IT — budget for this
+>
+> The fourteen builds took most of the run; the last hour was integration nobody
+> had written down. **A species commit is FOUR files** — the species file, its
+> test, its `index.ts` line, and **its pin in `assembly-fingerprint.test.ts`**,
+> which fails outright on a species with no pin. And **completing a collection
+> then demands**:
+> - `joe/names-audit.json` — one row per BUILT species. All generator output;
+>   `naming.test.ts` re-derives every name, so the test IS the verification. Write
+>   **no `signoff` key** — no existing row has one.
+> - `joe/species-facts.json` — one CHECKED fact per species, with a real source.
+>   This is genuine research, not bookkeeping. The schema will accept
+>   `check: "flagged"` with an empty source and go green, which is the trap:
+>   it looks finished and puts unchecked rows in front of Joe.
+> - `tests/island/species-registry.test.ts` — four counts move.
+>
+> ### How to run fourteen builders without collisions
+>
+> - **Write ALL the collection records FIRST, in one commit.** `define.ts` looks
+>   the assembly up off the register and omits it when absent, so a record can
+>   precede its species file harmlessly. This is the OPPOSITE of
+>   `assembled/index.ts`, where a line before its file breaks the module graph and
+>   blanked Joe's viewer once. Do not confuse them.
+> - **Let each worker append its OWN `index.ts` line, last, at the anchor.** My
+>   brief said do it centrally; there is no route by which a worker can then
+>   verify its own animal, because the test imports through the barrel. Zero
+>   collisions occurred in fourteen.
+> - **To still commit one species at a time**, stage a CONSTRUCTED blob so no
+>   commit references a file it does not contain:
+>   `git cat-file -p HEAD:<index> | sed "/append the next species/i <line>" | git hash-object -w --stdin`
+>   then `git update-index --cacheinfo 100644,<sha>,<index>`. Commit in
+>   working-tree line order and the tree converges exactly.
+>
+> ### Two things for Joe, neither blocking
+>
+> - **I restored one of his verdicts.** The chinchilla generates as `Boopvi` — the
+>   name he already rejected ("the pv sound is too hard", replacement `Boovip`),
+>   parked in `retiredVerdicts` when the kit species were deleted. A blank row
+>   would have asked him to rule twice or let a rejected name ship. His words are
+>   back on the live row; the retired entry is left in place for him to prune.
+> - **`home-pets.ts:101` says the budgie is BLUE, `:194` calls it "the only green
+>   one".** The budgie followed :194 and the lovebird is green in life, so two of
+>   the four cage birds are now green. Line 101's own answer is that the budgie
+>   should move.
+> - Every palette in these fourteen is NEW and UNREVIEWED.
+>
+> ### Where the next manager starts
+>
+> **PB-074, Farm, all sixteen — but read JT-045 first.** If Joe has answered and
+> the substitutions stand, Farm is a straight repeat of this method and most of
+> its hard problems are solved above. If he rejected some, fix those in Home Pets
+> before building sixteen more the same way.
+>
+> **These fourteen are UNSIGNED and must stay so.** Nothing was added to a deal
+> pool, no `signoff` field was touched, `joe/names-audit.json`'s signoff fields
+> were not written. Joe signs off in the editor; that gate is his alone.
+>
+> ### Cards raised: PB-075 (the hole), PB-076 (`box-21`), PB-077 (ridge/primitive). Closed: PB-063.
+
 > ## ⚠⚠ READ THIS FIRST — PB-076, a live obscenity in a child's game, 2 Aug 2026 (night)
 >
 > *Branch `worktree-agent-a6c245a1c33091f68`. Four commits: `69eb970`, `075c565`,

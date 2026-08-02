@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "nextId": 79,
+  "nextId": 82,
   "cards": [
     {
       "id": "PB-001",
@@ -520,17 +520,17 @@
     },
     {
       "id": "PB-073",
-      "state": "open",
+      "state": "done",
       "run": "",
       "title": "Home Pets: build the 14 unbuilt species by hand assembly",
-      "detail": "Ship 2, currently 2/16 — corn snake and goldfish exist, and both carry a non-uniform stretch Joe has flagged, so do not copy them as the standard; the Garden fourteen are the exemplars. To build: hamster, guinea pig, budgie, gerbil, pony, ferret, gecko, chinchilla, canary, cockatiel, terrapin, rat, lovebird, degu. JT-041 IS AMENDED (see JT-043): do not author new named parts, but DO improvise missing anatomy by sizing and rotating what the bank holds rather than stopping — Joe: \"bit of clever sizing and rotation will get a lot done\". His sign-off in the editor is the gate that catches a substitute reading badly."
+      "detail": "Ship 2, currently 2/16 — corn snake and goldfish exist, and both carry a non-uniform stretch Joe has flagged, so do not copy them as the standard; the Garden fourteen are the exemplars. To build: hamster, guinea pig, budgie, gerbil, pony, ferret, gecko, chinchilla, canary, cockatiel, terrapin, rat, lovebird, degu. JT-041 IS AMENDED (see JT-043): do not author new named parts, but DO improvise missing anatomy by sizing and rotating what the bank holds rather than stopping — Joe: \"bit of clever sizing and rotation will get a lot done\". His sign-off in the editor is the gate that catches a substitute reading badly. DONE 3 Aug 2026 — all 14 built, Home Pets is 16 of 16 and every member is hand-assembled. They ship UNSIGNED; Joe's editor pass is still to come, and JT-045 lists every improvised part in one place for him to judge at once. Shipping them also needed 14 rows in names-audit.json, 14 checked facts in species-facts.json and four registry counts, none of which was in the card."
     },
     {
       "id": "PB-074",
       "state": "open",
       "run": "",
       "title": "Farm: build all 16 species by hand assembly",
-      "detail": "Ship 5, currently 0/16 — all sixteen were kit-built and are deleted. To build: sheep, goat, horse, donkey, goose, turkey, llama, alpaca, rooster, ox, mule, chicken, guinea fowl, quail, water buffalo, pigeon. HOOVES ARE RULED ON — Joe: \"just use a two tone leg for hooves\". legs already take a paint, so a hooved species is legs: { paint: { base: \"limb\", patch: { below: \"hoof\", at: 0.25 } } } — Paint.patch needs no triangle edge to cut along, so no geometry is added. Three constraints: at is a fraction of the part own height and must sit on the 1/16 grid (0.125, 0.1875, 0.25); the patch applies to the BASE slot only, so do not combine it with byBand; spin a patched part and the boundary spins with it. This is a general tool, not a hoof workaround — it is also fur socks, pale paws, a bird feet against its legs, a dark-stockinged fawn. JT-041 as amended by JT-043 applies: improvise by sizing and rotation, never author a named part."
+      "detail": "Ship 5, currently 0/16 — all sixteen were kit-built and are deleted. To build: sheep, goat, horse, donkey, goose, turkey, llama, alpaca, rooster, ox, mule, chicken, guinea fowl, quail, water buffalo, pigeon. HOOVES ARE RULED ON — Joe: \"just use a two tone leg for hooves\". legs already take a paint, so a hooved species is legs: { paint: { base: \"limb\", patch: { below: \"hoof\", at: 0.25 } } } — Paint.patch needs no triangle edge to cut along, so no geometry is added. Three constraints: at is a fraction of the part own height and must sit on the 1/16 grid (0.125, 0.1875, 0.25); the patch applies to the BASE slot only, so do not combine it with byBand; spin a patched part and the boundary spins with it. This is a general tool, not a hoof workaround — it is also fur socks, pale paws, a bird feet against its legs, a dark-stockinged fawn. JT-041 as amended by JT-043 applies: improvise by sizing and rotation, never author a named part. The pony (PB-073) is the worked precedent for the hoof and derives the 1/16 grid point in full."
     },
     {
       "id": "PB-075",
@@ -559,6 +559,27 @@
       "run": "",
       "title": "A pet's name came off an unfiltered coin toss, and one in 678 was obscene",
       "detail": "Joe's six-year-old was dealt a rabbit called Defuck. The live hatch used petName(defaultRng) - unseeded Math.random - and src/core/names.ts's FORBIDDEN list carries shit, cock, dick, piss and arse but not fuck and not cunt, so 640 distinct obscene names were reachable at one hatch in 678. Fixed per Joe's ruling (\"no dont change the generator, we hard fix the first 24 animals instead\") by wiring the hatch to the frozen per-species allocation, which screened clean on all 320 names, plus a standing screen gate in the island layer. Forward-only: a pet already in a save keeps its name, which is JT-045. NOTE: the commits for this work say PB-076, which was taken by the push fix already pushed to origin. This record moved to PB-078; its commit messages were left alone rather than rewriting public history."
+    },
+    {
+      "id": "PB-079",
+      "state": "open",
+      "run": "",
+      "title": "LIVE: the shrew and the newt have a see-through hole in the front of the head",
+      "detail": "box-31 is an OPEN SHELL — 4 of its 77 edges are used by one triangle, forming a 1.000 x 1.000 aperture in the front face where the lion's blade-05 plate belongs. The material is THREE.FrontSide (assembly.ts:509-511 never sets side), so it is see-through to the sky, not a dark interior. In the album portrait (6.4 deg elevation, 32.4 deg yaw) 27.2% of the shrew and 30.9% of the newt is background. The frog is safe because it already wears blade-05; the terrapin was fixed the same way for 18 triangles. Both are SIGNED OFF, so the fix is Joe's call, not ours. No test can see this: assembly-assert reads bounding boxes, matches vertices to the bank (the hull IS a faithful box-31, hole and all) and counts triangles, and a missing face moves none of the three. NOTE: this work's own commits call it PB-075; that id was taken by another manager the same evening and is already on origin, so the record moved to PB-079. Commit messages were left alone rather than rewriting public history."
+    },
+    {
+      "id": "PB-080",
+      "state": "open",
+      "run": "",
+      "title": "hulls.ts:189 says box-21 is \"TALLER, and nothing else\", and it is not",
+      "detail": "Measured off its own 340 points while building the budgie: below local y +0.4975 box-21 IS the 1.250 cube, world span identical to box-03's to four decimals, and everything above sits in two LUGS at |x| 0.218-0.454 with nothing on the midline. It is a cube wearing the FOX'S EARS — exactly the trap box-12 was for the badger. The follow-on claim that the lugs are therefore a CREST was tried on the cockatiel and REFUSED on four numbers: the lugs' only band is Kenney's 10-triangle inner-ear cut so they cannot be painted yellow on a grey bird; they leave 0.436 of bare crown (35% of the hull's width) where a crest is one midline plume; they stand 0.2550 proud, LESS than the 0.2754 of the cone-01 crest that replaced them, at 184 triangles against box-03's 60. Note also that \"every cage bird stands at the 1.43125 floor\" is only true without crown extras — the crested cockatiel reaches 1.7066 — so home-pets.ts:194's \"tallest budgie\" is wrong about the budgie but height is not flat. Correct the comment in place; it is read by every species build, like PB-063. NOTE: this work's own commits call it PB-076; that id was taken by another manager the same evening and is already on origin, so the record moved to PB-080. Commit messages were left alone rather than rewriting public history."
+    },
+    {
+      "id": "PB-081",
+      "state": "open",
+      "run": "",
+      "title": "A ridge cannot wear a JT-041 primitive, so a mane has to be hand-placed",
+      "detail": "creatureSpec's ridge branch resolves its shape with partById alone (creature.ts:761), so bespoke-square-01, bespoke-triangle-01 and bespoke-circle-01 throw if used as a ridge part even though JT-041 sanctions them everywhere else. Found building the pony's mane, which is now a single hand-sited bespoke-square-01 instead; assembly-pony.test.ts proves the throw. Farm wants manes on the horse, the donkey and the mule and crests on the rooster, so this will be hit again within one card. Either widen the ridge branch to the authored resolver or record the limit in the spec. NOTE: this work's own commits call it PB-077; that id was taken by another manager the same evening and is already on origin, so the record moved to PB-081. Commit messages were left alone rather than rewriting public history."
     }
   ]
 }

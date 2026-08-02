@@ -113,6 +113,30 @@ const PINNED: Readonly<Record<string, string>> = {
   'animal-kiwi': '01a430e204093614',
   'animal-kinkajou': '07ed048ed805402c',
   'animal-glow-worm': 'ba579cc94d23eee3',
+
+  /* HOME PETS (PB-073), ship 2 — the collection Juno meets straight after
+   * Garden. Every one of these is a FIRST PIN: the hash of the animal as it was
+   * built, recorded rather than chosen, so none is evidence of anything yet.
+   * What they buy is the second run, exactly as the Garden fan-out's did.
+   *
+   * These animals are UNSIGNED. Joe reviews in the editor and that is his gate
+   * alone, so a pin moving here before he has ever seen the animal is not a
+   * regression — it is a build still being worked on. After his sign-off it is a
+   * regression, and the pin is what makes the difference detectable at all. */
+  'animal-chinchilla': '3005052c8bf1096a',
+  'animal-guinea-pig': 'a084406595c0eaef',
+  'animal-pony': '5f04f283cfa025c1',
+  'animal-hamster': '002aad1e863ae490',
+  'animal-degu': '1c718d0ba7ab53c5',
+  'animal-gecko': 'c2c73918dc2b3fe6',
+  'animal-gerbil': '0697d124f0024172',
+  'animal-ferret': '7ae0bbef676c9405',
+  'animal-budgie': 'a3ec6ebfd1942321',
+  'animal-rat': '3a20a89951d61f13',
+  'animal-terrapin': '1e74d030e89f620e',
+  'animal-cockatiel': 'eeb079e979377997',
+  'animal-lovebird': 'fc65a4b555597a9f',
+  'animal-canary': '0bd1e23f74d0038d',
 }
 
 describe('every assembled species has a pinned fingerprint', () => {

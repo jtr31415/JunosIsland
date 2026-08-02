@@ -8,8 +8,28 @@
  * `defineSpecies` so a typo is a thrown error at module load rather than a pet
  * called "Hamstre" forever.
  *
- * THIS COLLECTION IS COMPLETE — sixteen of sixteen, since 2 August 2026. It was
- * not, for most of its life, and the way it closed is worth keeping.
+ * THIS COLLECTION WAS COMPLETE ONCE, ON A ROUTE THAT NO LONGER EXISTS.
+ *
+ * It reached sixteen of sixteen on 2 August 2026, and then PB-036 deleted the
+ * fifty-nine kit-built species across the roster and it fell back to two. That is
+ * not a regression to be mourned: the kits described animals by multiplying a
+ * reference silhouette, and what they produced was fourteen animals that were
+ * recognisably the same animal at different scales. Garden was rebuilt by hand
+ * assembly and is the collection Joe signed off. This one is being rebuilt the
+ * same way, under PB-073, and every member below that carries `bespoke` and no
+ * `build` is a HAND-ASSEMBLED animal whose every measurement lives in its own
+ * file under `parts/assembled/`.
+ *
+ * **`defineSpecies` does not require the assembly to exist yet.** It looks the
+ * build up off the register (`define.ts`) and simply omits it when there is none,
+ * so a record here can legitimately precede its species file — which is what lets
+ * fourteen agents build fourteen animals in parallel without fourteen of them
+ * editing this file. A member with no assembly builds as a bare hull, visibly and
+ * harmlessly, until its file lands. That is the OPPOSITE of the rule in
+ * `parts/assembled/index.ts:28`, where a re-export line written before its file
+ * breaks the module graph outright, and the two must not be confused.
+ *
+ * The history below is kept because its REASONING outlived its numbers.
  *
  * It shipped at fourteen. PB-036 phase 3 built the songbird kit and with it the
  * four cage birds, which left two, and both were absent because their kits did
@@ -145,7 +165,61 @@ import { defineSpecies } from '../define'
 import '../parts/assembled'
 import type { Species } from '../types'
 
+/*
+ * IN ROSTER ORDER, which is the order `roster.ts:169-174` lists them and the
+ * order the album shows them. The corn snake and the goldfish sat alone at the
+ * end while they were the only two built; they are back in their roster
+ * positions now that the other fourteen are arriving around them, because a
+ * collection whose file order disagrees with its roster order is a trap the
+ * Garden test (`species-garden.test.ts:149`) already exists to catch.
+ *
+ * Every record below is one line, deliberately. The reasoning for a species'
+ * SHAPE — which hull, which tail, what was refused and why — lives in its own
+ * `parts/assembled/animal-<name>.ts`, where the number it justifies is on the
+ * next line. Repeating any of it here would be a second copy to fall out of date,
+ * and `define.ts` is explicit that adding a species should touch no collection
+ * file beyond its own name. What belongs here is what is true of the COLLECTION:
+ * the six-rodent separation problem and the four-cage-bird one, both above.
+ */
 export const HOME_PETS_SPECIES: readonly Species[] = [
+
+  /* The round one. Stub tail, small high ears, golden-tan — the silhouette the
+   * other five rodents are separated AGAINST. */
+  defineSpecies('animal-hamster', 'bespoke'),
+
+  /* The big tailless one. The only rodent here with no tail at all, which is the
+   * cheapest separation in the group and the truest to the animal. */
+  defineSpecies('animal-guinea-pig', 'bespoke'),
+
+  /* The tallest, slimmest, longest-tailed cage bird, and the only green one. */
+  defineSpecies('animal-budgie', 'bespoke'),
+
+  /* The long-tailed rodent with the tufted tip — separated from the rat by tail
+   * TREATMENT rather than by colour, since both are sandy in life. */
+  defineSpecies('animal-gerbil', 'bespoke'),
+
+  /* The only large quadruped in the collection, and the first species in the
+   * project to wear JT-044's two-tone leg as a HOOF. */
+  defineSpecies('animal-pony', 'bespoke'),
+
+  /* The long one. A ferret is a tube on short legs and the proportion is the
+   * whole read; nothing else here is shaped remotely like it. */
+  defineSpecies('animal-ferret', 'bespoke'),
+
+  /* The four-legged reptile: fat tail, huge eyes, wide mouth. Separated from the
+   * terrapin by its tail and from the corn snake by having legs at all. */
+  defineSpecies('animal-gecko', 'bespoke'),
+
+  /* The one with the ears. A chinchilla's ears are enormous and round, and that
+   * is the separation the six-rodent problem needs most. */
+  defineSpecies('animal-chinchilla', 'bespoke'),
+
+  /* The small yellow cage bird — the shortest and roundest of the four. */
+  defineSpecies('animal-canary', 'bespoke'),
+
+  /* The one with the CREST. The only cage bird here with anything on its head,
+   * and the only one a child could name from silhouette alone. */
+  defineSpecies('animal-cockatiel', 'bespoke'),
 
   /*
    * THE CORN SNAKE — the fifteenth, and the collection's first legless member.
@@ -162,6 +236,10 @@ export const HOME_PETS_SPECIES: readonly Species[] = [
    * was never in this file to be given one. It is FLAGGED and Joe has not seen it.
    */
   defineSpecies('animal-corn-snake', 'bespoke'),
+
+  /* The shelled one. A terrapin is the only member whose body is armour, and the
+   * only reptile here that is wider than it is long. */
+  defineSpecies('animal-terrapin', 'bespoke'),
 
   /*
    * THE GOLDFISH — the sixteenth, and the one that CLOSES this collection.
@@ -181,5 +259,19 @@ export const HOME_PETS_SPECIES: readonly Species[] = [
    * because the bank has no fin, flipper or fluke at all.
    */
   defineSpecies('animal-goldfish', 'bespoke'),
+
+  /* The biggest rodent bar the guinea pig, and the one with the long bare tail.
+   * Separated from the gerbil by that tail being BARE where the gerbil's is
+   * tufted, which is the difference a child actually points at. */
+  defineSpecies('animal-rat', 'bespoke'),
+
+  /* The stocky short-tailed cage bird with the big head — the opposite end of the
+   * four from the budgie on every axis the songbird brief separated them on. */
+  defineSpecies('animal-lovebird', 'bespoke'),
+
+  /* The last rodent, and the hardest: a degu is a gerbil-shaped animal with a
+   * tufted tail, so its separation has to come from proportion and from the pale
+   * eye-ring, not from anything cheaper. */
+  defineSpecies('animal-degu', 'bespoke'),
 
 ]
