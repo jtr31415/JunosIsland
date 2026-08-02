@@ -18,6 +18,32 @@ is the only thing that survives.
 **So the handoff file is the product of every run, not an afterthought.** Write
 it as if the next manager has never seen this repo — because it hasn't.
 
+---
+
+## A STANDING ORDER FOR THE DRUMBEAT: a signed-off animal ships
+
+Joe, 2 August 2026: *"as a standing order, if there is a new animal that is
+signed off by me, it goes live with the next push, always."*
+
+**Always** is his word and it is the whole instruction. So:
+
+- **Check for newly signed-off animals before every push**, and include them. It
+  is not a thing to be asked about, deferred to a tidier moment, or held back
+  because the rest of a collection is unfinished.
+- **Never sit on one.** A signed-off animal is finished work that Juno cannot
+  see, and the whole point of the arrangement is that his sign-off is the
+  bottleneck rather than our throughput. Holding one back for a batch spends the
+  scarcest thing in the project — his attention — and gives nothing back.
+- This is the OTHER half of the sign-off gate, and the two only make sense
+  together: **unsigned animals never ship, signed ones always do.** Building the
+  gate without this order would turn his review into a queue that drains at
+  someone else's convenience.
+
+Pushing remains the drumbeat's job and no manager pushes (see the constraints
+below), so this order is addressed to the drumbeat. A manager whose run signs
+off or unblocks an animal should say so plainly in its final report, because
+that is how the drumbeat learns there is something to ship.
+
 **Every task goes through a manager. The drumbeat never dispatches a worker
 directly.** Joe's instruction, 29 July: *"hand the tasks to a manager first to
 then invoke subagents, so we keep context low at all times."* Even a small,
