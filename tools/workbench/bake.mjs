@@ -31,11 +31,32 @@ export const bakeHash = (script, cast) =>
     .digest('hex')
     .slice(0, 16)
 
-/** SSML. The text is escaped; a lesson script containing `&` must not break the request. */
+/**
+ * SSML. The text is escaped; a lesson script containing `&` must not break the request.
+ *
+ * **The silence is trimmed at the source, and that is a splice requirement.**
+ * Azure pads every utterance with leading and trailing silence — measured, a
+ * bare "one" came back 1454ms long for roughly 450ms of speech. Baked as
+ * whole lines that is merely wasteful; baked as the numerals that get SPLICED
+ * into Fred's governor sentences it is fatal, because "Let's read with the egg
+ * —" [one second of nothing] "three" [one second of nothing] "more friends
+ * will fill it up!" is not a sentence anyone would recognise as speech.
+ *
+ * `Leading-exact`/`Tailing-exact` at 0ms hand the whole of the timing to the
+ * player, which is where voice.md §3 puts it: the ~120ms slot gap is the
+ * player's to insert, and it cannot subtract a gap Azure has already baked in.
+ *
+ * NOTE for whoever changes this function next: `bakeHash` covers script, voice,
+ * rate and pitch — NOT the shape of this SSML. Change the markup and nothing
+ * goes stale on its own; re-bake with `--force` deliberately.
+ */
 export function ssml(script, cast, lang = 'en-GB') {
   const text = String(script).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-  return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="${lang}">` +
-    `<voice name="${cast.voice}"><prosody rate="${cast.rate}" pitch="${cast.pitch ?? '0%'}">${text}</prosody></voice></speak>`
+  return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" ` +
+    `xmlns:mstts="http://www.w3.org/2001/mstts" xml:lang="${lang}">` +
+    `<voice name="${cast.voice}">` +
+    `<mstts:silence type="Leading-exact" value="0ms"/><mstts:silence type="Tailing-exact" value="0ms"/>` +
+    `<prosody rate="${cast.rate}" pitch="${cast.pitch ?? '0%'}">${text}</prosody></voice></speak>`
 }
 
 /**
@@ -64,17 +85,44 @@ export function opusDurationMs(buf) {
 export class BakeError extends Error {}
 
 /**
- * One lesson.
+ * Who says it.
+ *
+ * A lesson has no character field — every lesson is Fred teaching — so the
+ * default keeps the console's behaviour exactly as it was. A unit out of
+ * `voice/scripts.json` carries its own, because that file has four voices in
+ * it and §3's splice law turns on getting this right.
+ */
+export const castFor = (voices, unit) => {
+  const who = unit.character ?? 'fred'
+  const cast = voices.cast?.[who]
+  if (!cast?.voice) throw new BakeError(`joe/voices.json has no voice for ${who} — set cast.${who}.voice`)
+  return cast
+}
+
+/**
+ * Where the clip lands.
+ *
+ * Lessons are named relative to `voices.outDir` by a `file` field Joe edits in
+ * the console. A script unit brings a full repo-relative `out` instead, because
+ * its path is derived from its id rather than typed by hand.
+ */
+export const outPath = (voices, unit) => {
+  if (unit.out) return unit.out
+  if (!unit.file) throw new BakeError(`${unit.id} has no file field — set it to lessons/<name>.opus`)
+  return `${voices.outDir}/${unit.file.replace(/^lessons\//, '')}`
+}
+
+/**
+ * One lesson, or one line of Fred's script.
  *
  * Everything that can be wrong is checked before the network call, and each
  * failure says what to do rather than what happened. "add AZURE_SPEECH_KEY to
  * .env" is a fix; a stack trace is homework.
  */
 export async function bakeOne(root, lesson, voices, { fetchImpl = fetch } = {}) {
-  const cast = voices.cast?.fred
-  if (!cast?.voice) throw new BakeError('joe/voices.json has no voice for fred — set cast.fred.voice')
+  const cast = castFor(voices, lesson)
   if (!lesson.script?.trim()) throw new BakeError(`${lesson.id} has an empty script — nothing to bake`)
-  if (!lesson.file) throw new BakeError(`${lesson.id} has no file field — set it to lessons/<name>.opus`)
+  const rel = outPath(voices, lesson)
 
   const env = { ...readEnv(root), ...process.env }
   const key = env.AZURE_SPEECH_KEY
@@ -104,8 +152,6 @@ export async function bakeOne(root, lesson, voices, { fetchImpl = fetch } = {}) 
   }
 
   const buf = Buffer.from(await res.arrayBuffer())
-  const name = lesson.file.replace(/^lessons\//, '')
-  const rel = `${voices.outDir}/${name}`
   writeBytes(root, rel, buf)
 
   const manifest = readJson(root, voices.manifest, { schemaVersion: 1, clips: {} })
@@ -115,6 +161,13 @@ export async function bakeOne(root, lesson, voices, { fetchImpl = fetch } = {}) 
     ms: opusDurationMs(buf),
     bytes: buf.length,
     hash: bakeHash(lesson.script, cast),
+    /*
+     * Whose larynx, recorded beside the clip. §3's splice law is enforced at
+     * speak time by comparing the character of a template against the
+     * character of its insert, and the player can only do that if the manifest
+     * remembers. A lesson has no character of its own and is Fred by default.
+     */
+    character: lesson.character ?? 'fred',
     voice: cast.voice,
     rate: cast.rate,
   }
@@ -131,7 +184,7 @@ export async function bakeOne(root, lesson, voices, { fetchImpl = fetch } = {}) 
  */
 export function bakeState(root, lesson, voices, manifest) {
   const entry = manifest?.clips?.[lesson.id]
-  const cast = voices.cast?.fred
+  const cast = voices.cast?.[lesson.character ?? 'fred']
   const onDisk = entry && existsSync(inside(root, entry.file))
   if (entry && onDisk) {
     return cast && entry.hash === bakeHash(lesson.script, cast) ? 'baked' : 'stale'

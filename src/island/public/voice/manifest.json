@@ -1,0 +1,374 @@
+{
+  "schemaVersion": 1,
+  "clips": {
+    "open.greet": {
+      "file": "src/island/public/voice/script/open.greet.opus",
+      "ms": 2355,
+      "bytes": 19416,
+      "hash": "ed81f3d52687a27b",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "open.intro": {
+      "file": "src/island/public/voice/script/open.intro.opus",
+      "ms": 3373,
+      "bytes": 27520,
+      "hash": "bb7fb2e9461dbf71",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "open.quiet": {
+      "file": "src/island/public/voice/script/open.quiet.opus",
+      "ms": 1720,
+      "bytes": 14237,
+      "hash": "55f32bddf8f53e48",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "open.egg": {
+      "file": "src/island/public/voice/script/open.egg.opus",
+      "ms": 3100,
+      "bytes": 25427,
+      "hash": "9aa5cd9dd07435f9",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "open.fromTheSea": {
+      "file": "src/island/public/voice/script/open.fromTheSea.opus",
+      "ms": 4351,
+      "bytes": 35463,
+      "hash": "e9fcba0fe8fe4f6c",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "open.askRead": {
+      "file": "src/island/public/voice/script/open.askRead.opus",
+      "ms": 1536,
+      "bytes": 12788,
+      "hash": "776b157a74df0b28",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "open.foundName": {
+      "file": "src/island/public/voice/script/open.foundName.opus",
+      "ms": 1091,
+      "bytes": 9058,
+      "hash": "777fa1ecd5043f82",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "open.homeAtLast": {
+      "file": "src/island/public/voice/script/open.homeAtLast.opus",
+      "ms": 3451,
+      "bytes": 28164,
+      "hash": "6015179e1f9a0bb4",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "open.askLand": {
+      "file": "src/island/public/voice/script/open.askLand.opus",
+      "ms": 3867,
+      "bytes": 31572,
+      "hash": "e6af27799fd386cf",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "hatch.homeAtLast": {
+      "file": "src/island/public/voice/script/hatch.homeAtLast.opus",
+      "ms": 989,
+      "bytes": 8226,
+      "hash": "abb1c0907bcb33f5",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "hatch.isHere": {
+      "file": "src/island/public/voice/script/hatch.isHere.opus",
+      "ms": 953,
+      "bytes": 7904,
+      "hash": "5d42a38dfd88ad21",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "land.counted": {
+      "file": "src/island/public/voice/script/land.counted.opus",
+      "ms": 2386,
+      "bytes": 19577,
+      "hash": "2b8adc27ad1b4545",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "gov.spaceSurplus.head": {
+      "file": "src/island/public/voice/script/gov.spaceSurplus.head.opus",
+      "ms": 1720,
+      "bytes": 14237,
+      "hash": "dab913af7d84b4f1",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "gov.spaceSurplus.tail.one": {
+      "file": "src/island/public/voice/script/gov.spaceSurplus.tail.one.opus",
+      "ms": 1720,
+      "bytes": 14237,
+      "hash": "2244c36fbc1c12b3",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "gov.spaceSurplus.tail.many": {
+      "file": "src/island/public/voice/script/gov.spaceSurplus.tail.many.opus",
+      "ms": 1514,
+      "bytes": 12600,
+      "hash": "65e3505b4c1d0ec1",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "gov.nurseryQueue.head": {
+      "file": "src/island/public/voice/script/gov.nurseryQueue.head.opus",
+      "ms": 1720,
+      "bytes": 14237,
+      "hash": "1dea860589df0b1e",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "gov.nurseryQueue.tail.one": {
+      "file": "src/island/public/voice/script/gov.nurseryQueue.tail.one.opus",
+      "ms": 1183,
+      "bytes": 9863,
+      "hash": "6d033b368bf4d92e",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "gov.nurseryQueue.tail.many": {
+      "file": "src/island/public/voice/script/gov.nurseryQueue.tail.many.opus",
+      "ms": 1311,
+      "bytes": 10829,
+      "hash": "2517fd165463ca30",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "gov.wriggleBreak": {
+      "file": "src/island/public/voice/script/gov.wriggleBreak.opus",
+      "ms": 7955,
+      "bytes": 64793,
+      "hash": "9bdce55b9c422a64",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "offer.trickier": {
+      "file": "src/island/public/voice/script/offer.trickier.opus",
+      "ms": 7704,
+      "bytes": 62673,
+      "hash": "328f0a48af7ff14e",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "offer.takingAway": {
+      "file": "src/island/public/voice/script/offer.takingAway.opus",
+      "ms": 1970,
+      "bytes": 16169,
+      "hash": "d7c1f87c1f6c3c61",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "count.1": {
+      "file": "src/island/public/voice/script/count.1.opus",
+      "ms": 320,
+      "bytes": 2886,
+      "hash": "7399e8fb87d6d34d",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "count.2": {
+      "file": "src/island/public/voice/script/count.2.opus",
+      "ms": 313,
+      "bytes": 2725,
+      "hash": "9aa820a00850b2b9",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "count.3": {
+      "file": "src/island/public/voice/script/count.3.opus",
+      "ms": 385,
+      "bytes": 3369,
+      "hash": "18ccaf4e59976775",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "count.4": {
+      "file": "src/island/public/voice/script/count.4.opus",
+      "ms": 390,
+      "bytes": 3369,
+      "hash": "a9dbc2b971810119",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "count.5": {
+      "file": "src/island/public/voice/script/count.5.opus",
+      "ms": 619,
+      "bytes": 5328,
+      "hash": "b0523256b107f4fe",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "count.6": {
+      "file": "src/island/public/voice/script/count.6.opus",
+      "ms": 473,
+      "bytes": 4013,
+      "hash": "9f45849923753186",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "count.7": {
+      "file": "src/island/public/voice/script/count.7.opus",
+      "ms": 453,
+      "bytes": 3852,
+      "hash": "15f0311ad13c4194",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "count.8": {
+      "file": "src/island/public/voice/script/count.8.opus",
+      "ms": 313,
+      "bytes": 2725,
+      "hash": "3f3b10ef6cec5118",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "count.9": {
+      "file": "src/island/public/voice/script/count.9.opus",
+      "ms": 459,
+      "bytes": 4013,
+      "hash": "02de55b80b65e79b",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "count.10": {
+      "file": "src/island/public/voice/script/count.10.opus",
+      "ms": 329,
+      "bytes": 2886,
+      "hash": "8ee1ca6e304f1094",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "count.11": {
+      "file": "src/island/public/voice/script/count.11.opus",
+      "ms": 512,
+      "bytes": 4362,
+      "hash": "80f3a9488e6c10bb",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "count.12": {
+      "file": "src/island/public/voice/script/count.12.opus",
+      "ms": 568,
+      "bytes": 4845,
+      "hash": "9a546fe1353452d0",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "count.13": {
+      "file": "src/island/public/voice/script/count.13.opus",
+      "ms": 644,
+      "bytes": 5489,
+      "hash": "dff8a4aa259b640c",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "count.14": {
+      "file": "src/island/public/voice/script/count.14.opus",
+      "ms": 680,
+      "bytes": 5811,
+      "hash": "68272f2bbe3b7c5d",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "count.15": {
+      "file": "src/island/public/voice/script/count.15.opus",
+      "ms": 639,
+      "bytes": 5489,
+      "hash": "f30107400a72ac38",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "count.16": {
+      "file": "src/island/public/voice/script/count.16.opus",
+      "ms": 686,
+      "bytes": 5811,
+      "hash": "567a77bb2cb67289",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "count.17": {
+      "file": "src/island/public/voice/script/count.17.opus",
+      "ms": 713,
+      "bytes": 5972,
+      "hash": "1d478e6d3cffa512",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "count.18": {
+      "file": "src/island/public/voice/script/count.18.opus",
+      "ms": 596,
+      "bytes": 5167,
+      "hash": "ead57f271415bd12",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "count.19": {
+      "file": "src/island/public/voice/script/count.19.opus",
+      "ms": 625,
+      "bytes": 5328,
+      "hash": "a495f7c654e7d047",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    },
+    "count.20": {
+      "file": "src/island/public/voice/script/count.20.opus",
+      "ms": 519,
+      "bytes": 4523,
+      "hash": "85f05732c4f22ff0",
+      "character": "fred",
+      "voice": "en-GB-OliverNeural",
+      "rate": "-8%"
+    }
+  }
+}
