@@ -88,6 +88,7 @@ export { GERBIL_ASSEMBLY } from './animal-gerbil'
 export { FERRET_ASSEMBLY } from './animal-ferret'
 export { BUDGIE_ASSEMBLY } from './animal-budgie'
 export { RAT_ASSEMBLY } from './animal-rat'
+export { TERRAPIN_ASSEMBLY } from './animal-terrapin'
 /* -- append the next species' line directly above this one -- */
 
 import { assembledBuilds } from './register'
