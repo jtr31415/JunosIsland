@@ -111,6 +111,37 @@
         <p id="colour-note" class="note"></p>
       </section>
 
+      <!-- What it will be CALLED and what it will SAY. Almost none of this is
+           typed: the roster knows the species, the collection and the band, and
+           naming.ts draws the given name. Joe accepts or overwrites the name and
+           writes the one thing nothing can derive, which is the fact. The
+           approve tick is NOT here — it lives once, on the Animals bench. -->
+      <section id="signoff">
+        <h2>Name and fact</h2>
+        <p id="signoff-who" class="note"></p>
+        <div class="row">
+          <input id="signoff-name" type="text" placeholder="its given name" autocomplete="off" />
+        </div>
+        <div class="row">
+          <button id="signoff-regen" type="button" class="quiet">Use the generated name</button>
+        </div>
+        <textarea id="signoff-fact" rows="3" placeholder="one or two short sentences a six-year-old can read"></textarea>
+        <ul id="signoff-problems"></ul>
+        <p id="signoff-note" class="note"></p>
+      </section>
+
+      <!-- One button. It writes six of the nine places a species costs and says
+           which three it did not, because a push that silently half-lands a
+           species is worse than one that tells you what is left. -->
+      <section id="pushing">
+        <h2>Push it to the game</h2>
+        <div class="row">
+          <button id="push" type="button">Push it to the game</button>
+        </div>
+        <p id="push-note" class="note"></p>
+        <ul id="push-out"></ul>
+      </section>
+
       <section id="out">
         <h2>Take it out</h2>
         <div class="row">

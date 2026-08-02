@@ -16,10 +16,22 @@
  * persistence in `api.mjs`/`merge.mjs` (14 tests). `6bde9ec` landed them with no
  * screen. This is the screen.
  *
+ * ## The name and the fact are settled here; the APPROVAL is not
+ *
+ * Joe, 2 August: *"in the editor i also want to sign off on the name and the
+ * fact line."* The `Name and fact` panel is that — see `signoff.ts`, which owns
+ * all of its arithmetic and none of its DOM. It fills the four fields
+ * `joe/species-edits.json` has always carried and the UI never exposed:
+ * `collection`, `givenName`, `fact` and `factSource`.
+ *
+ * **There is no approve tick in this page and there must not be.** One creature,
+ * one judgement, on the Animals bench (`approver.ts`, JT-031). This panel
+ * settles what the bench will show; it does not tick it.
+ *
  * ## What is deliberately NOT here yet
  *
  * Joe's instruction while this was being built: *"dont get too clever with it. I
- * just needs the basics."* So four things he has asked for are named here and
+ * just needs the basics."* So three things he has asked for are named here and
  * left for a later pass, each with the seam it plugs into:
  *
  *  - **The parts-library browser** with thumbnails, search and the taper/sink
@@ -32,14 +44,6 @@
  *    at 100%. The 29 that do not are exactly the horns and the claws, which
  *    `tools/pets/parts-bank.ts:703 BAKED_ROLES` never banked. Do NOT match on
  *    triangle counts — 46.6% of components are ambiguous that way.
- *  - **Assigning a name, species and fact** to a new species. The store is
- *    `joe/species-edits.json`, already `WRITABLE` and merge-safe; save with
- *    `POST /api/save {what:'edits', patch:{...}}` and NO id (the server deals
- *    `SD-nnn`). `fact: ''` queues it for the pipeline; `factSource: 'joe'` marks
- *    his own words as his. `givenName(speciesId)` in `src/island/species/naming.ts`
- *    draws a collision-free name for an id the roster has never seen.
- *    `api.mjs state()` would need `edits` added to it so the page can read
- *    drafts back — it is writable but not yet readable.
  *  - **Non-uniform colouring** (the deer's belly, the penguin's front). Both
  *    routes are already sayable in the definition: `belly: k/16` paints the
  *    boundary into the coat's cell with no geometry, and a separate `paint` on a
@@ -52,6 +56,8 @@ import {
   setStretch, warningsFor, type DefPath, type Warning,
 } from './def'
 import { ALL_SHAPES, HULL_SHAPES, groupShapes, summarise, type ShapeRow } from './library'
+import { signoffView, type SignoffView } from './signoff'
+import { pushRequest, type PushReply } from './push'
 import { loadBuiltDefs } from './capture'
 import { createStage, type GizmoMode } from './stage'
 import type { CreatureDef } from '../../../../src/island/species/parts'
@@ -84,6 +90,13 @@ const insertPick = el<HTMLSelectElement>('#insert-pick')
 const insertNote = el<HTMLParagraphElement>('#insert-note')
 const newName = el<HTMLInputElement>('#new-name')
 const saveNote = el<HTMLParagraphElement>('#save-note')
+const signoffWho = el<HTMLParagraphElement>('#signoff-who')
+const signoffName = el<HTMLInputElement>('#signoff-name')
+const signoffFact = el<HTMLTextAreaElement>('#signoff-fact')
+const signoffProblems = el<HTMLUListElement>('#signoff-problems')
+const signoffNote = el<HTMLParagraphElement>('#signoff-note')
+const pushNote = el<HTMLParagraphElement>('#push-note')
+const pushOut = el<HTMLUListElement>('#push-out')
 
 function say(text: string, bad = false): void {
   saySpan.textContent = text
@@ -172,8 +185,19 @@ let drafts: readonly Draft[] = []
 let draftId = ''
 /** False the moment a gesture lands, true again only when the server has it. */
 let saved = true
-/** Joe's name for an animal he started himself. Empty for a shipped species. */
-let givenName = ''
+/**
+ * The name Joe typed over the generated one, or '' to take what `naming.ts`
+ * draws.
+ *
+ * NOT the same thing as the species' printed name — `SPECIES_NAMES` owns that
+ * and it is never typed here. This is the child-facing given name, the word a
+ * six-year-old says out loud, and `signoff.ts` explains why it is offered rather
+ * than demanded. It used to hold the display name Joe typed into "Start from
+ * scratch", which was a third meaning of a word that already had two.
+ */
+let nameOverride = ''
+/** The sentence that goes under the animal's name. Joe's own words. */
+let fact = ''
 
 const stage = createStage(el<HTMLCanvasElement>('#stage'), {
   onPick(path) { select(path) },
@@ -398,11 +422,65 @@ function drawWarnings(): void {
   }))
 }
 
+/**
+ * The name-and-fact panel, and what stands between it and the game.
+ *
+ * Everything drawn here is derived by `signoffView` off the roster and
+ * `naming.ts`; this function only paints it. The two fields are written back
+ * into the module-level `nameOverride`/`fact` on input rather than read out of
+ * the DOM at save time — a save that reads the DOM is a save that silently does
+ * nothing when the panel is hidden.
+ */
+function drawSignoff(): SignoffView {
+  const view = signoffView(speciesId, { givenName: nameOverride, fact })
+
+  signoffWho.textContent = speciesId === ''
+    ? 'no animal open'
+    : view.inRoster
+      ? `${view.species} · ${view.collectionName} · ${view.band} names`
+      : `${view.species} — not in the ratified roster`
+
+  /* Never fight his cursor: the box is only refilled when it is not his. */
+  if (document.activeElement !== signoffName) signoffName.value = view.name
+  signoffName.placeholder = view.generated || 'its given name'
+  if (document.activeElement !== signoffFact) signoffFact.value = fact
+
+  signoffProblems.replaceChildren(...view.problems.map(p => {
+    const li = document.createElement('li')
+    if (!p.blocks) li.className = 'soft'
+    li.textContent = p.say
+    return li
+  }))
+
+  /*
+   * THE SENTENCE THAT STOPS THE PANEL LYING. A name typed over the generated
+   * one is recorded as the audit row's `replacement` — his preference, on the
+   * bench, where the same field has always meant that. It does NOT rename the
+   * creature in the game: the game reads `NAME_PINS`, and `naming.ts` keeps that
+   * table empty on purpose until Juno's save arrives, with a test standing over
+   * it. Saying "it would be called X" when the game will say Y is exactly the
+   * class of quiet untruth this project keeps paying for.
+   */
+  signoffNote.textContent = !view.ready
+    ? `${view.generated ? `${view.generated} is what it will be called. ` : ''}`
+      + 'The approve tick is not here: it is on the Animals bench in the viewer, once per creature, '
+      + 'over the model, the name and the fact together.'
+    : view.overridden
+      ? `ready. The game will still call it ${view.generated} — your ${view.name} is recorded as the `
+        + 'replacement for you to rule on at the bench, because a name a child already says is only '
+        + 'changed by a pin, deliberately.'
+      : `ready — it will be called ${view.name}, and the fact goes to the bench flagged until `
+        + 'something checks it.'
+  signoffNote.className = view.ready ? 'note' : 'note warn'
+  return view
+}
+
 function draw(): void {
   drawParts()
   drawInspector()
   drawWarnings()
   drawSelected()
+  drawSignoff()
   /*
    * The unsaved marker belongs in the SAME redraw as the change that caused it.
    * Left out of here it only refreshed when a species was opened, so the panel
@@ -442,7 +520,8 @@ function open(id: string): void {
   const found = defs.get(id)
   if (!found) { say(`no definition captured for ${id}`, true); return }
   draftId = ''
-  givenName = ''
+  nameOverride = ''
+  fact = ''
   saved = true
   show(id, found, found, `opened ${id}`)
 }
@@ -450,7 +529,8 @@ function open(id: string): void {
 /** Reopen one of Joe's own saved drafts, exactly as he left it. */
 function openDraft(draft: Draft): void {
   draftId = draft.id
-  givenName = draft.givenName
+  nameOverride = draft.givenName
+  fact = draft.fact
   saved = true
   show(draft.speciesId, draft.def, defs.get(draft.from) ?? draft.def, `opened ${draft.id}`)
 }
@@ -636,14 +716,23 @@ async function save(): Promise<void> {
   if (!def) return
   await refreshDrafts()
   const mine = drafts.find(d => d.speciesId === speciesId)
+  const view = drawSignoff()
   const fields = {
     speciesId,
     from: defs.has(speciesId) ? speciesId : (mine?.from ?? ''),
     fromKind: defs.has(speciesId) ? 'built' : 'scratch',
-    collection: mine?.collection ?? '',
-    givenName: givenName || mine?.givenName || '',
-    fact: mine?.fact ?? '',
-    factSource: mine?.factSource ?? '',
+    /*
+     * DERIVED, never typed — and re-derived on every save rather than carried
+     * forward off the draft, because the roster is the answer and a stale copy
+     * of the roster is exactly the drift `species-facts.test.ts` checks for.
+     */
+    collection: view.collection,
+    /* What it WILL be called: his override, or the draw. Storing the resolved
+     * name rather than only the override is what lets the push write the audit
+     * row without recomputing anything. */
+    givenName: view.name,
+    fact: view.fact,
+    factSource: view.factSource,
     def,
     warnings: opened ? warningsFor(def, opened) : [],
     state: 'draft',
@@ -669,6 +758,73 @@ async function save(): Promise<void> {
 el<HTMLButtonElement>('#save').addEventListener('click', () => {
   void save().catch((error: unknown) => {
     say(error instanceof Error ? error.message : String(error), true)
+  })
+})
+
+/* -------------------------------------------------- one button, into the game */
+
+/**
+ * Joe, 2 August: *"then with one button push it to the game thats where we need
+ * to get to."*
+ *
+ * A species costs NINE places and this writes SIX; `push.mjs` carries the list
+ * and the reasoning. The three it does not write are all tests, and the reason
+ * is the same for each: a test generated to assert whatever the code currently
+ * does is worth less than no test at all. So the reply is drawn in FULL — what
+ * landed, what was already there, and what is still his — and the panel says
+ * plainly that `npm test` is red until those are written.
+ *
+ * The draft is saved first, unconditionally. The push does not consult the
+ * draft store, but a species that reaches `src/` while the draft it came from
+ * still says something else is a pair of records that disagree about the same
+ * animal, and the cheap end of that is here.
+ */
+async function push(): Promise<void> {
+  if (!def) return
+  const view = drawSignoff()
+  if (!view.ready) {
+    pushNote.textContent = 'not yet — the Name and fact panel above says what is missing.'
+    pushNote.className = 'note warn'
+    return
+  }
+  await save()
+  const today = new Date().toISOString().slice(0, 10)
+  const request = pushRequest(speciesId, def, view, draftId, today)
+  const reply = await api('/api/species/push', request) as unknown as PushReply
+
+  if (reply.error) {
+    pushNote.textContent = reply.error
+    pushNote.className = 'note warn'
+    pushOut.replaceChildren()
+    say(`nothing was pushed: ${reply.error}`, true)
+    return
+  }
+
+  const row = (marker: string, path: string, text: string, left = false): HTMLLIElement => {
+    const li = document.createElement('li')
+    if (left) li.className = 'left'
+    const b = document.createElement('b')
+    b.textContent = `${marker} ${path}`
+    li.append(b, document.createElement('br'), document.createTextNode(text))
+    return li
+  }
+  pushOut.replaceChildren(
+    ...(reply.wrote ?? []).map(p => row('written —', p.path, p.what)),
+    ...(reply.skipped ?? []).map(p => row('already there —', p.path, p.what)),
+    ...(reply.left ?? []).map(p => row('yours —', p.path, p.why, true)),
+  )
+  pushNote.textContent = reply.say ?? ''
+  pushNote.className = 'note warn'
+  say(`${speciesId} is in the game — read the list below before you close this`)
+}
+
+el<HTMLButtonElement>('#push').addEventListener('click', () => {
+  void push().catch((error: unknown) => {
+    /* `creatureSpec`'s own words, unwrapped: it names the axiom and the fix. */
+    const text = error instanceof Error ? error.message : String(error)
+    pushNote.textContent = text
+    pushNote.className = 'note warn'
+    say(`nothing was pushed: ${text}`, true)
   })
 })
 
@@ -703,11 +859,39 @@ el<HTMLButtonElement>('#new-animal').addEventListener('click', () => {
     return
   }
   const blank = blankDef()
-  draftId = drafts.find(d => d.speciesId === id)?.id ?? ''
-  givenName = name
+  const mine = drafts.find(d => d.speciesId === id)
+  draftId = mine?.id ?? ''
+  /* Blank, not the typed name: what he typed here is the SPECIES ("Fen Hare"),
+   * and the given name is a different word that `naming.ts` already draws. */
+  nameOverride = mine?.givenName ?? ''
+  fact = mine?.fact ?? ''
   saved = false
   show(id, blank, blank, `started ${name} — ${id}`)
   drawSubjects()
+})
+
+signoffName.addEventListener('input', () => {
+  nameOverride = signoffName.value
+  saved = false
+  drawSignoff()
+  drawSaveNote()
+})
+
+signoffFact.addEventListener('input', () => {
+  fact = signoffFact.value
+  saved = false
+  drawSignoff()
+  drawSaveNote()
+})
+
+/* Back to what `naming.ts` draws. Clearing the override is the whole gesture —
+ * there is no second name stored anywhere for this to have to undo. */
+el<HTMLButtonElement>('#signoff-regen').addEventListener('click', () => {
+  nameOverride = ''
+  signoffName.value = ''
+  saved = false
+  drawSignoff()
+  drawSaveNote()
 })
 
 subjectPick.addEventListener('change', () => {
