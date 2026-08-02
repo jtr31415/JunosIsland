@@ -186,6 +186,73 @@ describe('the leg row is a species’ choice now, and the model refloors under i
   })
 })
 
+/**
+ * Joe, 2 Aug, asked whether ridges should become hand-placeable or stay solved
+ * and merely SAY they are placed for you: *"make them handplacable if i so
+ * wish, i just want to be able to adjust what and how i want."*
+ *
+ * So the solve stays the default — a ridge still follows the body's shape
+ * automatically, which is the property worth keeping — and a row that he has
+ * actually dragged overrides it. "If I so wish" is the whole design: nothing
+ * changes for any species that does not ask.
+ *
+ * A ridge is THREE rows (`top`, `chamfer`, `side`), so a drag has to know which
+ * one was grabbed. `pathFromUserData` already worked out the row in order to
+ * match the mesh and then threw it away, collapsing all three into
+ * `{ role: 'ridge' }`. It now carries it.
+ *
+ * The override is `[x, y, zCentre]`, not `[x, y]`: a row runs from `+span` to
+ * `-span` about z = 0, so giving the drag's z a meaning as the row's CENTRE
+ * lets him slide a ridge forward and back as well as up and out. All three
+ * components of the gesture then mean something, which is what he asked for.
+ */
+describe('a ridge row is solved until Joe drags it, and then it is his', () => {
+  const RIDGE: CreatureDef = {
+    ...BASE,
+    ridge: { part: 'cone-01', paint: 'coat', count: 2, rows: ['top'] },
+  }
+  type Row = { from: readonly [number, number, number]; to: readonly [number, number, number] }
+  const rowOf = (def: CreatureDef): Row =>
+    creatureSpec(ID, def).features.find(f => f.name === 'spike-top')!.placement as Row
+
+  it('tells you which of the three rows the mesh belongs to', () => {
+    expect(pathFromUserData({ role: 'spike-top' }, RIDGE)).toEqual({ role: 'ridge', row: 'top' })
+    expect(pathFromUserData({ role: 'spike-side' }, RIDGE)).toEqual({ role: 'ridge', row: 'side' })
+  })
+
+  it('still solves the row off the hull when nobody has touched it', () => {
+    const solved = rowOf(RIDGE)
+    expect(solved.from[1]).toBeGreaterThan(1)
+    expect(solved.from[2]).toBeCloseTo(-solved.to[2], 9)
+  })
+
+  it('takes the drag on the row that was grabbed', () => {
+    const moved = setJoin(RIDGE, { role: 'ridge', row: 'top' }, [0.05, 1.6, 0.1])
+    expect(moved).not.toBe(RIDGE)
+    const p = rowOf(moved)
+    expect(p.from[0]).toBeCloseTo(0.05, 9)
+    expect(p.from[1]).toBeCloseTo(1.6, 9)
+    /* z is the row's CENTRE: the span still runs either side of it. */
+    expect((p.from[2] + p.to[2]) / 2).toBeCloseTo(0.1, 9)
+    builds(moved)
+  })
+
+  it('leaves the rows he has not touched still solved', () => {
+    const both: CreatureDef = { ...RIDGE, ridge: { ...RIDGE.ridge!, rows: ['top', 'side'] } }
+    const moved = setJoin(both, { role: 'ridge', row: 'top' }, [0.05, 1.6, 0])
+    const side = creatureSpec(ID, moved).features.find(f => f.name === 'spike-side')!
+      .placement as { from: readonly number[] }
+    const untouched = creatureSpec(ID, both).features.find(f => f.name === 'spike-side')!
+      .placement as { from: readonly number[] }
+    expect(side.from).toEqual(untouched.from)
+  })
+
+  /* The old behaviour, kept as a guard: a drag with no row still declines. */
+  it('declines a drag that does not say which row', () => {
+    expect(setJoin(RIDGE, { role: 'ridge' }, [0, 1, 0])).toBe(RIDGE)
+  })
+})
+
 describe('every op leaves a buildable definition', () => {
   it('moves', () => {
     builds(setJoin(BASE, { role: 'hull' }, [0, 0.80625, 0]))

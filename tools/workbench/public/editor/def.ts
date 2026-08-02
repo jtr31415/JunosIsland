@@ -57,7 +57,7 @@ import { PARTS_BANK } from '../../../../src/island/species/parts/bank.generated'
 import { EYE_CARD_Z, LEG_ROW } from '../../../../src/island/species/parts/hulls'
 import { assemblyFor } from '../../../../src/island/species/parts/assembled/register'
 import type {
-  CreatureDef, HullDef, PaintLike, PartDef, PartLike, RidgeDef,
+  CreatureDef, HullDef, PaintLike, PartDef, PartLike, RidgeDef, RidgeRow,
 } from '../../../../src/island/species/parts'
 import type { Spin, Vec3 } from '../../../../src/island/species/parts/assembly'
 
@@ -114,7 +114,11 @@ const v3 = (v: Vec3): Vec3 => [round6(v[0]), round6(v[1]), round6(v[2])]
 export type DefPath =
   | { role: 'hull' } | { role: 'legs' } | { role: 'eyes' }
   | { role: 'ears' } | { role: 'tail' } | { role: 'snout' } | { role: 'nose' }
-  | { role: 'ridge' } | { role: 'extras'; index: number }
+  /* A ridge is three rows, so a path may name WHICH — `pathFromUserData` knows,
+   * because it had to work the row out to match the mesh in the first place.
+   * The row is optional so every existing caller and every stored path still
+   * type-checks; a move with no row is declined rather than guessed at. */
+  | { role: 'ridge'; row?: RidgeRow } | { role: 'extras'; index: number }
 
 /** The four roles whose value is a `PartLike` — the ones that are one part each. */
 const FEATURE_ROLES = ['ears', 'tail', 'snout', 'nose'] as const
@@ -196,7 +200,9 @@ export function pathFromUserData(
     }
     if (def.ridge) {
       const stem = def.ridge.name ?? RIDGE_STEM
-      for (const row of RIDGE_ROWS) if (raw === `${stem}-${row}` || name === `${stem}-${row}`) return { role: 'ridge' }
+      for (const row of RIDGE_ROWS) {
+        if (raw === `${stem}-${row}` || name === `${stem}-${row}`) return { role: 'ridge', row }
+      }
     }
     if (def.legs !== false && (def.legs?.name ?? 'leg') === name) return { role: 'legs' }
     for (const role of FEATURE_ROLES) {
@@ -206,10 +212,12 @@ export function pathFromUserData(
     }
   }
 
-  /* By convention: the names `creature.ts` uses when a definition says nothing. */
-  const ridge = /^(.+)-(?:top|chamfer|side)$/.exec(raw)
+  /* By convention: the names `creature.ts` uses when a definition says nothing.
+   * The row is captured here too — it is in the mesh name either way, and a
+   * path that knows it is what lets a drag land on the row Joe grabbed. */
+  const ridge = /^(.+)-(top|chamfer|side)$/.exec(raw)
   if (ridge && (!def || (def.ridge?.name ?? RIDGE_STEM) === ridge[1])) {
-    if (!def || def.ridge) return { role: 'ridge' }
+    if (!def || def.ridge) return { role: 'ridge', row: ridge[2] as RidgeRow }
   }
   const known = ROLE_BY_MESH[name]
   if (known === undefined) return null
@@ -437,7 +445,15 @@ export function setJoin(def: CreatureDef, p: DefPath, at: Vec3): CreatureDef {
     if (def.eyes === false) return def
     return { ...def, eyes: { ...(def.eyes ?? {}), x: a[0], y: a[1] } }
   }
-  if (p.role === 'ridge') return def
+  if (p.role === 'ridge') {
+    /* A ridge USED to decline every move, because its rows are solved off the
+     * hull's own faces. Joe, 2 Aug: *"make them handplacable if i so wish."* So
+     * the row he grabbed takes the drag and every other row stays solved. A path
+     * that does not name a row is still declined — guessing which of three rows
+     * he meant is worse than doing nothing, and `pathFromUserData` always knows. */
+    if (!def.ridge || !p.row) return def
+    return { ...def, ridge: { ...def.ridge, place: { ...def.ridge.place, [p.row]: a } } }
+  }
   return editPart(def, p, d => ({ ...unpackChamfer(d), at: a }))
 }
 

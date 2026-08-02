@@ -194,6 +194,27 @@ export interface RidgeDef {
    * grid allows while every station stays EMBEDDED — see `ridgeSpan`.
    */
   span?: number
+  /**
+   * Rows Joe has placed BY HAND, which override the solve for those rows only.
+   *
+   * The solve is the default and stays the default: a ridge normally follows
+   * the body's shape automatically, off the hull's own measured faces and
+   * chamfers, which is what keeps it right when the hull changes. His ruling of
+   * 2 Aug 2026 was *"make them handplacable if i so wish, i just want to be able
+   * to adjust what and how i want"* — so a row he has actually dragged answers
+   * to him, and a row he has not is untouched. A species that says nothing here
+   * behaves exactly as it did before this field existed.
+   *
+   * `[x, y, zCentre]`. The z is the row's CENTRE, not an end: a row runs from
+   * `+span` to `-span` about it, so sliding it forward moves the whole row
+   * forward and keeps its length. Giving z that meaning is what makes all three
+   * components of a drag mean something.
+   *
+   * §3's nothing-floats check still applies — it tests the SPAN against the
+   * hull, which a hand-placed row does not change — so this cannot be used to
+   * push stations off the end of the body.
+   */
+  place?: Partial<Record<RidgeRow, Vec3>>
 }
 
 /** The one mass. Singular, and there is no way to say "and another". */
@@ -684,13 +705,23 @@ export function creatureSpec(id: string, def: CreatureDef): AssemblyBuild {
     const row = (
       suffix: RidgeRow, x: number, y: number, spin: readonly Spin[], mirror: boolean,
     ): void => {
+      /* Joe's hand beats the solve, for this row and no other. `zc` is the row's
+       * centre, so a placed row keeps its span and simply sits somewhere else. */
+      const hand = r.place?.[suffix]
+      const px = hand ? hand[0] : x
+      const py = hand ? hand[1] : y
+      const zc = hand ? hand[2] : 0
       const f: Feature = {
         name: `${stem}-${suffix}`,
         part: r.part,
         paint,
         sink,
         placement: {
-          kind: 'row', from: [x, y, s], to: [x, y, -s], count: r.count, ...(mirror ? { mirror } : {}),
+          kind: 'row',
+          from: [px, py, zc + s],
+          to: [px, py, zc - s],
+          count: r.count,
+          ...(mirror ? { mirror } : {}),
         },
       }
       if (spin.length > 0) f.spin = spin
