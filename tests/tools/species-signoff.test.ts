@@ -273,9 +273,30 @@ describe('the two rows the push would append', () => {
    * cleanly and fails somebody else's gate on the next run.
    */
   it('builds an audit row shaped exactly like the ones already in the file', () => {
+    /*
+     * Compared against a row STRIPPED OF `signoff`, and that is the point rather
+     * than a concession. Since 2 August a successful push writes `signoff` onto
+     * the row it just wrote — pressing the button is Joe signing the animal off —
+     * so rows on disk fall into two shapes: ten keys before he has pushed the
+     * animal, eleven after. `auditRowFor` builds the row that TRAVELS IN THE
+     * REQUEST, before the server has written a byte, and it must keep building
+     * the ten-key one: a `signoff` in it would be a sign-off issued in advance of
+     * the thing it signs off, and it would survive a push that turned out to
+     * write nothing at all. That is PB-076 exactly.
+     *
+     * So the assertion below is still keys AND key order against a real row, and
+     * the two assertions after it are what stop this weakening into "any subset
+     * will do": `signoff` must be the ONLY key it is allowed to lack, and it must
+     * be absent from the built row rather than present and empty.
+     */
     const sample = auditDoc.names[0]
     expect(sample, 'joe/names-audit.json has no rows to compare against').toBeDefined()
-    expect(Object.keys(auditRowFor(view(UNBUILT)))).toEqual(Object.keys(sample!))
+    const built = Object.keys(auditRowFor(view(UNBUILT)))
+    const onDisk = Object.keys(sample!)
+    expect(built).toEqual(onDisk.filter(k => k !== 'signoff'))
+    expect(onDisk.filter(k => !built.includes(k))).toEqual(
+      onDisk.includes('signoff') ? ['signoff'] : [])
+    expect(built).not.toContain('signoff')
   })
 
   /*
