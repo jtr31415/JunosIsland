@@ -2,3 +2,8 @@
 *.glb binary
 *.bin binary
 *.png binary
+# Baked voice. Ogg-encapsulated Opus, straight from Azure with no transcode, so
+# a byte is a byte: `text=auto` guessing at one of these on Windows is how a
+# clip arrives at CI unplayable. Explicit, like every other binary above.
+*.opus binary
+*.ogg binary
