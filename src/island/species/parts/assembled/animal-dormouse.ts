@@ -120,29 +120,15 @@ import { PACK_PUPIL } from '../texture'
 
 export const DORMOUSE_ASSEMBLY = defineCreature('animal-dormouse', {
   palette: {
-    coat: 0xd9a44e,    // signed-off coat: hazel-dormouse sandy gold
-    belly: 0xf9edd3,   // signed-off belly: the painted underside and the sclera
-    inner: 0xbf8535,   // signed-off detail: the round ears
-    limb: 0x8a5e22,    // signed-off accent: legs and the nose button
-    pupil: PACK_PUPIL, // measured off 544 real eye texels; see texture.ts
+    coat: 0xd9a44e,
+    belly: 0xf9edd3,
+    inner: 0xbf8535,
+    limb: 0x8a5e22,
+    pupil: PACK_PUPIL,  // the pack's own measured pupil; see texture.ts
   },
 
-  /* The tiger's belly line, made exact: gold above, cream below, no geometry. */
   belly: 0.5,
-
-  /* THE ANIMAL, half one. The beaver's and the polar bear's round top-face ear,
-   * on the beaver's own numbers on the beaver's own hull — a small button out on
-   * the shoulder, against the mouse's big side-mounted dish. */
   ears: { part: 'box-02', paint: 'inner' },
-
-  /* THE ANIMAL, half two. The fox's brush trailing off the back and carried LOW —
-   * the squirrel wears this same plume UP the rear chamfer, and that is the whole
-   * difference between the two. The fox's own fraction of its own taller hull,
-   * 0.4568, put back on this cube: 0.18125 + 0.4568 x 1.250. */
-  tail: { part: 'box-23', at: [0, 0.752235, -0.625] },
-
-  /* A blunt face: the koala's big rounded nose straight onto the cube's front
-   * face, on the koala's own numbers on the koala's own hull, and no muzzle at
-   * all. The mouse has the muzzle; the shrew has the snout. */
   nose: 'box-26',
+  extras: [{ part: 'wedge-07', name: 'wedge-07' }],
 })

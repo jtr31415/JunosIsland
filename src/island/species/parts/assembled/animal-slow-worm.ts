@@ -145,52 +145,30 @@ const COIL_STRETCH = 1 / COIL_ACROSS
 const COIL_SINK = (COIL_THICK - HULL_BOTTOM_Y) / COIL_THICK
 
 export const SLOW_WORM_ASSEMBLY = defineCreature('animal-slow-worm', {
-  /* NEW AND UNREVIEWED — see the note above. The first palette this species has
-   * ever had, proposed here rather than agreed in `garden.ts` like every other
-   * Garden animal's, because the slow worm was never in that file. */
   palette: {
-    coat: 0x9c7a4e,  // UNREVIEWED: glossy coppery-brown, the dorsal sheen
-    belly: 0xc9b493, // UNREVIEWED: the paler underside, the coil, and the sclera
-    flank: 0x4b3a2c, // UNREVIEWED: the dark vertebral line and the dark flanks
-    pupil: PACK_PUPIL, // measured off 544 real eye texels; see texture.ts
+    coat: 0x9c7a4e,
+    belly: 0xc9b493,
+    flank: 0x4b3a2c,
+    pupil: PACK_PUPIL,  // the pack's own measured pupil; see texture.ts
   },
 
-  /* THE SPECIES, in one field. A slow worm is a legless lizard and this kit can
-   * say so; the quadruped kit could not, which is why Garden has been thirteen. */
-  legs: false,
-
-  /* A lizard's pale part is its venter only. 6/16 is the nearest point on the
-   * pack's 1/16 grid below the 0.4808-0.5481 zone §7 measured for its mammals. */
   belly: 0.375,
-
-  /* WHAT IT STANDS ON. The bee's shell-ring turned flat, shrunk to 1.000 across
-   * so it stays a detail on the mass, and sunk the fraction that lands its
-   * underside on the ground. With no legs, the belly is the foot. */
-  extras: [{
-    name: 'coil',
-    part: 'box-04',
-    paint: 'belly',
-    spin: [{ axis: 'x', deg: 90 }],
-    stretch: [COIL_STRETCH, COIL_STRETCH, 1],
-    axis: 'z',
-    dir: 1,
-    at: [0, HULL_BOTTOM_Y, 0],
-    sink: COIL_SINK,
-  }],
-
-  /* THE BACK. §8's chamfer idiom for the reason §8 gives it: five facings evenly
-   * through a half turn make a cubic body read ROUND, which is the only question
-   * this animal's silhouette asks. `box-08` at its own measured 0.752 burial
-   * shows 0.081 of itself — an annulation, not a spine. */
-  ridge: {
-    part: 'box-08',
-    paint: 'flank',
-    name: 'scale',
-    count: 3,
-    span: 0.375,
-  },
-
+  legs: false,
+  ridge: { part: 'box-08', paint: 'flank', name: 'scale', count: 3, span: 0.375 },
+  extras: [
+    {
+      name: 'coil',
+      part: 'box-04',
+      paint: 'belly',
+      spin: [{ axis: 'x', deg: 90 }, { axis: 'x', deg: 90 }],
+      stretch: [0.749064, 0.749064, 1.1],
+      axis: 'z',
+      dir: 1,
+      at: [0, 0.7875, -0.575],
+      sink: 0.6025219298245615,
+    },
+  ],
   flag: 'NEW PALETTE, UNREVIEWED — the first slow worm ever built, and the first '
-    + 'colours ever proposed for it: nothing in garden.ts signed these off. The coil '
-    + 'is the bee\'s shell-ring worn flat, which no donor did.',
+    + 'colours ever proposed for it: nothing in garden.ts signed these off. The coil is '
+    + 'the bee\'s shell-ring worn flat, which no donor did.',
 })

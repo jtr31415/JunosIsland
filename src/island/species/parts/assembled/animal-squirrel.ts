@@ -203,45 +203,33 @@ import { PACK_PUPIL } from '../texture'
 
 export const SQUIRREL_ASSEMBLY = defineCreature('animal-squirrel', {
   palette: {
-    coat: 0xc4692f,    // signed-off coat: ginger
-    belly: 0xfbf1e2,   // signed-off belly: the painted patch, the sclera, the inner ear
-    limb: 0x9c4a1e,    // signed-off detail: legs and muzzle
-    tuft: 0x6e3413,    // signed-off accent: the ear tufts
-    pupil: PACK_PUPIL, // measured off 544 real eye texels; see texture.ts
+    coat: 0xc4692f,
+    belly: 0xfbf1e2,
+    limb: 0x9c4a1e,
+    tuft: 0x6e3413,
+    pupil: PACK_PUPIL,  // the pack's own measured pupil; see texture.ts
   },
 
-  /* §4's second kind of two-tone: the belly boundary drawn INTO the coat's cell
-   * at half the hull's height. The tiger's own line, made exact. No geometry. */
   belly: 0.5,
-
-  /* THE ANIMAL. The fox's brush, carried up the rear chamfer at 45 degrees
-   * instead of trailing — which is the whole difference between a squirrel and
-   * the fox it stands next to. */
-  tail: { part: 'box-23', chamfer: true },
-
-  /* The cat's ear on the cat's own numbers, with the cat's own inner ear. */
+  legs: { x: 0.2625, y: 0.1875, z: 0.25 },
   ears: { part: 'wedge-06', paint: { base: 'coat', byBand: { 1: 'belly' } } },
-
-  /* The beaver's muzzle — the pack's one rodent's — at the beaver's own height. */
+  tail: { part: 'box-23', spin: [{ axis: 'x', deg: 45 }], at: [0, 0.55, -0.4875] },
   snout: 'tube-01',
-
   extras: [
-    /* Ear tufts: the hedgehog's spike, on the ear's own apex. §3.1. */
     {
       name: 'tuft',
       part: 'cone-01',
       paint: 'tuft',
       kind: 'pair',
-      at: [0.336, 1.585699, 0.320549],
+      at: [0.3375, 1.45, 0.325],
     },
   ],
-
   flag: 'The raised tail makes this the TALLEST animal here: 1.98 against the pack\'s '
     + '1.43-2.02, and width/height 0.63 against the pack\'s mean 0.97. Every number in '
     + 'the tail is the pack\'s own — the fox\'s brush, the cube\'s own 45-degree rear '
     + 'chamfer, the fox\'s own burial depth — so nothing is tuned; the height is what '
-    + 'those numbers give. Burying it deeper than the fox did would bring it to 1.79 and '
-    + 'stockier, at the cost of the plume standing clear of the back. Joe\'s call. '
+    + 'those numbers give. Burying it deeper than the fox did would bring it to 1.79 '
+    + 'and stockier, at the cost of the plume standing clear of the back. Joe\'s call. '
     + 'Front-to-back it is SHORTER than the fox (0.92 keep-out against 1.15), because '
     + 'the tail goes up where the fox\'s goes back.',
 })

@@ -142,39 +142,48 @@ import { PACK_PUPIL } from '../texture'
 
 export const SALAMANDER_ASSEMBLY = defineCreature('animal-salamander', {
   palette: {
-    coat: 0x2c2c32,    // signed-off coat: the fire salamander's glossy black
-    belly: 0x53535d,   // signed-off belly: the dark grey underside
-    mark: 0xf5c518,    // signed-off detail: the vivid yellow blotches
-    limb: 0xdba90f,    // signed-off accent: the deeper yellow on the legs
-    pupil: PACK_PUPIL, // measured off 544 real eye texels; see texture.ts
+    coat: 0x2c2c32,
+    belly: 0x53535d,
+    mark: 0xf5c518,
+    limb: 0xdba90f,
+    pupil: PACK_PUPIL,  // the pack's own measured pupil; see texture.ts
+    'plate-03': 0xf5c518,
   },
 
-  /* The hull's own lower chamfer edge, which is also the lower card's bottom. */
   belly: 0.25,
-
-  /* The tiger's whip, on the donor transfer alone: joined at z = -0.625, sunk its
-   * own 0.137977, centre recovered onto the bank's recorded -0.826000. */
-  tail: 'wedge-18',
-
-  /* A black bead. `plate-04` is genuinely a no-sclera card — all 34 triangles are
-   * band 15 — but a one-band card reads ONE texture slot and the shared harness
-   * requires an eye to arrive pre-split into two. So the pack's own card with its
-   * sclera painted from the coat: same black bead, nothing weakened. */
   eyes: { paint: 'coat' },
-
-  /* THE ANIMAL. The cow's, dog's and giraffe's flank-patch cards, on the pack's
-   * own flat-card shell 0.635 from the hull centre, at their own recorded
-   * stations — where they land edge-on to this cube's 0.625-square flat faces.
-   * Zero thickness, and given none. The back pair is the same card turned onto
-   * the top face, because the island's camera looks down. */
+  tail: 'wedge-18',
   extras: [
-    { name: 'blotch-upper', part: 'plate-10', paint: 'mark', kind: 'pair',
-      at: [0.635, 0.99675, -0.18606] },
-    { name: 'blotch-lower', part: 'plate-11', paint: 'mark', kind: 'pair',
-      at: [0.635, 0.69375, 0.095994] },
-    { name: 'blotch-back-fore', part: 'plate-10', paint: 'mark', kind: 'pair',
-      spin: [{ axis: 'z', deg: 90 }], at: [0.1905, 1.44125, 0.18606] },
-    { name: 'blotch-back-aft', part: 'plate-10', paint: 'mark', kind: 'pair',
-      spin: [{ axis: 'z', deg: 90 }], at: [0.1905, 1.44125, -0.18606] },
+    {
+      name: 'blotch-upper',
+      part: 'plate-10',
+      paint: 'mark',
+      kind: 'pair',
+      at: [0.635, 0.99675, -0.18606],
+    },
+    {
+      name: 'blotch-lower',
+      part: 'plate-11',
+      paint: 'mark',
+      kind: 'pair',
+      at: [0.635, 0.69375, 0.095994],
+    },
+    {
+      name: 'blotch-back-fore',
+      part: 'plate-10',
+      paint: 'mark',
+      kind: 'pair',
+      spin: [{ axis: 'z', deg: 90 }],
+      at: [0.1905, 1.44125, 0.18606],
+    },
+    {
+      name: 'blotch-back-aft',
+      part: 'plate-10',
+      paint: 'mark',
+      kind: 'pair',
+      spin: [{ axis: 'z', deg: 90 }],
+      at: [0.1905, 1.44125, -0.18606],
+    },
+    { part: 'plate-03', name: 'plate-03', paint: 'plate-03' },
   ],
 })

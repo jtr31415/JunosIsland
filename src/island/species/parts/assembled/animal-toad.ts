@@ -140,22 +140,15 @@ import { PACK_PUPIL } from '../texture'
 
 export const TOAD_ASSEMBLY = defineCreature('animal-toad', {
   palette: {
-    coat: 0x8e7c4c,    // signed-off coat: drab olive
-    belly: 0xd8ca9f,   // signed-off belly: the painted underside and the sclera
-    wart: 0x6a5b33,    // signed-off detail: the nine warts
-    limb: 0x4c4023,    // signed-off accent: legs and the blunt jaw
-    pupil: PACK_PUPIL, // measured off 544 real eye texels; see texture.ts
+    coat: 0x8e7c4c,
+    belly: 0xd8ca9f,
+    wart: 0x6a5b33,
+    limb: 0x4c4023,
+    pupil: PACK_PUPIL,  // the pack's own measured pupil; see texture.ts
   },
 
-  /* The tiger's belly line, made exact. One number, no geometry. */
   belly: 0.5,
-
-  /* THE ANIMAL. Nine domes, three to a row, on the back and the two shoulder
-   * chamfers — the chamfer idiom without its flanks, because a toad is warty on
-   * its back. `box-05` is the bee's ear: taper 1.000, radius 0.110 at its middle
-   * and 0.000 at both poles, so half of it above the skin is a bump 0.221 across
-   * and 0.116 tall. It is the opposite shape to the hedgehog's cone-01 spike,
-   * and the sink is half because a symmetric ball has no other honest depth. */
+  snout: 'tube-03',
   ridge: {
     part: 'box-05',
     paint: 'wart',
@@ -164,9 +157,4 @@ export const TOAD_ASSEMBLY = defineCreature('animal-toad', {
     rows: ['top', 'chamfer'],
     sink: 0.5,
   },
-
-  /* The deer's broad blunt nose, on the deer's own numbers, by the donor
-   * transfer. Not a mouth plate — that is the frog's read — and no nose button
-   * on it either: an amphibian has neither. */
-  snout: 'tube-03',
 })

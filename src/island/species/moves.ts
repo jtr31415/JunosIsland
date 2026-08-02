@@ -138,9 +138,18 @@ export const DEFAULT_LOCOMOTION: Locomotion = 'land'
  * rule is that shipped code cannot so much as name it. This comment tripped that
  * gate once already. */
 export const MOVES: Readonly<Record<string, Locomotion>> = {
+  'animal-badger': 'land',
   'animal-bee': 'air',
+  'animal-dormouse': 'land',
   'animal-hedgehog': 'land',
+  'animal-mole': 'land',
+  'animal-mouse': 'land',
   'animal-parrot': 'air',
+  'animal-salamander': 'land',
+  'animal-slow-worm': 'land',
+  'animal-squirrel': 'land',
+  'animal-toad': 'amphibian',
+  'animal-tortoise': 'land',
 }
 /* <<< WORKBENCH-OWNED TABLE */
 

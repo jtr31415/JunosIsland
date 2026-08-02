@@ -111,34 +111,49 @@ import { PACK_PUPIL } from '../texture'
 
 export const MOLE_ASSEMBLY = defineCreature('animal-mole', {
   palette: {
-    coat: 0x3d3d47,    // signed-off coat: near-black velvet
-    belly: 0x6b6b78,   // signed-off belly: the sclera, and nothing else
-    paw: 0xd79a86,     // signed-off detail: the spade hands and the front legs
-    snout: 0xe8ac96,   // signed-off accent: the pointed muzzle
-    pupil: PACK_PUPIL, // measured off 544 real eye texels; see texture.ts
+    coat: 0x3d3d47,
+    belly: 0x6b6b78,
+    paw: 0xd79a86,
+    snout: 0xe8ac96,
+    pupil: PACK_PUPIL,  // the pack's own measured pupil; see texture.ts
+    'leg-back': 0xd79a86,
   },
 
-  /* NO EARS. Not an omission — a mole has no pinna, and it is this animal's
-   * loudest separation from every other small Garden mammal. */
-
-  /* The elephant's TRUNK, turned round: `z +1`, alone among the bank's seven
-   * tails, because Kenney's node name is wrong. At the hull's own centre height
-   * because that is the only y where a 0.623004 stub fits the 0.625 flat face. */
-  tail: { part: 'box-18', spin: [{ axis: 'y', deg: 180 }], at: [0, 0.80625, -0.625] },
-
-  /* The parrot's beak — taper 0.000, the pack's only pointed muzzle — placed
-   * entirely by the donor transfer, and painted pink rather than coat. */
-  snout: { part: 'cone-06', paint: 'snout' },
-
-  /* The leg row, split so the digging pair can be pink; the hog's disc hung on
-   * the front legs' own front face with its rim resting on the ground; and two
-   * of the beaver's incisors stood on each palm as claws. */
   legs: false,
+  tail: { part: 'box-18', spin: [{ axis: 'y', deg: 180 }], at: [0, 0.80625, -0.625] },
+  snout: { part: 'cone-06', paint: 'snout' },
   extras: [
-    { name: 'leg-back', part: 'box-01', paint: 'coat', kind: 'pair', sink: LEG_ROW.sink, at: [0.27, LEG_ROW.y, -0.25] },
-    { name: 'leg-front', part: 'box-01', paint: 'paw', kind: 'pair', sink: LEG_ROW.sink, at: [0.27, LEG_ROW.y, 0.25] },
-    { name: 'spade', part: 'box-24', paint: 'paw', kind: 'pair', at: [0.27, 0.2, 0.4375] },
-    { name: 'claw-inner', part: 'wedge-01', paint: 'belly', kind: 'pair', at: [0.2075, 0.2, 0.6375] },
-    { name: 'claw-outer', part: 'wedge-01', paint: 'belly', kind: 'pair', at: [0.3325, 0.2, 0.6375] },
+    {
+      name: 'leg-back',
+      part: 'box-01',
+      paint: 'leg-back',
+      kind: 'pair',
+      sink: 0.408163,
+      at: [0.27, 0.18125, -0.25],
+    },
+    {
+      name: 'leg-front',
+      part: 'box-01',
+      paint: 'paw',
+      kind: 'pair',
+      sink: 0.408163,
+      at: [0.27, 0.18125, 0.25],
+    },
+    {
+      name: 'claw-inner',
+      part: 'wedge-01',
+      paint: 'belly',
+      kind: 'pair',
+      at: [0.2125, 0.1, 0.4125],
+      spin: [{ axis: 'x', deg: -90 }],
+    },
+    {
+      name: 'claw-outer',
+      part: 'wedge-01',
+      paint: 'belly',
+      kind: 'pair',
+      at: [0.3125, 0.0625, 0.3625],
+      spin: [{ axis: 'x', deg: -90 }],
+    },
   ],
 })

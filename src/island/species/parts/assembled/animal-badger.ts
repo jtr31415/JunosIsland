@@ -128,50 +128,51 @@ import { PACK_PUPIL } from '../texture'
 
 export const BADGER_ASSEMBLY = defineCreature('animal-badger', {
   palette: {
-    coat: 0x9aa0a8,    // signed-off coat: badger grey
-    belly: 0xf8f6f0,   // signed-off belly: the underside, the white muzzle, the sclera
-    mark: 0x2a2b30,    // signed-off detail: the markings — the ear lugs, the muzzle's top
-    limb: 0x1c1d21,    // signed-off accent: the legs. `garden.ts`'s own "black paws".
-    pupil: PACK_PUPIL, // measured off 544 real eye texels; see texture.ts
+    coat: 0x9aa0a8,
+    belly: 0xf8f6f0,
+    mark: 0x2a2b30,
+    limb: 0x1c1d21,
+    pupil: PACK_PUPIL,  // the pack's own measured pupil; see texture.ts
+    'box-04': 0x2a2b30,
   },
 
-  /* The cow's and the deer's hull. Its 1.539 is TWO FUSED EAR LUGS on a 1.250
-   * cube body, not a wider body — so this species has no ear feature, and band 5
-   * is Kenney's own inner-ear cut on those lugs, painted dark for free. */
   hull: { part: 'box-12', paint: { base: 'coat', byBand: { 5: 'mark' } } },
-
-  /* The tiger's belly line, made exact. `garden.ts`: "white underside". */
   belly: 0.5,
-
-  /* The bank's ONLY stub tail — the elephant's trunk under Kenney's wrong name,
-   * spun to face backwards. Joined at the hull's own centre y, the one height at
-   * which its 0.6230 root fits inside the 0.6250 flat rear face. */
   tail: { part: 'box-18', spin: [{ axis: 'y', deg: 180 }], at: [0, 0.80625, -0.625] },
-
-  /* The fox's muzzle, WHITE, with Kenney's own upper band dark: the white face
-   * and the front end of the stripe, in one part and no geometry. */
   snout: { part: 'tube-06', paint: { base: 'belly', byBand: { 7: 'mark' } } },
-
-  /* The koala's big dark nose-tip, on the muzzle's own front plane. Not
-   * `wedge-10`, which is measurably a nose TIP and reads as a tongue — Joe
-   * rejected that one by name on the hedgehog, and the lesson is not its own. */
   nose: { part: 'box-26', paint: 'mark' },
-
+  extras: [
+    {
+      part: 'box-04',
+      name: 'box-04',
+      stretch: [0.95, 0.75, 0.45],
+      spin: [{ axis: 'y', deg: 90 }],
+      at: [-0.2, 0.975, -0.6],
+      paint: 'box-04',
+    },
+    {
+      part: 'box-04',
+      name: 'box-04-2',
+      stretch: [0.95, 0.75, 0.45],
+      spin: [{ axis: 'y', deg: 90 }],
+      at: [0.2, 0.975, -0.6],
+      paint: 'box-04',
+    },
+  ],
   flag: 'THE BLACK FACE STRIPES CANNOT BE EXPRESSED, and on a badger they ARE the '
     + 'animal: a white face carrying two stripes that run lengthwise from the nose, '
-    + 'through the eye, back to the ear. `Paint.patch` takes one number and that '
-    + 'number is a HEIGHT — it paints ONE LEVEL BOUNDARY across a part and has no z '
-    + 'term, so it cannot even say "the front is white"; `byBand` can only cut where '
-    + 'Kenney already cut; and the bank has no card that could carry a stripe — its '
-    + 'only marking cards are the cow\'s flank blotches, `plate-10` (0.244 x 0.253) '
-    + 'and `plate-11` (0.400 x 0.433), near-square and side-mounted. So the marking '
-    + 'is not awkward here, it is unsayable. What is here instead is both ENDS of the '
-    + 'stripe and nothing between them: a WHITE MUZZLE carrying the fox nose\'s own '
-    + 'dark upper band and a big dark nose pad (the front end), dark on the hull\'s '
-    + 'own fused ear lugs (the back end), and the pack\'s 8/16 mammal line for the '
-    + 'pale underside. The run between them, across the cheek and through the eye, is '
-    + 'the marking a child would name this animal by, and it is missing. Also worth '
-    + 'your eye: `box-12`\'s 1.539 width is TWO FUSED EARS on a 1.250 cube body, not a '
-    + 'wider body, so this badger has no ear part and needs none. Nothing was authored '
-    + 'to fake any of it.',
+    + 'through the eye, back to the ear. `Paint.patch` takes one number and that number '
+    + 'is a HEIGHT — it paints ONE LEVEL BOUNDARY across a part and has no z term, so '
+    + 'it cannot even say "the front is white"; `byBand` can only cut where Kenney '
+    + 'already cut; and the bank has no card that could carry a stripe — its only '
+    + 'marking cards are the cow\'s flank blotches, `plate-10` (0.244 x 0.253) and '
+    + '`plate-11` (0.400 x 0.433), near-square and side-mounted. So the marking is not '
+    + 'awkward here, it is unsayable. What is here instead is both ENDS of the stripe '
+    + 'and nothing between them: a WHITE MUZZLE carrying the fox nose\'s own dark upper '
+    + 'band and a big dark nose pad (the front end), dark on the hull\'s own fused ear '
+    + 'lugs (the back end), and the pack\'s 8/16 mammal line for the pale underside. The '
+    + 'run between them, across the cheek and through the eye, is the marking a child '
+    + 'would name this animal by, and it is missing. Also worth your eye: `box-12`\'s '
+    + '1.539 width is TWO FUSED EARS on a 1.250 cube body, not a wider body, so this '
+    + 'badger has no ear part and needs none. Nothing was authored to fake any of it.',
 })

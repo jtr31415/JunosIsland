@@ -81,27 +81,16 @@ import { PACK_PUPIL } from '../texture'
 
 export const MOUSE_ASSEMBLY = defineCreature('animal-mouse', {
   palette: {
-    coat: 0xa08a76,    // signed-off coat: mouse brown
-    belly: 0xf7ede0,   // signed-off belly: the painted patch and the sclera
-    inner: 0xe0a49c,   // signed-off detail: the ears' inner discs and the nose
-    limb: 0x54453a,    // signed-off accent: legs, muzzle and tail
-    pupil: PACK_PUPIL, // measured off 544 real eye texels; see texture.ts
+    coat: 0xa08a76,
+    belly: 0xf7ede0,
+    inner: 0xe0a49c,
+    limb: 0x54453a,
+    pupil: PACK_PUPIL,  // the pack's own measured pupil; see texture.ts
   },
 
-  /* The tiger's belly line, made exact. One number, no geometry. */
   belly: 0.5,
-
-  /* THE ANIMAL. The koala's dish ear — the bank's only side-mounted one — at the
-   * koala's own recorded height and depth on this same cube, with its own inner
-   * disc painted for free. */
   ears: { part: 'box-25', paint: { base: 'coat', byBand: { 1: 'inner' } } },
-
-  /* The cat's whip, carried LOW: a mouse's tail trails, and at the cat's own
-   * 1.1867 the animal reads as a cat with big ears. The only chosen number here. */
   tail: { part: 'wedge-07', paint: 'limb', at: [0, 0.9, -0.625] },
-
-  /* The beaver's muzzle — the pack's one rodent's — and a blunt dark button on
-   * its front face. Not `wedge-10`: that one reads as a tongue. */
   snout: 'tube-01',
   nose: { part: 'box-09', paint: 'inner' },
 })

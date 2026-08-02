@@ -129,32 +129,23 @@ import { PACK_PUPIL } from '../texture'
 
 export const VOLE_ASSEMBLY = defineCreature('animal-vole', {
   palette: {
-    coat: 0x8b5a33,    // signed-off coat: field-vole chestnut brown, above
-    belly: 0xc6bba4,   // signed-off belly: grey-buff below, the sclera, the teeth
-    muzzle: 0x8d7d64,  // signed-off detail: the blunt face — muzzle, cheeks, plate
-    limb: 0x5a4330,    // signed-off accent: legs, the stub tail and the nose
-    pupil: PACK_PUPIL, // measured off 544 real eye texels; see texture.ts
+    coat: 0x6d5d50,
+    belly: 0xc6bba4,
+    muzzle: 0x8d7d64,
+    limb: 0x5a4330,
+    pupil: PACK_PUPIL,  // the pack's own measured pupil; see texture.ts
+    tail: 0x6d5d50,
   },
 
-  /* The tiger's belly line, made exact. One number, no geometry. */
   belly: 0.5,
-
-  /* NO `ears`. A vole's are buried in its fur, and against the mouse's 0.743
-   * dish that absence is the biggest silhouette difference the bank can make. */
-
-  /* The elephant's TRUNK, which the pack calls a tail and which is the bank's
-   * only `z +1` tail shape. Spun 180 degrees it is its only stub: joined at the
-   * rear face by the donor transfer, sunk the elephant's own 0.000, and landing
-   * on the recorded offset mirrored. */
-  tail: { part: 'box-18', paint: 'limb', spin: [{ axis: 'y', deg: 180 }] },
-
-  /* The bunny's nose button — a BUTTON, deliberately, not `wedge-10`, which is
-   * the better nose tip on every axis and reads as a tongue. */
+  tail: {
+    part: 'box-18',
+    paint: 'tail',
+    spin: [{ axis: 'y', deg: 180 }],
+    stretch: [0.45, 0.45, 0.45],
+    at: [0, 0.725, -0.625],
+  },
   nose: { part: 'box-09', paint: 'limb' },
-
-  /* The rest of the bunny's face, worn as the bunny wears it, plus the pack's
-   * one rodent's teeth. Every one of these is its donor's own placement on its
-   * donor's own hull, which is this hull. */
   extras: [
     { part: 'box-08', name: 'muzzle', paint: 'muzzle' },
     { part: 'wedge-04', name: 'cheek', kind: 'pair', paint: 'muzzle' },

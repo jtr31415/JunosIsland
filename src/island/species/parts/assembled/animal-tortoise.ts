@@ -123,38 +123,15 @@ import { PACK_PUPIL } from '../texture'
 
 export const TORTOISE_ASSEMBLY = defineCreature('animal-tortoise', {
   palette: {
-    coat: 0x6f7a45,    // olive carapace
-    belly: 0xd7c79c,   // pale horn plastron, and the sclera
-    horn: 0x8a6a3c,    // horn-brown, for the shell rim alone
-    limb: 0x6b6455,    // duller skin: legs and tail
-    pupil: PACK_PUPIL, // measured off 544 real eye texels; see texture.ts
+    coat: 0x6f7a45,
+    belly: 0xd7c79c,
+    horn: 0x8a6a3c,
+    limb: 0x6b6455,
+    pupil: PACK_PUPIL,  // the pack's own measured pupil; see texture.ts
+    'tube-03': 0xd7c79c,
   },
 
-  /* The carapace line, PAINTED (§4 way 2): 6/16 of the hull's own height, which
-   * is world y = 0.65 — the same line the rim is joined at, by construction. */
   belly: 0.375,
-
-  /* THE BEST ATTEMPT AT A SHELL. The fish's whole-body shell-ring laid FLAT: a
-   * rim 0.077 proud of the cube on all four sides. Halved in thickness because
-   * at the fish's own 0.520 its bounding box is 1.9x under the hull's, which is
-   * a second mass and rule 3; halved it is 3.81x and a rim. `axis: 'z'` puts the
-   * facing back on +y after the turn, so `sink: 0.5` straddles the join plane. */
-  extras: [{
-    name: 'rim',
-    part: 'box-19',
-    paint: 'horn',
-    spin: [{ axis: 'x', deg: 90 }],
-    axis: 'z',
-    dir: -1,
-    stretch: [1, 1, 0.5],
-    sink: 0.5,
-    at: [0, 0.65, 0],
-  }],
-
-  /* THE CARAPACE, as near as the bank goes: the caterpillar's flat plate, four
-   * to a row, on the top face and both upper chamfers. §8's idiom — the pack's
-   * own way of making a cubic back read ROUND without authoring a curved shape.
-   * No side rows: they would run through the rim. */
   ridge: {
     part: 'wedge-08',
     paint: 'horn',
@@ -163,21 +140,35 @@ export const TORTOISE_ASSEMBLY = defineCreature('animal-tortoise', {
     rows: ['top', 'chamfer'],
     spin: [{ axis: 'x', deg: -90 }],
   },
-
-  /* The elephant's TRUNK — the bank inherited Kenney's wrong name — turned back
-   * to front, which is the bank's only stub tail. Rear face, donor's own height,
-   * donor's own sink. */
-  tail: { part: 'box-18', paint: 'limb', spin: [{ axis: 'y', deg: 180 }] },
-
-  flag: 'THE PACK HAS NO SHELL AND NO CARAPACE — measured, not guessed (§5 names '
-    + 'it) — so this tortoise is the 1.250 cube wearing the fish\'s whole-body '
-    + 'shell-ring box-19 turned FLAT and halved in thickness as a shell RIM (at '
-    + 'its own 0.520 it is 1.9x the hull and becomes a second mass, which is rule '
-    + '3 and the fault that scrapped 72), a carapace line PAINTED at 6/16 rather '
-    + 'than modelled, and twelve caterpillar plates laid on the top face and both '
-    + 'upper chamfers by §8\'s idiom to buy a quarter turn of curve where a dome '
-    + 'is wanted — the crab\'s flat box-13 having been rejected by measurement at '
-    + '0.632 tall against a 1.43 floor: it reads as a shelled animal and not yet '
-    + 'as a tortoise, and a domed carapace is the one bespoke part this collection '
-    + 'would pay to author.',
+  extras: [
+    {
+      name: 'rim',
+      part: 'box-19',
+      paint: 'horn',
+      spin: [{ axis: 'x', deg: 90 }],
+      axis: 'z',
+      dir: -1,
+      stretch: [1, 1, 0.5],
+      sink: 0.5,
+      at: [0, 0.65, 0],
+    },
+    {
+      part: 'tube-03',
+      name: 'tube-03',
+      at: [0, 0.4375, -0.5875],
+      spin: [{ axis: 'x', deg: -180 }],
+      paint: 'tube-03',
+      stretch: [0.6, 0.6, 0.6],
+    },
+  ],
+  flag: 'THE PACK HAS NO SHELL AND NO CARAPACE — measured, not guessed (§5 names it) — '
+    + 'so this tortoise is the 1.250 cube wearing the fish\'s whole-body shell-ring '
+    + 'box-19 turned FLAT and halved in thickness as a shell RIM (at its own 0.520 it '
+    + 'is 1.9x the hull and becomes a second mass, which is rule 3 and the fault that '
+    + 'scrapped 72), a carapace line PAINTED at 6/16 rather than modelled, and twelve '
+    + 'caterpillar plates laid on the top face and both upper chamfers by §8\'s idiom to '
+    + 'buy a quarter turn of curve where a dome is wanted — the crab\'s flat box-13 '
+    + 'having been rejected by measurement at 0.632 tall against a 1.43 floor: it reads '
+    + 'as a shelled animal and not yet as a tortoise, and a domed carapace is the one '
+    + 'bespoke part this collection would pay to author.',
 })
