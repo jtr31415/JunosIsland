@@ -8,20 +8,29 @@
  * `defineSpecies` so a typo is a thrown error at module load rather than a pet
  * called "Hamstre" forever.
  *
- * THIS COLLECTION SHIPS PARTIAL, ON PURPOSE. The roster lists sixteen members;
- * fourteen are here. PB-036 phase 3 built the songbird kit and with it the four
- * cage birds, which leaves two, and both are absent because their kits do not
- * exist (`kit.ts:66-74`) rather than because they were forgotten:
+ * THIS COLLECTION IS COMPLETE — sixteen of sixteen, since 2 August 2026. It was
+ * not, for most of its life, and the way it closed is worth keeping.
+ *
+ * It shipped at fourteen. PB-036 phase 3 built the songbird kit and with it the
+ * four cage birds, which left two, and both were absent because their kits did
+ * not exist (`kit.ts:66-74`) rather than because they were forgotten:
  *
  *     animal-corn-snake  -> legless; roster §1 puts the snake in `bespoke`
  *     animal-goldfish    -> swim kit, unbuilt
  *
- * `tests/island/species-home-pets.test.ts` names both and asserts they are
- * ABSENT, and — the invariant that outlived the four birds moving out of that
- * list — asserts that NO member of this collection resolves to a frozen pack
- * animal or to the wrong kit. The day someone half-fills this file with a
- * quadruped goldfish the suite says so. `registry.ts:11-14` — "do not finish
- * this file" — applies here exactly as it applies there.
+ * NEITHER kit was ever built. Both animals left that list the only honest way,
+ * by being BUILT on the route they were actually waiting for — the assembly kit,
+ * which places bank parts one at a time and can therefore say "no legs" and "no
+ * quadruped anything" without lying about the animal. Each carries `bespoke`, an
+ * `assembly` and no `build`. The rule that governed the wait still governs: a
+ * member is never forced onto a kit that would misdescribe it.
+ *
+ * `tests/island/species-home-pets.test.ts` keeps the invariant that outlived
+ * both of them — that NO member of this collection resolves to a frozen pack
+ * animal or to the wrong kit. The day someone rebuilds the goldfish as a
+ * quadruped the suite says so. `registry.ts:11-14` — "do not finish this file"
+ * — applied here until the day it was finished properly, and the assertion that
+ * replaced it is stronger, not weaker.
  *
  * NO THREAT STATUS IS RECORDED. Same reason as `registry.ts:55-76`: roster §5
  * wants facts that are "true, checkable", and `Threat.checkedDate` exists so a
@@ -442,17 +451,6 @@ export const HOME_PETS_SPECIES: readonly Species[] = [
   }),
 
   /*
-   * Terrapin — the shell does the work.
-   *
-   * `shell` (quadruped.ts:516) is a dome in the accent colour with a rim in the
-   * detail colour over the whole back, which is precisely a terrapin from three
-   * metres away. Everything else is tuned to get out of its way: small head
-   * (0.72, smallest here), legs near the floor, no ears, and a stub tail.
-   *
-   * Red-eared-slider colouring, which is the terrapin a child meets: olive skin,
-   * a yellow-striped underside, a yellow shell rim and a darker olive dome.
-   */
-  /*
    * THE CORN SNAKE — the fifteenth, and the collection's first legless member.
    *
    * It has no `build` and no numbers here at all, which is the whole point: the
@@ -468,6 +466,17 @@ export const HOME_PETS_SPECIES: readonly Species[] = [
    */
   defineSpecies('animal-corn-snake', 'bespoke'),
 
+  /*
+   * Terrapin — the shell does the work.
+   *
+   * `shell` (quadruped.ts:516) is a dome in the accent colour with a rim in the
+   * detail colour over the whole back, which is precisely a terrapin from three
+   * metres away. Everything else is tuned to get out of its way: small head
+   * (0.72, smallest here), legs near the floor, no ears, and a stub tail.
+   *
+   * Red-eared-slider colouring, which is the terrapin a child meets: olive skin,
+   * a yellow-striped underside, a yellow shell rim and a darker olive dome.
+   */
   defineSpecies('animal-terrapin', 'quadruped', {
     build: {
       kit: 'quadruped',
@@ -481,6 +490,25 @@ export const HOME_PETS_SPECIES: readonly Species[] = [
       palette: { coat: 0x4e7a3c, belly: 0xe8d98a, detail: 0xf0d23c, accent: 0x2f4a22 },
     },
   }),
+
+  /*
+   * THE GOLDFISH — the sixteenth, and the one that CLOSES this collection.
+   *
+   * Like the corn snake it has no `build` and no numbers here, and for the same
+   * reason: `bespoke` sends it to the assembly kit and
+   * `parts/assembled/animal-goldfish.ts` carries every measurement with the
+   * reason beside it. What differs is what it was waiting FOR. The corn snake
+   * wanted a kit that could say "no legs"; this one was rostered against the
+   * `swim` kit, which is declared in `types.ts`, has never been built, and turns
+   * out not to be needed — every part of a fish this pack owns was donated by
+   * the pack's own fish, and the assembly kit can place all of them.
+   *
+   * Its palette is proposed there rather than agreed here, because this species
+   * was never in this file to be given one. It is FLAGGED and Joe has not seen
+   * it — along with the tail, which is the LION'S standing in for a caudal fin,
+   * because the bank has no fin, flipper or fluke at all.
+   */
+  defineSpecies('animal-goldfish', 'bespoke'),
 
   /*
    * Rat — the long bare tail, and the only one that gets it.

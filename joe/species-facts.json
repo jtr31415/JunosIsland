@@ -627,6 +627,19 @@
       "note": ""
     },
     {
+      "speciesId": "animal-goldfish",
+      "species": "Goldfish",
+      "collection": "home-pets",
+      "fact": "Goldfish were once plain grey-green carp. People in China found rare orange ones and bred more.",
+      "check": "verified",
+      "source": "https://pmc.ncbi.nlm.nih.gov/articles/PMC3602300/",
+      "sourceNote": "Wang et al. 2013 (PMC3602300) localises goldfish domestication to Hangzhou and Jiaxing in Zhejiang, China, records that wild Carassius can naturally turn from grey to red, and that those red fish were first collected into Buddhist free-life ponds and only then bred deliberately. Chen et al., PNAS 2020 (PMC7703540) adds the timeline — red scales on 'normally gray or silver crucian carp' first recorded in the Jin dynasty (AD 265-420), selection into ornamental ponds by the Tang, the gold variety reserved for the imperial family by the Song — and the Invasive Species Centre records that feral goldfish revert to olive-green within a few generations, which is the cleanest proof that human choosing is the only reason they stay orange. DRAFTED AND CHECKED BY TWO AGENTS, THE SECOND OF WHICH NEVER SAW THE FIRST'S SOURCES (JT-031's method). The refuting pass could not break the claim but earned one change: the first draft said 'people in China bred the orange ones', which slightly overstates human agency — the mutation arose on its own and was FOUND before it was bred, so 'found rare orange ones and bred more' is the version above. It was then cut from 30 words to 16 to meet this file's own twenty-word cap. Remaining caveats, neither reaching falsehood: the ancestor is specifically the crucian carp, and the earliest records say red and gold rather than orange.",
+      "proposedRewrite": "",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
+    },
+    {
       "speciesId": "animal-rat",
       "species": "Rat",
       "collection": "home-pets",
@@ -985,6 +998,19 @@
       "check": "verified",
       "source": "https://nationalzoo.si.edu/animals/western-lowland-gorilla",
       "sourceNote": "Smithsonian National Zoo: before dusk each gorilla over about three years old builds its own fresh nest.",
+      "proposedRewrite": "",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
+    },
+    {
+      "speciesId": "animal-crocodile",
+      "species": "Crocodile",
+      "collection": "africa",
+      "fact": "Baby crocodiles chirp inside their eggs when they are ready to hatch. Their mother hears them and digs them out.",
+      "check": "verified",
+      "source": "https://pmc.ncbi.nlm.nih.gov/articles/PMC4616036/",
+      "sourceNote": "Chabert, Vergne et al. 2015 (PMC4616036) states that females guarding their nest react to the calls of near-term embryos by providing assistance during the hatching process, across Nile crocodile, alligator, caiman, Morelet's and Orinoco crocodile. The IUCN Crocodile Specialist Group (iucncsg.org/pages/Reproduction.html, http only, which is why it is not the source field) states the same as a general crocodilian pattern: hatchling embryos 'begin calling from within their eggs', females 'usually excavate the nests' in response, and hatchlings making their own way out is 'the exception rather than the rule'. The causal link is experimental, not anecdotal: Vergne and Mathevon, Current Biology 2008, played pre-hatching calls at Nile crocodile nests and 8 of 10 females dug, against 1 of 10 for noise controls. The Australian Museum's estuarine crocodile page supplies the word 'chirp' and the same behaviour independently. DRAFTED AND CHECKED BY TWO AGENTS, THE SECOND OF WHICH NEVER SAW THE FIRST'S SOURCES (JT-031's method); it could not break the claim. Three caveats it raised, all survivable: the playback experiments are Nile crocodile only, so 'crocodiles' generally rests on the CSG's descriptive statement rather than on multi-species trials; the 2024 follow-up finds that only SUSTAINED calling triggers digging, so 'hears them and digs them out' compresses a threshold; and the Nile crocodile's call is usually transcribed as a grunt rather than a chirp, though 'chirp' is the Australian Museum's own word for it. CHOSEN AGAINST THE GUARDRAIL, NOT DESPITE IT: every obvious crocodile fact is a predation fact, and the mother-carries-her-babies-in-her-mouth one — true, and confirmed on the same page — was rejected because a six-year-old has no mental model for a carrying mouth, only for an eating one.",
       "proposedRewrite": "",
       "verdict": "",
       "replacement": "",

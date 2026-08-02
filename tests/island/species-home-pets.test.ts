@@ -2,8 +2,8 @@
  * Home Pets, tested as DATA against the roster and as GEOMETRY against its kits.
  *
  * `kit-quadruped.test.ts` and `kit-songbird.test.ts` prove the kits build things
- * `pets.ts` can survive. This file proves that this collection's fifteen
- * records are the right fifteen, that each one actually constructs, and — the
+ * `pets.ts` can survive. This file proves that this collection's sixteen
+ * records are the right sixteen, that each one actually constructs, and — the
  * assertion that matters most on a page carrying six small brown rodents AND
  * four small cage birds — that no two of them are silhouette twins. Roster §4
  * flags confusable groups so "the Pet-o-matic veto pass has a checklist"; this
@@ -17,9 +17,7 @@
  * were carrying, which was never "these four do not exist" but "no member of
  * this page may resolve to something it is not": not a frozen pack animal, not a
  * kit that does not exist, not a budgie on four legs. That invariant is asserted
- * below in its own right, and the member that genuinely is still deferred — the
- * goldfish, which wants the unbuilt swim kit — keeps the original
- * absent-by-design assertion.
+ * below in its own right.
  *
  * IT CHANGED SHAPE AGAIN ON 2 AUG, when the CORN SNAKE was built. It left the
  * deferred list the only honest way, by being built on the route it was always
@@ -29,6 +27,19 @@
  * `build` — so the sweeps that reach into a build now walk `KIT_BUILT` rather
  * than every member, and the resolve-to-nothing-it-is-not invariant gained a
  * mirror-image branch rather than an exemption.
+ *
+ * AND IT CHANGED SHAPE A THIRD AND LAST TIME LATER THE SAME DAY, when the
+ * GOLDFISH landed and `DEFERRED` went EMPTY. **This collection is complete.**
+ * The assertion was not deleted with the list — a deleted assertion is a lost
+ * invariant — it was INVERTED, the way `species-garden.test.ts` inverted its
+ * slow-worm row: it now says that nothing is missing, and it says WHY the two
+ * that left are allowed to have left, which is the rule that governed the whole
+ * wait. Neither was forced onto a kit that would have misdescribed it. The
+ * goldfish was rostered against the `swim` kit, which is declared in `types.ts`
+ * and has never been built; it turned out not to need one, because every part of
+ * a fish this pack owns was donated by the pack's own fish and the assembly kit
+ * can place all of them. The day someone "finishes" a collection by putting a
+ * fish on four legs, that test goes red rather than nothing going red at all.
  */
 import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
@@ -36,38 +47,47 @@ import { HOME_PETS_SPECIES } from '../../src/island/species/collections/home-pet
 import { collection, SPECIES_NAMES } from '../../src/island/species/roster'
 import { BASE_SPECIES } from '../../src/island/species/registry'
 import { buildSpecies } from '../../src/island/species/kit'
+import { buildAssembled } from '../../src/island/species/parts'
 import type { QuadrupedBuild, SongbirdBuild, Species } from '../../src/island/species/types'
 
-/** The fifteen, in the order the collection file writes them — roster order. */
+/** The sixteen, in the order the collection file writes them — roster order. */
 const BUILT = [
   'animal-hamster', 'animal-guinea-pig', 'animal-budgie', 'animal-gerbil',
   'animal-pony', 'animal-ferret', 'animal-gecko', 'animal-chinchilla',
   'animal-canary', 'animal-cockatiel', 'animal-corn-snake', 'animal-terrapin',
-  'animal-rat', 'animal-lovebird', 'animal-degu',
+  'animal-goldfish', 'animal-rat', 'animal-lovebird', 'animal-degu',
 ]
 
 /**
- * The one the roster lists and this collection does not build, with the kit it
- * is waiting on. Not a TODO list — a statement that the gap is known.
+ * WHAT THE ROSTER LISTS AND THIS COLLECTION DOES NOT BUILD: nothing, since
+ * 2 August 2026. Home Pets is COMPLETE.
  *
- * This entry used to name two. The CORN SNAKE left it by being BUILT, which is
- * the only honest way off this list — and, like the cage birds before it, it
- * left on the kit it was always waiting for rather than by being forced onto a
- * kit that would lie about it. Its geometry comes off the ASSEMBLY kit, so its
- * record carries `assembly` and no `build`; the same route Garden's slow worm
- * took, and for the identical reason.
+ * This entry named six, then two, then one, and now none — and it is kept at
+ * zero rather than deleted, because the assertion below is what makes "complete"
+ * a checked fact instead of a comment. It also records the kit each member was
+ * waiting on, which is why an empty record still has a type: the next collection
+ * to close will want the same shape.
+ *
+ * Every one of the six left the only honest way, by being BUILT on a route that
+ * describes it — the four cage birds on the songbird kit, and the corn snake and
+ * the goldfish on the ASSEMBLY kit, which places bank parts one at a time and
+ * can therefore say "no legs" without lying. Neither of the last two was ever
+ * going to get the kit it was rostered against: there is still no `bespoke` KIT
+ * and there is still no `swim` kit. That is the rule this list was really
+ * carrying and it is asserted below in its own right.
  */
-const DEFERRED: Readonly<Record<string, string>> = {
-  'animal-goldfish': 'swim',
-}
+const DEFERRED: Readonly<Record<string, string>> = {}
 
 /**
- * The one member that is not a quadruped and not a songbird.
+ * The two members that are not quadrupeds and not songbirds.
  *
  * `legs` is structural in the quadruped kit — four boxes, always built, clamped
- * at 0.25 — so a snake cannot be expressed there without lying about it.
+ * at 0.25 — so neither a snake nor a fish can be expressed there without lying
+ * about it. Both carry `bespoke`, an `assembly` and no `build`; their own
+ * invariants are `assembly-corn-snake.test.ts`, `assembly-goldfish.test.ts` and
+ * the shared harness in `assembly-assert.ts`.
  */
-const ASSEMBLED = ['animal-corn-snake']
+const ASSEMBLED = ['animal-corn-snake', 'animal-goldfish']
 
 /** The six small rodents that share this page and must not share a silhouette. */
 const RODENTS = [
@@ -97,12 +117,16 @@ const byId = new Map(HOME_PETS_SPECIES.map(s => [s.id, s]))
  * into a `QuadrupedBuild` or a `SongbirdBuild`.
  *
  * Filtered on the presence of a `build` rather than counted, exactly as
- * `species-garden.test.ts` does for its slow worm. The corn snake has no
- * `build`, so a sweep that included it would read `undefined.ears` — and, worse,
+ * `species-garden.test.ts` does for its slow worm — which is why the goldfish
+ * arriving beside the corn snake changed nothing here. Neither has a `build`, so
+ * a sweep that included either would read `undefined.ears` — and, worse,
  * `buildSpecies` would be handed nothing and throw, which would look like a
- * broken kit rather than an animal that was never a quadruped. Its own
- * invariants are `assembly-corn-snake.test.ts` and the shared harness in
- * `assembly-assert.ts`.
+ * broken kit rather than an animal that was never a quadruped. Their own
+ * invariants are `assembly-corn-snake.test.ts`, `assembly-goldfish.test.ts` and
+ * the shared harness in `assembly-assert.ts`.
+ *
+ * Asserted against `ASSEMBLED` below rather than trusted, so a member that
+ * quietly LOST its build would drop out of every sweep in this file silently.
  */
 const KIT_BUILT: readonly Species[] = HOME_PETS_SPECIES.filter(s => s.build !== undefined)
 
@@ -118,7 +142,7 @@ const bird = (s: Species): SongbirdBuild => {
   return b
 }
 
-/** The build every member has, whichever kit it rides. */
+/** The build every KIT member has, whichever of the two kits it rides. */
 const anyBuild = (s: Species): QuadrupedBuild | SongbirdBuild => {
   const b = s.build
   if (!b || (b.kit !== 'quadruped' && b.kit !== 'songbird')) {
@@ -126,6 +150,17 @@ const anyBuild = (s: Species): QuadrupedBuild | SongbirdBuild => {
   }
   return b
 }
+
+/**
+ * Geometry for ANY member of this collection, by whichever route it takes.
+ *
+ * The two assembled members have no `build` to hand a kit builder — that is the
+ * whole point of them — so they come off `buildAssembled`, which reads the
+ * `assembly` their species modules registered. Nothing else in this file can see
+ * them; the measured silhouette sweep at the bottom can, and does.
+ */
+const buildAny = (s: Species): THREE.Object3D =>
+  s.build !== undefined ? buildSpecies(anyBuild(s)) : buildAssembled(s.id)
 
 const dims = (g: THREE.Object3D): [number, number, number] => {
   g.updateMatrixWorld(true)
@@ -193,8 +228,9 @@ const proportionsDiffer = (
   )
 
 describe('the Home Pets collection, as data', () => {
-  it('builds exactly the fourteen members it claims, in roster order', () => {
+  it('builds exactly the sixteen members it claims, in roster order', () => {
     expect(HOME_PETS_SPECIES.map(s => s.id)).toEqual(BUILT)
+    expect(HOME_PETS_SPECIES).toHaveLength(16)
   })
 
   it('takes every printed name from the roster, so the two cannot disagree', () => {
@@ -218,31 +254,47 @@ describe('the Home Pets collection, as data', () => {
     expect(HOME_PETS_SPECIES.filter(s => !members.has(s.id))).toEqual([])
   })
 
-  it('leaves the two deferred members OUT, and says which kit each waits on', () => {
+  it('LEAVES NOTHING OUT — this collection is complete, and nothing was forced', () => {
     /*
-     * Home Pets is 16 in the roster and 14 here, and that gap is deliberate: no
-     * swim kit, and roster §1 puts a snake in `bespoke` because a legless animal
-     * is not a quadruped. If someone adds either of these two as a quadruped to
-     * "finish" the page, the failure should be here and loud rather than a
-     * goldfish on four legs in a child's album.
+     * THE INVERSION, and it is deliberately not a deletion.
      *
-     * This test used to name six. The four cage birds left it by being BUILT, on
-     * the kit they were always waiting for — which is the only honest way off
-     * this list.
+     * This test used to name six absent members, then two, then one. Every one
+     * of them left by being BUILT, so at zero the row it was defending is gone
+     * and the assertion could have gone with it — which is exactly how an
+     * invariant is lost. So it is turned round instead: Home Pets is 16 of 16,
+     * and if a member ever goes missing again this says so rather than quietly
+     * accepting a hole. `species-garden.test.ts` did the same on the day the slow
+     * worm closed Garden, and the reasoning is unchanged.
+     *
+     * The SECOND half is the part worth keeping, because it is the rule the
+     * deferred list was really enforcing: a member never joins by being forced
+     * onto a kit that would misdescribe it. The corn snake was rostered
+     * `bespoke` and the goldfish `swim`; NEITHER kit was ever built, and neither
+     * animal waited for one. Both came in on the ASSEMBLY route, which places
+     * bank parts one at a time and can therefore say "no legs" about a snake and
+     * about a fish. That is why they carry an `assembly` and no `build`, and
+     * asserting both halves is what stops a future "completion" being a goldfish
+     * on four legs in a child's album.
      */
-    for (const [id, kit] of Object.entries(DEFERRED)) {
-      expect(byId.has(id), `${id} still needs the ${kit} kit — do not build it as a quadruped`)
-        .toBe(false)
-    }
     const row = collection('home-pets')
     expect(row?.members).toHaveLength(16)
-    expect(HOME_PETS_SPECIES).toHaveLength(16 - Object.keys(DEFERRED).length)
-    // Every rostered member is either built or deliberately deferred: no member
-    // may be silently unaccounted for.
-    for (const id of row?.members ?? []) {
-      expect(byId.has(id) || id in DEFERRED, `${id} is neither built nor listed as deferred`)
-        .toBe(true)
+    expect(DEFERRED, 'Home Pets is complete — nothing is waiting on a kit').toEqual({})
+    const missing = (row?.members ?? []).filter(id => !byId.has(id))
+    expect(missing, 'Home Pets is complete — no member may be absent').toEqual([])
+    expect(HOME_PETS_SPECIES).toHaveLength((row?.members ?? []).length)
+
+    // And the two that left last did so honestly. `assembly` and no `build`,
+    // both ways round, on both of them — a `build` would send either to a kit
+    // builder, and there is still no `bespoke` kit and still no `swim` kit for
+    // it to be sent to.
+    for (const id of ASSEMBLED) {
+      expect(byId.get(id)?.build, `${id} joined by being forced onto a kit`).toBeUndefined()
+      expect(byId.get(id)?.assembly, `${id} is assembled and must carry an assembly`).toBeDefined()
     }
+    // The list and the data agree in the other direction too, so a member that
+    // quietly lost its `build` cannot vanish out of every geometry sweep below.
+    expect(HOME_PETS_SPECIES.filter(s => s.build === undefined).map(s => s.id)).toEqual(ASSEMBLED)
+    expect(KIT_BUILT).toHaveLength(16 - ASSEMBLED.length)
   })
 
   it('never resolves a member to a frozen pack animal or to an unbuilt kit', () => {
@@ -440,13 +492,25 @@ describe('no two Home Pets are silhouette twins', () => {
     }
   })
 
-  it('builds fourteen measurably different creatures, not fourteen recoloured ones', () => {
-    // The end-to-end version: palette is excluded from the signature entirely,
-    // so this fails if two species differ only in colour. Roster §4's whole
-    // point is that colour is not enough.
-    const sigs = KIT_BUILT.map(s => `${s.id}=${signature(buildSpecies(anyBuild(s)))}`)
+  it('builds SIXTEEN measurably different creatures, not sixteen recoloured ones', () => {
+    /*
+     * The end-to-end version: palette is excluded from the signature entirely,
+     * so this fails if two species differ only in colour. Roster §4's whole
+     * point is that colour is not enough.
+     *
+     * AND IT IS THE ONE SWEEP THAT COVERS ALL SIXTEEN, which is why it walks
+     * `HOME_PETS_SPECIES` and not `KIT_BUILT`. The data-level sweeps above
+     * compare `ears`/`tail`/`beak` fields that an assembled record simply does
+     * not have, so the corn snake and the goldfish cannot be in them. This one
+     * compares BUILT GEOMETRY, and geometry is kit-agnostic — a box is a box
+     * whether a quadruped kit, a songbird kit or the assembly kit made it. So
+     * the collection's central invariant reaches its two assembled members here
+     * or it reaches them nowhere.
+     */
+    const sigs = HOME_PETS_SPECIES.map(s => `${s.id}=${signature(buildAny(s))}`)
     const shapes = sigs.map(s => (s.split('=')[1] as string))
-    expect(new Set(shapes).size, sigs.join('\n')).toBe(KIT_BUILT.length)
+    expect(new Set(shapes).size, sigs.join('\n')).toBe(HOME_PETS_SPECIES.length)
+    expect(HOME_PETS_SPECIES).toHaveLength(16)
   })
 })
 

@@ -470,13 +470,14 @@ describe('joe/names-audit.json', () => {
     expect([...audit.names.map(e => e.speciesId)].sort()).toEqual([...built].sort())
     // 14 after phase 1, 50 after phase 2, 72 after phase 3's songbird kit, 73
     // once the assembly kit gave the slow worm a build of its own, 74 once it
-    // gave the corn snake one.
+    // gave the corn snake one, 76 once it gave the goldfish and the crocodile
+    // theirs — which closed Home Pets at 16 of 16 and took Africa to 14.
     // The bench is REGENERATED whenever the built roster grows — every row is
     // rewritten from the registry — but Joe's three fields are carried across
     // by `speciesId`, so a regeneration never costs him a verdict he has
     // already given. That is the contract `tools/workbench/merge.mjs:92-107`
     // describes and it is why this file can grow under him safely.
-    expect(audit.names).toHaveLength(74)
+    expect(audit.names).toHaveLength(76)
   })
 
   it('gives every creature its own name, so the playground question works', () => {
