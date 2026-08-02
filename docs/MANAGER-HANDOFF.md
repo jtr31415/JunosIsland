@@ -1,5 +1,95 @@
 # Manager handoff
 
+> ## ⚠⚠ READ THIS FIRST — PB-076, a live obscenity in a child's game, 2 Aug 2026 (night)
+>
+> *Branch `worktree-agent-a6c245a1c33091f68`. Four commits: `69eb970`, `075c565`,
+> `43e5a8d`, `1b9fc1b`. Not pushed, not merged — the drumbeat merges. **This one
+> jumps the queue; Joe wants it shipped.***
+>
+> ### What happened
+>
+> Joe's six-year-old was dealt a rabbit called **Defuck**. His rule: *"nothing
+> that contains the letter combination fuck, cunt or shit, or homophones
+> thereof."* His ruling on the fix: *"no dont change the generator, we hard fix
+> the first 24 animals instead."*
+>
+> ### The brief I was given was premised on something false, and this is the correction
+>
+> I was told to compute the Base 24's allocated names, find the offending ones,
+> and pin replacements in `name-pins.json`. **There was nothing to pin.** All 320
+> allocated names are clean — zero hits for the three roots or any homophone.
+> `Defuck` was never in the allocation.
+>
+> **The fault was that the live game never used the allocation at all.**
+> `main.ts` hatched with `petName(defaultRng)` — unseeded `Math.random`. The
+> deterministic 320-name allocation, the bands, the pin table and the whole audit
+> apparatus were wired to the workbench and the tests, and to nothing a child
+> touches.
+>
+> And it was far worse than one rabbit. Exact enumeration of the generator, not a
+> sample: `src/core/names.ts`'s `FORBIDDEN` list carries `shit`, `cock`, `dick`,
+> `piss`, `arse` — **and not `fuck`, and not `cunt`**. So **2,108 of its
+> 1,429,287 accepted draws contain a banned root. 640 distinct names. One hatch
+> in 678.** Over 100 hatches, a 13.7% chance of at least one. `Defuck` is
+> `d`+`e` then `f`+`u`+`ck`, concatenated — routine output, not bad luck.
+>
+> ### What shipped
+>
+> Joe's ruling read correctly once you know the above: the hard fix for an animal
+> IS its frozen name. So `main.ts` now names a hatching friend with
+> `givenName(species)`. The bunny is **Chudup**. No pin was invented (`naming.ts`
+> says invent nothing, and nothing needed inventing), `name-pins.json` is
+> untouched and still empty, and its tripwire test still passes. **`src/core/`
+> and `tools/golden/golden.json` have an empty diff** — `parity` is byte-identical.
+>
+> Plus `src/island/species/name-screen.ts` — Joe's rule as 57 data patterns,
+> deliberately over-broad — and `tests/island/name-screen.test.ts`, the standing
+> gate that fails loudly if any of the 320 ever offends. Proved to bite by
+> injecting `Defuck` as a species name.
+>
+> ### THE HALF THAT IS STILL OPEN — JT-045, and do not let it get lost
+>
+> **The fix is forward-only, and Juno's existing pet is still called Defuck.**
+> `save.ts:301` reads pets back verbatim; every display path reads `pet.name` off
+> the stored record; nothing derives a name from the species at read time; and
+> `Pet.id` embeds the name (`pet3-Defuck`). So a pin or a rewiring cannot reach a
+> pet already in a save — that is brief §19 working exactly as designed, and it is
+> also the honest limit of what shipped tonight.
+>
+> **JT-045 asks Joe whether he wants it renamed in place.** Nothing is built on
+> either answer. If he says yes, it is the only code in the project that would
+> ever edit a name a child already owns — and the pet must never be lost,
+> replaced or re-hatched to achieve it.
+>
+> ### Two things worth knowing before you touch naming again
+>
+> - **A name is now per SPECIES, not per pet** (roster §3's intent). The deck
+>   deals without replacement for the first 24 pets, so nothing changes until a
+>   child owns 25; after that two pets of a species share a name. Ids stay unique
+>   and the album already routes duplicates to "More friends". JT-027 (new
+>   collection at 80%) pushes it further out and JT-029 has Joe's own fix ready
+>   ("add something like 'the great'"). Raised in JT-045, not built.
+> - **Three live names are borderline and NOT gated**, by a judgement written
+>   down rather than hidden: `Fickji`, `Nefack`, `Chashet`. They are exported as
+>   `WATCHLIST` in `name-screen.ts` with the reasoning and the reversal path.
+>   Overturning one is a pin, never a stream filter.
+> - **The hatch is not drivable end to end.** `handleChallengePassed` takes the
+>   name as an *input*, so a flow-driving test proves nothing about the wiring.
+>   `hatch-naming.test.ts` asserts at source level and says so. If you want that
+>   behavioural, extract a `hatchName(species)` seam.
+>
+> ### Gates — all six, on the final tree
+>
+> ```
+> npm test    157 files, 3456 tests, all passed   (baseline 155 / 3413)
+> tsc         TSC_EXIT=0
+> npm run build    files generated, sw.js + workbox
+> npm run smoke    all boot checks passed
+> npm run parity   every step renders identically
+> npm run channel  channel check passed
+> git diff src/core/ tools/golden/   (empty)
+> ```
+
 > ## ⚠ START HERE — state at handover, 2 Aug 2026 (night)
 >
 > *Written by the manager that shipped PB-070. Read this block, then the mouth
