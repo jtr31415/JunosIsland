@@ -520,10 +520,10 @@
     },
     {
       "id": "PB-073",
-      "state": "open",
+      "state": "done",
       "run": "",
       "title": "Home Pets: build the 14 unbuilt species by hand assembly",
-      "detail": "Ship 2, currently 2/16 — corn snake and goldfish exist, and both carry a non-uniform stretch Joe has flagged, so do not copy them as the standard; the Garden fourteen are the exemplars. To build: hamster, guinea pig, budgie, gerbil, pony, ferret, gecko, chinchilla, canary, cockatiel, terrapin, rat, lovebird, degu. JT-041 IS AMENDED (see JT-043): do not author new named parts, but DO improvise missing anatomy by sizing and rotating what the bank holds rather than stopping — Joe: \"bit of clever sizing and rotation will get a lot done\". His sign-off in the editor is the gate that catches a substitute reading badly."
+      "detail": "Ship 2, currently 2/16 — corn snake and goldfish exist, and both carry a non-uniform stretch Joe has flagged, so do not copy them as the standard; the Garden fourteen are the exemplars. To build: hamster, guinea pig, budgie, gerbil, pony, ferret, gecko, chinchilla, canary, cockatiel, terrapin, rat, lovebird, degu. JT-041 IS AMENDED (see JT-043): do not author new named parts, but DO improvise missing anatomy by sizing and rotating what the bank holds rather than stopping — Joe: \"bit of clever sizing and rotation will get a lot done\". His sign-off in the editor is the gate that catches a substitute reading badly. DONE 3 Aug 2026 — all 14 built, Home Pets is 16 of 16 and every member is hand-assembled. They ship UNSIGNED; Joe's editor pass is still to come, and JT-045 lists every improvised part in one place for him to judge at once. Shipping them also needed 14 rows in names-audit.json, 14 checked facts in species-facts.json and four registry counts, none of which was in the card."
     },
     {
       "id": "PB-074",
