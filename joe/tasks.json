@@ -540,7 +540,7 @@
       "id": "JT-041",
       "type": "ruling",
       "title": "ANSWERED: primitives yes, named missing parts no (PB-036 / editor)",
-      "detail": "docs/how-the-animals-are-made.md §14 records Joe’s standing rule: \"We have not invented any of the missing parts and we will not; you asked for that explicitly and it is the right rule.\" His editor plan of 2 Aug asks for triangle, circle and square with the game’s chamfer, resizable, which reverses part of it. Asked how far it goes; he chose PRIMITIVES ONLY, FOR NOW. So: the three chamfered primitives are added and are resizable, and they may be improvised with in the editor. Nobody authors a named fin, flipper, fluke, membranous wing, segmented leg, frill, plate, spine, hooked beak, talon, spread wing, hoof, trunk, shell or long neck. CONSEQUENCE, and it is the important half: Ocean (16), Critters (16), Dinosaurs (16) and Raptors (16) stay unbuildable as designed — 64 species — and Birds, Outback and Legendary stay partial. Species runs must STOP and report a named blocker rather than substitute. The library must also keep invented shapes visibly distinct from lifted ones, so the provenance of a part is never in doubt.",
+      "detail": "docs/how-the-animals-are-made.md §14 records Joe’s standing rule: \"We have not invented any of the missing parts and we will not; you asked for that explicitly and it is the right rule.\" His editor plan of 2 Aug asks for triangle, circle and square with the game’s chamfer, resizable, which reverses part of it. Asked how far it goes; he chose PRIMITIVES ONLY, FOR NOW. So: the three chamfered primitives are added and are resizable, and they may be improvised with in the editor. Nobody authors a named fin, flipper, fluke, membranous wing, segmented leg, frill, plate, spine, hooked beak, talon, spread wing, hoof, trunk, shell or long neck. CONSEQUENCE, and it is the important half: Ocean (16), Critters (16), Dinosaurs (16) and Raptors (16) stay unbuildable as designed — 64 species — and Birds, Outback and Legendary stay partial. Species runs must STOP and report a named blocker rather than substitute. The library must also keep invented shapes visibly distinct from lifted ones, so the provenance of a part is never in doubt. >>> AMENDED 2 Aug 2026 by JT-043. The half of this ruling that said a species run meeting a missing part must STOP and name it NO LONGER HOLDS. Joe: \"i am pretty sure i can build in the missing bits with what we have otherwise. bit of clever sizing and rotation will get a lot done.\" The ban on AUTHORING named parts stands unchanged — no fin, wing, talon, frill, hoof or trunk is ever authored — but a builder now improvises missing anatomy by sizing and rotating what the bank already holds, rather than stopping. Read JT-043 before acting on the paragraph above.",
       "blocks": [
         "PB-036"
       ],
@@ -562,6 +562,36 @@
       "doneRule": "manual",
       "check": "",
       "note": "Replace in place, collection by collection, Home Pets first.",
+      "state": "done"
+    },
+    {
+      "id": "JT-043",
+      "type": "ruling",
+      "title": "ANSWERED: improvise a missing part by sizing and rotation, do not stop (amends JT-041)",
+      "detail": "JT-041 ruled primitives-only and told a species run to STOP and name a missing part rather than substitute. That half is now reversed by Joe. His words: \"i am pretty sure i can build in the missing bits with what we have otherwise. bit of clever sizing and rotation will get a lot done.\" So the rule is: do NOT author new named parts (JT-041 stands in full on that — no authored fin, wing, talon, frill, hoof or trunk), but DO improvise missing anatomy by sizing and rotating what the bank already holds, rather than stopping and reporting a blocker. The precedent is his own and already shipped: the goldfish tail is wedge-15, the lion tail, used as a fin. What catches a substitute that reads badly is his sign-off in the editor — that is what the gate is for, so a builder no longer needs to stop and ask. CONSEQUENCE: the JT-041 conclusion that Ocean, Critters, Dinosaurs and Raptors are unbuildable is no longer automatic; those collections should be attempted and the substitutes put in front of him.",
+      "blocks": [
+        "PB-036",
+        "PB-073",
+        "PB-074"
+      ],
+      "artefact": "src/island/species/parts/assembled/",
+      "doneRule": "manual",
+      "check": "",
+      "note": "Improvise by sizing and rotation; never author a named part.",
+      "state": "done"
+    },
+    {
+      "id": "JT-044",
+      "type": "ruling",
+      "title": "ANSWERED: hooves are a two-tone leg, not a part (PB-074 Farm)",
+      "detail": "Farm has five hooved species (horse, donkey, ox, mule, water buffalo) plus pony in Home Pets, and \"hoof\" occurs zero times in the parts bank. Under JT-041 nobody may author one. Joe: \"just use a two tone leg for hooves\". The mechanism already exists and needs no new code: CreatureDef.legs already takes a paint, and Paint.patch is { below, at } — the base slot cell is drawn as two colours and the part vertices read across it by their own height, so the line falls wherever the image says and NO triangle edge and NO geometry are needed. A hooved species is therefore one line, roughly legs: { paint: { base: \"limb\", patch: { below: \"hoof\", at: 0.25 } } }. Three real constraints: (1) at is a fraction of the part own height and must sit on the pack 1/16 grid, so 0.125, 0.1875 or 0.25 — texture.ts refuses anything else, and a horse hoof is a shallower band than an ox fetlock; (2) the patch applies to the BASE slot only, so a triangle byBand has already sent elsewhere keeps its flat colour — do not combine the two; (3) spin a patched part and the boundary spins with it, which is safe today because legs are not spun but is a trap for anything patched later. SECOND-ORDER, and the reason this is worth recording as a general tool rather than a hoof workaround: the same one line is fur socks, pale paws, a bird feet against its legs, a dark-stockinged fawn. Several Home Pets and Farm species want it for reasons that have nothing to do with hooves.",
+      "blocks": [
+        "PB-074"
+      ],
+      "artefact": "src/island/species/parts/assembled/",
+      "doneRule": "manual",
+      "check": "",
+      "note": "Just use a two tone leg for hooves.",
       "state": "done"
     }
   ],
