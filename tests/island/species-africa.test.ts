@@ -4,14 +4,29 @@
  * PB-036 phase 2. Two failures are worth a suite of their own here, and they are
  * the two this file is built around.
  *
- * THE FIRST is the half-filled collection. Africa ships thirteen of its sixteen
- * rostered members because three of them — crocodile, ostrich, vulture — are not
- * quadrupeds and the kits they want are declared but unbuilt (`types.ts:159`).
- * That is a ruling, and rulings rot: the next person to open `africa.ts` sees a
- * roster of sixteen and a file of thirteen and "finishes" it by improvising a
- * shape, which is exactly what roster §1's "kits before species" forbids. So the
- * three absences are asserted BY NAME, with the reason, rather than left as a
- * count that happens to be right.
+ * THE FIRST is the half-filled collection. Africa ships fourteen of its sixteen
+ * rostered members because two of them — ostrich, vulture — are not quadrupeds
+ * and the kits they want are declared but unbuilt (`types.ts:159`). That is a
+ * ruling, and rulings rot: the next person to open `africa.ts` sees a roster of
+ * sixteen and a file of fourteen and "finishes" it by improvising a shape, which
+ * is exactly what roster §1's "kits before species" forbids. So the two absences
+ * are asserted BY NAME, with the reason, rather than left as a count that
+ * happens to be right.
+ *
+ * IT WAS THREE ABSENCES UNTIL 2 AUGUST 2026, when the CROCODILE was built. It
+ * left the list the only honest way — not by being improvised out of the
+ * quadruped kit, but on the ASSEMBLY kit, the route its own entry had always
+ * named. So this page now carries a second kind of record: `kit: 'bespoke'`, an
+ * `assembly`, and NO `build`. Every sweep that reaches into a `QuadrupedBuild`
+ * walks `KIT_BUILT` rather than every member, because handing `buildSpecies`
+ * nothing would throw and look like a broken kit rather than an animal that was
+ * never a quadruped.
+ *
+ * AND THE TWO THAT REMAIN ARE NOW ABSENT FOR A MEASURED REASON RATHER THAN AN
+ * ASSERTED ONE. Both want wings; the `wing` role is declared in
+ * `bank.generated.ts` and occurs ZERO times in the data, and the pack's own three
+ * birds donated no wing either. That is measured off `PARTS_BANK` below, so the
+ * day somebody banks a wing shape this file says the absence has changed.
  *
  * THE SECOND is the silhouette twin. Roster §4: distinct species "will read as
  * duplicates unless size, palette and marking are deliberately separated". A
@@ -27,32 +42,47 @@ import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
 import { AFRICA_SPECIES } from '../../src/island/species/collections/africa'
 import { buildSpecies } from '../../src/island/species/kit'
+import { PARTS_BANK, type PartRole } from '../../src/island/species/parts/bank.generated'
 import { COLLECTIONS, SPECIES_NAMES } from '../../src/island/species/roster'
 import type { QuadrupedBuild, Species } from '../../src/island/species/types'
 
-/** The thirteen that ship, in the roster's own order for `africa`. */
+/** The fourteen that ship, in the roster's own order for `africa`. */
 const BUILT = [
   'animal-zebra', 'animal-hippo', 'animal-cheetah', 'animal-meerkat',
-  'animal-warthog', 'animal-gorilla', 'animal-antelope', 'animal-mongoose',
-  'animal-hyena', 'animal-baboon', 'animal-wildebeest', 'animal-buffalo',
-  'animal-aardvark',
+  'animal-warthog', 'animal-gorilla', 'animal-crocodile', 'animal-antelope',
+  'animal-mongoose', 'animal-hyena', 'animal-baboon', 'animal-wildebeest',
+  'animal-buffalo', 'animal-aardvark',
 ]
 
 /**
- * The three the quadruped kit cannot honestly express, with the kit each wants.
+ * The two the quadruped kit cannot honestly express, with the kit each wants.
  *
  * Kept as data rather than as prose in a comment so the test can print the
  * reason when it fails, which is the moment anyone reads it.
  */
 const NOT_BUILT: readonly [string, string][] = [
-  ['animal-crocodile', 'a sprawled, long-jawed reptile — wants bespoke'],
   ['animal-ostrich', 'two legs and a neck longer than its body — wants songbird/bespoke'],
   ['animal-vulture', 'hooked beak, broad wings, tail fan — wants raptor'],
 ]
 
 const byId: ReadonlyMap<string, Species> = new Map(AFRICA_SPECIES.map(s => [s.id, s]))
 
-/** The build, narrowed. Every member of this collection is a quadruped. */
+/**
+ * The members that carry a KIT BUILD, which is every sweep below that reaches
+ * into a `QuadrupedBuild`.
+ *
+ * Filtered on the presence of a `build` rather than counted, exactly as
+ * `species-home-pets.test.ts` does for its corn snake and `species-garden.test.ts`
+ * for its slow worm. The crocodile has no `build`, so a sweep that included it
+ * would read `undefined.ears` — and, worse, `buildSpecies` would be handed
+ * nothing and throw, which would look like a broken kit rather than an animal
+ * that was never a quadruped. Its own invariants are
+ * `assembly-crocodile.test.ts` and the shared harness in `assembly-assert.ts`.
+ */
+const KIT_BUILT: readonly Species[] = AFRICA_SPECIES.filter(s => s.build !== undefined)
+const KIT_BUILT_IDS: readonly string[] = KIT_BUILT.map(s => s.id)
+
+/** The build, narrowed. Every member of this collection EXCEPT the crocodile. */
 const quad = (id: string): QuadrupedBuild => {
   const s = byId.get(id)
   if (!s) throw new Error(`africa has no ${id}`)
@@ -96,7 +126,7 @@ const meshCount = (g: THREE.Object3D): number => {
   return n
 }
 
-describe('the Africa collection is exactly the roster, minus the three it cannot build', () => {
+describe('the Africa collection is exactly the roster, minus the two it cannot build', () => {
   const rostered = COLLECTIONS.find(c => c.id === 'africa')
 
   it('is a collection the roster actually declares', () => {
@@ -104,7 +134,7 @@ describe('the Africa collection is exactly the roster, minus the three it cannot
     expect(rostered?.members).toHaveLength(16)
   })
 
-  it('ships thirteen members, in the roster order for africa', () => {
+  it('ships fourteen members, in the roster order for africa', () => {
     expect(AFRICA_SPECIES.map(s => s.id)).toEqual(BUILT)
     const order = (rostered?.members ?? []).filter(id => BUILT.includes(id))
     expect(AFRICA_SPECIES.map(s => s.id)).toEqual(order)
@@ -120,13 +150,13 @@ describe('the Africa collection is exactly the roster, minus the three it cannot
     }
   })
 
-  it('LEAVES OUT crocodile, ostrich and vulture — not an oversight, a ruling', () => {
+  it('LEAVES OUT ostrich and vulture — not an oversight, a ruling', () => {
     /*
      * Delete this test only by BUILDING the kit each of these wants. If it ever
      * goes red because one of them appeared in `africa.ts`, the question is not
      * "why is the test failing" — it is "what shape did someone improvise for a
-     * crocodile out of a kit whose legs stand under the body". Roster §1 rules
-     * that improvisation out; `types.ts:155-157` records what it costs.
+     * bird out of a kit whose legs stand under the body". Roster §1 rules that
+     * improvisation out; `types.ts:155-157` records what it costs.
      */
     for (const [id, why] of NOT_BUILT) {
       expect(rostered?.members, `${id} should still be rostered`).toContain(id)
@@ -135,10 +165,65 @@ describe('the Africa collection is exactly the roster, minus the three it cannot
     expect(AFRICA_SPECIES).toHaveLength(16 - NOT_BUILT.length)
   })
 
-  it('carries a quadruped build on every member and a threat status on none', () => {
+  it('is still short two birds because the bank has NO WING — measured, not assumed', () => {
+    /*
+     * THE REASON, TURNED INTO A MEASUREMENT. Both remaining absences want wings.
+     * `wing` is a declared `PartRole` — the line below is the compile-time proof
+     * of that, and it is the half a runtime check cannot make — and it occurs
+     * ZERO times in the baked data, alongside `horn` and `claw`. So rule 1's
+     * "adapt before authoring" has nothing at all to work on, and how those two
+     * should read is a LOOK decision that belongs to Joe.
+     *
+     * Written as a measurement rather than a sentence so that the day somebody
+     * banks a wing shape, this goes red and says the absence has changed. That is
+     * the moment to reopen the ostrich, not before.
+     */
+    const declared: readonly PartRole[] = ['wing', 'horn', 'claw']
+    for (const role of declared) {
+      const have = PARTS_BANK.filter(p => p.roles.includes(role)).map(p => p.id)
+      expect(have, `the bank now has a "${role}" shape: ${have.join(', ')} — reopen the ruling`)
+        .toHaveLength(0)
+    }
+    // And the pack's own three birds donated no wing either: they are a fused
+    // hull plus a beak, legs and eye cards, so there is nothing to lift from them.
+    const roleOf = (species: string): string[] => [...new Set(
+      PARTS_BANK.flatMap(p => p.provenance.filter(q => q.species === species).map(q => q.role)),
+    )].sort()
+    for (const bird of ['parrot', 'chick', 'penguin']) {
+      const roles = roleOf(bird)
+      expect(roles, `${bird} is not in the bank at all`).not.toHaveLength(0)
+      expect(roles, `${bird} donated a wing`).not.toContain('wing')
+    }
+  })
+
+  it('let the CROCODILE out the only honest way — bespoke, an assembly, and no build', () => {
+    /*
+     * The mirror image of the test above, and it has to be said in both
+     * directions. A crocodile that reappeared here with a `build` would be the
+     * exact improvisation the ruling forbids: the quadruped kit stands its legs
+     * under the body and gives it a cube skull, so a crocodile expressed through
+     * it is a lizard-shaped dog. It is out of `NOT_BUILT` because a kit was
+     * built for it, not because somebody filled in numbers.
+     */
+    const croc = byId.get('animal-crocodile')
+    expect(croc, 'the crocodile is no longer on this page').toBeDefined()
+    expect(croc?.kit).toBe('bespoke')
+    expect(croc?.build, 'the crocodile must NOT carry a quadruped build').toBeUndefined()
+    expect(croc?.assembly, 'the crocodile must carry an assembly').toBeDefined()
+    expect(croc?.assembly?.kit).toBe('assembly')
+    // Every other member is still a quadruped, so this is one exception and not
+    // a page that has quietly gone mixed.
+    expect(KIT_BUILT).toHaveLength(AFRICA_SPECIES.length - 1)
+  })
+
+  it('carries a quadruped build on every kit-built member and a threat status on none', () => {
     for (const s of AFRICA_SPECIES) {
-      expect(s.kit).toBe('quadruped')
-      expect(s.build?.kit).toBe('quadruped')
+      if (s.id === 'animal-crocodile') {
+        expect(s.kit).toBe('bespoke')
+      } else {
+        expect(s.kit).toBe('quadruped')
+        expect(s.build?.kit).toBe('quadruped')
+      }
       // Roster §5 wants statuses "true, checkable" and `Threat.checkedDate`
       // exists so one is a dated reading rather than a memory. Absent is honest;
       // remembered only looks checked. registry.ts:55-76.
@@ -148,8 +233,8 @@ describe('the Africa collection is exactly the roster, minus the three it cannot
 })
 
 describe('every Africa species actually constructs', () => {
-  it('builds a real, non-empty, finite group for all thirteen', () => {
-    for (const s of AFRICA_SPECIES) {
+  it('builds a real, non-empty, finite group for all thirteen kit builds', () => {
+    for (const s of KIT_BUILT) {
       const g = buildSpecies(s.build as QuadrupedBuild)
       expect(g, s.id).toBeInstanceOf(THREE.Group)
       expect(meshCount(g), `${s.id} built no meshes`).toBeGreaterThan(10)
@@ -174,7 +259,7 @@ describe('every Africa species actually constructs', () => {
      * proportions is a correct animal and a total stranger here — the kit's own
      * first pass built at W/H 0.37 and passed every other check.
      */
-    for (const s of AFRICA_SPECIES) {
+    for (const s of KIT_BUILT) {
       const [w, h, d] = dims(buildSpecies(s.build as QuadrupedBuild))
       expect(h, `${s.id} too short for the pack`).toBeGreaterThan(1.39)
       expect(h, `${s.id} too tall for the pack`).toBeLessThan(2.21)
@@ -200,8 +285,8 @@ describe('no two Africa species are silhouette twins', () => {
   const extrasOf = (b: QuadrupedBuild): string => [...(b.extras ?? [])].sort().join('+')
 
   it('separates every pair on ears, tail, extras or a real proportion margin', () => {
-    for (const [i, a] of BUILT.entries()) {
-      for (const b of BUILT.slice(i + 1)) {
+    for (const [i, a] of KIT_BUILT_IDS.entries()) {
+      for (const b of KIT_BUILT_IDS.slice(i + 1)) {
         const x = quad(a)
         const y = quad(b)
         const reasons: string[] = []
@@ -220,9 +305,11 @@ describe('no two Africa species are silhouette twins', () => {
     // The data check above says the separation was INTENDED. This one says it
     // survived the kit — a difference the builder collapses (two extras that
     // land in the same place, a proportion inside a clamp) is a difference that
-    // does not exist on screen.
+    // does not exist on screen. The crocodile is not here because it is not a
+    // quadruped; it is separated from this collection by being a different KIT,
+    // which is a stronger statement than any signature could make.
     const seen = new Map<string, string>()
-    for (const s of AFRICA_SPECIES) {
+    for (const s of KIT_BUILT) {
       const sig = signature(buildSpecies(s.build as QuadrupedBuild))
       expect(seen.has(sig), `${s.id} builds identically to ${seen.get(sig)}`).toBe(false)
       seen.set(sig, s.id)
@@ -231,8 +318,11 @@ describe('no two Africa species are silhouette twins', () => {
   })
 
   it('gives every species its own palette', () => {
+    // The crocodile's four colours are proposed in `parts/assembled/` rather than
+    // agreed here, are FLAGGED unreviewed, and are asserted in
+    // `assembly-crocodile.test.ts`. This sweep is the quadruped page's own.
     const seen = new Map<string, string>()
-    for (const s of AFRICA_SPECIES) {
+    for (const s of KIT_BUILT) {
       const p = (s.build as QuadrupedBuild).palette
       const key = [p.coat, p.belly, p.detail, p.accent].join(',')
       expect(seen.has(key), `${s.id} is painted like ${seen.get(key)}`).toBe(false)
@@ -314,8 +404,8 @@ describe('confusable: the cheetah must not read as the frozen tiger or lion', ()
     // The live 24 are FROZEN (roster §1), so every bit of the separation is on
     // this side. Leggiest in the collection, and effectively the smallest skull
     // in it — the antelope is the only thing with a smaller head, by 0.08.
-    const legs = BUILT.map(id => quad(id).legs)
-    const heads = BUILT.map(id => quad(id).head)
+    const legs = KIT_BUILT_IDS.map(id => quad(id).legs)
+    const heads = KIT_BUILT_IDS.map(id => quad(id).head)
     expect(cat.legs).toBe(Math.max(...legs))
     expect(cat.head).toBeLessThanOrEqual(Math.min(...heads) + 0.1)
     // A lion's read is the maned head; the cheetah must never borrow it.
@@ -409,9 +499,9 @@ describe('confusable: the aardvark leans on snout, and the hippo on the height c
      */
     const hip = quad('animal-hippo')
     expect(hip.height).toBeLessThanOrEqual(2.2)
-    expect(hip.height).toBe(Math.max(...BUILT.map(id => quad(id).height)))
-    expect(hip.legs).toBe(Math.min(...BUILT.map(id => quad(id).legs)))
-    expect(hip.head).toBe(Math.max(...BUILT.map(id => quad(id).head)))
+    expect(hip.height).toBe(Math.max(...KIT_BUILT_IDS.map(id => quad(id).height)))
+    expect(hip.legs).toBe(Math.min(...KIT_BUILT_IDS.map(id => quad(id).legs)))
+    expect(hip.head).toBe(Math.max(...KIT_BUILT_IDS.map(id => quad(id).head)))
     // Short body = deep body: the kit trades length for girth at constant volume.
     expect(hip.body).toBeLessThan(0.9)
     expect(hip.ears).toBe('none')
@@ -425,7 +515,7 @@ describe('confusable: the aardvark leans on snout, and the hippo on the height c
 
 describe('the collection is deterministic', () => {
   it('builds the same geometry twice — no Math.random reaches a species record', () => {
-    for (const s of AFRICA_SPECIES) {
+    for (const s of KIT_BUILT) {
       const a = signature(buildSpecies(s.build as QuadrupedBuild))
       const b = signature(buildSpecies(s.build as QuadrupedBuild))
       expect(a, s.id).toBe(b)
@@ -434,7 +524,7 @@ describe('the collection is deterministic', () => {
 
   it('names no node wing-, and sets userData.pick on nothing', () => {
     // pets.ts:690 collects flap targets with /^wing-/; pets.ts:663 owns pick.
-    for (const s of AFRICA_SPECIES) {
+    for (const s of KIT_BUILT) {
       buildSpecies(s.build as QuadrupedBuild).traverse(n => {
         expect(/^wing-/.test(n.name), s.id).toBe(false)
         expect(n.userData.pick, s.id).toBeUndefined()

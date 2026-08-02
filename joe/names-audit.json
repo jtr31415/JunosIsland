@@ -314,6 +314,18 @@
       "note": ""
     },
     {
+      "id": "natural/animal-goldfish",
+      "setId": "natural",
+      "speciesId": "animal-goldfish",
+      "species": "Goldfish",
+      "collection": "home-pets",
+      "band": "short",
+      "name": "Vuforn",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
+    },
+    {
       "id": "natural/animal-rat",
       "setId": "natural",
       "speciesId": "animal-rat",
@@ -609,6 +621,18 @@
       "collection": "africa",
       "band": "medium",
       "name": "Dishob",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
+    },
+    {
+      "id": "natural/animal-crocodile",
+      "setId": "natural",
+      "speciesId": "animal-crocodile",
+      "species": "Crocodile",
+      "collection": "africa",
+      "band": "medium",
+      "name": "Hoveem",
       "verdict": "",
       "replacement": "",
       "note": ""

@@ -59,16 +59,25 @@ describe('the species registry', () => {
     // (§9.2 of `docs/building-animals-from-parts.md`), so the species has shipped
     // on the strength of an assembly alone. It is the first record in the repo
     // that is real without a `build`, and this is the number that says so.
-    // 98 since 2 Aug, and the +1 is the CORN SNAKE — the assembly kit spent a
+    // 98 since 2 Aug, and the +1 was the CORN SNAKE — the assembly kit spent a
     // second time, and the first time on something that is not a Garden animal.
     // Same shape of record as the slow worm's: no `build`, an `assembly`, and
     // `bespoke` naming the route rather than a kit that exists.
-    expect(REGISTRY.size).toBe(98)
+    //
+    // 100 later the same day, and the +2 are the GOLDFISH and the CROCODILE, on
+    // that same route. The goldfish is the one that matters most here: it was
+    // rostered against the `swim` kit, which has never been built and now never
+    // needs to be, and with it HOME PETS IS THE FOURTH COMPLETE COLLECTION.
+    // `completion()` divides by ROSTER size, so a collection that can never be
+    // fully built can never complete, never go inactive and never release one of
+    // the four active slots JT-027 allows — and Home Pets had been holding one
+    // of those four permanently.
+    expect(REGISTRY.size).toBe(100)
     expect(shippedIn('base')).toHaveLength(24)
     expect(shippedIn('garden')).toHaveLength(14)      // COMPLETE — the slow worm is assembled
-    expect(shippedIn('home-pets')).toHaveLength(15)   // 16 rostered, 1 swim left
+    expect(shippedIn('home-pets')).toHaveLength(16)   // COMPLETE — corn snake and goldfish assembled
     expect(shippedIn('woodland')).toHaveLength(16)    // COMPLETE
-    expect(shippedIn('africa')).toHaveLength(13)      // 16 rostered, 2 bespoke + 1 raptor
+    expect(shippedIn('africa')).toHaveLength(14)      // 16 rostered, ostrich + vulture want wings
     expect(shippedIn('farm')).toHaveLength(16)        // COMPLETE
   })
 
@@ -79,17 +88,20 @@ describe('the species registry', () => {
     // 246 after phase 2; 224 after phase 3 built the songbird kit and spent it
     // on 22 more (woodland +2, home-pets +4, farm +16); 223 once the assembly
     // kit built the slow worm, which is one animal and not a collection; 222
-    // once it built the corn snake, likewise.
+    // once it built the corn snake, likewise; 220 once it built the goldfish and
+    // the crocodile.
     //
     // The rate is the thing to read here, not the number: the assembly kit
     // closes ONE animal at a time, which is why it is the right tool for the
-    // members a kit cannot express and the wrong one for a collection.
+    // members a kit cannot express and the wrong one for a collection. Four
+    // animals is four runs — and it is also what it took to close a collection
+    // that four kits could not.
     const rostered = COLLECTIONS.flatMap(c => c.members)
     expect(rostered).toHaveLength(320)
-    expect(rostered.filter(id => !speciesRecord(id))).toHaveLength(222)
+    expect(rostered.filter(id => !speciesRecord(id))).toHaveLength(220)
   })
 
-  it('has THREE complete collections now — garden, woodland and farm', () => {
+  it('has FOUR complete collections now — garden, home-pets, woodland and farm', () => {
     // This test used to assert ZERO, and said in its own comment: "if this test
     // ever goes red, a second kit landed and that question became live." That
     // is exactly what happened, so it is inverted rather than deleted — the
@@ -110,11 +122,20 @@ describe('the species registry', () => {
     // is roster row 1 and ship 1 — the first collection a child meets after the
     // base 24 — so this is the collection where "may it unlock with a hole in it"
     // mattered most, and the question no longer has to be answered for it.
+    //
+    // HOME PETS IS NOW THE FOURTH, and it is the one that took two assembly runs
+    // rather than one: the corn snake, which the quadruped kit would have put
+    // four legs on, and the goldfish, which was rostered against a `swim` kit
+    // that has never been built. NEITHER MISSING KIT WAS EVER BUILT — both
+    // animals left the deferred list by being assembled from the pack's own
+    // geometry instead. That is the pattern worth reading off this line: a
+    // collection's shortfall is not a queue of kits, it is a queue of animals,
+    // and the assembly route can clear it one at a time without waiting.
     const complete = COLLECTIONS
       .filter(c => c.id !== 'base')
       .filter(c => c.members.every(id => speciesRecord(id)))
       .map(c => c.id)
-    expect([...complete].sort()).toEqual(['farm', 'garden', 'woodland'])
+    expect([...complete].sort()).toEqual(['farm', 'garden', 'home-pets', 'woodland'])
   })
 
   it('names the seven base animals roster §5 gives a threat badge', () => {

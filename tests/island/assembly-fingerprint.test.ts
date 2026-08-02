@@ -69,6 +69,10 @@ const PINNED: Readonly<Record<string, string>> = {
   // Home Pets' first assembled member, and the first pin here that is not a
   // Garden animal. Read off the built model on 2 Aug.
   'animal-corn-snake': '5c3ad79166c9e4d7',
+  // The two that close Home Pets at 16 and take Africa to 14. Read off the built
+  // models on 2 Aug.
+  'animal-goldfish': '58c690f8271aaca6',
+  'animal-crocodile': 'c4bafe77662805a1',
 }
 
 describe('every assembled species has a pinned fingerprint', () => {
