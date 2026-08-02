@@ -2,9 +2,119 @@
 
 > ## ⚠ START HERE — state at handover, 2 Aug 2026 (late evening)
 >
-> *Written by the manager that shipped PB-068. Read this block first. Everything
-> below it, including the block that used to be the START HERE, is history and is
-> kept only for its reasoning.*
+> *Written by the manager that made the mouth placeable. **Two managers ran
+> concurrently in this one worktree tonight and both wrote a block.** Read this
+> one, then the PB-068 block immediately below it — that one is ALSO CURRENT, not
+> history. History starts at the first block marked `Superseded`.*
+>
+> ### The two rulings that change what the next run does
+>
+> **1. JT-041 IS AMENDED — a species run no longer stops.** This is the single
+> most important line in this file, because the old rule would halt the next
+> thirty animals on their first missing part. Joe: *"i am pretty sure i can
+> build in the missing bits with what we have otherwise. bit of clever sizing
+> and rotation will get a lot done."*
+>
+> So the rule now has two halves and you must keep them apart:
+> - **Never AUTHOR a named part.** No invented fin, wing, talon, frill, hoof or
+>   trunk. JT-041 stands in full on this and it has not moved.
+> - **DO improvise missing anatomy** by sizing and rotating what the bank
+>   already holds, rather than stopping and reporting a blocker. The precedent
+>   is Joe's own and already shipped: the goldfish's tail is `wedge-15`, the
+>   lion's tail, worn as a fin.
+>
+> What catches a substitute that reads badly is **his sign-off in the editor** —
+> that is what the gate is for, so a builder no longer needs to stop and ask.
+> Recorded as **JT-043**, and `JT-041`'s own record now points at it so a reader
+> arriving there does not act on the stale paragraph.
+>
+> **2. Hooves are a two-tone leg, not a part (JT-044).** Joe: *"just use a two
+> tone leg for hooves"*. `legs` already takes a paint and `Paint.patch` is
+> `{ below, at }` — the base slot's cell is drawn as two colours and the part's
+> vertices read across it by their own height, so **no triangle edge and no
+> geometry are needed**. A hooved species is one line:
+>
+> ```ts
+> legs: { paint: { base: 'limb', patch: { below: 'hoof', at: 0.25 } } }
+> ```
+>
+> Three constraints the code will otherwise enforce the hard way: `at` is a
+> fraction of the part's OWN height and must sit on the pack's **1/16 grid**
+> (0.125, 0.1875, 0.25) or `texture.ts` refuses it; the patch applies to the
+> **base slot only**, so never combine it with `byBand`; and a spun patched part
+> spins its boundary with it (safe today — legs are not spun).
+>
+> **Treat this as a general tool, not a hoof workaround.** The same line is fur
+> socks, pale paws, a bird's feet against its legs, a dark-stockinged fawn.
+>
+> ### What this run fixed, and what it really was
+>
+> Joe asked for the smiley mouth as a placeable part. He was right that we
+> already had it. **It was never missing, never filtered out of the editor, and
+> the schema always expressed it** — five species already carry a `mouth` extra.
+>
+> The fault was the **donor transfer** (`src/island/species/parts/creature.ts`).
+> A flat card has no extent along its facing, so the solved shift was 0 and the
+> card landed **exactly coplanar with the hull's front face**, where a
+> zero-thickness single-sided plane z-fights into invisibility. The proof it was
+> the fault and not a theory is written in the species files by four different
+> hands: goldfish, firefly and glow-worm all hard-code `at: [0, 0.686849, 0.635]`
+> on their mouths, and the shrew — the one animal that trusted the default —
+> **has had an invisible mouth since it was built**. Four authors worked around
+> this independently rather than reporting it.
+>
+> Fixed with `CARD_STANDOFF = 0.01`, a number **recovered three ways rather than
+> chosen**: `EYE_CARD_Z` (0.635) minus box-03's front face (0.625); Kenney's own
+> face decals sitting on a sheet 0.01 in front of the head; and `plate-03`'s
+> recorded bank offset, so the transfer plus the standoff puts the shape back
+> where Kenney had it in all three coordinates.
+>
+> **It is NOT the same fault as PB-064.** That card is real and stays open on
+> its own terms — its assert filters on role `eye`, and a face-plate's role is
+> `card`, so §3 has never once seen one.
+>
+> **Then Joe hit the second half:** *"i dont seem to be able to colour a mouth
+> with the colour i want."* The engine always supported per-part colour —
+> `palette` is an open Record and the texture is generated at `slots.length` —
+> but the colour panel's entire vocabulary was the slots already present, and
+> `addPaletteSlot` **existed in `def.ts` with zero callers in the UI**. An
+> inserted part arrives painted from the coat, so the only way to recolour it
+> repainted the body. There is now an "own colour" row that appends a slot and
+> repoints just that part. **Append only** — insertion order IS the texture
+> layout, slot *n* is atlas rows *n*·16…*n*·16+15, so appending leaves every
+> existing index untouched. Verified at pixel level across all 24 shipped
+> species that not one mesh changes colour (brief §19).
+>
+> **Known and deliberately not invented away:** `insertPart` names an extra
+> after its bank shape id, so a mouth inserted from `cone-02` gets the slot name
+> `cone-02`. Deterministic and collision-free, but not readable. Readable names
+> need a rename-a-part control, which does not exist.
+>
+> ### Where the next manager starts
+>
+> **Home Pets and Farm — thirty animals, now unblocked.** Cards `PB-073` (Home
+> Pets, ship 2, 2/16 — 14 to build) and `PB-074` (Farm, ship 5, 0/16 — all 16).
+> Both carry the JT-041 amendment; PB-074 carries the hoof ruling in full. Build
+> by hand assembly in `src/island/species/parts/assembled/`; **the Garden
+> fourteen are the exemplars.** Do NOT copy the corn snake, goldfish or crocodile
+> as a standard — all three carry a non-uniform stretch Joe has flagged.
+>
+> ### Landmine this run paid for: TWO MANAGERS, ONE WORKTREE, ONE `nextId`
+>
+> Two managers ran concurrently in this checkout, dealing card ids from the same
+> `nextId`. **`PB-069` and `PB-070` were taken out from under this run between
+> its commits and its card write**, so the ids in this run's commit messages do
+> not match the ids of its cards. Each card says which id its commits call it;
+> the other manager's cards keep their numbers. If you are ever one of two: **do
+> not hold a green tree** — commit the slice the moment it passes, stage by path,
+> and re-read any `joe/*.json` from disk in the same breath as writing it. This
+> file was also edited by the other manager mid-write; re-read before editing.
+
+> ## ⚠ ALSO CURRENT — the PB-068 manager's handover, same evening
+>
+> *Written by the manager that shipped PB-068, concurrently with the block
+> above. Both are current. Everything below THIS block is history and is kept
+> only for its reasoning.*
 >
 > ### What this project is, in four lines
 >
