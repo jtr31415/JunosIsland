@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "nextId": 71,
+  "nextId": 75,
   "cards": [
     {
       "id": "PB-001",
@@ -503,6 +503,34 @@
       "detail": "Dealing draws from SPECIES, the 24 Kenney GLB ids (main.ts:481), never from the 54-record registry — measured, and no test asserts the two pools agree. So even once Joe signs off the 30 hand-assembled animals they can never reach a child. The standing order says a signed-off animal ships with the next push, always, and today that order cannot be honoured. Needs the assembly path from PB-067 first, then the deal pool widened to signed-off species only.",
       "state": "open",
       "run": ""
+    },
+    {
+      "id": "PB-071",
+      "state": "done",
+      "run": "",
+      "title": "A flat card landed inside the face it joined, so no mouth could be seen",
+      "detail": "Joe asked for the smiley mouth and was right that we already had it — face-plate (flat cut-out sheet), 12 tris. It was never filtered out of the editor and the extras schema always expressed it; the donor transfer placed a zero-depth card exactly coplanar with the hull front face, where it z-fought into invisibility. Fixed with CARD_STANDOFF = 0.01, a number recovered three ways (EYE_CARD_Z minus box-03 front, Kenney own decal sheet, and plate-03 recorded bank offset) rather than chosen. NOT the same fault as PB-064, which filters on role eye and has never seen a card. NOTE ON IDS: the commits call this PB-069 and PB-070, both of which were taken by another manager working in the same worktree at the same time."
+    },
+    {
+      "id": "PB-072",
+      "state": "done",
+      "run": "",
+      "title": "The colour panel could not give a newly added part a colour of its own",
+      "detail": "Joe: \"i dont seem to be able to colour a mouth with the colour i want\". The engine always supported it — palette is an open Record and the texture is generated at slots.length — but the panel could only repaint an existing slot or repoint a part at another existing one, and addPaletteSlot had zero callers in the UI. An inserted part arrives painted from the coat, so the only way to recolour it repainted the body. Now an \"own colour\" row appends a slot and repoints just that part; append-only, because insertion order IS the texture layout. NOTE ON IDS: the commit calls this PB-071."
+    },
+    {
+      "id": "PB-073",
+      "state": "open",
+      "run": "",
+      "title": "Home Pets: build the 14 unbuilt species by hand assembly",
+      "detail": "Ship 2, currently 2/16 — corn snake and goldfish exist, and both carry a non-uniform stretch Joe has flagged, so do not copy them as the standard; the Garden fourteen are the exemplars. To build: hamster, guinea pig, budgie, gerbil, pony, ferret, gecko, chinchilla, canary, cockatiel, terrapin, rat, lovebird, degu. JT-041 IS AMENDED (see JT-043): do not author new named parts, but DO improvise missing anatomy by sizing and rotating what the bank holds rather than stopping — Joe: \"bit of clever sizing and rotation will get a lot done\". His sign-off in the editor is the gate that catches a substitute reading badly."
+    },
+    {
+      "id": "PB-074",
+      "state": "open",
+      "run": "",
+      "title": "Farm: build all 16 species by hand assembly",
+      "detail": "Ship 5, currently 0/16 — all sixteen were kit-built and are deleted. To build: sheep, goat, horse, donkey, goose, turkey, llama, alpaca, rooster, ox, mule, chicken, guinea fowl, quail, water buffalo, pigeon. HOOVES ARE RULED ON — Joe: \"just use a two tone leg for hooves\". legs already take a paint, so a hooved species is legs: { paint: { base: \"limb\", patch: { below: \"hoof\", at: 0.25 } } } — Paint.patch needs no triangle edge to cut along, so no geometry is added. Three constraints: at is a fraction of the part own height and must sit on the 1/16 grid (0.125, 0.1875, 0.25); the patch applies to the BASE slot only, so do not combine it with byBand; spin a patched part and the boundary spins with it. This is a general tool, not a hoof workaround — it is also fur socks, pale paws, a bird feet against its legs, a dark-stockinged fawn. JT-041 as amended by JT-043 applies: improvise by sizing and rotation, never author a named part."
     }
   ]
 }
