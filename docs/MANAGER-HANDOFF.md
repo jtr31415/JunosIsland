@@ -147,6 +147,22 @@
 >   than Joe's, on the grounds that his judgement is *which word per animal* and
 >   the union preserves that exactly. Made it, recorded the reasoning in `45c4f8b`.
 > - **PICKED UP: none.** No `type: "ruling"` task was newly `done` with a note.
+>
+> ### One loose end for the drumbeat — an orphaned card reference
+>
+> A manager running in parallel with me committed **`6d672e6` "fix(PB-070): the
+> card drawer names all four of its shapes"**, which changes
+> `tools/workbench/public/editor/library.ts`. **It never added a PB-070 card**,
+> and by the time I dealt an id from `nextId` the slot was free, so `PB-070` in
+> the backlog is now *"a signed-off animal still cannot be dealt"* — an unrelated
+> card.
+>
+> There is no duplicate: one card, one id, `nextId` is 71. But `6d672e6`'s subject
+> line points at a card that does not describe it. I left my card alone rather
+> than renumbering, because moving it would have falsified two of my own commit
+> messages and left `6d672e6` orphaned regardless. **The fix is to raise the card
+> drawer work as its own id and note the mismatch** — it is not mine to write,
+> because I do not know what that manager intended it to say.
 
 > ## Superseded — state at handover, 2 Aug 2026 (evening)
 >
