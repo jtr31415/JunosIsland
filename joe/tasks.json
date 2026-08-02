@@ -450,8 +450,8 @@
       "artefact": "docs/how-the-animals-are-made.md",
       "doneRule": "manual",
       "check": "",
-      "note": "",
-      "state": "open"
+      "note": "ANSWERED 2 Aug 2026, and the answer is yes — rebuild them. Joe: \"only the garden animals have been built to spec. the ones i can see in outline in the album for africa and home pets are the old blocky ones that can be deleted to be honest. do not build any more of them. all the rest must be built in the same way as the garden animals. which should be pretty much deterministic and quick.\" So the KIT ROUTE IS RETIRED for authoring: 59 kit-built species across home-pets (14), africa (13), farm (16) and woodland (16) are rejected work. He ordered them replaced BEFORE new collections are built, because those four collections are already openable and are what Juno actually sees.",
+      "state": "done"
     },
     {
       "id": "JT-035",
@@ -548,6 +548,20 @@
       "doneRule": "manual",
       "check": "",
       "note": "Primitives only, for now.",
+      "state": "done"
+    },
+    {
+      "id": "JT-042",
+      "type": "ruling",
+      "title": "ANSWERED: replace the 59 kit-built species, do not delete them (PB-036)",
+      "detail": "Joe called the kit-built animals \"the old blocky ones that can be deleted to be honest\". Deleting them outright was offered and NOT chosen; he chose replace-in-place. The reason matters and is measured, not assumed: album.ts:176 degrades gracefully for an unknown species (speciesRecord misses, it falls through to preview(), and speciesName() returns a capitalised id), so nothing crashes — BUT pets.ts creates nothing for an id it cannot build, so a kit-built pet Juno already owns would become an INVISIBLE pet on her island, and brief 19 says nothing she owns is lost. Keeping the species id and swapping only its build data from kit to assembly means an owned pet never disappears; it simply stops being blocky. ORDER HE SET: Home Pets 14, then Africa 13, then Farm 16, then Woodland 16, checking in at the end of each collection before the next starts. New collections (Night Time, Ice, Jungle, Prehistoric, the four conservation sets) wait behind all four.",
+      "blocks": [
+        "PB-036"
+      ],
+      "artefact": "src/island/species/parts/assembled/",
+      "doneRule": "manual",
+      "check": "",
+      "note": "Replace in place, collection by collection, Home Pets first.",
       "state": "done"
     }
   ],
