@@ -622,6 +622,34 @@
       "check": "",
       "note": "",
       "state": "open"
+    },
+    {
+      "id": "JT-047",
+      "type": "ruling",
+      "title": "Is the water buffalo / Cape buffalo pair acceptable, or must Africa's buffalo move off `box-12`? (PB-074)",
+      "detail": "collections/farm.ts's own header flagged this bovine group BEFORE anything was built, in these words: it is \"the one I would put in front of Joe first\". It is the collection's single genuinely open question, and it is the cheapest ruling in the queue — see the last paragraph.\n\nTHE FOUR ANIMALS IN THIS SHAPE. `animal-cow`, one of the FROZEN base 24 and untouchable. `animal-ox` and `animal-water-buffalo`, both built this run. And `animal-buffalo`, rostered in AFRICA and NOT BUILT YET, whose brief reads \"2.15, horns, round ears, tuft tail, near-black 0x413a36\" — that is the Cape buffalo, and it is a fourth animal in the same silhouette.\n\nWHAT IS SEPARATED, MEASURED. The water buffalo's coat is 0x4b525e, a cool blue-slate — 186 degrees of hue and nine points of L* away from Africa's warm near-black 0x413a36. Its horns are three `wedge-11` segments a side (the ELEPHANT'S TUSK, worn as a horn), which leaves the skull dead level, sweeps to 1.45x the body's own width and finishes 0.1895 behind the hull's midline. A Cape buffalo's horns do the opposite thing entirely: they drop from a fused boss on the crown, hook outward and come back UP beside the head. No silhouette confusion survives that. The ox took the far end of the same group — ruby red-brown, ONE short `wedge-11` horn a side, and no marking anywhere, which is also what holds it apart from the cow, whose whole identity is a map of patches.\n\nWHAT IS NOT SEPARATED, AND THIS IS THE QUESTION. farm.ts gives the Cape buffalo \"round ears\", and the ONLY round-eared wide hull in the bank is `box-12` — the very shell the ox and the water buffalo are both already standing on. `box-12`'s extra 0.289 of width IS two fused ear lugs; that is exactly why both of them took it. If Africa builds its buffalo on `box-12` as well, then THREE animals share one shell, the same widened leg row and the same stub tail — and unlike the ox, which is held apart by being ruby red, the Cape buffalo arrives DARK, like the water buffalo. Everything would then rest on the horns alone, which is a thinner separation than any other pair in Farm.\n\nTHE TWO OPTIONS. (a) Put Africa's buffalo on `box-41` or `box-03` and make it pay geometry for an ear — it gets an ear as a part rather than as a shell, and the three stop sharing a hull. (b) Accept the two as a deliberate pair, the way the chicken and the rooster are a deliberate pair, and let the horns carry the whole separation.\n\nWHAT HAS BEEN BUILT ON WHICH CHOICE: NOTHING. Africa's buffalo is unbuilt, so this ruling costs nothing today and constrains only the Africa build when it happens. NO COMMIT HAS TO CHANGE WHICHEVER WAY YOU RULE. It is the cheapest ruling in the queue — an answer now simply saves the Africa run from having to stop and ask.",
+      "blocks": [
+        "PB-074"
+      ],
+      "artefact": "src/island/species/parts/assembled/animal-water-buffalo.ts",
+      "doneRule": "manual",
+      "check": "",
+      "note": "",
+      "state": "open"
+    },
+    {
+      "id": "JT-048",
+      "type": "ruling",
+      "title": "Should a long-necked animal be able to carry its eyes on its head? (PB-074)",
+      "detail": "Rule 5 nails `EYE_CARD_Z` to a fixed 0.635 and `CreatureDef.eyes` has NO `z` field, so an eye card always lands on the BODY. An animal whose head is raised on a neck therefore carries its eyes at the NECK'S ROOT — on its chest — rather than on its face.\n\nTHIS IS NOT NEW. `animal-terrapin` (Home Pets) already ships with exactly this compromise and you have reviewed it without objecting. What has changed is the scale: it now affects `animal-goose` and `animal-llama`, both built this run, and it will affect every long-necked animal still to come — swans, ostriches, giraffes, camels, flamingos.\n\nTHE LLAMA MEASURED THE HARD CONSTRAINT SITTING BEHIND IT. 1.43125 + 0.150 + 0.49375 = 2.075, which is already OVER `PACK_HEIGHT_MAX` of 2.02 with a neck of ZERO length. So on this pack an erect ear cannot sit on a raised head either — there is no height left to put one. The llama's ears are therefore on the body's crown, and they are tied to the head by PALETTE instead: the same cream slot as the neck and the head, so the eye reads as belonging to the animal even though it is not on its face.\n\nTHE OPTIONS. (a) LEAVE IT. Three animals already ship this way, the terrapin has been in front of you and drew no comment, and every future long-necked species simply inherits the same compromise. (b) GIVE `CreatureDef.eyes` A `z` / `on` FIELD so an eye can ride a named feature rather than always the body. That is a change to the BUILDER, not to a species — and it would move the fingerprint of every animal that has eyes, which is all of them.\n\nWHAT WAS BUILT ON WHICH CHOICE: (a). The goose and the llama both ship with their eyes at the neck root and say so plainly in their own prose. Reversing it is NOT free — it changes the builder and re-pins every fingerprint in the project.\n\nNOT BLOCKING. Nothing waits on this, and Farm is complete either way. It is here so that the compromise is a decision you made rather than one you find later in three animals at once.",
+      "blocks": [
+        "PB-074"
+      ],
+      "artefact": "src/island/species/parts/assembled/animal-llama.ts",
+      "doneRule": "manual",
+      "check": "",
+      "note": "",
+      "state": "open"
     }
   ],
   "archive": []
