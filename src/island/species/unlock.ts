@@ -415,18 +415,28 @@ function draw(state: UnlockState, rng: Rng): string | null {
  * Returns the ids to open, in the order they were drawn, so the caller can fold
  * them in and record the last one. Empty when four are already active.
  *
- * >>> THE POOL IS FIVE COLLECTIONS WIDE TODAY, AND THAT IS TIGHT. Since PB-058
- * >>> put the twelve unbuilt collections into `HELD_BACK` (see `NOT_BUILT_YET`),
+ * >>> THE POOL IS SIX COLLECTIONS WIDE TODAY, AND THAT IS STILL TIGHT. Since
+ * >>> PB-058 put the unbuilt collections into `HELD_BACK` (see `NOT_BUILT_YET`),
  * >>> everything this function can ever draw is `garden`, `home-pets`,
- * >>> `woodland`, `africa` and `farm` — five. A fresh island opens `base` plus
- * >>> three of those to reach the cap of four, which leaves exactly TWO in
- * >>> reserve for the whole of the rest of the game: the child completes an
- * >>> album, one of the two opens, they complete another, the last one opens,
- * >>> and after that the cadence has nothing left to give until a modeller ships
- * >>> a collection. That is not a fault in this function, it is the true state of
- * >>> the registry, and it is a great deal better than opening a child an album
- * >>> of sixteen empty frames — but it is the number to look at first when someone
- * >>> asks why the album stopped growing.
+ * >>> `woodland`, `africa`, `farm` and — since 2 August — `night-time`. A fresh
+ * >>> island opens `base` plus three of those to reach the cap of four, which
+ * >>> leaves THREE in reserve for the rest of the game: the child completes an
+ * >>> album, one opens, they complete another, another opens, and after that the
+ * >>> cadence has nothing left to give until a modeller ships a collection. That
+ * >>> is not a fault in this function, it is the true state of the registry, and
+ * >>> it is a great deal better than opening a child an album of sixteen empty
+ * >>> frames — but it is the number to look at first when someone asks why the
+ * >>> album stopped growing.
+ * >>>
+ * >>> AND THE SIXTH DOES NOT BEHAVE LIKE THE OTHER FIVE. `night-time` is
+ * >>> thirteen of sixteen and CANNOT be completed on the current parts bank —
+ * >>> two of its members want a membrane and one wants a pincer, and the bank
+ * >>> has neither. `completion()` divides by ROSTER size, so once it opens it
+ * >>> never completes, never goes inactive, and holds one of `MAX_ACTIVE`'s four
+ * >>> slots for good. So it widens the pool by one and narrows the SLOTS by one,
+ * >>> which is very nearly a wash. That is JT-030's question arriving as a
+ * >>> measurement rather than as a design note; `NOT_BUILT_YET` above carries it
+ * >>> in full and it is Joe's to rule on.
  * >>>
  * >>> A POOL SMALLER THAN THE CAP DEGRADES SILENTLY, ON PURPOSE. It neither
  * >>> throws nor spins: `draw` returns null the instant `candidates` is empty
