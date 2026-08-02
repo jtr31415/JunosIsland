@@ -227,23 +227,36 @@ const MERGEABLE = {
    *               `collection` and `factSource` are short strings whose loss is
    *               silent rather than visible, which is the test `flag` fails.
    *
-   * IDS ARE DEALT HERE, and that is why the counter exists: the page once dealt
-   * itself a stale one and cost a card twice (see `needsAnId`). `SD-001` upward,
-   * sticky once written, never reused — a draft that has been through the facts
-   * pipeline or landed in a commit message is referred to by that id forever.
+   * THE RECORD IS KEYED BY THE ANIMAL, and there is no counter at all.
    *
-   * Note what the counter does NOT get here: `needsAnId`'s second signal is
-   * DIFFERENT — a disagreement about a field the page cannot edit — and this spec
-   * owns every field on the record, so that signal can never fire. It does not
-   * need to. The page deals no ids at all (`app.js` sends a draft with no `id`
-   * and the server allocates inside the request), which removes the race by
-   * construction rather than by detection; a payload record that does arrive
-   * carrying an id the file already holds is genuinely an edit of that draft.
+   * Joe, 2 August 2026: *"when i save an animal in the editor, it needs to just
+   * overwrite what there is already … no saving of drafts in the bottom of the
+   * list"*. It used to be keyed by a dealt `SD-nnn`, so saving the squirrel twice
+   * left two records and the editor's Animal list grew a `draft:SD-002` row under
+   * the animals every time he pressed Save. One animal is one record.
+   *
+   * **The id race the counter existed to manage is GONE, not moved**, and the
+   * reason is worth stating because it is the second time this file has reached
+   * it. A `speciesId` is not DEALT, it is DERIVED — from the species, which is
+   * the thing itself. There is no pool, so there is nothing for two writers to
+   * take the same number out of, and `needsAnId` cannot fire because it returns
+   * false without a counter. That is exactly the `names` and `primitives` case
+   * two specs up, and it is why neither of those has a counter either.
+   *
+   * What is left is a plain content collision — Joe and an agent editing the
+   * same animal's `def` at once — and that was never the counter's problem. It
+   * is `fold`'s, it always was, and a `json` disagreement still 409s rather than
+   * guessing. Nothing about that changed.
+   *
+   * `SD-nnn` ids that already exist on disk are folded away by `migrate` below,
+   * NOT deleted. Nothing outside this file has ever referred to a draft by one —
+   * checked across the code, the docs and every commit message — so the id
+   * itself is dropped while every field on the record is kept.
    */
   edits: {
-    list: 'drafts', key: 'id',
+    list: 'drafts', key: 'speciesId',
+    migrate: foldOntoSpecies,
     owns: {
-      speciesId: { kind: 'text' },
       from: { kind: 'text' },
       fromKind: { kind: 'text' },
       collection: { kind: 'text' },
@@ -255,7 +268,6 @@ const MERGEABLE = {
       state: { kind: 'flag', idle: 'draft' },
       note: { kind: 'text' },
     },
-    counter: { field: 'nextId', prefix: 'SD-', pad: 3 },
   },
 }
 
@@ -270,6 +282,86 @@ const MERGEABLE = {
  */
 
 export const mergeable = what => Object.hasOwn(MERGEABLE, what)
+
+/** What identifies a record in this file. `undefined` for a file with no spec. */
+export const keyOf = what => MERGEABLE[what]?.key
+
+/**
+ * Bring a file forward to the shape its spec describes, on the way in.
+ *
+ * Read-time, not a script. A file on disk was written by whatever the server was
+ * the day it was written, and the two places that read one — the state endpoint
+ * and the save path — are the only two that matter; healing there means the file
+ * is right on screen immediately and right on disk at the next save, with no
+ * migration step anybody has to remember to run. `nextFree` already works this
+ * way for the counter, for the same reason.
+ *
+ * Idempotent by construction: every migration below returns its input untouched
+ * when there is nothing to do.
+ */
+export function migrate(what, file) {
+  const spec = MERGEABLE[what]
+  if (!spec?.migrate || !file || typeof file !== 'object') return file
+  return spec.migrate(file)
+}
+
+/**
+ * `joe/species-edits.json` from dealt `SD-nnn` ids to one record per animal.
+ *
+ * The failure to avoid here is not a crash, it is a quiet subtraction: the three
+ * records this was written against carry a `givenName` Joe chose — `SD-003` is
+ * the fennec fox and it is called **Neegab** — and a migration that keyed by
+ * species and kept "the first one" would have thrown that away with a 200 and no
+ * error anywhere. `merge.mjs` and the names audit have both been bitten by that
+ * exact class before, which is why folding is field by field and never
+ * record-wins-record.
+ *
+ * Two rules, and between them nothing filled in is ever lost:
+ *
+ *   LATER WINS   records are in save order, so a later record for the same
+ *                animal is a later save of it and its values are the current
+ *                ones. This is the only guess the fold makes.
+ *   NEVER BLANKS a later record that says nothing about a field — '', [], {},
+ *                absent — leaves what the earlier one said standing. That is
+ *                `nothing`, the same test `json` fields already use, and it is
+ *                what protects a name recorded once and never retyped.
+ *
+ * The `id` is dropped rather than parked in a `legacyId`, because nothing has
+ * ever held one: no commit message, no doc, no code path outside this file
+ * refers to a draft by its `SD-nnn`, so a field preserving them would be
+ * archaeology with no reader. The mapping is in the commit that made this change.
+ *
+ * A record with no `speciesId` cannot be keyed and is passed through EXACTLY as
+ * it stands, id and all. The page cannot produce one — it refuses to open an
+ * animal without an id — so this is insurance rather than a case, and dropping
+ * such a row to tidy the file would be the very subtraction this function exists
+ * to prevent.
+ */
+function foldOntoSpecies(file) {
+  const rows = Array.isArray(file.drafts) ? file.drafts : []
+  const stale = Object.hasOwn(file, 'nextId') || rows.some(r => r && Object.hasOwn(r, 'id'))
+  if (!stale) return file
+
+  const bySpecies = new Map()
+  const unkeyed = []
+  for (const row of rows) {
+    const speciesId = row?.speciesId
+    if (typeof speciesId !== 'string' || speciesId === '') { unkeyed.push(row); continue }
+    const { id: _dropped, ...fields } = row
+    const was = bySpecies.get(speciesId)
+    if (!was) { bySpecies.set(speciesId, fields); continue }
+    const out = { ...was }
+    for (const [name, value] of Object.entries(fields)) if (!nothing(value)) out[name] = value
+    bySpecies.set(speciesId, out)
+  }
+
+  const folded = { ...file, drafts: [...bySpecies.values(), ...unkeyed] }
+  /* The counter's own field, and the counter is gone. Left behind it is a number
+   * that nothing reads and nothing advances, which is exactly the sort of thing
+   * the next reader spends twenty minutes deciding is not load-bearing. */
+  delete folded.nextId
+  return folded
+}
 
 /** Nothing said. An empty string, an absent key, or the value a record is born with. */
 const idle = (v, field) => v === undefined || v === null || v === '' || v === field.idle

@@ -28,6 +28,26 @@
  * one judgement, on the Animals bench (`approver.ts`, JT-031). This panel
  * settles what the bench will show; it does not tick it.
  *
+ * ## The Animal list is the ANIMALS, and it says what still needs doing
+ *
+ * Joe, 2 August: *"when i save an animal in the editor, it needs to just
+ * overwrite what there is already and i need to see and filter by status, so i
+ * can tell from the list what still needs doing. no saving of drafts in the
+ * bottom of the list"* — and, a minute later, *"also group them by collection, so
+ * i can prioritize."*
+ *
+ * So: one row per animal, under a header per collection in ship order, each row
+ * and each header carrying a status; a filter that narrows to one status; and
+ * **a save overwrites the record for that animal** rather than appending a new
+ * one. Before this, every Save dealt a fresh `SD-nnn` and hung a `draft:SD-002`
+ * row under the animals — his file had three of them and none of them was ever
+ * meant to be a separate thing.
+ *
+ * All of the arithmetic is `status.ts`, which owns the four statuses and, more
+ * importantly, owns `signedOff()` — the one call that answers whether a creature
+ * has Joe's tick. That answer is about to decide what reaches the game at all,
+ * so read that file's header before doing anything with it here.
+ *
  * ## What is deliberately NOT here yet
  *
  * Joe's instruction while this was being built: *"dont get too clever with it. I
@@ -57,6 +77,10 @@ import {
 } from './def'
 import { ALL_SHAPES, HULL_SHAPES, groupShapes, summarise, type ShapeRow } from './library'
 import { signoffView, type SignoffView } from './signoff'
+import {
+  STATUSES, STATUS_LABEL, rowLabel, subjectGroups,
+  type AuditRow, type Status,
+} from './status'
 import { pushRequest, type PushReply } from './push'
 import { loadBuiltDefs } from './capture'
 import { createStage, type GizmoMode } from './stage'
@@ -73,6 +97,8 @@ function el<T extends HTMLElement>(selector: string): T {
 
 const saySpan = el<HTMLParagraphElement>('#say')
 const subjectPick = el<HTMLSelectElement>('#subject')
+const subjectFilter = el<HTMLSelectElement>('#subject-filter')
+const subjectNote = el<HTMLParagraphElement>('#subject-note')
 const openNote = el<HTMLParagraphElement>('#open-note')
 const partList = el<HTMLUListElement>('#part-list')
 const partCount = el<HTMLSpanElement>('#part-count')
@@ -151,13 +177,19 @@ let selected: DefPath | null = null
 /**
  * One saved species draft, as `joe/species-edits.json` holds it.
  *
- * The server owns `id` — the page NEVER deals one. It sends a draft with no id
- * at all and `merge.mjs` allocates `SD-nnn` inside the request, against the file
- * as it stands that instant. That is what makes two writers safe, and it is why
- * a save here cannot destroy a draft an agent appended while this tab was open.
+ * **`speciesId` IS the id.** There is no `SD-nnn` any more and there is no
+ * counter behind one: a record is keyed by the animal it describes, so saving
+ * the squirrel twice updates one record instead of dealing a second. That also
+ * ends the id race the counter existed to manage — a derived key has no pool for
+ * two writers to draw the same number out of. `merge.mjs MERGEABLE.edits` argues
+ * both halves of that, and its `migrate` folds the ids already on disk away
+ * without losing a field.
+ *
+ * A save is still safe against a second writer for the reason it always was: the
+ * page sends a PATCH naming the record and the fields it owns, and the server
+ * re-reads the file inside the request.
  */
 interface Draft {
-  id: string
   speciesId: string
   /** The shipped species this was derived from; `''` when started from scratch. */
   from: string
@@ -174,15 +206,14 @@ interface Draft {
 
 let drafts: readonly Draft[] = []
 /**
- * Which of Joe's own definitions is on screen, if it is one of his.
- *
- * `''` means the subject is a shipped species being edited but not yet saved.
- * A draft is keyed by its `speciesId`, ONE per species id — saving the mouse
- * twice updates the same draft rather than growing a pile of near-identical
- * ones. A second variant is a new animal with a new name, which is a thing the
- * page can now do.
+ * `joe/names-audit.json`'s rows — the only thing that knows what Joe has signed
+ * off, and therefore what may reach the game at all. Read, never written here.
  */
-let draftId = ''
+let audit: readonly AuditRow[] = []
+/** Which status the Animal list is narrowed to, or `'all'`. His choice, not saved. */
+let filter: Status | 'all' = 'all'
+/** True when the animal on screen has a saved record of Joe's behind it. */
+let isMine = false
 /** False the moment a gesture lands, true again only when the server has it. */
 let saved = true
 /**
@@ -516,10 +547,26 @@ function show(id: string, next: CreatureDef, baseline: CreatureDef, what: string
   say(what)
 }
 
+/**
+ * Open an animal from the list.
+ *
+ * **His own work wins.** One row per animal means one gesture has to serve both
+ * "show me the hedgehog" and "show me what I did to the hedgehog", and the
+ * second is the only one worth choosing: an editor that opened the shipped
+ * version over an evening of saved edits would be hiding his work behind a name
+ * he has no reason to distrust. `Start again from the original` is how he gets
+ * back to the shipped one, and it always was.
+ */
+function openAnimal(id: string): void {
+  const mine = drafts.find(d => d.speciesId === id)
+  if (mine) { openDraft(mine); return }
+  open(id)
+}
+
 function open(id: string): void {
   const found = defs.get(id)
   if (!found) { say(`no definition captured for ${id}`, true); return }
-  draftId = ''
+  isMine = false
   nameOverride = ''
   fact = ''
   saved = true
@@ -528,11 +575,14 @@ function open(id: string): void {
 
 /** Reopen one of Joe's own saved drafts, exactly as he left it. */
 function openDraft(draft: Draft): void {
-  draftId = draft.id
+  isMine = true
   nameOverride = draft.givenName
   fact = draft.fact
   saved = true
-  show(draft.speciesId, draft.def, defs.get(draft.from) ?? draft.def, `opened ${draft.id}`)
+  show(
+    draft.speciesId, draft.def, defs.get(draft.from) ?? draft.def,
+    `opened ${draft.speciesId} — your saved version`,
+  )
 }
 
 for (const mode of ['translate', 'rotate', 'scale'] as const) {
@@ -623,9 +673,9 @@ el<HTMLButtonElement>('#revert').addEventListener('click', () => {
    * would tell him his own animal does not exist.
    */
   if (!opened) return
-  const wasDraft = draftId
+  const wasMine = isMine
   show(speciesId, opened, opened, 'back to the original')
-  draftId = wasDraft
+  isMine = wasMine
   saved = false
   drawSaveNote()
 })
@@ -648,44 +698,91 @@ const api = async (path: string, body?: unknown): Promise<Record<string, unknown
 function drawSaveNote(): void {
   saveNote.textContent = !def
     ? ''
-    : draftId
-      ? `${draftId}${saved ? ' — saved' : ' — unsaved changes'}`
+    : isMine
+      ? saved ? 'your saved version' : 'unsaved changes'
       : saved ? 'not saved yet' : 'unsaved changes'
   saveNote.className = saved ? 'note' : 'note warn'
 }
 
-/** The Animal list: what ships, then what Joe has made, kept apart. */
+/**
+ * The Animal list. Every animal, once, grouped by collection, status on the row.
+ *
+ * The whole list is `subjectGroups`' answer — this function paints it and
+ * decides nothing. That split is deliberate and it is the repo's rule: a page
+ * that restated the conditions behind a status would be a second opinion with no
+ * way to tell which of the two was the truth (HANDOFF §6 on `tileOffer`).
+ */
 function drawSubjects(): void {
-  const chosen = draftId ? `draft:${draftId}` : speciesId
-  const groups: HTMLOptGroupElement[] = []
-  const shipped = document.createElement('optgroup')
-  shipped.label = `Shipped species (${defs.size})`
-  shipped.append(...[...defs.keys()].map(id => {
-    const option = document.createElement('option')
-    option.value = id
-    option.textContent = id.replace(/^animal-/, '')
-    return option
-  }))
-  groups.push(shipped)
-  if (drafts.length) {
-    const mine = document.createElement('optgroup')
-    mine.label = `My drafts (${drafts.length})`
-    mine.append(...drafts.map(d => {
+  const groups = subjectGroups({ built: [...defs.keys()], drafts, audit, filter })
+  subjectPick.replaceChildren(...groups.map(group => {
+    const optgroup = document.createElement('optgroup')
+    optgroup.label = group.label
+    optgroup.append(...group.rows.map(row => {
       const option = document.createElement('option')
-      option.value = `draft:${d.id}`
-      option.textContent = `${d.givenName || d.speciesId.replace(/^animal-/, '')} · ${d.id}`
+      option.value = row.speciesId
+      option.textContent = rowLabel(row)
       return option
     }))
-    groups.push(mine)
-  }
-  subjectPick.replaceChildren(...groups)
-  if (chosen) subjectPick.value = chosen
+    return optgroup
+  }))
+  /*
+   * A filter NARROWS THE LIST; it never closes the animal. The one on screen
+   * stays on screen even when its status has just moved it out of view — losing
+   * an hour's work because a save changed a status is not a trade worth making
+   * — so the picker simply shows nothing selected and the note below says why.
+   */
+  const shown = groups.flatMap(g => g.rows)
+  subjectPick.value = shown.some(r => r.speciesId === speciesId) ? speciesId : ''
+  drawFilter(shown.length)
 }
 
-/** Read the drafts back off the server. The page never keeps its own copy warm. */
+/**
+ * The filter, with a count against every status.
+ *
+ * The counts are the point rather than a decoration: *"so i can tell from the
+ * list what still needs doing"* is answered before he opens the list at all if
+ * the option itself reads `in progress (4)`. Rebuilt on every draw because a
+ * count that lags a save is worse than no count; his choice is carried across.
+ */
+function drawFilter(shown: number): void {
+  const all = subjectGroups({ built: [...defs.keys()], drafts, audit, filter: 'all' })
+  const rows = all.flatMap(g => g.rows)
+  const option = (value: Status | 'all', text: string): HTMLOptionElement => {
+    const out = document.createElement('option')
+    out.value = value
+    out.textContent = text
+    out.selected = value === filter
+    return out
+  }
+  subjectFilter.replaceChildren(
+    option('all', `every animal (${rows.length})`),
+    ...STATUSES.map(status =>
+      option(status, `${STATUS_LABEL[status]} (${rows.filter(r => r.status === status).length})`)),
+  )
+
+  const todo = rows.filter(r => r.status !== 'signed').length
+  const hidden = speciesId !== '' && !subjectPick.value
+  subjectNote.textContent
+    = (filter === 'all'
+      ? `${rows.length} animals · ${todo} still to do`
+      : `showing ${shown} of ${rows.length} · ${todo} still to do altogether`)
+    + (hidden ? ` · ${speciesId.replace(/^animal-/, '')} is open but this filter hides it` : '')
+  subjectNote.className = hidden ? 'note warn' : 'note'
+}
+
+/**
+ * Read the drafts and the sign-offs back off the server. The page never keeps
+ * its own copy warm.
+ *
+ * `names` comes along because a status is not derivable without it: `signedOff`
+ * reads `joe/names-audit.json`, which is where Joe's tick actually lives, and a
+ * list that guessed at it from the draft store would be inventing the one state
+ * that decides whether an animal reaches the game.
+ */
 async function refreshDrafts(): Promise<void> {
   const state = await api('/api/state')
   drafts = (state['edits'] ?? []) as readonly Draft[]
+  audit = (state['names'] ?? []) as readonly AuditRow[]
   drawSubjects()
 }
 
@@ -696,17 +793,22 @@ async function refreshDrafts(): Promise<void> {
  * save my edits."* Until this landed the editor could do everything except keep
  * anything, so every session's work died with the tab.
  *
+ * **A SAVE OVERWRITES.** Joe, 2 August: *"when i save an animal in the editor,
+ * it needs to just overwrite what there is already"*. One animal, one record,
+ * keyed by `speciesId` — so this can no longer produce the second, third and
+ * fourth copy of the same squirrel that used to appear under the list.
+ *
  * Two shapes, and which one is used is decided against the file as it is RIGHT
  * NOW, not against what the page loaded:
  *
- *  - a draft for this species already exists → `patch`, naming only the fields
+ *  - a record for this species already exists → `patch`, naming only the fields
  *    this page owns. A patch cannot disturb a field it does not mention, which
  *    is what lets an agent and this page write the same file.
- *  - it does not → a whole-file payload carrying **only the new draft**, and
- *    **no id**. `merge.mjs` deals `SD-nnn` inside the request and KEEPS every
- *    record the payload does not mention. Sending the drafts we already knew
- *    about would risk a 409 against anything changed since; sending one record
- *    cannot.
+ *  - it does not → a whole-file payload carrying **only the new record**.
+ *    `merge.mjs` KEEPS every record the payload does not mention, so a save here
+ *    cannot destroy one an agent appended while this tab was open. Sending the
+ *    drafts we already knew about would risk a 409 against anything changed
+ *    since; sending one record cannot.
  *
  * This writes to `joe/species-edits.json` and nowhere else. **It cannot touch a
  * shipped species** — the live twenty-four are frozen, and the only way out of
@@ -739,20 +841,18 @@ async function save(): Promise<void> {
     note: mine?.note ?? '',
   }
   const reply = mine
-    ? await api('/api/save', { what: 'edits', patch: { id: mine.id, ...fields } })
-    : await api('/api/save', {
-      what: 'edits', value: { schemaVersion: 1, nextId: 1, drafts: [fields] },
-    })
+    ? await api('/api/save', { what: 'edits', patch: fields })
+    : await api('/api/save', { what: 'edits', value: { schemaVersion: 1, drafts: [fields] } })
   if (reply['error']) {
     say(`could not save: ${String(reply['error'])}`, true)
     return
   }
   await refreshDrafts()
-  draftId = drafts.find(d => d.speciesId === speciesId)?.id ?? ''
+  isMine = drafts.some(d => d.speciesId === speciesId)
   saved = true
   drawSubjects()
   drawSaveNote()
-  say(`saved ${draftId || speciesId}`)
+  say(`saved ${speciesId}`)
 }
 
 el<HTMLButtonElement>('#save').addEventListener('click', () => {
@@ -789,7 +889,7 @@ async function push(): Promise<void> {
   }
   await save()
   const today = new Date().toISOString().slice(0, 10)
-  const request = pushRequest(speciesId, def, view, draftId, today)
+  const request = pushRequest(speciesId, def, view, today)
   const reply = await api('/api/species/push', request) as unknown as PushReply
 
   if (reply.error) {
@@ -848,6 +948,33 @@ const idFromName = (name: string): string =>
  * editor that lets a typo put him on top of the hedgehog — thinking he is making
  * something new — is exactly the accident that must not be possible here. His
  * drafts are his own and are overwritten happily; only the shipped ones are shut.
+ *
+ * ## THE FROM-SCRATCH CASE, WHICH IS THE AWKWARD ONE, AND WHY IT IS NOT A CASE
+ *
+ * A record is keyed by `speciesId`, and the obvious objection is that a brand-new
+ * animal has no species id until it is named — so it cannot be keyed, so it would
+ * have to go on being keyed by something dealt, so the pile at the bottom of the
+ * list comes back under a new name.
+ *
+ * **That state does not exist in this page, and this button is why.** It demands
+ * the species name FIRST and derives the id from it before anything is drawn:
+ * "Fen Hare" is `animal-fen-hare` at the moment he presses the button, and
+ * `show` sets `speciesId` before there is a definition on screen at all. There
+ * is no path to a `def` without one — `save` returns early on `!def`, and `def`
+ * is only ever set through `show`. So a scratch animal is keyed exactly as a
+ * shipped one is, from the moment it exists, and saving it twice overwrites.
+ *
+ * The alternative was to let an animal be started unnamed and key it on
+ * something temporary. It was rejected: a temporary key is a dealt key wearing a
+ * hat, it brings back the counter and the race, and it would put half-drawn
+ * nameless things in the list — which is the pile Joe asked to be rid of.
+ *
+ * The cost, said out loud: **renaming a scratch animal makes a second record.**
+ * Type "Fen Hare", save, then type "Fen Hair" and you have two animals, because
+ * to this page they ARE two animals — `animal-fen-hare` and `animal-fen-hair`.
+ * That is one row each in the list under "Not in the roster", visible and
+ * deletable by hand, rather than a silent rename that would have to guess which
+ * of the two he meant. It is the same trade the shipped ids already make.
  */
 el<HTMLButtonElement>('#new-animal').addEventListener('click', () => {
   const name = newName.value.trim()
@@ -860,7 +987,7 @@ el<HTMLButtonElement>('#new-animal').addEventListener('click', () => {
   }
   const blank = blankDef()
   const mine = drafts.find(d => d.speciesId === id)
-  draftId = mine?.id ?? ''
+  isMine = mine !== undefined
   /* Blank, not the typed name: what he typed here is the SPECIES ("Fen Hare"),
    * and the given name is a different word that `naming.ts` already draws. */
   nameOverride = mine?.givenName ?? ''
@@ -895,13 +1022,12 @@ el<HTMLButtonElement>('#signoff-regen').addEventListener('click', () => {
 })
 
 subjectPick.addEventListener('change', () => {
-  const value = subjectPick.value
-  if (value.startsWith('draft:')) {
-    const found = drafts.find(d => d.id === value.slice('draft:'.length))
-    if (found) openDraft(found)
-    return
-  }
-  open(value)
+  if (subjectPick.value !== '') openAnimal(subjectPick.value)
+})
+
+subjectFilter.addEventListener('change', () => {
+  filter = subjectFilter.value as Status | 'all'
+  drawSubjects()
 })
 
 /* ----------------------------------------------------------------- the boot */
@@ -925,6 +1051,14 @@ loadBuiltDefs().then(async loaded => {
   await refreshDrafts().catch(() => {
     saveNote.textContent = 'no workbench server, so nothing can be saved from here'
   })
+  /*
+   * Now that his own work has arrived, apply the rule the list applies: his
+   * version of an animal is the one that opens. Guarded on `saved`, so a gesture
+   * made in the second the server took to answer is never thrown away — that is
+   * the async-race landmine in HANDOFF §6, and an editor is the worst possible
+   * place to lose one.
+   */
+  if (saved && !isMine && speciesId !== '') openAnimal(speciesId)
   drawSubjects()
 }).catch((error: unknown) => {
   say(error instanceof Error ? error.message : String(error), true)

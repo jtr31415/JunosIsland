@@ -124,8 +124,11 @@ export interface SignoffView {
  * Not a fallback anybody should rely on — an id off the roster cannot be pushed
  * at all — but the panel still has to say something in the box while he is
  * halfway through typing a name, and a blank there reads as a bug.
+ *
+ * Exported so `status.ts` can spell a stray the same way in the list as this
+ * panel spells it two inches to the right. One animal, one screen, one spelling.
  */
-const titleFromId = (speciesId: string): string => {
+export const titleFromId = (speciesId: string): string => {
   const bare = speciesId.replace(/^animal-/, '').replace(/-/g, ' ')
   return bare === '' ? '' : bare[0]!.toUpperCase() + bare.slice(1)
 }
