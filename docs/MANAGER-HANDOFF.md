@@ -1,10 +1,167 @@
 # Manager handoff
 
-> ## ⚠ START HERE — state at handover, 3 Aug 2026 (early hours)
+> ## ⚠ START HERE — the album stops showing animals nobody built, 3 Aug 2026
 >
-> *Written by the manager that built Home Pets. **This block is the current one.**
-> Everything below it is history, including the two that call themselves current
-> — they were, last night.*
+> *Written by the manager that fixed the empty slots. **This block is the current
+> one.** Everything below it is history, including the ones that call themselves
+> current — they were.*
+>
+> Branch **`worktree-agent-abea6830dd6e44e25`**, branched at **`382e9a9`** (local
+> `main`, correctly — not `origin/main`). Three commits: `55084ee` the change,
+> `ecd82d2` the backlog card, `6671ac4` the workbench raise. This block is the
+> fourth. **Nothing pushed, nothing merged** — that is the drumbeat's job.
+>
+> ### What this run did
+>
+> Joe: *"i can still see all the empty slots from the blocky animals in the
+> albums by the way. we should remove them all and they get built up as soon as i
+> push new animals to the game."*
+>
+> `album.ts` drew one frame per ROSTER member, so PB-036 deleting the fifty-nine
+> kit-built species left their frames behind. The album now filters its **view**
+> through a new one-line-answer module, **`src/island/species/built.ts`**.
+>
+> **THE ALBUM AS IT NOW STANDS — 68 frames, five possible pages:**
+>
+> | page | name | frames | rostered |
+> |---|---|---|---|
+> | 1 | Base Set | **24** | 24 |
+> | 2 | Garden | **14** | 14 |
+> | 3 | Home Pets | **16** | 16 |
+> | 4 | Africa | **1** | 16 |
+> | 5 | Night Time | **13** | 16 |
+>
+> Sixteen collections — Farm, Woodland, Birds, Ocean, Critters, Ice, Outback,
+> Jungle, Raptors, Dinosaurs, Prehistoric, Legendary and the four Red List tiers
+> — have nothing built and now have **no page, no name and no count** at all.
+> Africa loses 15 frames and Night Time 3; those 18 are the empty slots Joe was
+> looking at. `tests/island/album-built.test.ts` prints this table on every run.
+>
+> **A child sees at most FOUR of those five at once** — `MAX_ACTIVE` is 4 and
+> `base` is forced open, so the fifth only ever arrives after a completion.
+>
+> ### What "built" resolves to, and the trap you must not fall into
+>
+> **NOT `shippedIn`.** It counts REGISTERED records, and a record is not an
+> animal: `define.ts:60` looks an assembly up off the register and silently omits
+> it when there is none. That is not hypothetical — **the method the last three
+> collections were built by writes ALL of a collection's records first, in one
+> commit**, and the species files afterwards one at a time. Filtering on
+> `shippedIn` would put sixteen empty Farm frames back the day that first commit
+> landed: the same bug through a different door. (A manager already mis-measured
+> this once, reporting 100 built of 320 against a true 17.)
+>
+> `isBuilt` instead mirrors `album.ts`'s own `shapeOf` exactly — the only honest
+> question is *is there a picture to put in the frame*: an `assembly`, **or** a
+> `build` whose kit is one of the three actually written (`KITS`, **not**
+> `BUILT_KITS`, which lists three kits that throw by name), **or** the frozen
+> `kit: 'kenney'` pack. **Garden's thirteen quadrupeds are why clause two is not
+> dead code** — "no more blocky ones" is true of the build order, not of the data.
+>
+> **ONE PREDICATE, FOUR CALLERS.** The count at `:831` and the frames at `:836`
+> were two separate walks of `set.members` three lines apart; the page list and
+> the prefetch were two more. All four read `builtIn(id)` now, so the heading
+> cannot promise a number the grid below it does not show.
+>
+> **`roster.ts` IS UNTOUCHED and must stay so.** `naming.ts:218` allocates given
+> names across all 320 of it precisely so building a new animal cannot rename one
+> a child already owns. `builtIn` filters that order and never reorders it: a new
+> animal only ever INSERTS a frame.
+>
+> ### The brief §19 proof, because it was proved rather than asserted
+>
+> `shown` is built from the same filtered lists, so **a pet whose frame went away
+> falls to the "More friends" page** with its name, its portrait, its pop-out and
+> "find on the map" intact. That is a **third live route** into `orphans`, not a
+> defensive one. `album-built.test.ts` proves all three cases — a rostered but
+> unbuilt species, a species in a now-hidden collection, and a species not in the
+> roster at all — and asserts the general form: **the number of pets reachable in
+> the card is never less than the number passed to `open()`**. Juno's own 24 are
+> base species, all built, all still on page one; nothing of hers moved.
+>
+> **Filtering the cells without filtering `shown` would have lost her a friend
+> silently.** If you touch this file, that is the pair to keep together.
+>
+> ### The prefetch, which was the silent-bug risk
+>
+> `warmNext` reads `builtIn(pages[at + 1])`. `pages` is filtered **first**, so
+> `at + 1` still means the page she is one tap away from, and a hidden collection
+> sitting in the `albums` argument no longer shifts what gets warmed. The old
+> `album-portraits.test.ts` "warms ONE page ahead" fixture contained `birds`
+> (0 built) and had quietly stopped testing a three-page book — a near-miss worth
+> knowing about.
+>
+> ### Gate results — 4053 tests, 6 failing, and the arithmetic
+>
+> Baseline at `382e9a9` was **4001 with 6 failing**. This run is **4053 with the
+> same 6 failing**: `4046 passed + 6 failed + 1 skipped = 4053`, and `4053 − 4001
+> = 52` new tests, all green. **The 6 are the stale hedgehog ones**
+> (`assembly-hedgehog.test.ts` ×5, `assembly-fingerprint.test.ts` ×1) — another
+> manager's live work, not touched.
+>
+> A second full run additionally showed `coast`, `sealing` and
+> `editor-round-trip` ×2 — the documented PB-082 load flakes. **Re-run, never
+> widened:** the three files pass alone, `75 passed | 1 skipped`.
+>
+> `tsc` **0 errors** · `build` OK (`precache 50 entries`) · `smoke` "all boot
+> checks passed" · `parity` "every step renders identically" · `channel`
+> "channel check passed".
+>
+> ### Where the next manager starts
+>
+> **`JT-047` is open and it is the consequence of this change.** The album says
+> Night Time is "13 of 13"; `unlock.ts:292`'s `completion()` still divides by the
+> **roster**, so the same collection is 81% to the unlocker and **the next
+> collection never opens**. Africa is 6% and can never be finished by any amount
+> of play. Masked today because `NOT_BUILT_YET` holds most collections back and
+> Garden and Home Pets are genuinely complete; it bites the first time Night Time
+> or Africa is the collection in progress. **The unlocker was deliberately left
+> untouched** — it decides what a child experiences, so it is Joe's alone and was
+> not put to Fable. Three options with costs are written out in the card.
+>
+> Otherwise the queue is unchanged: **PB-074, Farm** — and **JT-046** (the
+> substitutions, raised as JT-045 in its own commits) is still unanswered, so
+> sixteen Farm animals still risk being built twice.
+>
+> ### What I learned that is not in the code
+>
+> - **`unlock.ts` cannot import `built.ts`.** `built.ts` reaches `KITS` and
+>   therefore three.js; `unlock.ts` is deliberately three-free (`unlock.ts:109`).
+>   That is why `NOT_BUILT_YET` is still a hand-written list where the truth is
+>   now derivable. Recorded as PB-083; a mirror in the `signed-off.ts` style is
+>   the shape of the fix if anyone wants it.
+> - **Three headers are now provably stale and I left them alone on purpose**
+>   (they belong to files a live manager may be in): `collections/africa.ts` says
+>   *"ships PARTIAL, FOURTEEN of sixteen"* when it is **one**; `unlock.ts`'s
+>   `fillToCap` note says the pool is *"six collections wide"* when it is **four**
+>   (woodland and farm are in `NOT_BUILT_YET` further up the same file); and
+>   `eedb6ef`'s *"Garden is the only complete collection left"* was already wrong
+>   — **Home Pets is 16 of 16** and is the album's second-biggest page.
+> - **`shapeOf` still fetches for a rostered-but-unregistered id.** `if (record &&
+>   ...)` falls through to `preview(species)` when there is no record, so the
+>   comment claiming no request is made for a species the roster knows and cannot
+>   build was never quite true. Harmless now — the grid no longer asks for those
+>   at all — but it is the path an orphan pet takes.
+> - **Test fixtures naming a zero-built collection now fail loudly**, which is
+>   good, but two of them (`birds` in `album-roster` and `album-portraits`) had
+>   been silently testing one page fewer than they claimed. If you write an album
+>   test, name a collection that has animals in it.
+>
+> ### Decisions
+>
+> **Raised:** `JT-047` — the album and the unlocker disagree about Night Time;
+> which number is right? Blocks PB-083. Also flagged inside it, not as a
+> question: the album now shows 68 animals while the sign-off gate still lets her
+> hatch only the base 24 — his ruling working as designed.
+>
+> **Picked up:** none. No `type: "ruling"` task moved to `done` with a note since
+> the last run. `JT-046` (the substitutions) and `JT-040` remain **open**.
+>
+> **Cards:** PB-083 raised, `nextId` 83 → 84.
+
+> ## Home Pets, 3 Aug 2026 (early hours) — superseded by the block above
+>
+> *Written by the manager that built Home Pets.*
 >
 > ### What this run did
 >
