@@ -34,6 +34,8 @@ import { fileURLToPath } from 'node:url'
  */
 // @ts-expect-error — see above; `push.mjs` ships no types.
 import { withExportLine, withRecord, withAssembledImport, withRow, assertLf, PushRefused } from '../../tools/workbench/push.mjs'
+import { defToModuleSource } from '../../tools/workbench/public/editor/def'
+import type { CreatureDef } from '../../src/island/species/parts'
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 
@@ -484,6 +486,57 @@ describe('what it refuses, by name, before it has written anything', () => {
     expect(existsSync(resolve(root, '../etc.ts'))).toBe(false)
     expect(readdirSync(join(root, 'src/island/species/collections'))).toEqual(['home-pets.ts'])
     treeIsUntouched()
+  })
+})
+
+/*
+ * THE DEFINITION ARRIVES WHOLE, INCLUDING THE FIELDS ADDED AFTER THIS WAS
+ * WRITTEN.
+ *
+ * `defToModuleSource` walks a fixed `DEF_KEYS` list and serialises each value
+ * generically, so a field added to `CreatureDef` is carried without anyone
+ * touching the generator — but "should be" is not a thing to assume about the
+ * only path out of the editor. A definition that lost a field between the screen
+ * and `src/` would silently reshape an animal Joe had already shaped, and it
+ * would do it quietly: the species still builds, still passes `creatureSpec`,
+ * and simply stands differently.
+ *
+ * Both fields under test are recent and both are NESTED, which is the case a
+ * flat serialiser gets wrong: `legs.y` (row height, `5ea32d4`) and `ridge.place`
+ * (per-row hand placement, `4b14bc9`) — and `place` is a partial record keyed by
+ * `RidgeRow` whose values are `Vec3`s, so it exercises an object of arrays two
+ * levels down. The assertion is against the BYTES THE PUSH WROTE, not against
+ * the generator's return value, because everything between them is the thing
+ * being tested.
+ */
+describe('a definition reaches src/ with nothing dropped on the way', () => {
+  /*
+   * The definition is not hand-written text here: it is a real `CreatureDef`
+   * put through the REAL generator, so the test covers the whole path the editor
+   * takes rather than only the courier at the end of it.
+   */
+  const SHAPED: CreatureDef = {
+    palette: { coat: 0xc4703a, belly: 0xe8d2a8 },
+    legs: { x: 0.31, y: 0.185, z: 0.4 },
+    ridge: {
+      part: 'cone-01',
+      count: 4,
+      rows: ['top', 'chamfer'],
+      place: { top: [0, 0.62, 0.05], chamfer: [0.18, 0.5, -0.1] },
+    },
+  }
+
+  it('carries legs.y and ridge.place through the generator and onto the disk', async () => {
+    const source = defToModuleSource('animal-corn-snake', SHAPED)
+    /* First that the generator says them at all — `DEF_KEYS` walks the whole
+     * definition generically, and this is the assertion that it kept doing so. */
+    expect(source).toContain('y: 0.185')
+    expect(source).toContain('place: { top: [0, 0.62, 0.05], chamfer: [0.18, 0.5, -0.1] }')
+
+    const r = await push(payload({ module: source }))
+    expect(r.code).toBe(200)
+    /* And then that the push is a courier with no opinion about the text. */
+    expect(read(MODULE)).toBe(source)
   })
 })
 

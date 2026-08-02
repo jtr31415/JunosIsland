@@ -79,8 +79,17 @@ records that the row list is **regenerated** whenever the roster moves, with onl
 
 So a name Joe types over the generated one goes to **`replacement`**, never to
 `name`. Parked in `name` it would fail the gate that day and be silently erased
-the next time the audit file was regenerated. (This was written the wrong way
-round first; the test agent caught it before it shipped.)
+the next time the audit file was regenerated.
+
+**This was written the wrong way round first and a test caught it before it
+shipped, and the class is worth naming.** The failure would not have looked like
+a bug. The push succeeds, the row is there, the bench shows his word — and then
+some later run regenerates the audit file against a moved roster and his name is
+simply gone, with no error anywhere and no way to tell it had ever been typed.
+Any field written into a GENERATED file has to be one of the fields that survive
+regeneration, and for `joe/names-audit.json` `merge.mjs` names them: `verdict`,
+`replacement`, `note`. Everything else in that file is derived and is rewritten
+without asking.
 
 **And an override does not rename the animal in the game.** The game reads
 `NAME_PINS`, which `naming.ts` keeps deliberately empty until Juno's save
@@ -157,6 +166,24 @@ holds the definition Joe just edited and can execute the rules against it.
 payload**, so a caller cannot name a file at all — and every write still goes
 through `repo.mjs`'s `inside()` jail, unwidened.
 
+### The definition arrives whole, including fields added after this was written
+
+`defToModuleSource` walks a fixed `DEF_KEYS` list and serialises each value
+generically, so a field added to `CreatureDef` rides along without anyone
+touching the generator. That is *designed*, but it was not *proved*, and the two
+newest fields are both nested — `legs.y` (row height, `5ea32d4`) and
+`ridge.place` (per-row hand placement, `4b14bc9`, a partial record keyed by
+`RidgeRow` whose values are `Vec3`s, so an object of arrays two levels down).
+
+`species-push.test.ts` now takes a real `CreatureDef` carrying both, runs it
+through the real generator, pushes it, and asserts the bytes on disk. Deleting
+`'ridge'` from `DEF_KEYS` makes it fail, which was checked rather than assumed.
+
+**Why this matters more than it looks:** a definition that lost one of those
+fields would not throw. The species still builds and still passes `creatureSpec`
+— it just stands differently from the animal Joe shaped on screen, silently, and
+the editor is the only path into `src/`.
+
 ### Three things that will bite the next person
 
 1. **`joe/species-facts.json` is still not writable through `/api/save`, and that
@@ -188,16 +215,19 @@ One-off churn on the first push, then stable.
 
 ## Gates, on the final tree
 
+Rebased onto local `main` at `3c5d10f` — clean, no conflicts — and re-gated
+there. Baseline was 148 files / 3290 tests; this adds two files and 45 tests.
+
 ```
 $ npm test
- Test Files  135 passed (135)
-      Tests  3030 passed (3030)
+ Test Files  150 passed (150)
+      Tests  3335 passed (3335)
 
 $ npx tsc --noEmit -p tsconfig.json
 TSC exit 0
 
 $ npm run build
-precache  50 entries (1833.25 KiB)
+precache  50 entries (1852.10 KiB)
 files generated  ../../dist/island/sw.js
 
 $ npm run smoke
@@ -211,21 +241,32 @@ src/ → workbench  no references, as it must be
 channel check passed
 ```
 
-**The baseline quoted to me was wrong and I could not reproduce it.** The brief
-said 148 files / 3290 tests on `main`; this tree has 135 test files on disk
-(`find tests -name '*.test.ts' | wc -l`) and ran 3003 before this work and 3030
-after (+24 sign-off, +20 push, minus the arithmetic of a run I did not
-double-count). Whoever writes the next brief should re-measure rather than copy
-that number forward.
+### AGENT WORKTREES BRANCH FROM `origin/main`, NOT FROM LOCAL `main`
+
+Worth its own heading, because it cost this run two false conclusions and it will
+cost the next one the same. **Joe deliberately keeps local `main` far ahead of
+`origin` — nothing has been pushed since `83eb94c`** — and an agent worktree
+defaults to the remote default branch. This work was therefore built 16 commits
+behind, and reported two "discrepancies" that were nothing of the sort:
+
+- the baseline. 148 files / 3290 tests is correct for local `main`; 135 / 3003
+  was correct for `origin/main`. Thirteen of the difference are the Night Time
+  merge's new species.
+- `PB-062` "not existing". It does; it was added in `5f9d3a3`, which is inside
+  those sixteen.
+
+**Check `git merge-base HEAD main` before you believe any count.** This branch
+was rebased onto `3c5d10f` and re-gated; the numbers below are the real ones.
 
 **The coast flake is real and it has two friends.** Under CPU contention —
-specifically, another agent running vitest at the same time — `coast.test.ts >
-never walls her island in` timed out at 62s, and so did
+another agent running vitest at the same time, or simply a full suite next to a
+build — `coast.test.ts > never walls her island in` timed out at 62s, and so did
 `facedecals.test.ts > nothing in the pack samples the reserved columns today`
 and `sealing.test.ts > a search over every ring configuration finds no
 radius-sensitive tap`. All three passed in 18.9s when re-run together on an idle
-machine. Do not widen any of their budgets; do not run two vitest processes at
-once.
+machine; `sealing` flaked once more on the post-rebase run at 5.1s and then
+passed alone in 2.0s. **Do not widen any of their budgets** and do not run two
+vitest processes at once. The clean run above is the one to believe.
 
 ## Three things found on the way that are NOT fixed here
 
@@ -242,10 +283,6 @@ once.
    push; harmless, and not worth a special-case serialiser.
 
 ## Where the next person starts
-
-`joe/backlog.json` **has no PB-062 card** — `nextId` is 61 and the highest card
-is PB-060. The card text is in the run report; this manager does not edit that
-file.
 
 The obvious next move is to take one species through the whole loop for real:
 draw it in the editor, settle its name and fact, push it, then write places 5, 6
