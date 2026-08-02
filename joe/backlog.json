@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "nextId": 66,
+  "nextId": 67,
   "cards": [
     {
       "id": "PB-001",
@@ -466,6 +466,13 @@
       "id": "PB-065",
       "title": "Three exhaustive tests fail only when the suite competes with a build for CPU",
       "detail": "coast \"never walls their island in\", sealing, and facedecals each pass alone in seconds and time out during a full run with an agent building in parallel. They failed and re-ran green four times on 2 Aug. Measured: the coast test is 8.8s alone against a 30s budget. The suite has grown 128 to 152 files in a day, so this will get worse. Two honest options — cap vitest’s worker count so the suite stops starving its own slowest test, or give the three a real budget with the measurement recorded. Widening a budget silently to absorb load is the thing to avoid.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-066",
+      "title": "One broken audio path silences the whole game, with no error and nothing on screen",
+      "detail": "Every sound the game makes goes through Web Audio — the voice player, the baked clips and the sound effects all build an AudioContext, and nothing in src/ uses an <audio> element. Found 2 Aug when Joe got total silence on his laptop while YouTube played fine: media elements and Web Audio are different output paths in Chrome, and only the media one worked. The game is fine (confirmed on the tablet, synth and baked both working), but a child in the same state would get a silent game with no error, no fallback and no indication anything is wrong — the ceremonies would still run, because speech.ts backstops onend at 2500ms whatever happens. Worth deciding whether the game should notice its own silence: an AudioContext that never leaves suspended, or a decode that yields no audible output, is detectable.",
       "state": "open",
       "run": ""
     }
