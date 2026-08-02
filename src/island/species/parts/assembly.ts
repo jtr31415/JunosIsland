@@ -70,7 +70,7 @@
  */
 import * as THREE from 'three'
 import { partById, type BakedPart } from './bank.generated'
-import { authoredById } from './authored'
+import { authoredById, isPrimitive, primitiveStretched } from './authored'
 import { assemblyTexture, slotUv, patchUv, type SlotSplit } from './texture'
 import type { ResolvedMotion } from './motion'
 
@@ -522,7 +522,28 @@ export function buildAssembly(spec: AssemblyBuild): THREE.Group {
       + `|${paint.patch ? `${paint.patch.below}@${paint.patch.at}` : ''}`
     const hit = geoms.get(key)
     if (hit) return hit
-    const made = bakeGeometry(part, stretch, spins, mirror, paint, slots)
+    /* THE ONE POINT WHERE A STRETCH IS BAKED, and the one place the three base
+     * shapes part company with everything else.
+     *
+     * A LIFTED part is multiplied, and that is right: its proportions are
+     * Kenney's, they are evidence, and rule 1 is that we adapt his shapes rather
+     * than re-cut them. An ear stretched 2.97x is the pack's own ear, longer.
+     *
+     * An AUTHORED PRIMITIVE is re-cut instead, because its chamfer is a DISTANCE
+     * and not a proportion: 0.25 of the part's own smallest dimension, at 45
+     * degrees, measured off `box-03` (see `authored.ts`). Multiply a baked one by
+     * [3, 1, 1] and that distance triples on x alone — the cut is no longer a
+     * quarter of anything and its bevel planes are no longer at 45 degrees. So
+     * the part is cut again from a box of `PRIMITIVE_SIZE x stretch` and baked at
+     * identity: same id, same everything downstream, a chamfer that stayed put.
+     * `primitiveStretched` returns the base part verbatim at [1, 1, 1], so an
+     * unstretched copy is untouched.
+     *
+     * The cache key above is computed FIRST and is unchanged — it already carries
+     * the id and the stretch, so it is unique per size either way. */
+    const made = isPrimitive(part.id)
+      ? bakeGeometry(primitiveStretched(part.id, stretch), [1, 1, 1], spins, mirror, paint, slots)
+      : bakeGeometry(part, stretch, spins, mirror, paint, slots)
     geoms.set(key, made)
     return made
   }

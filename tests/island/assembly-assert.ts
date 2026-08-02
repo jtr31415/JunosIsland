@@ -81,7 +81,7 @@ import {
 } from '../../src/island/species/parts'
 import { PARTS_BANK, partById, type BakedPart }
   from '../../src/island/species/parts/bank.generated'
-import { authoredById } from '../../src/island/species/parts/authored'
+import { authoredById, isPrimitive } from '../../src/island/species/parts/authored'
 import { SPECIES_NAMES, SPECIES_COLLECTION } from '../../src/island/species/roster'
 import { speciesRecord } from '../../src/island/species/registry'
 
@@ -509,7 +509,16 @@ export function assertAssembly(claims: AssemblyClaims): void {
       expect([...bespoke].sort()).toEqual([...(claims.authored ?? [])].sort())
       // Rule 1 is adapt-before-author. Authoring is Joe's call, taken once, and
       // the species that wears one says so where he reads it (§2's escape clause).
-      if (bespoke.size > 0) {
+      //
+      // The three base shapes are the exception, and it has to be here as well as
+      // in `creature.ts` or the first species to wear a square passes the builder
+      // and then fails its own harness — whose obvious "fix" is a `RULE 1` flag
+      // that names no strained rule, which is precisely the signal this assertion
+      // exists to keep meaningful. Joe sanctioned those three by name, for
+      // everybody, permanently (JT-041); a flag would be telling him something he
+      // already ruled.
+      const commissioned = [...bespoke].filter(p => !isPrimitive(p))
+      if (commissioned.length > 0) {
         expect(spec!.flag, `${id} wears authored geometry and its flag does not say so`)
           .toMatch(/RULE 1/i)
       }

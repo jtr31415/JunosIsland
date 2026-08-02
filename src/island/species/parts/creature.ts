@@ -68,9 +68,13 @@
  *     pack's measured 422-951 throws unless its own `flag` says `RULE 9`. The
  *     hedgehog's does; that is what the escape clause looks like when it is
  *     working.
- *   - **Rule 1, adapt before authoring** — a `bespoke-*` part throws unless the
- *     definition's `flag` says `RULE 1`. `authored.ts` is disjoint from
- *     `PARTS_BANK`, so nothing can reach one by search.
+ *   - **Rule 1, adapt before authoring** — a COMMISSIONED `bespoke-*` part throws
+ *     unless the definition's `flag` says `RULE 1`. The exception is the three
+ *     base shapes — square, triangle, circle — which Joe sanctioned by name, for
+ *     everybody, permanently (`JT-041`, quoted in `authored.ts`); a standing
+ *     ruling is not a thing to surface to him one species at a time. `isPrimitive`
+ *     is the whole of the exception and it is a closed list of three. Either way
+ *     `authored.ts` is disjoint from `PARTS_BANK`, so nothing reaches one by search.
  *   - **Rule 8, one hue per part** — a paint naming a slot the palette does not
  *     have throws here rather than at build.
  *   - **§3, nothing floats** — a ridge whose outer stations would leave the hull
@@ -91,7 +95,7 @@
  * once. The pupil fix should have been that kind of change and was not.
  */
 import { partById, PARTS_BANK, type BakedPart } from './bank.generated'
-import { authoredById } from './authored'
+import { authoredById, isPrimitive, primitiveStretched, PRIMITIVE_IDS } from './authored'
 import { PACK_PUPIL, SLOT_PX } from './texture'
 import { LEG_ROW, EYE_CARD_Z, MODEL_TRIS_MAX } from './hulls'
 import { defineAssembly } from './assembled/register'
@@ -333,14 +337,27 @@ export interface CreatureDef {
 
 type P3 = [number, number, number]
 
-/** A part's built points: stretched and spun, exactly as `bakeGeometry` will. */
+/**
+ * A part's built points: stretched and spun, exactly as `bakeGeometry` will.
+ *
+ * "Exactly as" is the load-bearing word, and it is why the primitive swap has to
+ * be repeated here rather than only in `assembly.ts`. This function solves the
+ * join at definition time and feeds the `anchors` map, so a feature written
+ * `on: '<a stretched primitive>'` hangs off whatever extent this predicts. A
+ * primitive is RE-CUT at its new size rather than multiplied — see
+ * `primitiveStretched` — so multiplying here would predict an extent the built
+ * mesh does not have. The two agree for the square, whose cut faces reach its
+ * box at every size; the triangle and the circle are where they would diverge.
+ */
 function builtPoints(p: BakedPart, stretch: Vec3, spins: readonly Spin[]): P3[] {
+  const part = isPrimitive(p.id) ? primitiveStretched(p.id, stretch) : p
+  const scale: Vec3 = isPrimitive(p.id) ? [1, 1, 1] : stretch
   const out: P3[] = []
-  for (const vi of new Set(p.indices)) {
+  for (const vi of new Set(part.indices)) {
     out.push(spinVec([
-      p.positions[vi * 3]! * stretch[0],
-      p.positions[vi * 3 + 1]! * stretch[1],
-      p.positions[vi * 3 + 2]! * stretch[2],
+      part.positions[vi * 3]! * scale[0],
+      part.positions[vi * 3 + 1]! * scale[1],
+      part.positions[vi * 3 + 2]! * scale[2],
     ], spins))
   }
   return out
@@ -566,10 +583,23 @@ export function creatureSpec(id: string, def: CreatureDef): AssemblyBuild {
         'One mass. A head box beside a body box is what scrapped 72 animals; there is no seam '
         + 'at the neck on any of the 24 originals.')
     }
-    if (d.part.startsWith('bespoke-') && !/RULE 1/i.test(def.flag ?? '')) {
+    /* Rule 1, and the flag exists to surface an UNSANCTIONED authored shape to
+     * Joe — one he has not ruled on, in the species that reached for it, where he
+     * reviews. `bespoke-sphere-01` is one of those and so is every part he
+     * commissions next.
+     *
+     * The three base shapes are not. He asked for them, named them and scoped
+     * them himself (`JT-041`, quoted in `authored.ts`): square, triangle, circle,
+     * for everybody, permanently. A standing ruling said once is not a thing to
+     * make fourteen species re-declare, and a flag that fires on it teaches a
+     * builder to write "RULE 1" without meaning it — which is the flag stopping
+     * working for the sphere too. So `isPrimitive` is the exception, it is a
+     * closed list of three, and anything else starting `bespoke-` still throws. */
+    if (d.part.startsWith('bespoke-') && !isPrimitive(d.part) && !/RULE 1/i.test(def.flag ?? '')) {
       fail(id, 'RULE 1', `feature "${role}" wears the AUTHORED shape ${d.part} and nothing says so`,
         'Authoring is Joe\'s call, taken once, having seen the lifted alternative. Say so in '
-        + '`flag`, naming RULE 1, where he reads it.')
+        + '`flag`, naming RULE 1, where he reads it — unless it is one of the three base shapes '
+        + `sanctioned for everybody by JT-041 (${PRIMITIVE_IDS.join(', ')}), which need no flag.`)
     }
 
     const name = d.name ?? role
