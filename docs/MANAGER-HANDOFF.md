@@ -1,6 +1,154 @@
 # Manager handoff
 
-> ## ⚠ START HERE — state at handover, 2 Aug 2026 (night)
+> ## ⚠ START HERE — state at handover, 2 Aug 2026 (late night)
+>
+> *Written by the manager that made Push actually push (PB-076). Read this
+> block, then the PB-070 block below it, then the mouth manager's — all three
+> are current. History starts at the block marked `Superseded`.*
+>
+> ### The headline: Push wrote nothing, for every animal, and said it worked
+>
+> Joe edited the hedgehog in the species editor, pressed **Push it to the game**,
+> and was told in green that it was in the game. **It was not.** No error was
+> raised, because there was never an error. What happened:
+>
+> `push.mjs` sets `alreadyBuilt = exists(modulePath)`, and **all thirty
+> assembled species are already built**, so every push took the already-built
+> branch. With a locomotion set it wrote the MOVES table, marked places 1, 2, 3,
+> 4, 8 and 9 *skipped*, and returned **HTTP 200**. On every retry after that
+> `withMovesEntry` returned `null` too, so the reply wrote **nothing at all** and
+> was **still a 200**. The client judged success by the absence of an `error`
+> key, so it printed "animal-hedgehog is in the game" over a reply whose own
+> `say` field read *"Nothing was written."* `8f380a1` — Joe's `moves.ts` row —
+> is the one real thing any push of his ever wrote, and it is the independent
+> confirmation of this whole account.
+>
+> **The editor could not re-push a change to ANY animal.** Joe's editing time
+> had been producing nothing but drafts.
+>
+> ### The suspicion that the editor eats authored geometry is REFUTED
+>
+> Do not act on it, and do not "restore" anyone's part. His hedgehog draft holds
+> `{ part: 'box-09', name: 'box-09', at: [...] }` where the shipped file holds a
+> `bespoke-sphere-01` nose — **because Joe swapped it deliberately.** He said so:
+> *"i changed the nose to something more fitting."* The code agrees independently:
+> that key order is `insertPart`'s literal signature (`def.ts:856`), whereas
+> `setPartShape` spreads the old object first and would have kept `name`, `paint`
+> and `sink`. Load is a `structuredClone` off `CREATURE_DEFS` with **no filter**,
+> `ALL_SHAPES` includes `AUTHORED_PARTS`, and the goldfish draft round-tripped
+> `bespoke-triangle-01` with its stretch and spin intact. The orphaned `nose`
+> palette slot is expected residue: **there is no `removePaletteSlot` anywhere**,
+> by design.
+>
+> ### TELL JOE: his new nose will be coat-coloured
+>
+> His `box-09` carries **no `paint` key**, and an `extras` entry with no paint
+> falls back to `coat` (`creature.ts:882`, resolved by `paintOf` at
+> `creature.ts:539`). So it renders **`#b2946c`, the hedgehog's buff coat tan** —
+> the pink `#e792bd` still sitting in the orphaned `nose` slot is never reached.
+> **He gets no warning of any kind**: `warningsFor` has no axiom for an unpainted
+> part or an unreferenced slot, and sign-off says nothing either. It is his
+> animal and his call — the "own colour" row added earlier tonight is how he
+> paints it. Deleting the orphan slot to tidy up is the one dangerous gesture:
+> palette insertion order IS the atlas layout, so removing a slot repaints
+> everything after it.
+>
+> ### What shipped, three commits
+>
+> - **`684655b`** — the emitter was **lossy**. `numLit` was `String(round6(n))`,
+>   so **9 of 30 species did not survive their own round trip**: slow-worm,
+>   corn-snake, goldfish and crocodile lost precision on a `stretch`, which
+>   *multiplies* geometry, and bushbaby on a `sink`. Now emits the shortest
+>   decimal that parses back to exactly the same double — tidy numbers on disk
+>   are untouched, so a re-save churns nothing. **21/30 → 30/30.** Also
+>   `CreatureDef.motion` was missing from `DEF_KEYS` and was being silently
+>   deleted; the first animal given a wingbeat would have lost it on first save.
+> - **`bfad6c8`** — the push writes, and the client stops lying. An explicit
+>   `replace` intent (set from `defs.has(speciesId)` — "this came out of the
+>   game") opens the guard *only* for an edit; a new species colliding with a
+>   built id still hits the original refusal word for word.
+> - **`a871169`** — card PB-076. **`PB-075` was taken while I held it** — fourth
+>   id collision tonight.
+>
+> ### The thing that nearly went wrong, and the number that proves it didn't
+>
+> **`defToModuleSource` is byte-identical to 0 of 30 shipped files.** The
+> generator writes an 11-line placeholder where the real files carry their
+> derivations — `animal-hedgehog.ts` is **286 lines on disk against 50 emitted**.
+> A push that regenerated the file would have deleted **236 lines of argued
+> reasoning, including Joe's own 29 July ruling quoted verbatim.** That is worse
+> than the no-op it replaces: the no-op cost him an hour, this would have cost
+> the project its memory.
+>
+> So an update **splices**: `withUpdatedDefinition` brace-matches the single
+> `defineCreature('<id>', {...})` literal and replaces only that, refusing rather
+> than guessing on zero or multiple matches. Proved over the real files, not in a
+> fixture: **30/30 re-splice their own literal as a byte-exact no-op, and 30/30
+> preserve every byte outside the span.** The hedgehog's definition opens on line
+> 223 and all **222 lines above it survive verbatim**.
+>
+> One trap worth knowing: all thirty files write `pupil: PACK_PUPIL`, which the
+> editor emits as a hex because `def.ts` is deliberately three.js-free. Without
+> `withRestoredConstants` every update would have left an unread import and
+> **`noUnusedLocals` would have turned `tsc` red on a push that otherwise
+> worked**. A value Joe genuinely changed keeps its new literal and the dead
+> binding is *named* for him, never deleted.
+>
+> ### Gate results — full tree, rebased onto `8f380a1`
+>
+> ```
+> npm test    Test Files 156 passed (156)   Tests 3458 passed | 1 skipped (3459)
+> tsc         0 errors
+> build       precache 50 entries (1845.22 KiB), files generated
+> smoke       all boot checks passed
+> parity      every step renders identically
+> channel     channel check passed  (src/ → workbench: no references, as it must be)
+> ```
+> Baseline at `8f380a1` was 3413/155; this run adds 45 tests and one file. The
+> single skip is deliberate — the byte-fidelity case, kept un-weakened with its
+> 0/30 finding written above it, because that measurement is *why* push splices.
+>
+> ### Where the next manager starts
+>
+> **Joe can now push, so the next thing he hits is the loop around it.** Two
+> concrete gaps, both his words: `insertPart` names a part after its bank shape
+> id (`box-09` where he expects `mouth`), which needs a **rename-a-part control
+> that does not exist** — that one is already with Joe, do not invent it. And an
+> unpainted inserted part silently takes the coat, with no warning; an axiom in
+> `warningsFor` (`def.ts:1051`) would be cheap and is not yet raised as a card.
+> Otherwise the queue is **PB-073 (Home Pets, 14 to build)** and **PB-074 (Farm,
+> all 16)**, both unblocked, both carrying the JT-041 amendment.
+>
+> ### Landmines paid for this run
+>
+> - **A 200 is not a success.** `push.mjs` has *six* `return null` "already
+>   there, not an error" no-ops. Collectively they let a push report 200 having
+>   written literally nothing. Anything reading that reply must judge it by
+>   **what it says it WROTE** — `pushOutcome` in `push.ts` is the seam, and place
+>   1 is the species module.
+> - **`docs/HANDOFF.md`'s say-card trap does not apply in the workbench.**
+>   `body:has(.overlay:not(.hide)) .say` lives in `src/ui/tokens.css`; the editor
+>   loads only `editor/editor.css` and has no overlay. The editor's own failure
+>   was different and worse: `main.ts` set `className = 'note warn'` on the
+>   **success** path too, so success and failure were the *same string*. There
+>   was no red note class at all until this run.
+> - **Do not measure "was this file written" from `git status` alone.** I
+>   concluded the 400 refusal had fired because `moves.ts` was clean — it was
+>   clean only because the drumbeat had already committed it as `8f380a1`. The
+>   commit log is part of the evidence.
+>
+> ### Decisions
+>
+> **No JT raised, deliberately, and this is the one thing to check.** The open
+> question is whether an update push should ask Joe to confirm before it
+> overwrites a built animal. I shipped **no confirm** — the refusal's own comment
+> says replacing a species is *"a thing to do on purpose, in an editor, with git
+> watching"*, and a confirm on his primary workflow is friction. Joe is live in
+> the workbench right now, so a fifth whole-file id collision tonight is a real
+> risk against near-zero benefit; the drumbeat is relaying to him directly
+> instead. **If he wants a confirm, it is one branch in `push()`.**
+
+> ## ⚠ ALSO CURRENT — the PB-070 manager's handover, 2 Aug 2026 (night)
 >
 > *Written by the manager that shipped PB-070. Read this block, then the mouth
 > manager's block immediately below it, which is still current for the species
