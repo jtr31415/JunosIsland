@@ -1,11 +1,140 @@
 # Manager handoff
 
-> ## ⚠ START HERE — state at handover, 2 Aug 2026 (late evening)
+> ## ⚠ START HERE — state at handover, 2 Aug 2026 (night)
 >
-> *Written by the manager that made the mouth placeable. **Two managers ran
-> concurrently in this one worktree tonight and both wrote a block.** Read this
-> one, then the PB-068 block immediately below it — that one is ALSO CURRENT, not
-> history. History starts at the first block marked `Superseded`.*
+> *Written by the manager that shipped PB-070. Read this block, then the mouth
+> manager's block immediately below it, which is still current for the species
+> layer. The PB-068 block after that is now history — this run did the thing it
+> told you to do.*
+>
+> ### The headline: a signed-off animal now reaches the island
+>
+> **PB-070 is done.** Sign-off and shipping are now one act. Until tonight Joe
+> could have signed off all thirty hand-assembled animals and Juno would still
+> never have met one — the deck dealt only the 24 Kenney ids, and even had it
+> dealt an assembled one `pets.ts` would have 404'd and dropped it in silence.
+> Three commits, each a coherent slice:
+>
+> - **`b427cac`** — `pets.ts` `prototype()` forks: if `speciesRecord(id)?.assembly`
+>   answers, it calls the synchronous `buildAssembly(spec)` and **makes no network
+>   request at all**; otherwise the GLB path is untouched. Assembly-then-GLB is
+>   copied from `album.ts:176-186` rather than invented. The built group enters the
+>   SAME promise cache, so one prototype per species and `model()` still clones it.
+>   `sync()`'s `.catch(() => null)` becomes `reportDrop` — one `console.error` per
+>   species, retry intact.
+> - **`d0865de`** — `src/island/species/signed-off.{ts,json}`, a generated mirror of
+>   `joe/names-audit.json`'s `signoff === 'ok'`, written by `tools/species/signoffs.mjs`
+>   (`npm run signoffs`) **and by `/api/save` whenever the names file is saved**.
+> - **`e7fe6e3`** — `dealPool(base, signedOff)` in `species/pool.ts`; `main.ts:482`
+>   now passes `dealPool(SPECIES)` where it passed `SPECIES`.
+> - **`59242dc`** — backlog.
+>
+> **Nothing changes for anyone today.** The mirror is empty — 0 of 30 rows carry
+> `signoff`, because Joe's ruling is retroactive — so the pool is still the 24 and
+> the deck deals exactly what it dealt yesterday. **The moment he ticks one row in
+> the workbench, that animal is in the pool.** No flag, no regeneration to
+> remember, no approval step. Tell the drumbeat: the standing order can now be
+> honoured, and PB-067's second half (the editor preview) is what stands between
+> Joe and doing it.
+>
+> ### How it was proved, and why you should believe it
+>
+> `tests/island/deal-assembled.test.ts` drives the real chain, each stage handing
+> the value it produced to the next: the real `makeCollectionDeck` **deals** the
+> assembled id (not "contains" — dealt, on all 25 seeds); the real hatch path puts
+> it in `flow.pets`; a real `createPetField` renders it with the mesh count of an
+> independent `buildAssembly`, non-zero vertex and index counts, feet on y=0, and
+> **zero network requests**; 600 seeded frames move it horizontally; the real
+> `saveIsland`/`loadIsland` put the id in the actual localStorage bytes; and a
+> brand-new pet field — which is what a reload really is — renders and walks it
+> again off the same shared texture, nothing disposed.
+>
+> **Every production change was reverted and watched to fail** (HANDOFF §5).
+> `pool.ts → return base` fails six links plus five unit cases. The assembly fork
+> returning null fails render, reload and walk while deal, hatch and save stay
+> green — the chain isolating the break rather than smearing it. The loader stub
+> **works** for `animal-cow`, hatched in the same file, so "never asked" is a
+> measured fact about `pets.ts` and not an artefact of a dead double.
+>
+> ### Where the next manager starts
+>
+> **PB-067's second half — the editor preview.** Its first half is gone: `pets.ts`
+> can build all thirty, so the wander loop has something true to show. The one real
+> problem is unchanged and is the actual design work: the editor shows an **unsaved
+> draft** (`def` in `joe/species-edits.json`), not a registered species, so
+> `prototype()`'s id lookup will not find the draft geometry. Expect to need a
+> "build this exact spec" injection point beside the id lookup in `pets.ts:~707`.
+> The PB-068 block below still has the rest of the map for that card and it is
+> accurate.
+>
+> ### Landmines paid for this run
+>
+> - **`buildAssembly` grounds its result by writing `group.position.y` on the group
+>   it RETURNS** (`assembly.ts:617-619`). A node's own `position` is not scaled by
+>   its own `scale`, so `sync()`'s `root.scale.setScalar(0.16)` shrinks the geometry
+>   and leaves the lift at full size. `prototype()` therefore returns a plain
+>   **wrapper Group** with the assembly as its only child. It looks removable and is
+>   not. Measured across all thirty, the lift is float dust (largest `-2.951e-5`),
+>   so the symptom today is a pet 2.5e-5 above the grass — invisible, and a real bug
+>   the first time a species is authored below zero. The test pins the cancellation
+>   at `|min.y| < 1e-9`.
+> - **`main.ts:482`'s deck line carries THREE source-text guards and no behavioural
+>   one** — `collection.test.ts`, `preload.test.ts` and `species.test.ts` each grep
+>   for the literal. All three had to be updated in lockstep for a one-line change.
+>   `main.ts` self-boots into WebGL and exports nothing, so no test can construct its
+>   deck; making it observable means lifting the deck construction into an importable
+>   factory. Worth doing, not worth doing inside this card.
+> - **`npm run channel` greps `src/` for the workbench path as raw TEXT**, so a
+>   comment mentioning it fails the gate exactly as an import would. `signed-off.ts`
+>   says "the workbench" in prose for this reason. (The PB-068 block already had
+>   this; it caught a second manager tonight.)
+> - **`.mjs` under `tools/species/` needs a sibling `.d.mts`** or `tsc` rejects a
+>   test importing it with TS7016 — while `tools/workbench/*.mjs` is somehow exempt
+>   and nobody worked out why. `tools/workbench/api.d.mts` is the precedent followed.
+> - **`joe/backlog.json`'s `nextId` was 71 in my brief and 75 on disk.** Re-read
+>   immediately before writing, always; two managers and Joe were all dealing ids
+>   tonight.
+>
+> ### The id mapping (bookkeeping, done)
+>
+> `58f3ef7` says `fix(PB-069)` and `6d672e6` says `fix(PB-070)`. Neither is the card
+> it names — both are the flat-card standoff and card-drawer work, which is
+> **PB-071**. History is NOT rewritten. PB-071 said so from its side; PB-069 and
+> PB-070 now carry the pointer too, so a reader arriving from the commit finds it.
+>
+> ### Gate results — full tree, after the last commit
+>
+> ```
+> npm test        Test Files 155 passed (155)   Tests 3413 passed (3413)
+> npx tsc --noEmit -p tsconfig.json             exit 0, no output
+> npm run build   PWA v1.3.0  precache 50 entries (1845.22 KiB)  files generated
+> npm run smoke   all boot checks passed
+> npm run parity  every step renders identically
+> npm run channel files 363 (7 searchable) ... channel check passed
+> ```
+>
+> Baseline at the start of the run was 3339 tests across 150 files. No flakes were
+> seen; `coast`, `sealing` and `facedecals` were green first time, run serially.
+>
+> ### What is blocked on Joe, and what is not
+>
+> - **Nothing in PB-070 is blocked on him.** No new JT was raised: the pool rule was
+>   already ruled twice ("unsigned animals never ship, signed ones always do") and
+>   inventing an approval step would have contradicted it.
+> - **Thirty animals are waiting for his tick and can now be dealt the moment they
+>   get it.** He should probably not tick until PB-067's preview lands, since that is
+>   how he wants to judge them — but the machinery no longer makes him wait.
+> - **PB-075 raised** (not a decision, an observation): `fromSave` trusts every
+>   record in `save.pets` while every other field it reads is sanitised. Harmless
+>   while a species could only be one of 24; not any more.
+
+> ## ⚠ ALSO CURRENT — the mouth manager's handover, same evening
+>
+> *Written by the manager that made the mouth placeable, concurrently with the
+> PB-068 manager. **Three managers wrote a block in this one worktree tonight.**
+> Still current for the species layer: its two rulings (JT-041 amended, JT-043)
+> govern the next thirty animals. Retitled from `START HERE` by the PB-070
+> manager so the file keeps one entry point; nothing in it is stale.*
 >
 > ### The two rulings that change what the next run does
 >
@@ -110,11 +239,13 @@
 > and re-read any `joe/*.json` from disk in the same breath as writing it. This
 > file was also edited by the other manager mid-write; re-read before editing.
 
-> ## ⚠ ALSO CURRENT — the PB-068 manager's handover, same evening
+> ## Superseded — the PB-068 manager's handover, same evening
 >
-> *Written by the manager that shipped PB-068, concurrently with the block
-> above. Both are current. Everything below THIS block is history and is kept
-> only for its reasoning.*
+> *Written by the manager that shipped PB-068. Its `Where the next manager
+> starts` is DONE — PB-070 gave pets.ts the assembly path it asked for, and its
+> `discovery that matters` is the bug that run fixed. Kept because its map of
+> PB-067’s SECOND half is still accurate and still the next piece of work.
+> Everything below THIS block is older history.*
 >
 > ### What this project is, in four lines
 >
