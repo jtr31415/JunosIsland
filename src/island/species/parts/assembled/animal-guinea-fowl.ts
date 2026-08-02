@@ -373,7 +373,7 @@ export const GUINEA_FOWL_ASSEMBLY = defineCreature('animal-guinea-fowl', {
     + 'boss, so the bare donor transfer lands the bill at z=0.725 rather than the hen\'s '
     + '0.625 with the same zero shift — the bill\'s rear happens to land flush on the flat '
     + 'plate and its tip reaches 0.1 past the boss\'s own end, the same 0.1 clearance the '
-    + 'hen\'s bill has past HER frame.front. Over the 0.100 where bill and boss overlap, '
+    + 'hen\'s bill has past THE HEN\'S OWN frame.front. Over the 0.100 where bill and boss overlap, '
     + 'tube-02\'s uniform 0.230 half-width is wider than the boss\'s uniform '
     + '0.200 half-width; kept anyway because it is under '
     + 'half animal-horse.ts\'s own refused 0.066 overhang for tube-06 on this same boss, and '

@@ -159,8 +159,17 @@ export const NOT_BUILT_YET: readonly string[] = [
    * route: *"remove all the blocky ones from the game completely, including the
    * album."* So they are back to nothing built, which is exactly what this list
    * is for, and the tripwire test caught the omission by name rather than
-   * letting the album offer a child sixteen empty frames. */
-  'woodland', 'farm',
+   * letting the album offer a child sixteen empty frames.
+   *
+   * FARM LEFT AGAIN ON 3 AUGUST 2026 (PB-074), and it is the first id to make
+   * the round trip. All sixteen have been rebuilt on the assembly route —
+   * `shippedIn('farm').length` is 16 — so this is the same derivation that took
+   * `night-time` out, arriving at the same answer for the same reason, and the
+   * tripwire failed by name ("farm now has models") exactly as designed. Unlike
+   * `night-time` it leaves with NO hole in it: sixteen of sixteen, so it can be
+   * completed, frees its slot when it is, and raises none of JT-030's question.
+   * Woodland stays; it is still entirely unbuilt. */
+  'woodland',
 ]
 
 /**
@@ -447,6 +456,18 @@ function draw(state: UnlockState, rng: Rng): string | null {
  * >>> which is very nearly a wash. That is JT-030's question arriving as a
  * >>> measurement rather than as a design note; `NOT_BUILT_YET` above carries it
  * >>> in full and it is Joe's to rule on.
+ * >>>
+ * >>> THE TWO PARAGRAPHS ABOVE ARE OUT OF DATE AND ARE KEPT FOR THE REASONING,
+ * >>> NOT THE COUNT. `woodland` and `farm` were both named there as part of the
+ * >>> six; both then went back into `NOT_BUILT_YET` when Joe retired the
+ * >>> kit-built route, taking the pool down to four. Farm returned on 3 August
+ * >>> (PB-074) with all sixteen rebuilt on the assembly route, so the pool is
+ * >>> FIVE today — `garden`, `home-pets`, `africa`, `night-time` and `farm` —
+ * >>> and `woodland` is the only one of the original six still missing. A fresh
+ * >>> island still opens `base` plus three, so the reserve is two rather than
+ * >>> three, and Farm is the first of those two that a child can actually
+ * >>> finish: it is sixteen of sixteen and frees its slot on completion, which
+ * >>> `night-time` cannot do.
  * >>>
  * >>> A POOL SMALLER THAN THE CAP DEGRADES SILENTLY, ON PURPOSE. It neither
  * >>> throws nor spins: `draw` returns null the instant `candidates` is empty

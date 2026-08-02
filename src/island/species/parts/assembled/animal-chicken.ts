@@ -549,7 +549,7 @@ export const CHICKEN_ASSEMBLY = defineCreature('animal-chicken', {
     + 'of 0.311502 against box-03\'s flat rear reach of 0.312500 clears by 0.000998 — which also '
     + 'means the tail\'s height is not a choice and cannot be raised. wedge-15, box-23 and the '
     + 'chamfer: true idiom are all left unspent for the rooster\'s arched sickle. AND THE WING '
-    + 'IS THE CAGE BIRDS\', UNCHANGED: a hen holds hers tighter and 9/16 was measured for it, '
+    + 'IS THE CAGE BIRDS\', UNCHANGED: a hen holds its wing tighter and 9/16 was measured for it, '
     + 'but the whole difference between 8/16 and 9/16 is 0.019115 of standing wing, 1.53% of the '
     + 'hull\'s width, which is under what the island\'s downward camera shows — so nine birds '
     + 'stay on one number rather than eight and one. NEW PALETTE, UNREVIEWED: farm.ts:177 only '
