@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "nextId": 82,
+  "nextId": 83,
   "cards": [
     {
       "id": "PB-001",
@@ -580,6 +580,13 @@
       "run": "",
       "title": "A ridge cannot wear a JT-041 primitive, so a mane has to be hand-placed",
       "detail": "creatureSpec's ridge branch resolves its shape with partById alone (creature.ts:761), so bespoke-square-01, bespoke-triangle-01 and bespoke-circle-01 throw if used as a ridge part even though JT-041 sanctions them everywhere else. Found building the pony's mane, which is now a single hand-sited bespoke-square-01 instead; assembly-pony.test.ts proves the throw. Farm wants manes on the horse, the donkey and the mule and crests on the rooster, so this will be hit again within one card. Either widen the ridge branch to the authored resolver or record the limit in the spec. NOTE: this work's own commits call it PB-077; that id was taken by another manager the same evening and is already on origin, so the record moved to PB-081. Commit messages were left alone rather than rewriting public history."
+    },
+    {
+      "id": "PB-082",
+      "title": "The round-trip guard times out under load, because its cost scales with the species count",
+      "detail": "tests/tools/editor-round-trip.test.ts round-trips EVERY registered species through emit, write and dynamic import. Home Pets took that set from 30 to 44 and it now exceeds vitest's default 5s under full-suite load, while passing alone in ~2s. Farm makes it 60. Deliberately not fixed by raising the timeout: the standing rule here is that moving a constant to make a gate green buries real faults. Wants a measurement and a decision — per-species cases, a longer budget justified by data, or the trip proved once and sampled thereafter.",
+      "state": "open",
+      "run": ""
     }
   ]
 }
