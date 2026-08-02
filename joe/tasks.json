@@ -505,8 +505,8 @@
       "artefact": "tools/workbench/public/editor/library.ts",
       "doneRule": "manual",
       "check": "",
-      "note": "",
-      "state": "open"
+      "note": "ANSWERED 2 Aug 2026: group by ROLE — what the shape DOES, not what it is. Headers are Ears, Legs, Tails, Snouts, Ridges, Eyes. Joe picked it over grouping by form (the editor’s behaviour today) and over a role/form hybrid, so the hybrid is not wanted either. Needs each shape tagged with a role; PARTS_BANK.provenance already knows the donor node for most, which is where the tag comes from rather than a hand-written table.",
+      "state": "done"
     },
     {
       "id": "JT-039",
@@ -535,6 +535,20 @@
       "check": "",
       "note": "",
       "state": "open"
+    },
+    {
+      "id": "JT-041",
+      "type": "ruling",
+      "title": "ANSWERED: primitives yes, named missing parts no (PB-036 / editor)",
+      "detail": "docs/how-the-animals-are-made.md §14 records Joe’s standing rule: \"We have not invented any of the missing parts and we will not; you asked for that explicitly and it is the right rule.\" His editor plan of 2 Aug asks for triangle, circle and square with the game’s chamfer, resizable, which reverses part of it. Asked how far it goes; he chose PRIMITIVES ONLY, FOR NOW. So: the three chamfered primitives are added and are resizable, and they may be improvised with in the editor. Nobody authors a named fin, flipper, fluke, membranous wing, segmented leg, frill, plate, spine, hooked beak, talon, spread wing, hoof, trunk, shell or long neck. CONSEQUENCE, and it is the important half: Ocean (16), Critters (16), Dinosaurs (16) and Raptors (16) stay unbuildable as designed — 64 species — and Birds, Outback and Legendary stay partial. Species runs must STOP and report a named blocker rather than substitute. The library must also keep invented shapes visibly distinct from lifted ones, so the provenance of a part is never in doubt.",
+      "blocks": [
+        "PB-036"
+      ],
+      "artefact": "src/island/species/parts/bank.generated.ts",
+      "doneRule": "manual",
+      "check": "",
+      "note": "Primitives only, for now.",
+      "state": "done"
     }
   ],
   "archive": []
