@@ -35,7 +35,11 @@
 > Jungle, Raptors, Dinosaurs, Prehistoric, Legendary and the four Red List tiers
 > — have nothing built and now have **no page, no name and no count** at all.
 > Africa loses 15 frames and Night Time 3; those 18 are the empty slots Joe was
-> looking at. `tests/island/album-built.test.ts` prints this table on every run.
+> looking at. `tests/island/album-built.test.ts:450-453` **asserts** this table —
+> the page names, the per-page cells `[24, 14, 16, 1, 13]` and the total 68 — so
+> it goes red the day an animal lands rather than merely describing today. It
+> also `console.log`s it for eyeballing, though vitest's default reporter does
+> not surface that through a pipe; the assertion is the part to trust.
 >
 > **A child sees at most FOUR of those five at once** — `MAX_ACTIVE` is 4 and
 > `base` is forced open, so the fifth only ever arrives after a completion.
