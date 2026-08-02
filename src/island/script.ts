@@ -6,9 +6,29 @@
  *
  * The wording is load-bearing. These lines establish the STANDING WORLD-LAW
  * vocabulary the rest of the game reuses: eggs *hatch when read to*, pets
- * *come home* when their name is read, land is *counted up*. Rewording them
- * here quietly breaks the game's internal logic for the child, so the copy is
- * kept exactly as the brief specifies.
+ * *come home* when their name is read, land is *found* for the friends who
+ * need it. Rewording them quietly breaks the game's internal logic for the
+ * child, so the copy is changed only on Joe's say-so — never to suit a test,
+ * a layout, or a tidier sentence.
+ *
+ * TWO OF THOSE THREE ARE NO LONGER THE BRIEF'S OWN WORDS, and that is
+ * deliberate. Joe, twice:
+ *
+ *   - *"'You've counted up some land' sounds off. lets call it 'You have found
+ *     some land for your friends'"* — taken at main.ts:1581.
+ *   - *"change the bits that 'read something home' or 'count up land'. i dont
+ *     want these weird linguistic crowbars."*
+ *
+ * So *counted up* is gone everywhere it was spoken or printed, and the egg is
+ * *read to* rather than *read home* — which is what the opening's own earlier
+ * beat already says ("they only hatch for someone who reads to them"), so the
+ * crowbar was never even consistent with the line three beats above it.
+ *
+ * `pet-island-brief.md` §3 (lines 18, 59, 68) STILL CARRIES THE OLD WORDING and
+ * now disagrees with the game. That divergence is known and is Joe's to close;
+ * do not "fix" the code back to match the brief. The same divergence was
+ * already opened by the first ruling above and left recorded rather than
+ * reconciled, which is the established pattern here.
  */
 
 export interface Beat {
@@ -30,7 +50,7 @@ export const OPENING: Beat[] = [
   { line: 'Will you read to it, [NAME]?', cue: 'first-read' },
   { line: 'You found its name! [PETNAME] has arrived.' },
   {
-    line: 'Every friend you read home needs somewhere to live… can you count us up some land?',
+    line: 'Every new friend needs somewhere to live… can you find us some land?',
     cue: 'ask-land',
   },
 ]

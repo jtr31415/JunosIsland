@@ -74,7 +74,7 @@ export default defineConfig(({ command }) => ({
       manifest: {
         name: "Juno's Island",
         short_name: "Juno's Island",
-        description: 'Read eggs home and count up some land.',
+        description: 'Read to your eggs and find land for your friends.',
         start_url: '/JunosIsland/',
         scope: '/JunosIsland/',
         display: 'standalone',

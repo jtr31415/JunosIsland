@@ -83,7 +83,7 @@
     { "id": "open.nameSlot", "character": "teacher", "category": "opening", "ref": "name.", "port": "item 11", "note": "Plays the pet's clip from the name table." },
     { "id": "open.homeAtLast", "character": "fred", "category": "opening", "text": "Home at last! It was coming home all along.", "port": "item 11", "was": "You found its name! [PETNAME] has arrived." },
 
-    { "id": "open.askLand", "character": "fred", "category": "opening", "text": "Every friend you read home needs somewhere to live… can you count us up some land?", "cue": "ask-land" },
+    { "id": "open.askLand", "character": "fred", "category": "opening", "text": "Every new friend needs somewhere to live… can you find us some land?", "cue": "ask-land", "was": "Every friend you read home needs somewhere to live… can you count us up some land?" },
 
     { "id": "hatch.homeAtLast", "character": "fred", "category": "ceremony", "text": "Home at last!", "port": "item 11", "note": "Follows a name. clip. Replaces '[PETNAME] has arrived!'" },
     { "id": "hatch.isHere", "character": "fred", "category": "ceremony", "text": "Look who's here!", "port": "item 11", "note": "Follows a name. clip. Replaces '[PETNAME] is here!'" },

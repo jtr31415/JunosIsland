@@ -516,7 +516,7 @@ async function boot(): Promise<void> {
        * tests/island/stretch.test.ts.
        */
       if (!offerAStretch()) {
-        overlay.say('Tap the egg to read it home — or tap the island for land!')
+        overlay.say('Tap the egg to read to it — or tap the island for land!')
       }
       refresh()
     },
@@ -1571,12 +1571,14 @@ async function boot(): Promise<void> {
            * Joe: *"'You've counted up some land' sounds off. lets call it 'You
            * have found some land for your friends'"*.
            *
-           * Note this MOVES the world-law vocabulary. script.ts records that land
-           * is *counted up*, and the opening still says "can you count us up some
-           * land?" — so the ask and the reward now use different words. Joe's call,
-           * and the new line is better on its own terms (it names who the land is
-           * FOR, which is the whole loop), but the opening line is the other half
-           * and wants the same treatment when he next looks at the script.
+           * This MOVED the world-law vocabulary, and the other half has since
+           * caught up: Joe took the opening line too — *"i dont want these weird
+           * linguistic crowbars"* — so the ask is now "can you find us some
+           * land?" and the two halves match again. The reward line earns its
+           * place by naming who the land is FOR, which is the whole loop.
+           *
+           * See the header of script.ts for the full ruling and for the fact
+           * that pet-island-brief.md still carries the old wording.
            */
           speech.speak('You have found some land for your friends!')
           fred.talk(2.2)
@@ -2182,7 +2184,7 @@ async function boot(): Promise<void> {
   if (!opening.seen()) {
     void runOpening()
   } else {
-    overlay.say('Tap the egg to read it home — or tap the island for land!')
+    overlay.say('Tap the egg to read to it — or tap the island for land!')
   }
 }
 
