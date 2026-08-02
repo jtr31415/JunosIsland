@@ -622,6 +622,20 @@
       "check": "",
       "note": "",
       "state": "open"
+    },
+    {
+      "id": "JT-047",
+      "type": "ruling",
+      "title": "The album now says Night Time is \"13 of 13\", but the unlocker still says 81% and never opens the next collection — which number is right? (PB-083)",
+      "detail": "You ruled that a slot appears when an animal is BUILT, and that is now how the album draws: Night Time shows 13 frames, not 16, because the bat, the sugar glider and the scorpion want a membrane and a pincer the parts bank does not have. Africa shows 1, not 16. That change is live and this question is the consequence of it, not a re-opening of it.\n\nThe collection UNLOCKER was not changed, because it decides what a child experiences and that is yours. `unlock.ts:292` still divides by the roster: a new collection opens when the current one is 85% complete, and completeness is measured against 16. So a child who collects every animal in Night Time reaches 13/16 = 81%, the album congratulates her with \"13 of 13\", and the next collection never arrives. The same is far worse for Africa: 1/16 = 6%, and it can never be finished by any amount of play. Today this is masked — `NOT_BUILT_YET` holds most collections back and Garden and Home Pets are both genuinely complete, so nobody has hit it yet. It bites the first time Night Time or Africa is the collection in progress.\n\nTHE OPTIONS. (a) COMPLETION COUNTS BUILT ANIMALS. 13 of 13 unlocks the next collection, and the album and the unlocker agree by construction. Cost: the bar moves under a child if you later build the bat — she was at 100%, she is at 93%, and a collection can un-complete. (b) COMPLETION KEEPS COUNTING THE ROSTER. The numbers stay honest about the ambition, and the price is that a partial collection is a dead end: the album says finished and nothing happens, which is the exact shape of a promise the game does not keep. (c) A COLLECTION IS ONLY EVER OPENED WHEN IT IS WHOLE — Africa and Night Time come out of the rotation until their last animal is built, and completion keeps counting the roster. Cost: two collections you have already paid for go dark, and Night Time is 13 finished animals nobody would see.\n\nNOTHING HAS BEEN BUILT ON A GUESS — the unlocker is untouched and this was not put to Fable, because it changes what a child experiences. If you pick (a) the change is one divisor in `unlock.ts:292` and it would use the same `built.ts` predicate the album now uses; nothing already committed has to be reverted for any of the three.\n\nA SECOND, SMALLER THING IN THE SAME BREATH: the album now shows animals that are BUILT but NOT SIGNED OFF, which you took knowingly. So Juno can see 68 animals in the album and can still only ever hatch the base 24, because the sign-off gate governs dealing and nothing is signed off yet. That is your ruling working as designed. It is flagged only so the gap is a decision rather than a surprise the first time she taps one.",
+      "blocks": [
+        "PB-083"
+      ],
+      "artefact": "src/island/species/unlock.ts",
+      "doneRule": "manual",
+      "check": "",
+      "note": "",
+      "state": "open"
     }
   ],
   "archive": []
