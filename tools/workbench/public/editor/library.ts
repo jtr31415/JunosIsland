@@ -410,10 +410,18 @@ const PRIMITIVE = 'primitive'
  * particular words would make the day-one behaviour of a new role worse to make
  * one header better.
  *
+ * The header names all four honestly and not just the two being hunted for.
+ * `plate-03` and `plate-13` are face-plates; `plate-10` and `plate-11` are
+ * flank-patch cards, recorded on axis `x` at an offset of 0.635 and used as
+ * markings on every species that wears them — civet spots, the raccoon's mask,
+ * salamander mottling. Calling the drawer "faces" would have been a lie for half
+ * of it, and a person looking for a marking would then be the one who could not
+ * find their drawer. The fix for one hunt must not create the next one.
+ *
  * The count suffix is still appended by the caller, so this reads
- * `Mouths & face cards (4)` and stays scannable beside the other headers.
+ * `Mouths, faces & markings (4)` and stays scannable beside the other headers.
  */
-const HEADER: Readonly<Record<string, string>> = { card: 'Mouths & face cards' }
+const HEADER: Readonly<Record<string, string>> = { card: 'Mouths, faces & markings' }
 
 export const groupShapes = (rows: readonly ShapeRow[]): readonly ShapeGroup[] => {
   const byRole = new Map<string, ShapeRow[]>()
