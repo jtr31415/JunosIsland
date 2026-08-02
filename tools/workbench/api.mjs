@@ -19,6 +19,7 @@ import { allLessons, loadLesson, saveLesson, exportPlan, STATUSES } from './less
 import { bakeOne, bakeState, loadManifest, BakeError } from './bake.mjs'
 import { checkTask, blocking } from './checks.mjs'
 import { mergeWhole, applyPatch, mergeable, Conflict, Refused } from './merge.mjs'
+import { PushRefused, pushSpecies } from './push.mjs'
 import { REPO } from './seed.mjs'
 
 /** The only files the API may write, by name. An allowlist, not a path parameter. */
@@ -267,6 +268,49 @@ export function createApi(root) {
         } catch (err) {
           if (err instanceof Conflict) return json(res, 409, { error: err.message, clashes: err.clashes })
           if (err instanceof Refused) return json(res, 400, { error: err.message })
+          throw err
+        }
+      }
+
+      /*
+       * ONE BUTTON: a draft becomes a species in the game.
+       *
+       * Joe, 2 August: *"then with one button push it to the game thats where
+       * we need to get to."* Until this, `Save` wrote a draft and the only way
+       * out of the editor into `src/` was him copying the module text by hand.
+       *
+       * DELIBERATELY NOT PART OF `/api/save`. That route is an allowlist of
+       * `joe/` files merged by `merge.mjs`, and `joe/species-facts.json` is
+       * deliberately absent from it — one author, asserted by
+       * `tests/tools/workbench.test.ts`. Folding a `src/`-writing operation into
+       * it would have meant either widening that allowlist or teaching the merge
+       * about TypeScript, and both are worse than a second route that says what
+       * it is. `/api/save` still answers 400 for `what: 'facts'`, unchanged.
+       *
+       * WHAT REFUSES, AND WHY EACH ONE IS HERE RATHER THAN ON THE PAGE. The page
+       * owns the rules of a definition — it runs `creatureSpec` before it sends,
+       * because that lives in TypeScript this plain-`.mjs` server cannot import.
+       * This side owns the filesystem, which the page cannot see: whether the
+       * collection is real, whether the species file already exists, and whether
+       * the files are the shape the surgery expects. **Every path below is
+       * derived from `speciesId` and `collection`; not one is taken from the
+       * payload**, so a caller cannot name a file at all — and everything still
+       * goes through the same `inside()` jail as every other write here.
+       *
+       * NOTHING IS WRITTEN UNTIL EVERYTHING IS DECIDED. The whole plan is built
+       * in memory first, so a refusal at the last step leaves the tree exactly as
+       * it was. Then the writes go out in the one order where an interruption
+       * still leaves a loadable tree: the species FILE before the export LINE
+       * that names it (`parts/assembled/index.ts` line 28 is the incident this
+       * rule was bought with — thirteen lines for five files that did not exist
+       * yet, and Joe's live viewer went blank).
+       */
+      if (path === '/api/species/push' && req.method === 'POST') {
+        const body = await readBody(req)
+        try {
+          return json(res, 200, pushSpecies(root, body))
+        } catch (err) {
+          if (err instanceof PushRefused) return json(res, 400, { error: err.message })
           throw err
         }
       }

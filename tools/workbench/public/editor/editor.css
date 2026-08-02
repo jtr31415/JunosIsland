@@ -121,6 +121,11 @@ optgroup option { font-weight: 400; color: var(--ink, inherit); }
 #signoff-problems li { font-size: 11px; margin-top: 6px; color: var(--loud); }
 #signoff-problems li.soft { color: var(--warn); }
 #signoff textarea { margin-top: 8px; }
+/* What the push wrote, and what it left. Two lists, one look — the difference
+   is the marker, so neither can be skimmed past as the other. */
+#push-out li { font-size: 11px; margin-top: 8px; color: var(--dim); }
+#push-out li b { color: var(--ink, inherit); font-weight: 600; }
+#push-out li.left b { color: var(--warn); }
 .selected { margin-left: auto; color: var(--dim); }
 .hint { margin: 0; padding: 4px 10px; color: var(--dim); font-size: 11px; border-top: 1px solid var(--line); flex: none; }
 

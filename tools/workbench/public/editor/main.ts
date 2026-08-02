@@ -57,6 +57,7 @@ import {
 } from './def'
 import { ALL_SHAPES, HULL_SHAPES, groupShapes, summarise, type ShapeRow } from './library'
 import { signoffView, type SignoffView } from './signoff'
+import { pushRequest, type PushReply } from './push'
 import { loadBuiltDefs } from './capture'
 import { createStage, type GizmoMode } from './stage'
 import type { CreatureDef } from '../../../../src/island/species/parts'
@@ -94,6 +95,8 @@ const signoffName = el<HTMLInputElement>('#signoff-name')
 const signoffFact = el<HTMLTextAreaElement>('#signoff-fact')
 const signoffProblems = el<HTMLUListElement>('#signoff-problems')
 const signoffNote = el<HTMLParagraphElement>('#signoff-note')
+const pushNote = el<HTMLParagraphElement>('#push-note')
+const pushOut = el<HTMLUListElement>('#push-out')
 
 function say(text: string, bad = false): void {
   saySpan.textContent = text
@@ -755,6 +758,73 @@ async function save(): Promise<void> {
 el<HTMLButtonElement>('#save').addEventListener('click', () => {
   void save().catch((error: unknown) => {
     say(error instanceof Error ? error.message : String(error), true)
+  })
+})
+
+/* -------------------------------------------------- one button, into the game */
+
+/**
+ * Joe, 2 August: *"then with one button push it to the game thats where we need
+ * to get to."*
+ *
+ * A species costs NINE places and this writes SIX; `push.mjs` carries the list
+ * and the reasoning. The three it does not write are all tests, and the reason
+ * is the same for each: a test generated to assert whatever the code currently
+ * does is worth less than no test at all. So the reply is drawn in FULL — what
+ * landed, what was already there, and what is still his — and the panel says
+ * plainly that `npm test` is red until those are written.
+ *
+ * The draft is saved first, unconditionally. The push does not consult the
+ * draft store, but a species that reaches `src/` while the draft it came from
+ * still says something else is a pair of records that disagree about the same
+ * animal, and the cheap end of that is here.
+ */
+async function push(): Promise<void> {
+  if (!def) return
+  const view = drawSignoff()
+  if (!view.ready) {
+    pushNote.textContent = 'not yet — the Name and fact panel above says what is missing.'
+    pushNote.className = 'note warn'
+    return
+  }
+  await save()
+  const today = new Date().toISOString().slice(0, 10)
+  const request = pushRequest(speciesId, def, view, draftId, today)
+  const reply = await api('/api/species/push', request) as unknown as PushReply
+
+  if (reply.error) {
+    pushNote.textContent = reply.error
+    pushNote.className = 'note warn'
+    pushOut.replaceChildren()
+    say(`nothing was pushed: ${reply.error}`, true)
+    return
+  }
+
+  const row = (marker: string, path: string, text: string, left = false): HTMLLIElement => {
+    const li = document.createElement('li')
+    if (left) li.className = 'left'
+    const b = document.createElement('b')
+    b.textContent = `${marker} ${path}`
+    li.append(b, document.createElement('br'), document.createTextNode(text))
+    return li
+  }
+  pushOut.replaceChildren(
+    ...(reply.wrote ?? []).map(p => row('written —', p.path, p.what)),
+    ...(reply.skipped ?? []).map(p => row('already there —', p.path, p.what)),
+    ...(reply.left ?? []).map(p => row('yours —', p.path, p.why, true)),
+  )
+  pushNote.textContent = reply.say ?? ''
+  pushNote.className = 'note warn'
+  say(`${speciesId} is in the game — read the list below before you close this`)
+}
+
+el<HTMLButtonElement>('#push').addEventListener('click', () => {
+  void push().catch((error: unknown) => {
+    /* `creatureSpec`'s own words, unwrapped: it names the axiom and the fix. */
+    const text = error instanceof Error ? error.message : String(error)
+    pushNote.textContent = text
+    pushNote.className = 'note warn'
+    say(`nothing was pushed: ${text}`, true)
   })
 })
 
