@@ -637,6 +637,149 @@ export const setPaletteColour = (def: CreatureDef, slot: string, rgb: number): C
 export const addPaletteSlot = (def: CreatureDef, slot: string, rgb: number): CreatureDef =>
   ({ ...def, palette: rebuiltPalette(def.palette, slot, rgb, true) })
 
+/**
+ * The palette slot a part is painted from TODAY, defaults resolved.
+ *
+ * A `PartDef` may say nothing about paint at all — `insertPart` writes `{ part,
+ * name }` and nothing else — and a definition that says nothing still paints:
+ * `creature.ts` hands `paintOf` a per-role FALLBACK slot, and the part comes out
+ * wearing it. So a panel that reads `slot.paint` alone reports "no colour" about
+ * a part that is plainly coloured on the screen, which is precisely how a person
+ * ends up recolouring `coat` to change one mouth.
+ *
+ * **This MIRRORS `creature.ts` and is not a second opinion.** The chain is its
+ * own, verbatim: `coat` is `def.coat`, else the `coat` slot, else the first slot;
+ * `under` is `def.under`, else `belly`, else the coat; `limb` is `def.limb`, else
+ * `limb`, else the coat. Hull, ears, tail, ridge and extras fall back to the
+ * coat; legs, snout and nose to the limb; the eye cards to the under. A test
+ * pins every one of those against a real `creatureSpec` run, because a mirror
+ * that drifts silently is worse than no mirror.
+ *
+ * `null` when the species does not have the slot at all — a legless species, a
+ * definition with no ridge — which is the same answer `partAt` gives.
+ */
+export function paintSlotOf(def: CreatureDef, p: DefPath): string | null {
+  const slot = partAt(def, p)
+  if (!slot) return null
+
+  const slots = Object.keys(def.palette)
+  const coat = def.coat ?? (def.palette['coat'] !== undefined ? 'coat' : slots[0] ?? 'coat')
+  const under = def.under ?? (def.palette['belly'] !== undefined ? 'belly' : coat)
+  const limb = def.limb ?? (def.palette['limb'] !== undefined ? 'limb' : coat)
+  const fallback = p.role === 'legs' || p.role === 'snout' || p.role === 'nose'
+    ? limb
+    : p.role === 'eyes' ? under : coat
+
+  const paint = 'paint' in slot ? slot.paint : undefined
+  if (typeof paint === 'string') return paint
+  if (paint && typeof paint === 'object' && typeof paint.base === 'string') return paint.base
+  return fallback
+}
+
+/** The mesh name a path's slot carries, which is the natural stem for its own slot. */
+function meshStemOf(def: CreatureDef, p: DefPath): string {
+  if (p.role === 'hull') return 'hull'
+  if (p.role === 'legs') return (def.legs === false ? undefined : def.legs?.name) ?? 'leg'
+  if (p.role === 'eyes') return 'eye'
+  if (p.role === 'ridge') return def.ridge?.name ?? RIDGE_STEM
+  if (p.role === 'extras') return def.extras?.[p.index]?.name ?? 'part'
+  const v = def[p.role]
+  return (v === undefined ? undefined : asDef(v).name) ?? ROLE_MESH_NAME[p.role]
+}
+
+/**
+ * A palette slot name this species does not already have.
+ *
+ * The counterpart of `uniqueExtraName` for the OTHER namespace. A slot name that
+ * silently landed on one already in the palette would not append at all — see
+ * `rebuiltPalette`, where an existing key is recoloured in place — so the part
+ * asking for a colour of its own would instead repaint every part sharing that
+ * name. That is the bug this whole seam exists to fix, so a collision is
+ * disambiguated rather than reused: `stem`, then `stem-2`, `stem-3`.
+ *
+ * The stem is lowercased and reduced to `[a-z0-9-]` so an emitted palette key is
+ * a word rather than whatever a mesh happened to be called. It is NOT reduced to
+ * a JavaScript identifier: `defToModuleSource` quotes a key that is not one
+ * (`key()`), so `cone-01` emits as `'cone-01'` and round-trips exactly.
+ */
+export function uniquePaletteSlot(def: CreatureDef, stem: string): string {
+  const clean = stem.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+  const base = clean === '' ? 'slot' : clean
+  if (def.palette[base] === undefined) return base
+  for (let n = 2; ; n++) {
+    const candidate = `${base}-${n}`
+    if (def.palette[candidate] === undefined) return candidate
+  }
+}
+
+/**
+ * Give one part a palette slot of its OWN, so it can be coloured alone.
+ *
+ * Joe, of a mouth he had just added: *"the colour panel does not let me colour a
+ * newly added primitive in my own colour."* He was right, and the reason was not
+ * the engine — `spec.palette` is an open record and the atlas is simply as tall
+ * as it has slots. It was that the panel offered two acts and neither was this
+ * one: recolour an EXISTING slot (which repaints every part sharing it — the
+ * whole body, when the slot is `coat`) or point the part at another existing
+ * slot (same problem, one step later). A part that arrives painted from the coat
+ * by default therefore had no way to stop being.
+ *
+ * So: APPEND a slot, then repoint this part at it. Two ops that already existed,
+ * in the one order that is safe.
+ *
+ * **The new slot is seeded with the colour the part is wearing right now**, so
+ * the act of taking a slot changes NOTHING on screen. The user then drags that
+ * swatch and exactly one part moves. A slot seeded with some fresh colour would
+ * make "give this its own colour" a surprise recolour, and a slot seeded with
+ * white would make it a flash.
+ *
+ * **A `byBand`/`patch` block is kept and only its `base` is repointed.** The
+ * badger's snout is a slot AND a band; rebuilding it as a bare slot name would
+ * throw away the second colour to grant the first. The eye cards are the one
+ * exception, and it is `setPaint`'s: a `Paint` given for the eyes is reduced to
+ * its base, because the eye card's second colour is the pupil and the pupil is
+ * not a species' choice.
+ *
+ * **Appending is the only shape change made, and that is the §19 guarantee.**
+ * Insertion order IS the texture layout: slot *n* is atlas row *n* and every UV
+ * in every baked geometry is that index. A new slot takes the NEXT row, so every
+ * existing row keeps its index, every existing part keeps its UVs, and a species
+ * already on disk — or a pet Juno already owns, rebuilt from that same
+ * definition — is byte-identical apart from the rows nothing points at yet.
+ * `warningsFor`'s `palette-order` axiom stays silent for the same reason.
+ *
+ * Returns the definition unchanged and a `null` slot when the path names nothing
+ * this species has, which is how `apply()` reads a refusal.
+ */
+export function giveOwnPaletteSlot(
+  def: CreatureDef, p: DefPath,
+): { def: CreatureDef; slot: string | null } {
+  const slot = partAt(def, p)
+  if (!slot) return { def, slot: null }
+
+  const from = paintSlotOf(def, p)
+  if (from === null) return { def, slot: null }
+  /* The colour it is wearing. A slot the palette does not have cannot happen —
+   * `paintSlotOf` either read a name out of the definition or resolved one of
+   * the three defaults — but a definition that arrived as JSON can say anything,
+   * and a mid-grey is a better answer here than `NaN` in a texture. */
+  const rgb = def.palette[from] ?? 0x9a9a9a
+
+  const name = uniquePaletteSlot(def, meshStemOf(def, p))
+  const current = 'paint' in slot ? slot.paint : undefined
+  const next: PaintLike = current && typeof current === 'object'
+    ? { ...current, base: name }
+    : name
+
+  const appended = addPaletteSlot(def, name, rgb)
+  const painted = setPaint(appended, p, next)
+  /* `setPaint` returns its input when the role cannot hold a paint. Detect that
+   * BEFORE returning, or the definition keeps an appended slot nothing points
+   * at — an orphan row in the atlas, added by a gesture that did nothing. */
+  if (painted === appended) return { def, slot: null }
+  return { def: painted, slot: name }
+}
+
 /* ------------------------------------------------------------- the rest --- */
 
 /** Every mesh name this species already uses, so a new one cannot collide. */

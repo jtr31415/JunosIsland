@@ -156,6 +156,10 @@ ul { list-style: none; margin: 0; padding: 0; }
 #palette .slot { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #palette .col { color: var(--dim); font-size: 10px; }
 #palette li.used { font-weight: 600; }
+/* The append row. Separated, because appending is a change to the palette's
+   SHAPE and the rows above it are only colours. */
+#palette li.own { border-top: 1px solid var(--line); border-radius: 0; padding-top: 6px; margin-top: 2px; }
+#palette li.own button { flex: 1; }
 
 #warnings { flex: none; max-height: 132px; overflow-y: auto; border-top: 1px solid var(--line); }
 #warnings li { padding: 5px 10px; font-size: 11px; border-bottom: 1px solid var(--line); cursor: pointer; }

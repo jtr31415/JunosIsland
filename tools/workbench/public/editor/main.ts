@@ -71,9 +71,10 @@
  */
 
 import {
-  blankDef, deletePart, duplicatePart, defToModuleSource, insertPart, listParts, partAt,
-  pathKey, samePath, setJoin, setMirrored, setPaint, setPaletteColour, setPartShape, setSpin,
-  setStretch, warningsFor, type DefPath, type Warning,
+  blankDef, deletePart, duplicatePart, defToModuleSource, giveOwnPaletteSlot, insertPart,
+  listParts, paintSlotOf, partAt, pathKey, samePath, setJoin, setMirrored, setPaint,
+  setPaletteColour, setPartShape, setSpin, setStretch, warningsFor,
+  type DefPath, type Warning,
 } from './def'
 import { ALL_SHAPES, HULL_SHAPES, groupShapes, summarise, type ShapeRow } from './library'
 import { signoffView, type SignoffView } from './signoff'
@@ -413,9 +414,29 @@ function drawInspector(): void {
       ? 'uniform. Only one node in the whole pack carries a scale at all, so any value here is authoring, not measurement.'
       : 'per-axis. Safe on an ear to about 3×; never on an eye card.'
 
-  /* Colour. Two different acts: repaint a SLOT, or point a part at another slot. */
-  const paint = slot && 'paint' in slot ? slot.paint : undefined
-  const usedSlot = typeof paint === 'string' ? paint : undefined
+  /*
+   * Colour. THREE different acts, and the third is the one Joe was missing:
+   * *"the colour panel does not let me colour a newly added primitive in my own
+   * colour, eg i dont seem to be able to colour a mouth with the colour i want."*
+   *
+   * Repaint a SLOT (the swatch) hits every part sharing it. Point a part at
+   * another slot ("paint") only moves the problem — a mouth painted from `limb`
+   * still cannot differ from the legs. Neither can ever give one part a colour of
+   * its own, because the panel's whole vocabulary was the slots already in the
+   * palette and a freshly inserted part arrives sharing one.
+   *
+   * "own colour" appends a slot and repoints this part at it, seeded with the
+   * colour it already wears — so nothing changes until the new swatch is dragged,
+   * and then only this part moves. Appending is the ONLY shape change: insertion
+   * order is the texture layout, so a new slot takes the next atlas row and every
+   * existing row keeps its index. See `giveOwnPaletteSlot`.
+   *
+   * `paintSlotOf` and not `slot.paint`, because a part that says nothing about
+   * paint is still painted — from the coat, the limb or the under, per role. The
+   * panel used to mark NO row for such a part, which is exactly how a person
+   * concludes the mouth has no colour and goes and recolours the body instead.
+   */
+  const usedSlot = path ? paintSlotOf(def, path) ?? undefined : undefined
   paletteList.replaceChildren(...Object.entries(def.palette).map(([name, rgb], column) => {
     const li = document.createElement('li')
     if (name === usedSlot) li.className = 'used'
@@ -448,9 +469,41 @@ function drawInspector(): void {
     li.append(colour, slotName, col, use)
     return li
   }))
-  colourNote.textContent = usedSlot
-    ? `${label(path!)} is painted from "${usedSlot}".`
-    : 'A swatch recolours the slot everywhere it is used. "paint" points the selected part at that slot instead.'
+
+  /*
+   * The append row, LAST in the list on purpose: it is where the slot it makes
+   * will appear, because appending is the only safe edit to a palette's shape.
+   */
+  const ownRow = document.createElement('li')
+  ownRow.className = 'own'
+  const own = document.createElement('button')
+  own.type = 'button'
+  own.textContent = 'own colour'
+  own.disabled = !path
+  own.title = path
+    ? `give ${label(path)} a palette slot of its own, so colouring it moves nothing else`
+    : 'select a part'
+  own.addEventListener('click', () => {
+    if (!def || !path) return
+    const made = giveOwnPaletteSlot(def, path)
+    if (made.slot === null) { say('own colour: that part has no paint of its own', true); return }
+    apply(made.def, `"${made.slot}" is ${label(path)}'s own slot — recolour it and nothing else moves`)
+  })
+  ownRow.append(own)
+  paletteList.append(ownRow)
+
+  /*
+   * The note names the slot AND how many other parts are on it, because "painted
+   * from coat" is not the fact that matters — "and so is the body" is.
+   */
+  const sharers = usedSlot === undefined ? 0
+    : listParts(def).filter(r => !samePath(r.path, path!) && paintSlotOf(def!, r.path) === usedSlot).length
+  colourNote.textContent = !path
+    ? 'A swatch recolours the slot everywhere it is used. Select a part to point it at another slot, or to give it one of its own.'
+    : sharers > 0
+      ? `${label(path)} is painted from "${usedSlot}" — and so ${sharers === 1 ? 'is 1 other part' : `are ${sharers} other parts`}. `
+        + 'Recolouring that swatch moves all of them; "own colour" appends a slot for this part alone.'
+      : `${label(path)} is painted from "${usedSlot}", which no other part uses — the swatch above colours it alone.`
 }
 
 /* --------------------------------------------------------------- the warnings */
