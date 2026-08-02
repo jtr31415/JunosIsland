@@ -354,7 +354,6 @@ export function createBakedSpeaker(fallback: Speaker, opts: VoiceOptions = {}): 
        * synthetic line, or the reverse, would be two voices at once.
        */
       stopChain()
-      fallback.cancel()
 
       /*
        * A rate is never Fred. It is a challenge word slowed for the rescue read
@@ -366,7 +365,35 @@ export function createBakedSpeaker(fallback: Speaker, opts: VoiceOptions = {}): 
         const bufs = ids ? planChain(ids) : null
         if (bufs) {
           if (ctx.state === 'running') {
+            /*
+             * THE CANCEL BELONGS HERE AND NOWHERE ELSE, and it used to sit
+             * above this whole block. Joe, 2 August, on the live build: *"i
+             * dont get any noise in the game at the moment, no synth and no
+             * bake"*. His console had the baked half entirely healthy —
+             * activation true, context `running`, manifest 200, a clip
+             * decoding — while `speechSynthesis` was silent with NO EVENT at
+             * all: neither `onstart` nor `onerror`, which is that engine
+             * wedged rather than refusing.
+             *
+             * `speech.ts:74` already opens `speak()` with a bare
+             * `speechSynthesis.cancel()`. Hoisted above this branch, the call
+             * here fired on the FALLBACK path too — so an ordinary synthetic
+             * line was cancelled, handed to `fallback.speak`, cancelled a
+             * second time and only then spoken. Two cancels in one tick
+             * immediately before a speak is a known way to wedge Chrome.
+             *
+             * It is not a useless call, which is why it moved rather than
+             * went: a clip taking over from a synthetic line in flight must
+             * silence it, or Fred is heard twice at once. That is only ever
+             * this path. A test holds both halves, because the wedge itself
+             * cannot be reproduced without a browser and the SEQUENCE is the
+             * whole of what broke.
+             */
+            fallback.cancel()
             if (play(bufs, ctx, onend)) return true
+            /* Nothing started, so the line goes on to synthesis below and is
+             * cancelled once more on the way in. One redundant cancel on a
+             * path that has already failed to play is not the path he hit. */
           } else {
             /*
              * Asleep, so this line goes out synthetically and the resume lands

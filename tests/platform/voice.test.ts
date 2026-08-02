@@ -540,3 +540,59 @@ describe('the baked voice ships in the precache', () => {
     expect(main).not.toMatch(/BASE_URL/)
   })
 })
+
+/**
+ * Joe, 2 August, on the live build: *"i dont get any noise in the game at the
+ * moment, no synth and no bake"*.
+ *
+ * His console said the baked half was entirely healthy — activation true, the
+ * context `running`, the manifest 200 with all 41 clips, and one decoding OK —
+ * while `speechSynthesis` was **silent with no event at all**. Not
+ * `not-allowed`, not an error: `onstart` never fired and neither did `onerror`,
+ * which is Chrome's synthesiser wedged rather than refusing.
+ *
+ * What this file pins is the REDUNDANCY that is the leading explanation, and it
+ * is provable without a browser. `speech.ts:74` already opens `speak()` with a
+ * bare `speechSynthesis.cancel()`. So a line that falls back used to be
+ * cancelled by `voice.ts`, then handed to `fallback.speak`, which cancelled it
+ * AGAIN and only then spoke — two cancels in one synchronous tick immediately
+ * before a `speak`, which is a well-known way to wedge that engine.
+ *
+ * The cancel is not useless; it is in the wrong place. It exists so a clip can
+ * interrupt a synthetic line already in flight, which is a thing that only
+ * happens on the path where a clip actually plays. Hoisted above the branch, it
+ * also fired on the path where nothing plays and the device voice is all there
+ * is.
+ *
+ * The wedge itself cannot be reproduced in jsdom — there is no `speechSynthesis`
+ * to wedge — so the SEQUENCE is the only thing a test can hold, and that is
+ * exactly what broke. This is not a mock proving it ran: the order of these two
+ * calls is the contract.
+ */
+describe('a line that falls back is not cancelled on its way to the device voice', () => {
+  it('reaches synthesis with no cancel in between', async () => {
+    const h = await harness()
+    /* A line with no clip: the fallback is the whole of its journey. */
+    h.speaker.speak('a line nobody ever baked')
+    expect(h.fallback.speak).toHaveBeenCalledWith('a line nobody ever baked', undefined, undefined)
+    expect(h.fallback.cancel, 'voice.ts cancelled a line it was about to hand to synthesis')
+      .not.toHaveBeenCalled()
+  })
+
+  it('does not cancel a rated line either — those are always synthetic', async () => {
+    const h = await harness()
+    h.speaker.speak(SEA, 0.6)
+    expect(h.fallback.speak).toHaveBeenCalledWith(SEA, 0.6, undefined)
+    expect(h.fallback.cancel).not.toHaveBeenCalled()
+  })
+
+  /* The other half, so the fix cannot be "delete the cancel": a clip REPLACING
+   * a synthetic line still has to stop it, or Fred is heard twice at once. */
+  it('still cancels synthesis when a clip is about to take over', async () => {
+    const h = await harness()
+    h.speaker.speak(SEA)
+    expect(h.sources, 'this line should have played as a clip').toHaveLength(1)
+    expect(h.fallback.cancel, 'a clip must silence a synthetic line in flight')
+      .toHaveBeenCalled()
+  })
+})
