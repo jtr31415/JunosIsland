@@ -98,8 +98,22 @@ function livedInAttainment(): Attainment {
   return a
 }
 
-const LIVED_IN_OPENED: Opened =
-  { open: [...NOTHING_OPENED.open, 'collection-woodland'], lastOpened: 'collection-woodland' }
+/**
+ * An album roster with a history: one drawn, and one FINISHED.
+ *
+ * The completions are here for the same reason every other fixture in this file
+ * carries a distinctive value — the island box has to take the whole album
+ * record, and JT-047 added a third field to it. `completedCollections` is the
+ * one that would be easiest to leave behind, because it looks like a once-flag
+ * and once-flags deliberately SURVIVE a wipe. It is not one: a completion
+ * remembered on a fresh island frees one of the four slots and satisfies the 80%
+ * trigger with no animals owned at all.
+ */
+const LIVED_IN_OPENED: Opened = {
+  open: [...NOTHING_OPENED.open, 'collection-woodland'],
+  lastOpened: 'collection-woodland',
+  completed: ['collection-woodland'],
+}
 
 const LIVED_IN_FLAGS = ['INTRO-TEN']
 const NAME = 'Juno'
@@ -144,9 +158,17 @@ describe('the island and animals box', () => {
      * Left alone it would show collections standing open with nothing in them
      * and `lastOpened` pointing at a collection that is not theirs any more.
      * `advance` re-seeds from the pets on the next load.
+     *
+     * AND IT TAKES THE COMPLETIONS WITH IT — JT-047. This is the field that
+     * looks like a once-flag and must not be treated as one: a collection
+     * remembered as finished on a fresh island would free one of `MAX_ACTIVE`'s
+     * four slots and satisfy the 80% trigger with no animals owned at all, so a
+     * child who started again would be given an album for nothing.
      */
     expect(untouched().opened.lastOpened).toBe('collection-woodland')
+    expect(untouched().opened.completed).toEqual(['collection-woodland'])
     expect(wipeAndLoad({ island: true }).opened).toEqual(NOTHING_OPENED)
+    expect(wipeAndLoad({ island: true }).opened.completed).toEqual([])
   })
 
   it('DOES NOT TAKE THEIR NAME — the trap this whole card exists to break', () => {

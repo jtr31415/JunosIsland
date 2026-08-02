@@ -80,117 +80,97 @@ export const MAX_ACTIVE = 4
  * least consistent with how the data already thinks.
  *
  * Nothing about MODELS is said here. All three happen also to be unbuilt today,
- * and so appear in `NOT_BUILT_YET`'s reasoning as well, but the two holds are
- * different questions with different release conditions and are kept apart for
- * exactly that reason. See `HELD_BACK` below.
+ * and so are held back twice over, but the two holds are different questions
+ * with different release conditions and are kept apart for exactly that reason.
+ * See `heldBack` below, which is where the other half now lives.
+ *
+ * >>> SO RELEASING ONE OF THESE THREE IS NOT ENOUGH ON ITS OWN. Deleting a
+ * >>> string here is still the whole of Joe's half, but a collection also has to
+ * >>> have something built before the cadence will offer it. For these three
+ * >>> that is a real gap and not a formality: none of them has a single model.
  */
 export const HELD_BACK_BY_JOE: readonly string[] = ['legendary', 'dinosaurs', 'prehistoric']
 
-/**
- * Collections with NOT ONE species built. Held back by arithmetic, not taste.
- *
- * THIS IS A DIFFERENT KIND OF HOLD FROM JOE'S, and confusing the two is how this
- * list gets deleted by someone tidying up. `HELD_BACK_BY_JOE` is a judgement and
- * shrinks when he rules. This one is a measurement and shrinks when a modeller
- * finishes a collection. A collection whose registry entry is empty does not
- * render as "coming soon" or as anything else considerate: `album.ts` draws one
- * frame per ROSTER member, so opening `ocean` today puts sixteen empty squares
- * in front of a five-year-old and calls it a new album. PB-058 is that bug. Four
- * albums drawn at random from twenty-one, when six of the twenty-one have any
- * animals in them at all, means most children open mostly nothing.
- *
- * IT IS DERIVED, NOT DECIDED. The truth is `shippedIn(id).length === 0` in
- * `registry.ts:144`, and that derivation is PINNED BY A TRIPWIRE TEST in
- * `tests/island/species-unlock.test.ts` which recomputes the set from the
- * registry and fails BY NAME the day a collection gains its first model —
- * "ocean now has models, take it out of NOT_BUILT_YET". Nobody has to remember
- * this list exists; the test remembers for them.
- *
- * SO WHY IS IT WRITTEN OUT BY HAND rather than computed here? Because this
- * module is pure and intends to stay pure — the header says "no three.js" —
- * and importing `registry.ts` would drag three.js in behind it, transitively,
- * through `collections/garden.ts:70` to `parts/assembled` to
- * `parts/texture.ts`. Twelve short strings and a test that checks them is a
- * cheaper price than putting a renderer inside the unlock rules.
- *
- * REMOVING AN ID FROM HERE IS WHAT "SHIPPING A COLLECTION" MEANS. There is no
- * other switch. Build the species, delete the string, and the cadence starts
- * offering it the next time a child finishes an album.
- */
 /*
- * `night-time` LEFT THIS LIST ON 2 AUGUST 2026, and it is the first id ever
- * deleted from it. Thirteen of its sixteen are built on the assembly route and
- * `shippedIn('night-time').length` is 13, so the derivation above is what took
- * it out — the tripwire in `species-unlock.test.ts` failed by name ("night-time
- * now has models") and this deletion is the whole of the response.
+ * >>> `NOT_BUILT_YET` AND `HELD_BACK` WERE DELETED HERE ON 3 AUGUST 2026, and
+ * >>> what replaced them is `heldBack()` below. This note is what they were for,
+ * >>> because the REASON survives them and the next person needs it.
  *
- * IT LEAVES WITH A HOLE IN IT, which no collection released here has done
- * before, and that is worth knowing rather than smoothing over. `animal-bat`,
- * `animal-sugar-glider` and `animal-scorpion` want a membrane and a pincer, and
- * the bank has neither, so this collection **cannot be completed on the current
- * parts bank at all**. Two consequences follow and both are real:
+ * `NOT_BUILT_YET` was a hand-written list of the collections with not one
+ * species built, held back by arithmetic rather than by taste. The bug it
+ * existed for is real and is not fixed by deleting it: a collection whose
+ * registry entry is empty does not render as "coming soon" or as anything else
+ * considerate, so opening `ocean` puts sixteen empty squares in front of a
+ * five-year-old and calls it a new album. That is PB-058.
  *
- *   - `album.ts` draws one frame per ROSTER member, so a child opening Night
- *     Time sees sixteen frames of which three can never be filled. That is a
- *     smaller version of the PB-058 bug this list exists for — three empty
- *     squares rather than sixteen — but it is the same bug, and it is the first
- *     time it ships.
- *   - `completion()` divides by ROSTER size, so this collection can never reach
- *     100%, never goes inactive, and therefore holds one of `MAX_ACTIVE`'s four
- *     slots permanently. That is exactly the trap the goldfish run recorded for
- *     Home Pets and closed by building its last two animals. Here it cannot be
- *     closed that way.
+ * IT WAS WRITTEN BY HAND FOR A GOOD REASON — this module is pure, and computing
+ * the truth here would have dragged three.js in through `registry.ts` and
+ * `collections/garden.ts`. A tripwire test recomputed it and failed by name the
+ * day a collection gained its first model. That was a fair trade at the time.
  *
- * **So JT-030 — may a collection unlock with a hole in it? — is now live in its
- * hardest form and it is Joe's.** It is not settled by this deletion: the
- * alternative was to hold a collection of thirteen finished animals off the
- * cadence indefinitely for three that no amount of work can produce, which is
- * worse for a child and hides the question rather than asking it. If he rules
- * the other way, putting `night-time` back is one string.
+ * >>> IT STOPPED BEING A FAIR TRADE, AND THE TRIPWIRE WAS ABOUT TO CAUSE THE
+ * >>> VERY BUG IT GUARDED. The tripwire measured `shippedIn(id).length`, which
+ * >>> counts REGISTERED RECORDS — and a record is not an animal. `built.ts`
+ * >>> spells this out: the method the last three collections were built by
+ * >>> writes ALL of a collection's records in one commit and the species files
+ * >>> afterwards, one at a time. So the moment Farm's sixteen records landed,
+ * >>> the tripwire would have gone red saying "farm now has models — take it out
+ * >>> of NOT_BUILT_YET so the cadence can start offering it", with ZERO farm
+ * >>> animals built. Whoever obeyed it would have handed a child an album the
+ * >>> album view itself refuses to draw a single frame of.
+ * >>>
+ * >>> The list also went BACKWARDS twice, which its own comment said could not
+ * >>> happen: `woodland` and `farm` re-entered it on 2 August when PB-036
+ * >>> deleted the kit-built route. A list that can move in both directions and
+ * >>> is checked by the wrong predicate is not a cache of the truth, it is a
+ * >>> second opinion — and two functions answering one question is how the
+ * >>> album came to read "13 of 13" while the unlocker read 81%.
+ *
+ * So the hold is now DERIVED, live, from the same `state.built` counts that
+ * `completion` divides by — one predicate, `built.ts`, reaching here by
+ * injection rather than by import, so purity is kept and the list cannot rot.
+ * "Shipping a collection" is no longer a string anybody has to remember to
+ * delete: build an animal, and the cadence offers the collection on its own.
  */
-export const NOT_BUILT_YET: readonly string[] = [
-  'birds', 'ocean', 'critters', 'ice', 'outback', 'jungle', 'raptors',
-  'near-threatened', 'vulnerable', 'endangered', 'critically-endangered',
-  /* Farm and Woodland went BACKWARDS into this list on 2 Aug 2026, which the
-   * comment above did not anticipate — it says this list "shrinks when a
-   * modeller finishes a collection" and assumed that was the only direction.
-   *
-   * Both were 16 of 16 and both were entirely kit-built, and Joe retired that
-   * route: *"remove all the blocky ones from the game completely, including the
-   * album."* So they are back to nothing built, which is exactly what this list
-   * is for, and the tripwire test caught the omission by name rather than
-   * letting the album offer a child sixteen empty frames. */
-  'woodland', 'farm',
-]
-
 /**
- * Collections that are never offered — the union of the two holds above.
+ * Is this collection never to be offered? Joe's judgement, or nothing built.
  *
- * The name and the type are unchanged from when this was Joe's three alone, so
- * the one place that reads it (`candidates`, below) and every test that imports
- * it carry on working. What changed is that it is now COMPOSED rather than
- * typed out, and the two halves are named separately because they are undone by
- * different people for different reasons: `HELD_BACK_BY_JOE` shrinks when Joe
- * rules on a collection, `NOT_BUILT_YET` shrinks when a collection is actually
- * built. Merging them into one flat array would lose that, and the first person
- * to release `legendary` would have no way of knowing whether they were
- * answering a design question or a modelling one.
+ * The two halves stay NAMED SEPARATELY even though the function returns one
+ * boolean, because they are undone by different people for different reasons:
+ * `HELD_BACK_BY_JOE` shrinks when Joe rules on a collection, and the built
+ * clause shrinks the moment a modeller commits a species file. Collapsing them
+ * into one flat idea would lose that, and the first person to release
+ * `legendary` would have no way of knowing whether they were answering a design
+ * question or a modelling one.
  *
- * >>> AND IT NO LONGER ONLY SHRINKS. The note above `HELD_BACK_BY_JOE` still
- * >>> says "meant to shrink" and that is true OF THAT LIST. It is not true of
- * >>> this one: today it grew from three ids to fifteen, and it will grow again
- * >>> the moment someone adds a collection to the roster ahead of its models.
- * >>> A roster row is an ambition; a registry entry is a shipped thing; this
- * >>> union is the gap between them plus Joe's judgement, and the gap moves in
- * >>> both directions.
+ * THE BUILT CLAUSE IS THE WHOLE OF PB-058, now stated as arithmetic rather than
+ * remembered as a list. A collection with nothing built is never drawn, so a
+ * child is never handed sixteen empty frames.
  *
- * Deduplicated because the two lists overlap today — all three of Joe's three
- * are also unbuilt — and a doubled id would make `HELD_BACK.length` lie to any
- * test that counts it.
+ * `night-time` IS THE CASE THAT SHOWS WHY THIS IS A COUNT AND NOT A FLAG. It has
+ * thirteen of sixteen built, and the other three — `animal-bat`,
+ * `animal-sugar-glider`, `animal-scorpion` — want a membrane and a pincer that
+ * the parts bank does not have, so on today's bank they cannot be built at all.
+ * Under the OLD roster-denominated maths that made the collection permanently
+ * uncompletable: it sat at 13/16, never reached 100%, never went inactive, and
+ * held one of `MAX_ACTIVE`'s four slots for good. Under JT-047 it is 13 of 13,
+ * it completes, and it frees its slot like any other. **That is JT-030 — "may a
+ * collection unlock with a hole in it?" — answered by arithmetic rather than by
+ * ruling: there is no hole any more, because the roster's ambition is no longer
+ * what a child is measured against.** Joe may still want to rule on whether a
+ * partial collection should be offered at all; that question is now cosmetic
+ * rather than a wedge, and it is his.
+ *
+ * It takes the BUILT MAP rather than a whole `UnlockState` because `opened.ts`'s
+ * prune needs the same answer while it is still assembling one, and the two must
+ * not be allowed to drift into separate readings of "never offered" — that
+ * divergence is the entire subject of this file's 3 August rewrite.
  */
-export const HELD_BACK: readonly string[] = [
-  ...new Set([...HELD_BACK_BY_JOE, ...NOT_BUILT_YET]),
-]
+export function heldBack(
+  built: Readonly<Record<string, number>>, id: string,
+): boolean {
+  return HELD_BACK_BY_JOE.includes(id) || (built[id] ?? 0) === 0
+}
 
 /**
  * Which collections would read as "related" if they opened back to back.
@@ -212,8 +192,8 @@ export const HELD_BACK: readonly string[] = [
  * having at all.
  *
  * The table is TOTAL over `COLLECTIONS` minus `base`: every id in the roster has
- * a group, including every id in `HELD_BACK` however long that list grows, so
- * that releasing one of them needs no edit here. `base` is absent on purpose — it is never a candidate and
+ * a group, including every id `heldBack` currently refuses, so that releasing
+ * one of them needs no edit here. `base` is absent on purpose — it is never a candidate and
  * never the "most recently opened", because it was never opened.
  */
 export const RELATED_GROUP: Readonly<Record<string, string>> = {
@@ -241,7 +221,7 @@ export const RELATED_GROUP: Readonly<Record<string, string>> = {
   endangered: 'conservation',
   'critically-endangered': 'conservation',
   // The three held back. Grouped anyway so the table stays total and releasing
-  // one from HELD_BACK is a one-line change there and nothing here.
+  // one is a one-line change in HELD_BACK_BY_JOE and nothing here.
   legendary: 'legendary',
   dinosaurs: 'deep-time',
   prehistoric: 'deep-time',
@@ -270,6 +250,72 @@ export interface UnlockState {
   lastOpened: string | null
   /** The roster to consult — normally `COLLECTIONS` from `roster.ts`. */
   roster: readonly Collection[]
+  /**
+   * HOW MANY MEMBERS OF EACH COLLECTION ARE ACTUALLY BUILT, right now.
+   *
+   * A missing id means none. This is the denominator of `completion` and the
+   * whole of JT-047 — Joe, 3 August: *"the unlocker and counters on the page
+   * should go of the number of animals pushed on that collection at any one
+   * time. i might make some more, needs to be dynamic."*
+   *
+   * >>> IT IS INJECTED RATHER THAN IMPORTED, AND THAT IS NOT SQUEAMISHNESS.
+   * >>> The one honest answer to "is this animal built" lives in `built.ts`, and
+   * >>> `built.ts` costs three.js twice over — `KITS` comes from `kit.ts`, and
+   * >>> `speciesRecord` comes from `registry.ts` which reaches three through
+   * >>> `collections/garden.ts`. This module is pure and its header promises to
+   * >>> stay pure, so it takes the ANSWER and never the renderer. `roster` above
+   * >>> is injected for exactly the same reason and has been since phase 2, so
+   * >>> this is the established seam rather than a new one.
+   * >>>
+   * >>> THERE IS STILL ONLY ONE PREDICATE. Nothing here re-derives "built";
+   * >>> `opened.ts` threads a map through and `main.ts` fills it from
+   * >>> `built.ts`'s `builtIn`. Two functions answering this question separately
+   * >>> is precisely how the album came to read "13 of 13" while the unlocker
+   * >>> read 81% — the bug JT-047 exists to close.
+   *
+   * DO NOT CACHE IT ANYWHERE THAT OUTLIVES A CALL. "Needs to be dynamic" is the
+   * requirement: the map is rebuilt from the live registry on each arrival, so
+   * an animal added between two sessions changes the sums with no migration and
+   * nothing to invalidate. It is never written to the save — see the ratchet
+   * note on `isComplete`.
+   */
+  built: Readonly<Record<string, number>>
+  /**
+   * EVERY COLLECTION THIS ISLAND HAS EVER HAD COMPLETE. Append-only. THE RATCHET.
+   *
+   * This is the one thing in the snapshot that is HISTORY rather than a reading
+   * of the present, and it has to be, because after Joe adds two animals "she
+   * has 13 of 14" and "she once had all of them" are the same current state.
+   * There is nothing left to derive it from, so it is written down.
+   *
+   * >>> WHY IT EXISTS — brief §19, and it is not optional. `built` above can
+   * >>> FALL as well as rise: Joe says *"i might make some more"*, so a
+   * >>> collection is 14 of 14 and COMPLETE today and 14 of 16 and INCOMPLETE
+   * >>> tomorrow. Without this field that collection becomes ACTIVE again, the
+   * >>> active count goes back to `MAX_ACTIVE`, and `nextToOpen` returns null
+   * >>> FOREVER until she collects the two new ones.
+   * >>>
+   * >>> The cost of that lands at the exact moment the whole feature exists for.
+   * >>> This game teaches a child one rule — finish an album and a new one
+   * >>> appears — and rule 1 below calls "one completion, one opening" the
+   * >>> load-bearing invariant. Without the ratchet, a content push nobody at
+   * >>> the screen can see silently spends her next album weeks in advance, and
+   * >>> she finishes a collection to be told nothing. Not one person in the room
+   * >>> could explain it; Joe would not connect "I pushed two owls" to "the
+   * >>> island went quiet".
+   * >>>
+   * >>> WHAT IS RATCHETED IS ONLY THE SLOT ACCOUNTING, and that is the point.
+   * >>> The counter still moves honestly from "13 of 13" to "13 of 14", the
+   * >>> album visibly reopens, and she can go and collect the new animals. New
+   * >>> animals in a finished album are a GIFT ON TOP OF HER TROPHY, never a
+   * >>> lien against her next one.
+   *
+   * `opened.ts` owns the appending and the save carries it; ids are never
+   * removed, and a wipe clears it with the rest of the island (`save.ts`) —
+   * deliberately NOT with `onceFlags`, which survive a wipe and would leave a
+   * fresh island with a freed slot and no animals to show for it.
+   */
+  everCompleted: readonly string[]
 }
 
 /** Roster lookup by id. Ids not in the roster simply do not exist to this module. */
@@ -280,23 +326,57 @@ function find(roster: readonly Collection[], id: string): Collection | undefined
 /**
  * How far through a collection the child is, in [0, 1].
  *
- * A collection with NO MEMBERS reads as 1, not as NaN and not as 0. No roster
- * row is empty today (`tests/island/species-roster.test.ts` pins every count),
- * so this is purely defensive — but the choice matters if it ever fires: 1 means
- * "there is nothing left to collect here", so an empty collection frees its
- * active slot instead of occupying one forever, which 0 would do.
+ * >>> IT DIVIDES BY THE BUILT MEMBERS, NOT BY THE ROSTER. This is JT-047 and it
+ * >>> is the whole of Joe's ruling: *"the unlocker and counters on the page
+ * >>> should go of the number of animals pushed on that collection at any one
+ * >>> time."* The roster is what a collection WILL hold one day; dividing by it
+ * >>> asks a child to collect animals that do not exist.
+ * >>>
+ * >>> IT WAS THE ROSTER UNTIL 3 AUGUST 2026 AND THAT WAS A LIVE BUG. Night Time
+ * >>> is thirteen built of sixteen rostered. `album.ts:874` already counted the
+ * >>> built ones, so the album told her "13 of 13" — finished — while this
+ * >>> function read 13/16 = 81%, so to the unlocker the collection was never
+ * >>> complete, never freed its slot, and the next album never opened. Africa
+ * >>> was worse: one built of sixteen, 6%, uncompletable by any amount of play.
+ * >>> Both were masked only because neither happened to be the collection in
+ * >>> progress. The two numbers now come from ONE predicate (`built.ts`), which
+ * >>> is the only way they cannot drift apart again.
+ *
+ * A collection with NOTHING BUILT reads as 1, not as NaN and not as 0, and under
+ * built-denominated maths that case is REAL rather than defensive — PB-036
+ * deleted fifty-nine species without touching the roster, so a child can own
+ * pets from a collection whose models are all gone. 1 means "there is nothing
+ * left to collect here", so it frees its active slot; 0 would wedge it open
+ * forever holding one of `MAX_ACTIVE`'s four, which is exactly the trap
+ * `opened.ts` documents at its step 0. Such a collection is also never OFFERED
+ * (see `heldBack`), so it can neither occupy a slot nor be drawn into one.
+ *
+ * An id that is not in the roster at all still reads 0: it does not exist to
+ * this module, which is a different thing from existing and being empty.
  */
 export function completion(state: UnlockState, id: string): number {
-  const c = find(state.roster, id)
-  if (!c) return 0
-  const size = c.members.length
+  if (!find(state.roster, id)) return 0
+  const size = state.built[id] ?? 0
   if (size === 0) return 1
   const have = state.owned[id] ?? 0
   return Math.max(0, Math.min(1, have / size))
 }
 
-/** Complete = at 100%. Not "at or above OPEN_AT" — that is a different question. */
+/**
+ * Complete = at 100% NOW, or ever having been. Not "at or above OPEN_AT".
+ *
+ * THE `everCompleted` CLAUSE IS THE RATCHET AND IT IS LOAD-BEARING. See the
+ * field's own note on `UnlockState` for why brief §19 requires it; the short
+ * version is that `completion` can FALL when Joe builds more animals, and a
+ * collection she has already finished must never take back the slot it freed.
+ *
+ * Putting the clause HERE rather than in `activeIds` is deliberate: `isComplete`
+ * is read by both things that matter — `activeIds` for the slot, and rule 2 of
+ * `nextToOpen` by way of a completed collection always clearing `OPEN_AT` — so
+ * one clause in one function ratchets both, and they cannot disagree.
+ */
 export function isComplete(state: UnlockState, id: string): boolean {
+  if (state.everCompleted.includes(id)) return true
   return completion(state, id) >= 1
 }
 
@@ -323,7 +403,7 @@ export function activeIds(state: UnlockState): readonly string[] {
 export function candidates(state: UnlockState): readonly string[] {
   return state.roster
     .map((c) => c.id)
-    .filter((id) => id !== 'base' && !state.open.includes(id) && !HELD_BACK.includes(id))
+    .filter((id) => id !== 'base' && !state.open.includes(id) && !heldBack(state.built, id))
 }
 
 /**
@@ -361,8 +441,17 @@ export function nextToOpen(state: UnlockState, rng: Rng): string | null {
   // Rule 2. Something already open has to have reached 80%. A completed
   // collection is at 100% and therefore always satisfies this — which is
   // exactly what makes rule 1's release work.
+  //
+  // `isComplete` IS ASKED FIRST, AND NOT ONLY AS A SHORTCUT. It carries the
+  // ratchet, and without it this line would leak the very failure the ratchet
+  // exists to stop: a collection she FINISHED, at 14 of 14, reads 14/20 = 70%
+  // the day Joe builds six more, which is under `OPEN_AT`. Rule 1 would already
+  // have freed her slot on the strength of `isComplete`, and then this rule
+  // would refuse to fill it — she would be owed an album by one half of the
+  // rule and denied it by the other. Both halves must ratchet or neither can.
   const triggered = state.open.some(
-    (id) => find(state.roster, id) !== undefined && completion(state, id) >= OPEN_AT,
+    (id) => find(state.roster, id) !== undefined
+      && (isComplete(state, id) || completion(state, id) >= OPEN_AT),
   )
   if (!triggered) return null
 
@@ -425,28 +514,26 @@ function draw(state: UnlockState, rng: Rng): string | null {
  * Returns the ids to open, in the order they were drawn, so the caller can fold
  * them in and record the last one. Empty when four are already active.
  *
- * >>> THE POOL IS SIX COLLECTIONS WIDE TODAY, AND THAT IS STILL TIGHT. Since
- * >>> PB-058 put the unbuilt collections into `HELD_BACK` (see `NOT_BUILT_YET`),
- * >>> everything this function can ever draw is `garden`, `home-pets`,
- * >>> `woodland`, `africa`, `farm` and — since 2 August — `night-time`. A fresh
- * >>> island opens `base` plus three of those to reach the cap of four, which
- * >>> leaves THREE in reserve for the rest of the game: the child completes an
- * >>> album, one opens, they complete another, another opens, and after that the
- * >>> cadence has nothing left to give until a modeller ships a collection. That
- * >>> is not a fault in this function, it is the true state of the registry, and
- * >>> it is a great deal better than opening a child an album of sixteen empty
- * >>> frames — but it is the number to look at first when someone asks why the
- * >>> album stopped growing.
+ * >>> THE POOL IS FOUR COLLECTIONS WIDE TODAY, AND THAT IS THE TIGHTEST IT HAS
+ * >>> BEEN. It is no longer a list anybody maintains — `heldBack` derives it
+ * >>> from `state.built`, so this paragraph is a MEASUREMENT AND WILL GO STALE,
+ * >>> which is exactly why the numbers are pinned in
+ * >>> `tests/island/species-built.test.ts` instead of trusted here.
  * >>>
- * >>> AND THE SIXTH DOES NOT BEHAVE LIKE THE OTHER FIVE. `night-time` is
- * >>> thirteen of sixteen and CANNOT be completed on the current parts bank —
- * >>> two of its members want a membrane and one wants a pincer, and the bank
- * >>> has neither. `completion()` divides by ROSTER size, so once it opens it
- * >>> never completes, never goes inactive, and holds one of `MAX_ACTIVE`'s four
- * >>> slots for good. So it widens the pool by one and narrows the SLOTS by one,
- * >>> which is very nearly a wash. That is JT-030's question arriving as a
- * >>> measurement rather than as a design note; `NOT_BUILT_YET` above carries it
- * >>> in full and it is Joe's to rule on.
+ * >>> On 3 August 2026 the non-base collections with anything built are
+ * >>> `garden` (14), `home-pets` (16), `night-time` (13) and `africa` (1). This
+ * >>> paragraph said SIX until today and named `woodland` and `farm` among them;
+ * >>> both went to zero built when PB-036 deleted the kit route on 2 August, and
+ * >>> the sentence was simply not updated. A fresh island opens `base` plus
+ * >>> three of those four to reach the cap, leaving exactly ONE in reserve for
+ * >>> the rest of the game. That is not a fault in this function — it is the
+ * >>> true state of the registry, and it is far better than opening a child an
+ * >>> album of sixteen empty frames — but it is the first number to look at when
+ * >>> someone asks why the album stopped growing.
+ * >>>
+ * >>> **Farm is being built right now and will widen this to five.** That is the
+ * >>> case the derivation exists for: nobody has to remember to delete a string
+ * >>> for the cadence to start offering it.
  * >>>
  * >>> A POOL SMALLER THAN THE CAP DEGRADES SILENTLY, ON PURPOSE. It neither
  * >>> throws nor spins: `draw` returns null the instant `candidates` is empty

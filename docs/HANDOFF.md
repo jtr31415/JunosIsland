@@ -499,6 +499,37 @@ service worker before verifying is doing real work, not ceremony.
   `open(p,'w')` translates LF to CRLF on write, which silently reflows the whole
   file and broke `tests/island/barrier.test.ts`, whose assertion contains `'\n'`.
   Write bytes (`'rb'`/`'wb'`) or pass `newline='\n'`.
+- **`shippedIn()` counts RECORDS; `isBuilt()` counts ANIMALS. Never gate on the
+  first.** A `Species` record whose model does not exist is legal and silent —
+  `define.ts:60` looks the assembly up and simply omits it. The method every
+  recent collection was built by writes **all** sixteen records in one commit and
+  the species files afterwards, one at a time, so `shippedIn` goes positive while
+  zero animals are drawable. A tripwire test in `species-unlock.test.ts` measured
+  `shippedIn` and would have told the Farm manager to release Farm to the unlock
+  cadence with nothing built in it — an album whose every frame the album view
+  refuses to draw. `species/built.ts` is the only honest predicate. A manager
+  already mis-measured this once, reporting 100 built of 320 against a true 17.
+- **`unlock.ts` and `opened.ts` must stay three.js-free, and the reason is
+  `save.ts`.** It imports `opened.ts`, so importing `built.ts` (which reaches
+  three through both `kit.ts` and `registry.ts`) into either would drag a
+  renderer into the save path and into every headless test that touches it. They
+  are fed by INJECTION instead: `main.ts` already pays for three, fills a
+  `Record<collectionId, builtCount>` from `builtIn`, and threads it through
+  `UnlockState.built`. `roster` has used that same seam since PB-036 phase 2. If
+  you need "is it built" in a pure module, take the answer as a parameter — do
+  not write a second list, which is how the album came to read "13 of 13" while
+  the unlocker read 81%.
+- **Completion can FALL, so anything it pays for must ratchet.** Joe adds animals
+  ("i might make some more"), and `completion()` divides by the built count — so
+  a collection is 14 of 14 and COMPLETE today and 14 of 16 tomorrow. The unlock
+  itself is safe (`openCollections` is persisted and only ever appended to), but
+  the FREE ACTIVE SLOT a completion buys is not, and losing it silently stops the
+  child ever being given another album. `Opened.completed` is the append-only
+  record that stops it; `isComplete` reads it so the slot and the 80% trigger
+  ratchet together. Note the trap: `completion()` returns **1** for a collection
+  with nothing built (so a dead album cannot wedge a slot), which means the
+  recorder MUST refuse to write a zero-built collection into the permanent record
+  — otherwise deleting a collection's models marks it finished for good.
 
 ---
 

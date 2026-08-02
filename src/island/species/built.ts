@@ -64,11 +64,25 @@
  *
  * ## This module costs three.js, and one caller cannot pay
  *
- * `KITS` lives in `kit.ts`, which imports three. `album.ts` is a three consumer
- * already so it pays nothing. **`unlock.ts` and `opened.ts` deliberately are
- * not** (`unlock.ts:109`), which is why they still hold `NOT_BUILT_YET` as a
- * hand-written list and why `completion()` still divides by the roster. Those
- * are real remaining divergences, not oversights — see PB-083.
+ * `KITS` lives in `kit.ts`, which imports three, and `speciesRecord` comes from
+ * `registry.ts` which reaches three through `collections/garden.ts`. `album.ts`
+ * is a three consumer already so it pays nothing. **`unlock.ts` and `opened.ts`
+ * deliberately are not**, and `save.ts` imports the latter — so importing this
+ * module into either would put a renderer inside the save path.
+ *
+ * >>> SO THEY ARE FED BY INJECTION, AND AS OF JT-047 THERE IS NO SECOND OPINION
+ * >>> LEFT. `main.ts` — which pays for three anyway — fills a map of
+ * >>> `builtIn(id).length` per collection on every arrival and threads it in as
+ * >>> `UnlockState.built`. `completion()` divides by THAT, and the hold on
+ * >>> unbuilt collections derives from it too, so `unlock.ts`'s hand-written
+ * >>> `NOT_BUILT_YET` list is gone.
+ * >>>
+ * >>> Until 3 August those were real divergences (PB-083): the album counted
+ * >>> built animals while `completion()` divided by the roster, so Night Time
+ * >>> read "13 of 13" on the page and 81% to the unlocker, and its next album
+ * >>> never opened. Two functions answering one question is the whole failure —
+ * >>> if you are about to add a third reader of "is it built", give it this
+ * >>> module or give it the injected map, and never a list of your own.
  */
 import { collection } from './roster'
 import { speciesRecord } from './registry'

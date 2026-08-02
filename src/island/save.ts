@@ -139,6 +139,28 @@ interface IslandSave {
    */
   openCollections?: unknown
   lastOpened?: unknown
+  /**
+   * Which albums this island has ever FINISHED. Append-only. The JT-047 ratchet.
+   *
+   * ADDITIVE for the same reason as the two above, and it matters more here: a
+   * save without this field reads as "nothing ever completed", and `advance`
+   * immediately re-records every collection that is complete RIGHT NOW, so an
+   * existing island loses nothing on the way up. The only thing it cannot
+   * recover is a collection she finished and that has since gained animals —
+   * unknowable by construction, which is the whole reason the field exists.
+   *
+   * WHY IT CANNOT BE RECOMPUTED, unlike `openCollections` which merely should
+   * not be: `completion` divides by the BUILT members, and Joe adds animals. On
+   * the day he does, "she has 13 of 14" and "she once had all thirteen" are the
+   * same present state. History that has stopped being visible in the present
+   * has to be written down or it is gone.
+   *
+   * IT IS NOT AN ONCE-FLAG, though it looks like one. Once-flags survive an
+   * island wipe on purpose; this must not. A stale completion on a fresh island
+   * would free one of `MAX_ACTIVE`'s four slots and satisfy the 80% trigger
+   * with no animals owned at all. See `wipeSave`.
+   */
+  completedCollections?: unknown
 }
 
 /**
@@ -205,19 +227,34 @@ export function readOnceFlags(v: unknown): OnceFlags {
  * place. The album skips what it cannot render (`albumsToShow`), which costs a
  * downgraded build one invisible entry and costs the child nothing.
  */
-export function readOpened(open: unknown, last: unknown): Opened {
+function readCollectionIds(v: unknown): string[] {
   const ids: string[] = []
-  if (Array.isArray(open)) {
-    for (const id of open) {
-      if (typeof id !== 'string' || !id || id.length > COLLECTION_ID_MAX_LEN) continue
-      if (!ids.includes(id)) ids.push(id)
-      if (ids.length >= COLLECTION_KEEP) break
-    }
+  if (!Array.isArray(v)) return ids
+  for (const id of v) {
+    if (typeof id !== 'string' || !id || id.length > COLLECTION_ID_MAX_LEN) continue
+    if (!ids.includes(id)) ids.push(id)
+    if (ids.length >= COLLECTION_KEEP) break
   }
+  return ids
+}
+
+export function readOpened(open: unknown, last: unknown, completed?: unknown): Opened {
+  const ids = readCollectionIds(open)
+  /*
+   * UNKNOWN IDS ARE KEPT HERE TOO, and for a sharper reason than `open`'s. A
+   * completion is a thing the child DID; a build that cannot render the album
+   * still must not forget that she finished it, or a downgrade-then-upgrade
+   * hands her collection back as unfinished and takes the slot it freed. It
+   * reaches nothing but an equality test, exactly like a once-flag id.
+   */
+  const done = readCollectionIds(completed)
   const lastOpened = typeof last === 'string' && last && last.length <= COLLECTION_ID_MAX_LEN
     ? last
     : null
-  return ids.length === 0 ? NOTHING_OPENED : { open: ids, lastOpened }
+  if (ids.length === 0) {
+    return done.length === 0 ? NOTHING_OPENED : { ...NOTHING_OPENED, completed: done }
+  }
+  return { open: ids, lastOpened, completed: done }
 }
 
 export function toSave(
@@ -233,6 +270,7 @@ export function toSave(
     calmColours,
     openCollections: [...opened.open],
     lastOpened: opened.lastOpened,
+    completedCollections: [...opened.completed],
     tiles: [...flow.island.tiles.entries()],
     pets: [...flow.pets],
     bankedTiles: flow.bankedTiles,
@@ -281,7 +319,7 @@ export function fromSave(save: IslandSave | null): Loaded {
       childName: '', persistGranted: null,
       attainment: readAttainment(save?.attainment),
       onceFlags: readOnceFlags(save?.onceFlags),
-      opened: readOpened(save?.openCollections, save?.lastOpened),
+      opened: readOpened(save?.openCollections, save?.lastOpened, save?.completedCollections),
     }
   }
   const island: Island = { tiles: new Map(save.tiles) }
@@ -372,7 +410,7 @@ export function fromSave(save: IslandSave | null): Loaded {
     persistGranted: typeof save.persistGranted === 'boolean' ? save.persistGranted : null,
     attainment: readAttainment(save.attainment),
     onceFlags: readOnceFlags(save.onceFlags),
-    opened: readOpened(save.openCollections, save.lastOpened),
+    opened: readOpened(save.openCollections, save.lastOpened, save.completedCollections),
   }
 }
 
@@ -470,9 +508,19 @@ export function wipeSave(save: IslandSave | null, what: WipeChoice): IslandSave 
      * cannot outlive them: left alone it would show collections standing open
      * with nothing in them, and `lastOpened` pointing at a collection that is
      * no longer theirs. `advance` re-seeds on the next load from the pets left.
+     *
+     * THE COMPLETION RECORD GOES WITH IT, and this is the one place the JT-047
+     * ratchet is deliberately BROKEN — correctly. Everywhere else `completed`
+     * is append-only, because a collection she finished stays finished. A wipe
+     * is the single event that says those animals were never hers, and a
+     * completion that outlived them would free one of `MAX_ACTIVE`'s four slots
+     * and satisfy the 80% trigger on an island with no pets at all. That is
+     * exactly why this field is NOT an `onceFlag`: once-flags survive a wipe by
+     * design, and this must not.
      */
     out.openCollections = [...NOTHING_OPENED.open]
     out.lastOpened = NOTHING_OPENED.lastOpened
+    out.completedCollections = [...NOTHING_OPENED.completed]
   }
 
   if (what.academic) {
