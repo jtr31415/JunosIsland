@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "nextId": 70,
+  "nextId": 71,
   "cards": [
     {
       "id": "PB-001",
@@ -479,7 +479,7 @@
     {
       "id": "PB-067",
       "title": "Sign-off needs the animal moving on hex tiles, not standing on a turntable",
-      "detail": "Joe, 2 Aug: \"i need to see the animals in the game environment, so in the editor i need to see it on like 7 hex tiles bouncing around like it would in the game. the it gets signed off.\" So this GATES sign-off rather than following it — he judges an animal moving, at distance, on ground, not still on a grey stage. The behaviour already exists in pets.ts (goal, restFor, bounce, and the hover for flyers) and the editor stage is tools/workbench/public/editor/stage.ts. Bring the island’s own wander loop to the editor rather than writing a second one; a second one drifts, and then he is signing off a thing that does not exist.",
+      "detail": "Joe, 2 Aug: \"i need to see the animals in the game environment, so in the editor i need to see it on like 7 hex tiles bouncing around like it would in the game. the it gets signed off.\" So this GATES sign-off rather than following it — he judges an animal moving, at distance, on ground, not still on a grey stage. The behaviour already exists in pets.ts (goal, restFor, bounce, and the hover for flyers) and the editor stage is tools/workbench/public/editor/stage.ts. Bring the island’s own wander loop to the editor rather than writing a second one; a second one drifts, and then he is signing off a thing that does not exist. MEASURED THIS RUN, and it makes this card bigger than it reads: no hand-assembled animal can be a live pet at all today. pets.ts builds a pet only from pets/<id>.glb, so an assembled species 404s and sync() silently drops it (pets.ts:777); dealing draws only from the 24 Kenney ids (main.ts:481). So the wander loop cannot yet show ANY of the 30 animals awaiting sign-off, and the preview must not be faked around that — giving pets.ts an assembly path is the first half of this card.",
       "state": "open",
       "run": ""
     },
@@ -487,13 +487,20 @@
       "id": "PB-068",
       "title": "Whether an animal flies is a hardcoded set of two ids, and it should be Joe’s field",
       "detail": "Joe: \"editor also needs to let me decide if it flys or bounces on land.\" Today it is FLYERS at pets.ts:51 — a Set holding animal-bee and animal-parrot. Its own comment argues it must be a LIST and not a rule, because a rule saying \"has wings\" would put a penguin in the canopy; that reasoning is exactly why it belongs to Joe rather than to a constant. Already biting: no hand-assembled species can be marked flying at all, so Night Time’s nightjar cannot fly while the kiwi correctly should not, and nothing can express the difference. Design the field knowing water is coming (PB-069) rather than as a boolean to be widened later.",
-      "state": "open",
+      "state": "done",
       "run": ""
     },
     {
       "id": "PB-069",
       "title": "Confine sea creatures to water, and keep land animals out of it",
       "detail": "Joe, 2 Aug, explicitly LATER: \"later we will confine sea creatures to water tiles only and stop land animals from going into the water.\" Both directions, not one. Belongs with habitats (PB-017) and the biome ladder (PB-022), and it should read the same per-species field that PB-068 creates rather than a second one beside it.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-070",
+      "title": "A signed-off animal still cannot be dealt, so sign-off alone does not put it in the game",
+      "detail": "Dealing draws from SPECIES, the 24 Kenney GLB ids (main.ts:481), never from the 54-record registry — measured, and no test asserts the two pools agree. So even once Joe signs off the 30 hand-assembled animals they can never reach a child. The standing order says a signed-off animal ships with the next push, always, and today that order cannot be honoured. Needs the assembly path from PB-067 first, then the deal pool widened to signed-off species only.",
       "state": "open",
       "run": ""
     }
