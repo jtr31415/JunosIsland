@@ -197,45 +197,52 @@ describe('filterShapes', () => {
 describe('groupShapes gives the dropdown headers without losing a row', () => {
   const flat = (rows: readonly ShapeRow[]): ShapeRow[] => groupShapes(rows).flatMap(g => [...g.rows])
 
-  it('is exhaustive and lossless over the whole library', () => {
+  /* Headers are ROLES now, on Joe's JT-038 ruling. The property below is
+   * therefore no longer "a permutation of the input": three of the ninety-five
+   * shapes carry two roles and appear under both, deliberately, because a shape
+   * that is an ear AND a horn must be findable as either. So: every row at
+   * least once, and once per role it holds. */
+  it('loses no row, and repeats one only where the pack gave it two roles', () => {
     const out = flat(ALL_SHAPES)
-    expect(out.length, 'a row went into no group, or into two').toBe(ALL_SHAPES.length)
-    expect(out.map(r => r.id).sort()).toEqual(ALL_SHAPES.map(r => r.id).slice().sort())
+    const seen = new Set(out.map(r => r.id))
+    expect([...seen].sort(), 'a row reached no group at all')
+      .toEqual(ALL_SHAPES.map(r => r.id).slice().sort())
+
+    const expected = ALL_SHAPES.reduce((n, r) => n + Math.max(1, r.roles.length), 0)
+    expect(out.length, 'a row appeared a different number of times than it has roles')
+      .toBe(expected)
+
     /* The rows themselves, not copies of them — a group holds what it was given. */
     for (const r of out) expect(ALL_SHAPES.includes(r), r.id).toBe(true)
   })
 
-  it('is exhaustive and lossless over the torso shells too', () => {
+  it('is exhaustive over the torso shells too', () => {
     const out = flat(HULL_SHAPES)
-    expect(out.length).toBe(HULL_SHAPES.length)
-    expect(out.map(r => r.id).sort()).toEqual(HULL_SHAPES.map(r => r.id).slice().sort())
+    expect([...new Set(out.map(r => r.id))].sort())
+      .toEqual(HULL_SHAPES.map(r => r.id).slice().sort())
   })
 
-  it('puts every row of a form in that form\'s one group', () => {
+  it('puts every row of a role in that role\'s one group', () => {
     for (const g of groupShapes(ALL_SHAPES)) {
-      const forms = [...new Set(g.rows.map(r => r.form))]
-      expect(forms.length, `"${g.label}" mixes ${forms.join(', ')}`).toBe(1)
-      expect(g.rows.length, `"${g.label}" is missing rows of its own form`)
-        .toBe(ALL_SHAPES.filter(r => r.form === forms[0]).length)
+      const role = g.label.split(' (')[0]!.toLowerCase()
+      for (const r of g.rows) {
+        expect(r.roles.some(x => role.startsWith(x)), `${r.id} is not a ${role}`).toBe(true)
+      }
     }
     const labelled = groupShapes(ALL_SHAPES).length
-    expect(labelled, 'one group per form the data actually has')
-      .toBe(new Set(ALL_SHAPES.map(r => r.form)).size)
+    expect(labelled, 'one group per role the data actually has')
+      .toBe(new Set(ALL_SHAPES.flatMap(r => r.roles)).size)
   })
 
-  it('emits no empty group — `spike` is declared and has no rows', () => {
+  it('emits no empty group — a header over nothing is a drawer he cannot open', () => {
     for (const g of groupShapes(ALL_SHAPES)) {
       expect(g.rows.length, `"${g.label}" is a header over nothing`).toBeGreaterThan(0)
     }
-    const labels = groupShapes(ALL_SHAPES).map(g => g.label)
-    expect(labels.some(l => l.startsWith('Spike')),
-      `spike has ${ALL_SHAPES.filter(r => r.form === 'spike').length} rows: ${labels.join(', ')}`)
-      .toBe(false)
   })
 
-  it('orders the groups alphabetically by form, which needs no judgement call', () => {
-    const forms = groupShapes(ALL_SHAPES).map(g => g.rows[0]!.form)
-    expect(forms).toEqual(forms.slice().sort())
+  it('orders the groups alphabetically by role, which needs no judgement call', () => {
+    const labels = groupShapes(ALL_SHAPES).map(g => g.label.split(' (')[0]!)
+    expect(labels).toEqual(labels.slice().sort())
   })
 
   it('heads each group with a plural and the count, so Joe knows the scroll', () => {
@@ -243,11 +250,13 @@ describe('groupShapes gives the dropdown headers without losing a row', () => {
       expect(g.label, `"${g.label}" does not carry its count`).toContain(`(${g.rows.length})`)
       expect(g.label[0], `"${g.label}" is not capitalised`).toBe(g.label[0]!.toUpperCase())
     }
-    const boxes = ALL_SHAPES.filter(r => r.form === 'box').length
-    expect(groupShapes(ALL_SHAPES).map(g => g.label)).toContain(`Boxes (${boxes})`)
-    /* One row of a form is one row, and the header says so rather than "1 Boxs". */
-    const one = ALL_SHAPES.filter(r => r.form === 'box').slice(0, 1)
-    expect(groupShapes(one)[0]!.label).toBe('Box (1)')
+    /* Headers are roles now (JT-038). Derived from the data, not typed here, so
+     * a role added to the bank gets a header rather than failing this test. */
+    const noses = ALL_SHAPES.filter(r => r.roles.includes('nose')).length
+    expect(groupShapes(ALL_SHAPES).map(g => g.label)).toContain(`Noses (${noses})`)
+    /* One row of a role is one row, and the header says so rather than "1 Noss". */
+    const one = ALL_SHAPES.filter(r => r.roles.length === 1 && r.roles[0] === 'nose').slice(0, 1)
+    expect(groupShapes(one)[0]!.label).toBe('Nose (1)')
   })
 
   it('sorts within a group by id NUMERICALLY: box-9 before box-10', () => {

@@ -99,6 +99,12 @@ function say(text: string, bad = false): void {
  * ordering; this turns it into `<optgroup>`s. Ninety-five options in bank-file
  * order was the thing that made him ask.
  *
+ * "Sorted by part" was ambiguous between the shape's FORM and its JOB, and it
+ * shipped as form. He settled it on 2 Aug 2026 (JT-038): by job. So a shape the
+ * pack used as both an ear and a horn now appears under both headers — see
+ * `groupShapes` — and this function must not dedupe them back, because being
+ * findable as either is the whole point of the ruling.
+ *
  * **Grouping is not filtering.** Every row of the list handed in still appears,
  * exactly once — `library.ts` says loudly that `form` is a label and never a
  * filter, and a test guards against a default-on form filter. An `<optgroup>`
@@ -721,8 +727,9 @@ loadBuiltDefs().then(async loaded => {
   drawSubjects()
   fillShapes(insertPick, ALL_SHAPES)
   insertNote.textContent
-    = `${ALL_SHAPES.length} shapes, grouped by form. An inserted part lands at its own measured join `
-    + 'to this body, and you drag it from there.'
+    = `${ALL_SHAPES.length} shapes, grouped by what they DO. A shape the pack used for two jobs `
+    + 'appears under both. An inserted part lands at its own measured join to this body, and you '
+    + 'drag it from there.'
   stage.setSnap(true)
   const first = [...loaded.keys()][0]
   if (first) open(first)

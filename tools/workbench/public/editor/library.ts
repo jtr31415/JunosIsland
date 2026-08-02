@@ -336,44 +336,66 @@ const naturalCompare = (a: string, b: string): number => {
 }
 
 /**
- * The same rows, bucketed by `form` under a header — what a `<select>` turns
- * into `<optgroup>`s.
+ * The same rows, bucketed by ROLE under a header — what a `<select>` turns into
+ * `<optgroup>`s.
  *
- * **GROUPING IS NOT FILTERING, and that is the whole reason this is allowed to
- * exist.** The header of this file says `form` is a LABEL and never a
- * discriminator, because the hog's tusk is a `wedge` and the hog's ear a `cone`
- * and they do the same job. An `<optgroup>` shows every row it was given, in one
- * list, still scrollable end to end — nothing is excluded and no control here
- * can exclude anything. `LibraryFilter.form` is still the only way to lose a row
- * to a bucket, and it is still off by default.
+ * **This groups by role, not by form, on Joe's ruling of 2 Aug 2026 (JT-038).**
+ * He was offered form — which is what this did, and was the smaller change —
+ * and a role/form hybrid, and picked role outright: headers are what a shape
+ * DOES, so looking for a tail shows you the seven tails. Form is still on the
+ * row as a label via `summarise`, so nothing is hidden; it is simply no longer
+ * what the headers are made of.
  *
- * EXHAUSTIVE and NON-LOSSY by construction: every input row is pushed into
- * exactly one bucket and no bucket is dropped, so the groups' rows concatenated
- * are a permutation of the input. `tests/tools/editor-library.test.ts` asserts
- * that as a property rather than against a list of forms typed there, so a form
- * added to the bank appears in the dropdown on the next reload.
+ * Grouping by role is also the more honest key, and this file already said so
+ * before the ruling: the hog's tusk is a `wedge` at taper 0.586 and the hog's
+ * ear is a `cone` at taper 0.249, they do the same job, and a form header
+ * separates them. `roles` is provenance — what the pack actually put the shape
+ * to — so it is measured rather than a bucket boundary somebody drew.
  *
- * Groups come out ALPHABETICAL by form. There is no measured order to prefer —
- * `form` is not an axis — and a human scanning a dropdown for `plate` finds it
- * faster in the one order he can predict without being taught it. Empty groups
- * are not emitted: `spike` is declared in the type with zero rows in the bank,
- * and a header over nothing is a scroll stop that teaches Joe the library has a
- * drawer he cannot open.
+ * **GROUPING IS STILL NOT FILTERING.** An `<optgroup>` excludes nothing. Every
+ * row handed in comes out. `LibraryFilter.form` remains the only way to lose a
+ * row to a bucket and is still off by default.
+ *
+ * **A SHAPE MAY APPEAR UNDER MORE THAN ONE HEADER, and that is deliberate.**
+ * Three of the ninety-five carry two roles, and where an ear and a horn are one
+ * shape the pack recorded both. Showing it only under the first would mean Joe
+ * hunting for a horn and not finding the shape that is one, which is the exact
+ * failure he asked to fix. So the output is no longer a permutation of the
+ * input: it is every row at least once, and once per role it holds. The tests
+ * assert that property rather than the old one, derived from the data so a role
+ * added to the bank gets a header instead of falling out of the list.
+ *
+ * Groups come out ALPHABETICAL by role, for the same reason they used to come
+ * out alphabetical by form: there is no measured order to prefer, and a human
+ * scanning for `tail` finds it faster in the one order he can predict without
+ * being taught it. Empty groups are not emitted — a header over nothing is a
+ * scroll stop that teaches Joe the library has a drawer he cannot open.
+ *
+ * A shape with no role at all would vanish, so it is caught and given its own
+ * header rather than dropped. Nothing in the bank is roleless today; this is
+ * the guard for the authored shapes, which are not lifted from anything and so
+ * have no provenance to read a role off.
  */
+const NO_ROLE = 'unsorted'
+
 export const groupShapes = (rows: readonly ShapeRow[]): readonly ShapeGroup[] => {
-  const byForm = new Map<string, ShapeRow[]>()
-  for (const r of rows) {
-    const bucket = byForm.get(r.form)
-    if (bucket === undefined) byForm.set(r.form, [r])
+  const byRole = new Map<string, ShapeRow[]>()
+  const push = (role: string, r: ShapeRow): void => {
+    const bucket = byRole.get(role)
+    if (bucket === undefined) byRole.set(role, [r])
     else bucket.push(r)
   }
-  return [...byForm.keys()]
+  for (const r of rows) {
+    if (r.roles.length === 0) push(NO_ROLE, r)
+    else for (const role of r.roles) push(role, r)
+  }
+  return [...byRole.keys()]
     .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
-    .map((form) => {
-      const sorted = byForm.get(form)!.slice().sort((a, b) => naturalCompare(a.id, b.id))
-      /* The count is in the header because Joe is scanning: 41 boxes is a page of
-       * scrolling and 5 blades is not, and knowing which before he starts is the
+    .map((role) => {
+      const sorted = byRole.get(role)!.slice().sort((a, b) => naturalCompare(a.id, b.id))
+      /* The count is in the header because Joe is scanning: 29 noses is a page of
+       * scrolling and 4 cards is not, and knowing which before he starts is the
        * difference between reading the list and hunting through it. */
-      return { label: `${plural(form, sorted.length)} (${sorted.length})`, rows: sorted }
+      return { label: `${plural(role, sorted.length)} (${sorted.length})`, rows: sorted }
     })
 }
