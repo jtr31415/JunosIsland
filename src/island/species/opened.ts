@@ -224,8 +224,31 @@ export function advance(
    * record of what was drawn last — which is what the field is for.
    */
   const owned = ownedByCollection(species)
+  /*
+   * >>> A THIRD ESCAPE, AND IT IS NOT DEFENSIVE: AN ID THIS BUILD DOES NOT KNOW
+   * >>> IS NEVER PRUNED. `save.ts`'s `readOpened` keeps collection ids from a
+   * >>> LATER build on purpose — its own comment says dropping one "would mean a
+   * >>> downgrade, then an upgrade, silently loses an album they had already been
+   * >>> given" — and `albumsToShow` drops them from the VIEW only. `main.ts`
+   * >>> writes whatever this function returns straight back through `toSave`, so
+   * >>> anything pruned here is gone from disk FOREVER. That is the most
+   * >>> permanent §19 loss available anywhere in this file.
+   * >>>
+   * >>> JT-047 NEARLY CAUSED IT. Condition (a) used to be membership of a
+   * >>> hand-written list, which by construction held only ids this build knew,
+   * >>> so an unknown id could never match it. Deriving the hold from built
+   * >>> COUNTS changed that silently: an id nobody here has heard of has no
+   * >>> count, so it reads as held back, and `ownedByCollection` skips species
+   * >>> whose collection is unknown, so it also reads as owning nothing — both
+   * >>> conditions fire and the album is deleted. The unknown-id guard restores
+   * >>> exactly the old behaviour and now says out loud why it is there.
+   */
+  const known = new Set(COLLECTIONS.map(c => c.id))
   const open = was.filter(id =>
-    id === BASE_COLLECTION || !heldBack(built, id) || (owned[id] ?? 0) > 0,
+    id === BASE_COLLECTION
+    || !known.has(id)
+    || !heldBack(built, id)
+    || (owned[id] ?? 0) > 0,
   )
 
   /*

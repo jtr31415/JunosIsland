@@ -332,6 +332,45 @@ describe('advance records completions, and never takes an album back', () => {
     expect(twice.open).toEqual(once.open)
   })
 
+  it('keeps an album from a LATER build that this one has never heard of', () => {
+    /*
+     * BRIEF §19, AND THE SHARPEST CASE OF IT, because the loss would be
+     * PERMANENT AND SILENT. `save.ts`'s `readOpened` deliberately keeps
+     * collection ids this build does not know — its comment says dropping them
+     * "would mean a downgrade, then an upgrade, silently loses an album they
+     * had already been given" — and `albumsToShow` drops them from the VIEW
+     * only. But `main.ts` writes whatever `advance` returns straight back
+     * through `toSave`, so anything `advance` prunes is gone from disk for good.
+     *
+     * JT-047 nearly broke this. The prune's first condition used to be a
+     * membership test against a hand-written list, which by construction held
+     * only ids this build knew, so an unknown id was never a candidate for it.
+     * Deriving the hold from built COUNTS silently changed that: an id nobody
+     * here has heard of has no count, so it reads as held back AND as owning
+     * nothing, and both prune conditions fire. A child who opened Atlantis on a
+     * newer build and then launched an older one would have lost it forever.
+     *
+     * The prune may only judge collections this build actually knows.
+     */
+    const fromTheFuture: Opened = {
+      open: [BASE_COLLECTION, 'garden', 'atlantis'],
+      lastOpened: 'atlantis',
+      completed: [],
+    }
+    const out = advance(speciesOf('garden'), fromTheFuture, mulberry32(6), REAL)
+    expect(out.open).toContain('atlantis')
+  })
+
+  it('keeps a COMPLETION recorded by a later build, for the same reason', () => {
+    const fromTheFuture: Opened = {
+      open: [BASE_COLLECTION, 'atlantis'],
+      lastOpened: 'atlantis',
+      completed: ['atlantis'],
+    }
+    const out = advance([], fromTheFuture, mulberry32(6), REAL)
+    expect(out.completed).toContain('atlantis')
+  })
+
   it('keeps every album a save arrived with, even as built counts move', () => {
     /*
      * BRIEF §19 AS A PROPERTY RATHER THAN A CASE. Whatever the built map does,
