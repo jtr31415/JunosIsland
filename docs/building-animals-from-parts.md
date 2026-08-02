@@ -756,7 +756,8 @@ above is how you check it rather than assume it.
 same cube and it works on any of the twelve. The squirrel's tail uses the
 **+y/−z** edge: chamfer running (y 0.625, z −0.3125) to (y 0.3125, z −0.625),
 midpoint **(0.46875, −0.46875)** off the hull centre — the same 0.46875 — and
-outward normal (0, 0.7071, −0.7071). A `z −1` part reaches that normal with
+ridge direction (0, 0.7071, −0.7071) (a ridge, not one plane's normal: see step
+1 of the idiom below). A `z −1` part reaches that direction with
 `{ axis: 'x', deg: 45 }`.
 
 That single placement is what makes a squirrel out of the fox's own tail: the
@@ -788,24 +789,53 @@ whose whole silhouette question is "does the back read as a curve".
 
 **How to apply it, in four steps:**
 
-1. **Measure the hull's real chamfer. It is not where it looks.** `box-03` cuts
-   every edge AND every corner: its 32 welded points are the permutations of
-   (±0.625, ±0.3125, ±0.3125) and (±0.5, ±0.5, ±0.5). Each flat face is
-   therefore only **0.625 square**, and the edge chamfer between the +x and +y
-   faces runs from (0.625, 0.3125) to (0.3125, 0.625) — midpoint
-   **(0.46875, 0.46875)**, not the (0.5625, 0.5625) you get by assuming a
-   1.000-wide face. Assuming it once put a whole row 0.09 out.
-2. **Join on the chamfer plane's midpoint**, and spin the part so its facing is
-   that plane's outward normal — 45° for an edge chamfer, which is
-   `{ axis: 'z', deg: -45 }` for a `y +1` part on a +x/+y edge.
+1. **Measure the hull's real chamfer. It is not where it looks.** `box-03`'s 32
+   welded points are the permutations of (±0.625, ±0.3125, ±0.3125) and
+   (±0.5, ±0.5, ±0.5). Each flat face is therefore only **0.625 square**, and
+   the edge chamfer between the +x and +y faces runs from (0.625, 0.3125) to
+   (0.3125, 0.625) — midpoint **(0.46875, 0.46875)**, not the (0.5625, 0.5625)
+   you get by assuming a 1.000-wide face. Assuming it once put a whole row 0.09
+   out.
+
+   The chamfer is **not one plane, and there is no corner facet.** Measured off
+   `bank.generated.ts`: 30 planar faces / 60 triangles — **6 flat axis-aligned
+   faces, each 0.625 square, plus 24 bevel quads, TWO per cube edge, and ZERO
+   corner facets.** The two bevels on an edge have normals the permutations of
+   (±2, ±3, 0)/√13 and sit **33.69° and 56.31°** off the flat face each one
+   borders — atan(2/3) and atan(3/2) — meeting along a shallow ridge rather
+   than forming a single 45° plane. The eight (±0.5, ±0.5, ±0.5) points are
+   **vertices where six bevel quads meet**, carrying the averaged corner
+   diagonal (±0.5774, ±0.5774, ±0.5774) as their normal.
+
+   Why the odd number: three exact 45° bevel planes triple-intersect at
+   x = y = z = 0.46875, which is 7.5/16 and off the pack's own 1/16 grid, so
+   Kenney rounded outward to 0.5 = 8/16. That one snap is what replaces a
+   corner facet with a vertex and splits each 45° edge bevel into two. Derived
+   in full at `authored.ts:238-263`; `authored-primitives.test.ts:76-105` pins
+   the same solid — *"the square prism IS box-03, generalised"*, 32 welded
+   points, 30 faces, 60 triangles.
+
+   **Changed 2 August (PB-063): this step used to say `box-03` "cuts every edge
+   AND every corner". Its points were right; its topology was not.** No
+   placement moves — the 0.46875 midpoint above was always correct and is what
+   `creature.ts:439-440` computes its ridge rows off.
+2. **Join on the chamfer's midpoint**, and spin the part so its facing is the
+   chamfer's outward direction — **45° for an edge chamfer**, which is
+   `{ axis: 'z', deg: -45 }` for a `y +1` part on a +x/+y edge. 45° survives the
+   correction above, for a better reason than "that plane's normal": it is the
+   bisector of the edge's two bevel normals — (2, 3, 0)/√13 and (3, 2, 0)/√13
+   average to (0.7071, 0.7071, 0) — so it is the direction of the ridge the two
+   quads meet along, and the normal the pack's own smooth shading stores there.
 3. **Use the same stations along the row on every row.** Same shape, same depth,
    same positions — only the facing differs. That is what makes N rows read as
    one shell rather than as N rows.
 4. **Check the outer stations are still embedded.** The flat face ends and the
-   chamfer falls away 1:1, so a part buried `d` below the nominal plane leaves
-   the hull once its station passes `halfFace + d`. On `box-03` with d = 0.125
-   that is |z| ≤ 0.4375, which is what caps the hedgehog's row at ±0.375. §3's
-   "nothing floats" is the binding constraint, not taste.
+   chamfer falls away 1:1 — net, across the whole chamfer; the two bevels of
+   step 1 drop 2:3 and then 3:2 — so a part buried `d` below the nominal plane
+   leaves the hull once its station passes `halfFace + d`. That errs safe: near
+   the ridge the real surface is a shade higher than 1:1 predicts. On `box-03`
+   with d = 0.125 that is |z| ≤ 0.4375, which is what caps the hedgehog's row at
+   ±0.375. §3's "nothing floats" is the binding constraint, not taste.
 
 **The acceptance test is Joe's stated intent, not the arithmetic:** the back must
 read as curved rather than as three flat faces. Expressed as a measurement, the

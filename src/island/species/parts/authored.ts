@@ -244,7 +244,14 @@ export const BESPOKE_SPHERE: BakedPart = {
  *
  *   - 6 flat axis-aligned faces, each 0.625 square;
  *   - 24 bevel quads, TWO per cube edge, normals the permutations of
- *     (±2, ±3, 0)/√13 — 56.31° from the neighbouring flat face, not 45°;
+ *     (±2, ±3, 0)/√13 — **33.69° from the flat face each one BORDERS and 56.31°
+ *     from the one across the ridge** (atan(2/3) and atan(3/2)), not a single
+ *     45°. This line used to say "56.31° from the neighbouring flat face", which
+ *     had the two angles the wrong way round: take the bevel with normal
+ *     (−0.555, −0.832, 0), whose points are (−0.5, −0.5, ±0.5) and
+ *     (−0.3125, −0.625, ±0.3125), and the face it actually shares an edge with is
+ *     −y, at acos(0.832) = 33.69°. The two angles plus the 22.62° between the
+ *     bevels sum to exactly 90°, which is the check;
  *   - 0 corner facets. The eight (±0.5, ±0.5, ±0.5) are single vertices where
  *     six bevel quads meet.
  *
