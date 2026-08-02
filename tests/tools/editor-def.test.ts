@@ -36,8 +36,12 @@ import {
 } from '../../src/island/species/parts'
 import type { CreatureDef, PartDef } from '../../src/island/species/parts'
 import { EYE_CARD_Z, LEG_ROW } from '../../src/island/species/parts/hulls'
+import { Box3 } from 'three'
 
 const ID = 'animal-test'
+
+/** Enough decimals to see a refloor, few enough to ignore float dust. */
+const round4 = (n: number): number => Math.round(n * 1e4) / 1e4
 
 /**
  * A real species, on real bank shapes: the 1.250 cube, the hog's ear, the
@@ -126,6 +130,62 @@ describe('the edit model addresses the definition, not the mesh', () => {
   })
 })
 
+/**
+ * Joe, 2 Aug: *"i cannot move the legs up. i should be able to do that and then
+ * the model gets refloored to that new height"* — and, asked exactly what
+ * refloor means: *"bottom of feet stays datum. essentially when i move the legs
+ * up, what happens in the background is everything else moves down."*
+ *
+ * That is a DELIBERATE BREAK with §15's fourth axiom, which he confirmed:
+ * "All legs under the body — confirmed 23 of 23, always at the same height."
+ * All twenty-four originals put the leg row at `LEG_ROW.y`. From here a species
+ * may say otherwise, and `LEG_ROW.y` becomes the default rather than the law.
+ *
+ * The refloor itself needs no new machinery and that is worth knowing before
+ * anyone builds some: `buildAssembly` already ends with
+ * `group.position.y = -box.min.y` (assembly.ts:598). Raise the row and the
+ * group re-grounds on whatever is now lowest, which moves the body down exactly
+ * as he described. The bug was only that `setJoin` threw the y away before it
+ * could ever reach the builder.
+ */
+describe('the leg row is a species’ choice now, and the model refloors under it', () => {
+  it('keeps the y that setJoin used to discard', () => {
+    const raised = setJoin(BASE, { role: 'legs' }, [0.3, 0.4, 0.28])
+    expect(raised.legs).toMatchObject({ x: 0.3, y: 0.4, z: 0.28 })
+    builds(raised)
+  })
+
+  it('leaves the row at LEG_ROW.y when nobody asks otherwise', () => {
+    const spec = creatureSpec(ID, BASE)
+    const legs = spec.features.find(f => f.name === 'leg')
+    expect((legs?.placement as { from: readonly number[] }).from[1]).toBe(LEG_ROW.y)
+  })
+
+  it('puts the row where the definition says', () => {
+    const spec = creatureSpec(ID, { ...BASE, legs: { y: 0.4 } })
+    const legs = spec.features.find(f => f.name === 'leg')
+    const p = legs?.placement as { from: readonly number[]; to: readonly number[] }
+    expect(p.from[1]).toBe(0.4)
+    expect(p.to[1]).toBe(0.4)
+  })
+
+  /* The whole point, in one assertion: raising the legs lowers the animal. */
+  it('refloors — feet stay on zero, so the body sits lower', () => {
+    const box = (def: CreatureDef): { min: number; max: number } => {
+      const g = buildAssembly(creatureSpec(ID, def))
+      g.updateMatrixWorld(true)
+      const b = new Box3().setFromObject(g)
+      return { min: round4(b.min.y), max: round4(b.max.y) }
+    }
+    const before = box(BASE)
+    const after = box({ ...BASE, legs: { y: LEG_ROW.y + 0.1 } })
+
+    expect(before.min).toBe(0)
+    expect(after.min).toBe(0)
+    expect(after.max).toBeLessThan(before.max)
+  })
+})
+
 describe('every op leaves a buildable definition', () => {
   it('moves', () => {
     builds(setJoin(BASE, { role: 'hull' }, [0, 0.80625, 0]))
@@ -164,9 +224,13 @@ describe('every op leaves a buildable definition', () => {
     expect(creatureSpec(ID, eyes).features.find(f => f.name === 'eye')!.placement)
       .toEqual({ kind: 'pair', at: [0.3, 1.02, EYE_CARD_Z] })
 
-    /* The leg row's y is what puts the feet on zero and is not a species' choice. */
-    const legs = setJoin(BASE, { role: 'legs' }, [0.3, 999, 0.28])
-    expect(legs.legs).toEqual({ x: 0.3, z: 0.28 })
+    /* The leg row USED to drop its y here, and this assertion is what pinned
+     * that. Joe overruled it on 2 Aug 2026 — see the refloor describe block
+     * above — so all three components are kept and `LEG_ROW.y` is now merely the
+     * default. Changed deliberately, and left in place rather than deleted so
+     * the reversal is visible where the old rule used to be stated. */
+    const legs = setJoin(BASE, { role: 'legs' }, [0.3, 0.4, 0.28])
+    expect(legs.legs).toEqual({ x: 0.3, y: 0.4, z: 0.28 })
 
     /* A ridge has no join point at all — its rows are solved off the hull. */
     expect(setJoin(BASE, { role: 'ridge' }, [0, 1, 0])).toBe(BASE)

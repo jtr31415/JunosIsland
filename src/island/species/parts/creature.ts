@@ -248,8 +248,25 @@ export interface CreatureDef {
    */
   belly?: number
 
-  /** Four legs on the row that never moves. `false` for a legless species. */
-  legs?: false | { x?: number; z?: number; paint?: PaintLike; name?: string }
+  /**
+   * Four legs on the row. `false` for a legless species.
+   *
+   * **`y` is a DELIBERATE BREAK with §15's fourth axiom**, made on Joe's ruling
+   * of 2 Aug 2026. That axiom reads "All legs under the body — confirmed 23 of
+   * 23, always at the same height", and it is still true of all twenty-four
+   * originals: every one of them sits at `LEG_ROW.y`, which stays the default
+   * here. What changed is that it is now a default and not a law, because he
+   * asked to raise a row in the editor and could not: *"i cannot move the legs
+   * up. i should be able to do that and then the model gets refloored to that
+   * new height."*
+   *
+   * Refloor needs nothing here. `buildAssembly` ends on
+   * `group.position.y = -box.min.y`, so raising the row re-grounds the animal on
+   * whatever is lowest and the body drops — which is exactly how he described
+   * it: *"bottom of feet stays datum. essentially when i move the legs up, what
+   * happens in the background is everything else moves down."*
+   */
+  legs?: false | { x?: number; y?: number; z?: number; paint?: PaintLike; name?: string }
   /**
    * Two eye cards. **`z` is not a field**: it is `EYE_CARD_Z`, always, and there
    * is no `stretch` and no `sink` either. Rule 5, made unsayable.
@@ -612,10 +629,17 @@ export function creatureSpec(id: string, def: CreatureDef): AssemblyBuild {
   if (def.legs !== false) {
     const l = def.legs ?? {}
     /* 0.27 and 0.25 are the hedgehog's and the squirrel's on the 1.250 cube,
-     * scaled with the hull so a wider body stands wider. The y never scales:
-     * `LEG_ROW.y` is what puts the feet on zero, on nine of the pack's ten hulls. */
+     * scaled with the hull so a wider body stands wider.
+     *
+     * The y does NOT scale with the hull, and that is the difference between it
+     * and the other two: x and z are proportions of a body, whereas the row
+     * height is an absolute the pack shares — `LEG_ROW.y` is what puts the feet
+     * on zero, on nine of the pack's ten hulls. So a species that says nothing
+     * gets the pack's own row, and one that names a `y` gets exactly that y,
+     * unscaled. See `legs` in `CreatureDef` for why this is sayable at all. */
     const x = l.x ?? 0.27 * (frame.half[0] * 2 / 1.25)
     const z = l.z ?? 0.25 * (frame.half[2] * 2 / 1.25)
+    const y = l.y ?? LEG_ROW.y
     features.push({
       name: l.name ?? 'leg',
       part: LEG_ROW.part,
@@ -623,8 +647,8 @@ export function creatureSpec(id: string, def: CreatureDef): AssemblyBuild {
       sink: LEG_ROW.sink,
       placement: {
         kind: 'row',
-        from: [x, LEG_ROW.y, z],
-        to: [x, LEG_ROW.y, -z],
+        from: [x, y, z],
+        to: [x, y, -z],
         count: 2,
         mirror: true,
       },

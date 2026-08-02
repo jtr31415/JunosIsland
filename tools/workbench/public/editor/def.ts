@@ -407,8 +407,14 @@ const isQuarterTurn = (spin: readonly Spin[]): boolean =>
  *
  *   - `hull` — `at` is the hull's bounding-box CENTRE, which is the one place in
  *     the kit where `at` is a centre. `Hull.at` says so.
- *   - `legs` — a row, not a point. `x` and `z` are written, and `y` is dropped:
- *     `LEG_ROW.y` is what puts the feet on zero and is not a species' choice.
+ *   - `legs` — a row, not a point, but all three components are written. `y`
+ *     USED TO BE DROPPED here, on the grounds that `LEG_ROW.y` puts the feet on
+ *     zero and is not a species' choice. Joe overruled that on 2 Aug 2026 —
+ *     *"i cannot move the legs up. i should be able to do that"* — so the row
+ *     height is now a species' choice, with `LEG_ROW.y` as its default. The
+ *     model refloors itself: `buildAssembly` re-grounds on whatever is lowest,
+ *     so raising the row drops the body and the feet stay on zero, which is the
+ *     behaviour he asked for in those words.
  *   - `eyes` — `x` and `y` are written and `z` is dropped. Rule 5: the eye card
  *     is at `EYE_CARD_Z` on every animal in the pack, and `CreatureDef` has no
  *     field to say otherwise.
@@ -425,7 +431,7 @@ export function setJoin(def: CreatureDef, p: DefPath, at: Vec3): CreatureDef {
   if (p.role === 'hull') return { ...def, hull: { ...normHull(def), at: a } }
   if (p.role === 'legs') {
     if (def.legs === false) return def
-    return { ...def, legs: { ...(def.legs ?? {}), x: a[0], z: a[2] } }
+    return { ...def, legs: { ...(def.legs ?? {}), x: a[0], y: a[1], z: a[2] } }
   }
   if (p.role === 'eyes') {
     if (def.eyes === false) return def
