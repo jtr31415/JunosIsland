@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "nextId": 60,
+  "nextId": 61,
   "cards": [
     {
       "id": "PB-001",
@@ -426,6 +426,13 @@
       "state": "open",
       "run": "",
       "id": "PB-059"
+    },
+    {
+      "id": "PB-060",
+      "title": "A task can be ticked done while its own check is red — voicesCast has never run",
+      "detail": "JT-003 was marked done with all three voices still cast:false, and joe/voices.json kept placeholder Ryan/Sonia while Joe's actual casting (oliver/olivia/thomas) sat only in the task's note field. Cause: checks.mjs:16 early-returns {ok:true} for any doneRule that is not 'artefact', and JT-003 is 'manual'. JT-003 is voicesCast's ONLY user, so that validator has never executed once. Proved by running it both ways against the old file: as declared it returns ok:true; as 'artefact' it returns 'still on placeholder voices: fred, teacher, owl'. Two ways out and it is a design call: flip JT-003 to 'artefact', or let checkTask run validators for manual tasks in warn-only mode, which matches the file's stated design that the Done button warns and never refuses. voices.json is already corrected; this card is about the hole, not the data.",
+      "state": "open",
+      "run": ""
     }
   ]
 }

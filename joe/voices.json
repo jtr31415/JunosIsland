@@ -4,22 +4,22 @@
   "region": "uksouth",
   "cast": {
     "fred": {
-      "voice": "en-GB-RyanNeural",
+      "voice": "en-GB-OliverNeural",
       "rate": "-8%",
       "pitch": "0%",
-      "cast": false
+      "cast": true
     },
     "teacher": {
-      "voice": "en-GB-SoniaNeural",
+      "voice": "en-GB-OliviaNeural",
       "rate": "0%",
       "pitch": "0%",
-      "cast": false
+      "cast": true
     },
     "owl": {
       "voice": "en-GB-ThomasNeural",
       "rate": "-4%",
       "pitch": "0%",
-      "cast": false
+      "cast": true
     }
   }
 }
