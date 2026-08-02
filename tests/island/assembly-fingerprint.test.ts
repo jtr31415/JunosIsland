@@ -124,6 +124,7 @@ const PINNED: Readonly<Record<string, string>> = {
    * regression — it is a build still being worked on. After his sign-off it is a
    * regression, and the pin is what makes the difference detectable at all. */
   'animal-chinchilla': '3005052c8bf1096a',
+  'animal-guinea-pig': 'a084406595c0eaef',
 }
 
 describe('every assembled species has a pinned fingerprint', () => {
