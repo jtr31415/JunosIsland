@@ -1,5 +1,90 @@
 # Manager handoff
 
+> ## ⚠ START HERE — state at handover, 2 Aug 2026
+>
+> *Written by the drumbeat at Joe's request, for a FRESH SESSION. Read this
+> block, then Run 15 below for the detail. Everything else in this file is
+> history.*
+>
+> ### Where the tree is
+>
+> - **`main` at `851b12f`, working tree CLEAN, all five gates green** — verified
+>   at that exact commit: `tsc` exit 0, **128 test files / 2859 tests**, build ok,
+>   smoke "all boot checks passed", parity "every step renders identically".
+> - **34 commits ahead of `origin/main`, and NOTHING IS PUSHED.** That is Joe's
+>   instruction, not an oversight — *"keep things local, dont push."* Do not push
+>   without asking, and see the Sassoon licence item before you ever do.
+> - **Backlog: 31 open / 21 done / 4 parked / 3 planned** (was 39/13 at the start
+>   of Run 15). `joe/backlog.json` is authoritative for state.
+> - **14 open questions in `joe/tasks.json`.** Five are live and were raised by
+>   this run: **JT-030, JT-037, JT-038, JT-039**, plus PB-009's dead-trunk taste
+>   note on the card itself.
+>
+> ### One branch that is deliberately NOT merged
+>
+> **`pb-051-sassoon-font` (`f0f36b8`)** — PB-051 is BUILT and GREEN and is being
+> held off `main` on purpose. The repo is PUBLIC, the zip's `COPYRIGHT.txt` says
+> Sassoon is *"licensed, not sold"*, the License Agreement is not on disk, and
+> `.gitignore:16` already keeps `Assets/*.zip` out. Merging would be the first
+> time the binaries entered public git history, which is the part that survives
+> deleting the file later. **This is JT-037 and it is Joe's.** Note the important
+> distinction, since it is easy to get wrong: buying a licence would likely permit
+> SHIPPING the font, but essentially no commercial font licence permits
+> REDISTRIBUTION, and a public repo is redistribution. Free alternatives with the
+> same teaching letterforms (single-storey `a`, open-tailed `g`) are **Andika**
+> and **Edu QLD/NSW/VIC Beginner**, both OFL, which permit bundling outright.
+>
+> ### What to work on next
+>
+> **The no-ruling defect slate is EXHAUSTED.** What remains needs a Joe ruling,
+> belongs to a later phase, or is a feature card wanting a spec. So the next work
+> is **new species**, which is where Joe pointed when the slate ran dry:
+>
+> > *"i can see a number of animals in the editor, the garden ones. they are
+> > generally good drafts to start manual finishing with. build the remainder in
+> > that same style. deterministically, like those."*
+>
+> **Four are outstanding**, and building all four takes Home Pets and Africa to
+> 16/16 — which also unwedges the two permanently-held album slots in JT-030:
+> `animal-goldfish` (Home Pets — **the easy one**, the bank has a real fish hull
+> `box-20` and its shell-band `box-19`), then `animal-crocodile`,
+> `animal-ostrich`, `animal-vulture` (Africa, 13 of 16).
+>
+> **Read `PB-036`'s note in `joe/backlog.json` before starting.** It carries the
+> recipe and the three traps, the sharpest being: **a donor's burial only
+> transfers if its attachment axis does** (a shape picked on a 0.933 burial
+> predicted 0.019 proud and delivered 0.141, because it was a forward-facing ear
+> and a ridge mounts radially — only `y +1` shapes carry a usable number), and
+> **"a species is a file and a line" is optimistic — it is eight places.**
+>
+> **Two things are Joe's before the birds get built:** the bank has **no `wing`,
+> `horn` or `claw` shapes at all**, and the pack's own birds (parrot, chick,
+> penguin) have no wings either — they are a fused hull plus beak, legs and eye
+> cards. So how the ostrich and vulture should read is a look decision, not a
+> measurement.
+>
+> ### Operational, and it cost this run real capacity
+>
+> **The 200-subagent and 200-web-search caps are SESSION-scoped, and `/clear`
+> does NOT reset them.** Run 15 proved it: zero web searches were made all run,
+> yet the budget was already 200/200 from earlier work in the same terminal. Both
+> ran out mid-run and the drumbeat had to build in its own context, which is
+> exactly what the manager arrangement exists to avoid. **Start long runs in a
+> FRESH terminal**, or raise `CLAUDE_CODE_MAX_SUBAGENTS_PER_SESSION` and
+> `CLAUDE_CODE_MAX_WEB_SEARCHES_PER_SESSION`.
+>
+> ### Where the detail lives
+>
+> `docs/handoffs/` — one per card: `PB-052-053`, `PB-058-055`, `PB-054-009`,
+> `PB-047`, `PB-036-editor`, `PB-051`. `docs/asset-loading-survey.md` is PB-048's
+> deliverable. `docs/PB036-HANDOFF.md` is the species baton.
+>
+> ### To see the animals
+>
+> `npm run workbench`, then `http://127.0.0.1:4173/editor/`. `strictPort` is on:
+> if 4173 is taken it fails loudly — kill that PID rather than accept a fallback,
+> or you will be looking at a stale tree. There are **15 definitions** now.
+
 ---
 
 ## Run 15 (drumbeat, parallel defect burn-down) — 1 Aug. PREPENDED, NOT OVERWRITTEN.
@@ -9,8 +94,14 @@ built independently, keep it local, don't push, don't make more work, burn the
 backlog down. Six managers ran in isolated git worktrees; the drumbeat merged
 each one and kept `joe/*.json` centrally so parallel runs could not conflict.*
 
-**Backlog moved 39 open / 13 done → 32 open / 20 done. Nothing pushed.
+**Backlog moved 39 open / 13 done → 31 open / 21 done. Nothing pushed.
 `origin/main` is behind on purpose.**
+
+*The run continued past this entry's first draft: after the six managers came
+PB-014 (done directly, once the subagent cap blocked dispatch), the PB-010 and
+PB-048 surveys, and then — on a later instruction from Joe — the restart of
+species building with `animal-corn-snake`. The START HERE block at the top of
+this file is the current state; this section is how it got there.*
 
 ### Shipped and merged, all five gates green on the MERGED tree
 
@@ -25,6 +116,7 @@ each one and kept `joe/*.json` centrally so parallel runs could not conflict.*
 | PB-047 | Wipe becomes three tick-boxes. Nearly deleted her name — see below. |
 | PB-036 ph.7 | All five editor notes + the `CREATURE_DEFS` debt. Snap bug was **arithmetic**, not the gizmo. |
 | PB-014 | Prop 404 silenced with a `LoadingManager`. **The broken reference is load-bearing** — see below. |
+| PB-036 | `animal-corn-snake` built on the assembly route. **Home Pets 14 → 15 of 16.** |
 
 **Also surveyed and deliberately NOT built: PB-010 and PB-048.** Both have their
 findings on their cards; PB-048's survey is `docs/asset-loading-survey.md` and
