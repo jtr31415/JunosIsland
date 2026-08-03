@@ -170,6 +170,43 @@ const PINNED: Readonly<Record<string, string>> = {
   'animal-cockatiel': 'eeb079e979377997',
   'animal-lovebird': 'fc65a4b555597a9f',
   'animal-canary': '0bd1e23f74d0038d',
+
+  /* FARM (PB-074), 16 of 16 — the first collection to arrive whole in a single
+   * run on the parts route, where Home Pets needed two earlier assembly passes
+   * before PB-073 closed it.
+   *
+   * These sixteen were computed by the Farm manager on its own branch, which was
+   * forbidden from touching this file, and left in its handoff block to be pasted
+   * here. They were NOT pasted on trust: every one was re-read off
+   * `npm run pets:creature` on the MERGED tree — the tree that also carries the
+   * sign-off, album and unlocker runs — and all sixteen agreed with the handoff
+   * exactly. That matters because a pin copied wrong certifies the wrong animal
+   * forever, and it would do so silently.
+   *
+   * Every one of these is a FIRST PIN: the hash of the animal as it was built,
+   * recorded rather than chosen, so none is evidence of anything yet. What they
+   * buy is the second run.
+   *
+   * These animals are UNSIGNED. Joe reviews in the editor and that gate is his
+   * alone, so a pin moving here before he has ever seen the animal is not a
+   * regression — it is a build still being worked on. After his sign-off it is a
+   * regression, and the pin is what makes the difference detectable at all. */
+  'animal-sheep': '5f1fefecf7c5f032',
+  'animal-goat': 'ea8ac91fe1c45d1d',
+  'animal-horse': 'e833919f2c6e5fb1',
+  'animal-donkey': '3e3e33680bb1fe06',
+  'animal-goose': '5a2c31673b14dc99',
+  'animal-turkey': 'c9e10147a68d4655',
+  'animal-llama': '172901245825fdb2',
+  'animal-alpaca': '17f8669554583993',
+  'animal-rooster': 'bb77a76cf94ea1de',
+  'animal-ox': '35423cfe21a9d770',
+  'animal-mule': 'ea1c9d9fb2ce2445',
+  'animal-chicken': '770e38cf0aa4a57d',
+  'animal-guinea-fowl': 'a4c6a14f9e298169',
+  'animal-quail': '8a6ff2e001f60872',
+  'animal-water-buffalo': 'ae7b17cefb787da8',
+  'animal-pigeon': 'c5a8365d6074be93',
 }
 
 describe('every assembled species has a pinned fingerprint', () => {
