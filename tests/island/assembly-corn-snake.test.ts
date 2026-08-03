@@ -119,21 +119,36 @@ describe('animal-corn-snake: the species the quadruped kit could not say', () =>
     expect(h - HEIGHT_FLOOR).toBeCloseTo(0.1190, 3)
   })
 
-  it('shares the slow worm\'s coil ON PURPOSE — same shape, same spin, same sink', () => {
+  it('keeps the coil AS A FOOT, which is where it and the slow worm now part company', () => {
     /*
-     * This is an assertion that two species AGREE, which is unusual and is the
-     * point. The coil is the kit's answer to leglessness, solved once against
-     * `HULL_BOTTOM_Y` — the one plane in the kit that never moves. A second,
-     * independently-derived transform doing the same job would be a second thing
-     * to get wrong.
+     * This used to assert that the two species AGREE — same shape, same spin,
+     * same sink — because the coil was the kit's one answer to leglessness,
+     * solved once against `HULL_BOTTOM_Y`, and a second independently-derived
+     * transform doing the same job would have been a second thing to get wrong.
+     *
+     * JOE SEPARATED THEM ON 3 AUGUST 2026, deliberately: *"slow worm i did indeed
+     * turn the bottom box and put it on its back. i decided that snake like
+     * animals are extended to the back and not propped up at the bottom."* So the
+     * slow worm's coil is furniture on its rump and its hull is the foot, while
+     * the corn snake still stands on its coil.
+     *
+     * The agreement is therefore gone by decision, not by drift, and asserting it
+     * would now be asserting that his change had not happened. What survives is
+     * the half that is still load-bearing HERE: this animal's coil is the thing
+     * it stands on, and it is the shape the bank was measured for. The stance
+     * itself is pinned by 'lands on its coil' above.
      */
     const mine = CORN_SNAKE_ASSEMBLY.features.find(f => f.name === 'coil')
     const theirs = SLOW_WORM_ASSEMBLY.features.find(f => f.name === 'coil')
     expect(mine, 'corn snake must have a coil').toBeDefined()
     expect(theirs, 'slow worm must have a coil').toBeDefined()
+    // Still the same SHAPE out of the bank — that much was never his to change
+    // and a swap here would be a real regression.
     expect(mine?.part).toBe(theirs?.part)
-    expect(mine?.sink).toBeCloseTo(theirs?.sink as number, 9)
-    expect(mine?.stretch).toEqual(theirs?.stretch)
+    // And the corn snake's own numbers are undisturbed: full precision, because
+    // this species has never been through the editor's push.
+    expect(mine?.stretch?.[2], 'the corn snake\'s coil is unstretched in z').toBe(1)
+    expect(mine?.stretch?.[0]).toBeCloseTo(1 / 1.335, 12)
   })
 
   it('does NOT share its marking with the slow worm — that is where they separate', () => {

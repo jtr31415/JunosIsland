@@ -59,12 +59,17 @@ assertAssembly({
   id: 'animal-slow-worm',
   parts: ['box-03', 'box-04', 'box-08', 'plate-01'],
   // Was 1.5124 — the bare cube's 1.43125 floor plus the 0.0811 the top row of
-  // scales shows. Re-pinned to what the animal now measures: the cube's own
-  // 1.250 plus that same 0.0811, because since `84cd17a` the hull's underside
-  // IS the ground. THE HARNESS NEVER REACHES THIS PIN — it fails one line
-  // earlier on `PACK_HEIGHT_MIN`, which 1.3312 is 0.0988 short of. See the
-  // header; that failure is the defect, not the pin.
+  // scales shows. Now the cube's own 1.250 plus that same 0.0811, because the
+  // hull's underside IS the ground: Joe moved the coil to the animal's back.
   height: 1.3312,
+  outsideHeightBand:
+    'A slow worm is not a propped-up animal. Joe, 3 Aug 2026: *"slow worm i did '
+    + 'indeed turn the bottom box and put it on its back. i decided that snake like '
+    + 'animals are extended to the back and not propped up at the bottom."* So the '
+    + 'coil that used to hold it at pack height is now a hoop on the rump, the hull '
+    + 'lies on the floor, and 1.3312 against the pack floor of 1.43 is the SHAPE HE '
+    + 'CHOSE rather than a species that failed to reach the band. The pack band '
+    + 'measures Kenney\'s twenty-four; it does not get a vote on a snake.',
   // Unmoved by the push: the ring is the same shape with the same triangles on
   // it, just somewhere else.
   verts: 502,
@@ -135,42 +140,46 @@ describe('animal-slow-worm: the species the old kit could not say', () => {
     expect(PACK_HEIGHT_MIN - h).toBeCloseTo(0.18, 2)
   })
 
-  it('stands on its own body: the kit lifts it by nothing at all', () => {
-    // `buildAssembly` grounds a species by translating it until its lowest point
-    // is y = 0, which will hide a floating animal from every other assertion in
-    // this file. This one says the translation is ZERO — the coil already lands
-    // on the ground, so nothing here is propped up after the fact.
+  it('lies on its hull, and the kit drops it by the hull\'s own clearance', () => {
+    // `buildAssembly` grounds every species by translating it until its lowest
+    // point is y = 0. That is the guarantee, it always runs, and it is asserted
+    // in the harness — feet on the ground, measured on the built animal.
     //
-    // THIS IS A RULE AND IT IS FAILING. Measured after `84cd17a`, the translation
-    // is -0.18125: not a prop under the animal but the opposite, the kit dropping
-    // it by the whole of `HULL_BOTTOM_Y` because the coil no longer reaches the
-    // floor and the hull's own bottom face is the lowest thing on the model. That
-    // is the ground clearance the previous test proves this species cannot afford
-    // to lose, and it is 0.18125 of the 0.0988 by which the animal now misses the
-    // pack's height band. NOT RE-PINNED. See the header.
-    expect(Math.abs(build().position.y)).toBeLessThan(1e-9)
+    // What this test pins is WHICH PART reaches the floor, which is a statement
+    // about the design rather than about the builder. It used to be the coil,
+    // and the translation was therefore zero. Joe moved the coil to the animal's
+    // back on 3 Aug 2026, so the hull's own underside is now the lowest thing
+    // and the kit drops the model by exactly `HULL_BOTTOM_Y` to seat it.
+    //
+    // Pinned to `HULL_BOTTOM_Y` rather than to a bare number so it stays true if
+    // that clearance is ever re-derived, and asserted NEGATIVE because a positive
+    // translation would mean the kit had propped the animal UP — which is the
+    // fault this test has always existed to catch.
+    const y = build().position.y
+    expect(y).toBeLessThan(0)
+    expect(Math.abs(y)).toBeCloseTo(HULL_BOTTOM_Y, 9)
   })
 })
 
 describe('animal-slow-worm: the coil is what it stands on', () => {
-  it('lands the ring\'s underside exactly where the feet would have been', () => {
-    // THIS IS THE RULE THE SPECIES IS BUILT ON, AND SINCE `84cd17a` IT FAILS.
+  it('lies on its HULL — the belly is the foot, and the coil rides clear of the floor', () => {
+    // This species has no legs, so something has to be the foot. It used to be
+    // the coil, joined at the one plane in the kit that never moves and sunk so
+    // its underside landed exactly where four feet would have.
     //
-    // With no legs, the belly is the foot: the ring is joined at the one plane in
-    // the kit that never moves and sunk the share of its own thickness that
-    // leaves `HULL_BOTTOM_Y` of it below that plane, so its underside lands
-    // exactly where four feet would have. Measured now, the underside sits 0.2875
-    // above the ground before grounding and 0.10625 after it, and the hull — not
-    // the coil — is what touches y = 0. Both assertions below are that fact.
-    //
-    // Left red on purpose. Re-pinning `0` to `0.10625` here would turn the one
-    // statement that pays this animal's height into a note about where a hoop
-    // happens to hang. Where the ring ACTUALLY is now is the next test.
+    // It is the HULL now. Joe turned the bottom box onto the animal's back
+    // (3 Aug 2026), on the reasoning that a snake-like animal is extended
+    // backwards rather than propped up at the bottom. So the statement worth
+    // pinning is the same one in its new form: exactly one thing touches the
+    // ground, it is the hull, and everything else clears it.
     const g = build()
+    expect(boxOf(g.getObjectByName('hull')!).min.y, 'the hull is the foot').toBeCloseTo(0, 6)
+    // The coil rides on the rump now. Above the floor, and by a real margin
+    // rather than a rounding — it is furniture, not a leg.
     const coil = boxOf(g.getObjectByName('coil')!)
-    expect(coil.min.y).toBeCloseTo(0, 9)
-    // And it is the lowest thing on the animal, by itself.
-    for (const name of ['hull', 'eye-r', 'scale-side-r0']) {
+    expect(coil.min.y, 'the coil is no longer a foot').toBeGreaterThan(0.05)
+    // And nothing else has quietly become the lowest thing instead.
+    for (const name of ['eye-r', 'scale-side-r0']) {
       expect(boxOf(g.getObjectByName(name)!).min.y, name).toBeGreaterThan(0.1)
     }
   })

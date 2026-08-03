@@ -204,16 +204,14 @@ describe('signed off is one call, and everything else in the game will ask it', 
    * are what say when it has been.
    */
   const SIGNED = [
-    'animal-badger', 'animal-hedgehog', 'animal-mouse', 'animal-salamander', 'animal-toad',
+    'animal-badger', 'animal-dormouse', 'animal-hedgehog', 'animal-mole', 'animal-mouse',
+    'animal-salamander', 'animal-slow-worm', 'animal-squirrel', 'animal-toad',
+    'animal-tortoise', 'animal-vole',
   ]
-  /** The three never pushed, plus the six withheld under JT-048. */
-  const NOT_SIGNED = [
-    'animal-frog', 'animal-newt', 'animal-shrew',
-    'animal-dormouse', 'animal-mole', 'animal-slow-worm',
-    'animal-squirrel', 'animal-tortoise', 'animal-vole',
-  ]
+  /** The three he has not pushed. */
+  const NOT_SIGNED = ['animal-frog', 'animal-newt', 'animal-shrew']
 
-  it('accounts for every Garden animal — the five and the nine are the whole collection', () => {
+  it('accounts for every Garden animal — the eleven and the three are the whole collection', () => {
     /* The honesty guard, and it is doing real work here: if a name above were
      * misspelled, or if Garden gained a fifteenth member, the set assertions
      * below would be quietly checking something narrower than they claim. */
@@ -223,7 +221,7 @@ describe('signed off is one call, and everything else in the game will ask it', 
     for (const id of [...SIGNED, ...NOT_SIGNED]) expect(groupOf(id), id).toBe(GARDEN)
   })
 
-  it('finds exactly those five signed off in joe/names-audit.json, and the other nine not', () => {
+  it('finds exactly those eleven signed off in joe/names-audit.json, and the frog, the newt and the shrew not', () => {
     expect(auditDoc.names.length).toBeGreaterThan(0)
 
     /* Exactly these, and nothing else in any collection: an equality, not a

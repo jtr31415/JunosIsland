@@ -60,22 +60,23 @@ assertAssembly({
   // count and the triangle count are untouched, because nothing was added or
   // taken away — the same shapes are somewhere else.
   //
-  // Two things about this number that the suite below reports rather than
-  // absorbs, and they are both failures, not footnotes:
+  // Two things about this number, and — settled on 3 Aug 2026 — BOTH ARE JOE'S
+  // DECISIONS rather than faults. He was asked directly and answered: *"i changed
+  // the moles feet and rotated the claws... all my decisions. why am i being
+  // second guessed here?"* The same applies to this animal, whose diff is his
+  // tail, his tufts and his leg row and nothing else.
   //
   //   - The tail no longer sets the height. It tops out at 1.2450, which is
-  //     0.334 BELOW the ears; the tallest things on the animal are now the two
-  //     ear tufts, at 1.7191. The species' own `flag` still reads "1.98" and
-  //     still gives the raised tail as the reason.
-  //   - 0.00625 of the 0.257 drop is not the tail at all. The same push wrote
-  //     `legs: { x: 0.2625, y: 0.1875, z: 0.25 }`, taking the leg row off the
-  //     pack's own y = 0.18125. That sinks each leg 0.4285 of its height into
-  //     the belly against the bank's measured maximum of 0.408163, and it drops
-  //     the whole animal 0.00625 when it is grounded. It is a gate and it is red
-  //     below. Put the row back and this pin becomes 1.7254; it is pinned here at
-  //     what the animal measures today, not at what it would measure once the
-  //     gate is honoured, because a pin that describes a hypothetical animal
-  //     describes nothing.
+  //     0.334 BELOW the ears; the tallest things are now the two ear tufts, at
+  //     1.7191. He replaced `chamfer: true` with an explicit spin and `at`, which
+  //     is the exact-placement control PB-062 built for him.
+  //   - 0.00625 of the drop is the leg row. He wrote
+  //     `legs: { x: 0.2625, y: 0.1875, z: 0.25 }`, off the pack's own y = 0.18125,
+  //     which sinks each leg deeper into the belly and re-seats the whole animal
+  //     when it is grounded. Declared in `legRowMoved` below rather than failed.
+  //
+  // The species' own `flag` still reads "1.98" and still gives the raised tail as
+  // the reason — that prose predates his edit and is his to rewrite, not ours.
   height: 1.7191,
   verts: 452,
   tris: 597,
@@ -87,6 +88,15 @@ assertAssembly({
   massRatio: 3,
   // One spun feature, and it is the whole silhouette.
   spinsAtLeast: 1,
+  legRowMoved:
+    'Joe raised this animal\'s legs from the editor on 3 Aug 2026 — '
+    + '`legs: { x: 0.2625, y: 0.1875, z: 0.25 }`, off the pack\'s own y = 0.18125. '
+    + 'That buries 0.4285 of each leg in the belly against the bank\'s measured '
+    + 'maximum of 0.408163, which is what raising legs DOES; the control exists '
+    + 'for him to use (PB-062 piece 3, *"bottom of feet stays datum... when i move '
+    + 'the legs up"*). The sunk range measures Kenney\'s twenty-four and does not '
+    + 'get a vote on a squirrel he has re-proportioned. Feet on zero still holds '
+    + 'and is still asserted.',
 })
 
 /* ---------------------------------------------------------------- tools --- */
@@ -148,6 +158,28 @@ const world = (o: THREE.Object3D): THREE.Vector3 => {
   o.updateMatrixWorld(true)
   return o.getWorldPosition(new THREE.Vector3())
 }
+
+/**
+ * A part's position in the animal's OWN space — world, with the grounding
+ * translation taken back off.
+ *
+ * `buildAssembly` seats every species by translating it until its lowest point is
+ * y = 0, and that translation depends on WHAT THE LOWEST THING IS. So any
+ * assertion that compares a world y against a number measured off the bank — the
+ * donor's recorded offset, say — is silently also asserting where the animal's
+ * floor happens to be. It passes until someone changes a part that has nothing to
+ * do with it.
+ *
+ * That is exactly what happened on 3 Aug 2026: Joe re-sited the squirrel's tail
+ * to stand it up, the model's lowest point moved, and the ear, the muzzle and the
+ * eye card all failed by the identical 0.00628 — three "wrong" parts that had not
+ * moved a micron relative to the animal they are on.
+ *
+ * Measuring in the animal's own space says the thing these tests mean. The
+ * GROUNDING is asserted once, on its own, where it belongs.
+ */
+const local = (g: THREE.Group, o: THREE.Object3D): THREE.Vector3 =>
+  world(o).sub(new THREE.Vector3(0, g.position.y, 0))
 
 const worldBox = (o: THREE.Object3D): THREE.Box3 => {
   o.updateMatrixWorld(true)
@@ -260,14 +292,24 @@ describe('the tail is CARRIED UP, on the cube\'s own measured chamfer', () => {
       p.map(Math.abs).sort((a, b) => b - a).map(n => n.toFixed(4)).join(',')))
     expect([...shells].sort()).toEqual(['0.5000,0.5000,0.5000', '0.6250,0.3125,0.3125'])
 
+    // THE CHAMFER IDIOM IS NO LONGER WHAT THIS ANIMAL USES, and that is Joe's
+    // decision of 3 Aug 2026. `tail: { part: 'box-23', chamfer: true }` became
+    // `{ part: 'box-23', spin: [{ axis: 'x', deg: 45 }], at: [0, 0.55, -0.4875] }`
+    // — the exact-placement control PB-062 built for him, used exactly as
+    // intended. The measurement of `box-03`'s shells above is kept because it is
+    // a fact about the cube and still true; what changed is where he hangs a tail
+    // on it.
     const g = build()
     const j = named(g, 'tail')[0]!.userData['joinedAt'] as [number, number, number]
     const cy = SQUIRREL_ASSEMBLY.hull.at[1]
+    // On the midline still — a tail off-centre would be a real fault.
     expect(j[0]).toBeCloseTo(0, 6)
-    expect(j[1] - cy).toBeCloseTo(0.46875, 6)
-    expect(j[2]).toBeCloseTo(-0.46875, 6)
-    // ON the chamfer plane, which is y - z = 0.9375 in hull-local terms.
-    expect((j[1] - cy) - j[2]).toBeCloseTo(0.9375, 6)
+    // And behind the animal, which is the half of "carried up and back" that a
+    // hand placement could still get wrong.
+    expect(j[2]).toBeLessThan(0)
+    // His own numbers, pinned so a LATER accident is still caught: the join sits
+    // below the hull centre rather than on the +y/-z chamfer it used to solve to.
+    expect(j[1] - cy).toBeCloseTo(-0.25625, 6)
   })
 
   it('points along that chamfer\'s outward normal, and the spin is what turned it', () => {
@@ -310,11 +352,21 @@ describe('the tail is CARRIED UP, on the cube\'s own measured chamfer', () => {
     expect(buried).toBeGreaterThan(0.125)
   })
 
-  it('is the animal — tallest thing on it, and above the ears', () => {
+  it('is carried up and BACK, clear of the hull, though no longer the tallest thing', () => {
+    // It WAS the tallest thing, by a designed 0.3 over the ears, when the tail
+    // solved to the cube's +y/-z chamfer. Joe placed it by hand on 3 Aug 2026 and
+    // it now tops out at 1.2450, below the ear tufts at 1.7191. His call, made
+    // with the animal in front of him in the editor.
+    //
+    // What is still worth asserting is the thing that stops it being the fox: it
+    // goes UP and clear rather than trailing behind on the floor.
     const g = build()
-    const top = worldBox(g).max.y
-    expect(worldBox(named(g, 'tail')[0]!).max.y).toBeCloseTo(top, 6)
-    expect(top - worldBox(named(g, 'ear')[0]!).max.y).toBeGreaterThan(0.3)
+    const tail = worldBox(named(g, 'tail')[0]!)
+    // Clear of the ground by a real margin — a tail dragging at y = 0 would be
+    // the fox's silhouette and is the fault this test has always guarded.
+    // 0.2576 measured; the guard is that it does not reach the floor, not the
+    // 0.4 the chamfer solve used to give.
+    expect(tail.min.y).toBeGreaterThan(0.2)
     // And it goes UP rather than back, which is what stops it being the fox. The
     // fox wears this exact shape at z = -0.918642 trailing behind its hull; the
     // squirrel's centre is 0.24 further FORWARD and 0.61 higher.
@@ -498,9 +550,9 @@ describe('every other placement is a donor\'s own recorded number', () => {
     expect(join.kind).toBe('pair')
     expect((join as { at: readonly number[] }).at[1]).toBeCloseTo(0.80625 + 0.625, 6)
     for (const m of named(g, 'ear')) {
-      expect(world(m).y).toBeCloseTo(ear.offset[1], 4)
-      expect(Math.abs(world(m).x)).toBeCloseTo(ear.offset[0], 4)
-      expect(world(m).z).toBeCloseTo(ear.offset[2], 4)
+      expect(local(g, m).y).toBeCloseTo(ear.offset[1], 4)
+      expect(Math.abs(local(g, m).x)).toBeCloseTo(ear.offset[0], 4)
+      expect(local(g, m).z).toBeCloseTo(ear.offset[2], 4)
     }
     // Mirror-symmetric, so it is one mesh placed twice (rule 6).
     expect(ear.shape.symmetry).toBe('mirror')
@@ -534,9 +586,9 @@ describe('every other placement is a donor\'s own recorded number', () => {
     // muzzle's centre lands on the beaver's own point, all three axes.
     const snout = named(g, 'snout')[0]!
     expect(nose.attachment!.sunkFractionMax).toBe(0)
-    expect(world(snout).x).toBeCloseTo(nose.offset[0], 6)
-    expect(world(snout).y).toBeCloseTo(nose.offset[1], 4)
-    expect(world(snout).z).toBeCloseTo(nose.offset[2], 4)
+    expect(local(g, snout).x).toBeCloseTo(nose.offset[0], 6)
+    expect(local(g, snout).y).toBeCloseTo(nose.offset[1], 4)
+    expect(local(g, snout).z).toBeCloseTo(nose.offset[2], 4)
     // Blunt, not pointed: taper 1.000, the opposite of the hedgehog's cone-06.
     expect(nose.shape.taper).toBe(1)
     expect(partById('cone-06')!.shape.taper).toBe(0)
@@ -550,9 +602,9 @@ describe('every other placement is a donor\'s own recorded number', () => {
     const g = build()
     const card = partById('plate-01')!
     for (const e of named(g, 'eye')) {
-      expect(world(e).z).toBeCloseTo(EYE_CARD_Z, 4)
-      expect(world(e).y).toBeCloseTo(card.offset[1], 4)
-      expect(Math.abs(world(e).x)).toBeCloseTo(card.offset[0], 4)
+      expect(local(g, e).z).toBeCloseTo(EYE_CARD_Z, 4)
+      expect(local(g, e).y).toBeCloseTo(card.offset[1], 4)
+      expect(Math.abs(local(g, e).x)).toBeCloseTo(card.offset[0], 4)
     }
     expect(SQUIRREL_ASSEMBLY.palette['pupil']).toBe(PACK_PUPIL)
   })
@@ -568,13 +620,24 @@ describe('every other placement is a donor\'s own recorded number', () => {
     const ear = partById('wedge-06')!
     const apex = ear.offset[1] + Math.max(...referenced(ear).map(p => p[1]))
     const join = SQUIRREL_ASSEMBLY.features.find(f => f.name === 'tuft')!.placement
-    expect((join as { at: readonly number[] }).at[1]).toBeCloseTo(apex, 5)
+    const at = (join as { at: readonly number[] }).at
+    // WAS the ear's own solved apex, 1.585699. Joe moved them to 1.45 by hand on
+    // 3 Aug 2026, along with the tail and the leg row — the exact-placement
+    // control doing what it was built to do. Pinned at his number so a later
+    // accident still shows, and checked against the apex only for DIRECTION: a
+    // tuft is a thing on top of an ear, so below it would be a real fault.
+    expect(at[1]).toBeCloseTo(1.45, 5)
+    expect(at[1], 'a tuft below the ear\'s base is not a tuft')
+      .toBeGreaterThan(ear.offset[1])
+    expect(apex - at[1]!, 'his placement sits a little under the solved apex')
+      .toBeCloseTo(0.1357, 3)
     for (const t of named(g, 'tuft')) {
       expect(t.userData['part']).toBe('cone-01')
       expect(t.userData['sink']).toBeCloseTo(spike.attachment!.sunkFractionMean, 6)
-      // They cost nothing in height: the tail is still the tallest thing.
-      expect(worldBox(t).max.y).toBeLessThan(worldBox(g).max.y)
     }
+    // And they ARE the tallest thing on the animal now that the tail is not.
+    expect(Math.max(...named(g, 'tuft').map(t => worldBox(t).max.y)))
+      .toBeCloseTo(worldBox(g).max.y, 6)
     expect(named(g, 'tuft')).toHaveLength(2)
   })
 

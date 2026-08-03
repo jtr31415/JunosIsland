@@ -411,10 +411,27 @@ describe('the viewer is truthful about absolute size', () => {
     expect(asNow(lo)).toBe(asNow(hi))
     expect(asNow(lo)).toBeCloseTo(0.7758, 4)
 
-    /* And the page does not lurch: the old rule drew every animal at 1.000 and this
-     * draws all fourteen inside a band around it, so the framing Joe knows holds. */
+    /*
+     * And the page does not lurch: the old rule drew every animal at 1.000 and this
+     * draws them inside a band around it, so the framing Joe knows holds.
+     *
+     * THE FLOOR MOVED 0.85 -> 0.80 ON 3 AUGUST 2026, and this is the justification
+     * rather than a convenience. The slow worm draws at 0.8262. It is not a
+     * regression and it is not drift: Joe turned its coil onto its back that day —
+     * *"i decided that snake like animals are extended to the back and not propped
+     * up at the bottom"* — so the animal now LIES on the floor at 1.3312 instead of
+     * being held at pack height by a hoop. A flat animal drawing smaller than a
+     * standing one is the shared divisor working, not failing.
+     *
+     * The band is still doing its job at 0.80: it is a lurch guard, and 17% under
+     * the standard hull is not a lurch, while anything that genuinely collapsed
+     * would be far below this. Do NOT keep nudging it. If a third species arrives
+     * needing a lower floor, the answer is that this assertion has become a
+     * description of the roster rather than a guard — the same fault the pack
+     * height band had, and the reason `AssemblyClaims.outsideHeightBand` exists.
+     */
     for (const h of heights) {
-      expect(h * shared).toBeGreaterThan(0.85)
+      expect(h * shared).toBeGreaterThan(0.80)
       expect(h * shared).toBeLessThan(1.30)
     }
   })

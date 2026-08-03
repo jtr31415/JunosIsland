@@ -104,6 +104,43 @@ export interface AssemblyClaims {
   authored?: readonly string[]
   /** Exact height, pinned. The band is checked either way. */
   height?: number
+  /**
+   * Why this species sits OUTSIDE the pack's measured height band, on purpose.
+   *
+   * The band is `PACK_HEIGHT_MIN`..`PACK_HEIGHT_MAX`, and it is a MEASUREMENT OF
+   * KENNEY'S TWENTY-FOUR — not a law anybody agreed to. It earned its place while
+   * the job was making new animals sit convincingly beside that pack. It stops
+   * earning it the moment Joe is DESIGNING rather than matching, because then a
+   * deliberate silhouette arrives looking like a regression with an authoritative
+   * number attached. That is not hypothetical: six of his animals were reported
+   * to him as damaged on 3 Aug 2026 and every one turned out to be his own edit.
+   *
+   * So a species may opt out — but it must SAY SO and the claim is checked in
+   * both directions: the height really must fall outside the band, or this line
+   * has gone stale and the test fails. An opt-out that quietly becomes untrue is
+   * the same disease as the band itself.
+   *
+   * Feet on `y = 0` is NOT waived by this and never is. `buildAssembly` grounds
+   * every species by translating its lowest point to the floor, so that one is a
+   * genuine invariant rather than a description of the pack.
+   */
+  outsideHeightBand?: string
+  /**
+   * Why this species' legs sit outside the pack's own sunk-fraction range.
+   *
+   * `legs: { y }` is a control the editor gives Joe on purpose — PB-062's third
+   * piece, his words: *"bottom of feet stays datum. essentially when i move the
+   * legs up..."*. Raising them buries more of the leg in the hull, which is the
+   * POINT, and `sunkFractionMin`/`Max` are measurements of how deep Kenney's own
+   * twenty-four bury theirs. A feature built for him to use cannot also be a
+   * thing the suite fails him for using.
+   *
+   * Same contract as `outsideHeightBand`: say so, give a reason, and the claim is
+   * checked both ways so it cannot rot into a lie.
+   *
+   * Feet on `y = 0` is NOT waived and never is.
+   */
+  legRowMoved?: string
   /** Exact whole-model vertex count, pinned. The band is checked either way. */
   verts?: number
   /** Exact whole-model triangle count, pinned. The band is checked either way. */
@@ -378,10 +415,21 @@ export function assertAssembly(claims: AssemblyClaims): void {
       // already 1.43125, so there is no headroom underneath at all and a species
       // designed low fails here before anything is added to it. `HEIGHT_FLOOR`
       // in parts/hulls.ts carries the whole derivation.
-      expect(h, `${h.toFixed(4)} is shorter than anything in the pack`)
-        .toBeGreaterThan(PACK_HEIGHT_MIN)
-      expect(h, `${h.toFixed(4)} is taller than anything in the pack`)
-        .toBeLessThan(PACK_HEIGHT_MAX)
+      if (claims.outsideHeightBand !== undefined) {
+        /* Declared out of band, with a reason. Checked BOTH ways so the opt-out
+         * cannot rot into a lie: if the animal is brought back inside the band,
+         * this fails and the claim has to go. */
+        expect(claims.outsideHeightBand.length, 'an opt-out needs a reason').toBeGreaterThan(0)
+        expect(
+          h < PACK_HEIGHT_MIN || h > PACK_HEIGHT_MAX,
+          `${id} claims to sit outside the pack band and ${h.toFixed(4)} is inside it — drop the claim`,
+        ).toBe(true)
+      } else {
+        expect(h, `${h.toFixed(4)} is shorter than anything in the pack`)
+          .toBeGreaterThan(PACK_HEIGHT_MIN)
+        expect(h, `${h.toFixed(4)} is taller than anything in the pack`)
+          .toBeLessThan(PACK_HEIGHT_MAX)
+      }
       if (claims.height !== undefined) expect(h).toBeCloseTo(claims.height, 3)
     })
 
@@ -689,10 +737,22 @@ export function assertAssembly(claims: AssemblyClaims): void {
         expect(worldBox(l).min.y, `${l.name} is off the ground`).toBeCloseTo(0, 3)
         // Sunk into the belly by an amount the pack itself demonstrated.
         const frac = (worldBox(l).max.y - hullBottom) / part.size[1]!
-        expect(frac).toBeGreaterThanOrEqual(part.attachment!.sunkFractionMin - 1e-3)
-        expect(frac).toBeLessThanOrEqual(part.attachment!.sunkFractionMax + 1e-3)
-        // The pack's own leg offset, arrived at by solving rather than by aiming.
-        expect(world(l).y).toBeCloseTo(part.offset[1]!, 4)
+        if (claims.legRowMoved !== undefined) {
+          /* Declared off the pack's row, with a reason. Checked both ways so the
+           * opt-out cannot rot: if the legs come back inside the range, this
+           * fails and the claim has to go. */
+          expect(claims.legRowMoved.length, 'an opt-out needs a reason').toBeGreaterThan(0)
+          expect(
+            frac < part.attachment!.sunkFractionMin - 1e-3
+            || frac > part.attachment!.sunkFractionMax + 1e-3,
+            `${id} claims a moved leg row and ${frac.toFixed(6)} is inside the pack's range — drop the claim`,
+          ).toBe(true)
+        } else {
+          expect(frac).toBeGreaterThanOrEqual(part.attachment!.sunkFractionMin - 1e-3)
+          expect(frac).toBeLessThanOrEqual(part.attachment!.sunkFractionMax + 1e-3)
+          // The pack's own leg offset, arrived at by solving rather than aiming.
+          expect(world(l).y).toBeCloseTo(part.offset[1]!, 4)
+        }
         // Under the MIDDLE, not at the corners (§3, the leg note).
         const hull = worldBox(g.getObjectByName('hull')!)
         expect(Math.abs(world(l).x)).toBeLessThan((hull.max.x - hull.min.x) / 2)
