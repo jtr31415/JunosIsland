@@ -152,6 +152,13 @@ describe('WHAT THE ALBUM SHOWS TODAY, collection by collection', () => {
    *   - HOME PETS IS ALSO 16 OF 16, entirely on the assembly route.
    *   - AFRICA IS 1 OF 16 — `animal-crocodile` alone, built bespoke on the
    *     assembly kit. Fifteen frames went away there.
+   *
+   * >>> RE-MEASURED, 3 August 2026, after PB-074 merged. FARM IS 16 OF 16 and is
+   * >>> the third complete collection. That is the whole of this update: sixteen
+   * >>> animals that did not exist when the block above was written now do, so
+   * >>> farm goes 0 -> 16, the total goes 68 -> 84, and farm becomes a sixth
+   * >>> collection with frames — which makes it a sixth PAGE. Nothing here was
+   * >>> loosened; the numbers were wrong because the world moved under them.
    */
   const PINNED: ReadonlyArray<readonly [string, number, number]> = [
     // collection            roster  built
@@ -160,7 +167,7 @@ describe('WHAT THE ALBUM SHOWS TODAY, collection by collection', () => {
     ['home-pets', 16, 16],
     ['night-time', 16, 13],
     ['africa', 16, 1],
-    ['farm', 16, 0],
+    ['farm', 16, 16],
     ['woodland', 16, 0],
     ['birds', 18, 0],
     ['ocean', 16, 0],
@@ -189,17 +196,18 @@ describe('WHAT THE ALBUM SHOWS TODAY, collection by collection', () => {
     expect(PINNED.map(p => p[0]).sort()).toEqual(COLLECTIONS.map(c => c.id).sort())
   })
 
-  it('is 68 frames in total across the whole roster of 320', () => {
+  it('is 84 frames in total across the whole roster of 320', () => {
     // The one number to quote. Everything else on this page is an outline of
     // something nobody has drawn yet, and none of it is shown any more.
     expect(ROSTER).toHaveLength(320)
-    expect(ROSTER.filter(isBuilt)).toHaveLength(68)
+    expect(ROSTER.filter(isBuilt)).toHaveLength(84)
   })
 
-  it('has exactly five collections with any frame at all', () => {
-    // The five that can be a PAGE. Everything else is not an album yet.
+  it('has exactly six collections with any frame at all', () => {
+    // The six that can be a PAGE. Everything else is not an album yet.
+    // Farm is the sixth, added by PB-074; the order is COLLECTIONS' own.
     expect(COLLECTIONS.map(c => c.id).filter(id => builtIn(id).length > 0))
-      .toEqual(['base', 'garden', 'africa', 'night-time', 'home-pets'])
+      .toEqual(['base', 'garden', 'africa', 'night-time', 'home-pets', 'farm'])
   })
 })
 
@@ -217,7 +225,7 @@ describe('the tripwire: isBuilt cannot drift from the ability to draw', () => {
      * declaring a kit without writing it fails here instead of shipping.
      */
     const built = ROSTER.filter(isBuilt)
-    expect(built).toHaveLength(68)
+    expect(built).toHaveLength(84)
 
     for (const id of built) {
       const record = speciesRecord(id)

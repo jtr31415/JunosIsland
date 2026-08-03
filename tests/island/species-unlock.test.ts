@@ -607,17 +607,25 @@ describe('the hold on unbuilt collections is derived live, and a record is not a
      * The distinction stated on the predicate rather than on data, because
      * TODAY NO COLLECTION CAN SHOW IT: every collection with a registry record
      * also has a model, so `shippedIn` and `builtIn` happen to agree everywhere
-     * (base 24, garden 14, home-pets 16, night-time 13, africa 1, the rest zero
-     * — pinned in `tests/island/species-built.test.ts` and
+     * (base 24, garden 14, home-pets 16, farm 16, night-time 13, africa 1, the
+     * rest zero — pinned in `tests/island/species-built.test.ts` and
      * `tests/island/species-registry.test.ts`). The measurement below says so
      * out loud instead of a loop that would run zero times and claim cover.
      *
      * `heldBack`'s SIGNATURE is what makes the confusion unrepeatable: it takes
-     * a map of built counts and has no way to ask how many records exist. Farm
-     * is the case that is coming — sixteen records, zero models — and on that
-     * day the first assertion here goes red, the hold stays correct without an
-     * edit, and the right response is to move `farm` into the second list rather
-     * than to touch `unlock.ts`.
+     * a map of built counts and has no way to ask how many records exist.
+     *
+     * >>> FARM WAS THE CASE THIS BLOCK WAS WAITING FOR, and it arrived on 3
+     * >>> August (PB-074) NOT in the shape predicted. The prediction was sixteen
+     * >>> records then zero models, which would have reddened the FIRST
+     * >>> assertion. Instead the records and the sixteen models landed in the
+     * >>> same run, so `shippedIn` and `builtIn` still agree, the first
+     * >>> assertion stayed green, and it was the THIRD — `built('farm') === 0` —
+     * >>> that went red. The hold was correct throughout and `unlock.ts` was not
+     * >>> touched, which is the part the prediction got right.
+     * >>>
+     * >>> `woodland` is the stand-in now: no records, no models, and not on
+     * >>> Joe's list, so the second clause is still what does the refusing.
      */
     const recordsWithoutModels = COLLECTIONS.map((c) => c.id)
       .filter((id) => shippedIn(id).length > 0 && builtIn(id).length === 0)
@@ -627,12 +635,12 @@ describe('the hold on unbuilt collections is derived live, and a record is not a
         + 'refuse it; this measurement is what needs updating, not unlock.ts',
     ).toEqual([])
 
-    // Farm today: no records, no models, held back. The assertion that matters
-    // is that the SECOND clause is what does the refusing, and it still will
-    // when the sixteen records land.
-    expect(built('farm')).toBe(0)
-    expect(heldBack(BUILT, 'farm')).toBe(true)
-    expect(HELD_BACK_BY_JOE).not.toContain('farm')
+    // Woodland today: no records, no models, held back. The assertion that
+    // matters is that the SECOND clause is what does the refusing, and it still
+    // will when woodland's records land.
+    expect(built('woodland')).toBe(0)
+    expect(heldBack(BUILT, 'woodland')).toBe(true)
+    expect(HELD_BACK_BY_JOE).not.toContain('woodland')
   })
 })
 

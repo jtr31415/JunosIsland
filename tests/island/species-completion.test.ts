@@ -138,22 +138,31 @@ describe('the hold on unbuilt collections is now derived, so it cannot rot', () 
 
   it('offers a collection the moment it has one animal, with no list to edit', () => {
     /*
-     * THE FARM CASE, WRITTEN BEFORE FARM LANDS. This is the whole reason the
-     * hand-written `NOT_BUILT_YET` was deleted: it had to be edited by a person,
-     * and its tripwire measured `shippedIn` — REGISTERED RECORDS — which goes
-     * positive when a collection's records are committed and before a single
-     * animal is modelled. Obeying it would have handed a child an album the
-     * album view itself refuses to draw one frame of.
+     * THE WOODLAND CASE. This is the whole reason the hand-written
+     * `NOT_BUILT_YET` was deleted: it had to be edited by a person, and its
+     * tripwire measured `shippedIn` — REGISTERED RECORDS — which goes positive
+     * when a collection's records are committed and before a single animal is
+     * modelled. Obeying it would have handed a child an album the album view
+     * itself refuses to draw one frame of.
+     *
+     * >>> THIS WAS WRITTEN AS THE FARM CASE, BEFORE FARM LANDED — and it did its
+     * >>> job. Farm arrived whole on 3 August (PB-074, sixteen of sixteen), so
+     * >>> `farm` is no longer a collection with nothing built and cannot stand
+     * >>> for one. `woodland` takes over: no records, no models, not on Joe's
+     * >>> list. Note what did NOT have to change to make Farm offerable — the
+     * >>> hold is arithmetic over live built counts, so sixteen new species
+     * >>> released Farm on their own and no list was edited, which is precisely
+     * >>> the property this test was written to protect.
      */
-    expect(REAL['farm']).toBe(0)
-    expect(heldBack(REAL, 'farm')).toBe(true)
+    expect(REAL['woodland']).toBe(0)
+    expect(heldBack(REAL, 'woodland')).toBe(true)
 
-    // Farm with a single animal built. Nothing else changes; no list is touched.
-    const withOneFarmAnimal = { ...REAL, farm: 1 }
-    expect(heldBack(withOneFarmAnimal, 'farm')).toBe(false)
+    // Woodland with a single animal built. Nothing else changes; no list touched.
+    const withOneWoodlandAnimal = { ...REAL, woodland: 1 }
+    expect(heldBack(withOneWoodlandAnimal, 'woodland')).toBe(false)
 
-    const s = state({ open: [BASE_COLLECTION], built: withOneFarmAnimal })
-    expect(candidates(s)).toContain('farm')
+    const s = state({ open: [BASE_COLLECTION], built: withOneWoodlandAnimal })
+    expect(candidates(s)).toContain('woodland')
   })
 
   it('never offers a collection with nothing built, however the pool is shaped', () => {

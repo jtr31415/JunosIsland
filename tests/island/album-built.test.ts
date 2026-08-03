@@ -106,8 +106,16 @@ const pet = (id: string, name: string, species: string): Pet =>
 const FOX = pet('p1', 'Gachap', 'animal-fox')
 /** Rostered, and nobody has built it: no membrane in the parts bank. */
 const BAT = pet('p2', 'Squeak', 'animal-bat')
-/** A collection with nothing built at all — Farm went back to zero in PB-036. */
-const SHEEP = pet('p3', 'Woolly', 'animal-sheep')
+/*
+ * A collection with nothing built at all.
+ *
+ * >>> THIS WAS THE SHEEP, and Farm was the empty collection, until PB-074 built
+ * >>> Farm 16 of 16 on 3 August. `animal-sheep` now HAS a frame, so it can no
+ * >>> longer stand for a species whose collection the album refuses to draw.
+ * >>> `animal-bear` takes over: rostered in `woodland`, which has sixteen
+ * >>> members and not one of them built. Same role, same assertions.
+ */
+const BEAR = pet('p3', 'Bramble', 'animal-bear')
 /** A species the roster has never heard of. What a later build's save carries. */
 const STRANGER = pet('p4', 'Moth', 'animal-from-the-future')
 
@@ -256,13 +264,18 @@ describe('a partial collection shows only what somebody has built', () => {
 /* ------------------------------------------- C: nothing built, no page at all --- */
 
 describe('a collection with nothing built gets no page', () => {
-  it('leaves Farm out of the book entirely — no page, no dot, no name', () => {
+  it('leaves Woodland out of the book entirely — no page, no dot, no name', () => {
+    /*
+     * >>> THIS WAS FARM until PB-074 built it 16 of 16 on 3 August. Farm now has
+     * >>> a page, so it proves the opposite of what this test needs. Woodland is
+     * >>> the empty collection now: sixteen rostered, none built.
+     */
     const { album, sections, dots, text } = setup()
-    album.open([FOX], ['base', 'farm'])
-    expect(builtIn('farm')).toEqual([])
+    album.open([FOX], ['base', 'woodland'])
+    expect(builtIn('woodland')).toEqual([])
     expect(sections()).toHaveLength(1)
     expect(dots()).toHaveLength(1)
-    expect(text()).not.toContain('Farm')
+    expect(text()).not.toContain('Woodland')
   })
 
   it('says nothing about it anywhere in the card, not even "coming soon"', () => {
@@ -327,16 +340,16 @@ describe('BRIEF §19: nothing the child owns is lost by the filter', () => {
   })
 
   it('D2: keeps a pet from a collection that is hidden entirely', () => {
-    // Farm has nothing built, so there is no Farm page at all — and it makes no
-    // difference whether the caller asked for one.
-    for (const albums of [['base'], ['base', 'farm']]) {
-      nobodyVanishes([FOX, SHEEP], albums)
+    // Woodland has nothing built, so there is no Woodland page at all — and it
+    // makes no difference whether the caller asked for one.
+    for (const albums of [['base'], ['base', 'woodland']]) {
+      nobodyVanishes([FOX, BEAR], albums)
     }
 
-    const { album, cell } = reach([FOX, SHEEP], ['base', 'farm'], 'More friends', 'Woolly')
+    const { album, cell } = reach([FOX, BEAR], ['base', 'woodland'], 'More friends', 'Bramble')
     expect(cell.getAttribute('role')).toBe('button')
     cell.click()
-    expect(album.popped()).toBe(SHEEP)
+    expect(album.popped()).toBe(BEAR)
   })
 
   it('D3: keeps a pet whose species the roster has never heard of', () => {
@@ -356,15 +369,15 @@ describe('BRIEF §19: nothing the child owns is lost by the filter', () => {
      * collection, a friend from the future, a duplicate, and only the base album
      * showing. Every one of them has to be somewhere.
      */
-    const pets = [FOX, BAT, SHEEP, STRANGER, pet('p5', 'Rellow', 'animal-fox')]
+    const pets = [FOX, BAT, BEAR, STRANGER, pet('p5', 'Rellow', 'animal-fox')]
     nobodyVanishes(pets, ['base'])
     nobodyVanishes(pets, ['base', 'farm', 'woodland', 'night-time', 'africa'])
   })
 
   it('reaches exactly as many named cells as there are pets — no doubles either', () => {
-    const pets = [FOX, BAT, SHEEP, STRANGER]
+    const pets = [FOX, BAT, BEAR, STRANGER]
     const { album, names } = setup()
-    album.open(pets, ['base', 'night-time', 'farm'])
+    album.open(pets, ['base', 'night-time', 'woodland'])
     expect(names().sort()).toEqual(pets.map(p => p.name).sort())
   })
 })
@@ -397,11 +410,14 @@ describe('the prefetch warms the page they are about to reach', () => {
     /*
      * `pages` has already had the empty collections taken out, so `at + 1` must
      * mean the page the child is one tap away from — not the id one along in the
-     * list the caller happened to pass. Farm is in the argument and is not a
+     * list the caller happened to pass. Woodland is in the argument and is not a
      * page, so the warm after page 0 is still Night Time's thirteen.
+     *
+     * >>> WAS FARM; PB-074 built it, so it is a page now and cannot be the
+     * >>> hidden one. Woodland is empty and takes the role.
      */
     const { album } = setup()
-    album.open([], ['base', 'farm', 'night-time'])
+    album.open([], ['base', 'woodland', 'night-time'])
     return settle().then(() => {
       expect(warmed().sort()).toEqual([...NIGHT_BUILT].sort())
     })
@@ -419,18 +435,24 @@ describe('the prefetch warms the page they are about to reach', () => {
 /* ---------------------------------------------------- F: the album, out loud --- */
 
 describe('the album as a child sees it today', () => {
-  it('prints the book page by page, and there are 68 frames in it', () => {
+  it('prints the book page by page, and there are 84 frames in it', () => {
     /*
-     * THE FIVE COLLECTIONS THAT CAN BE OPENED TODAY. `unlock.ts`'s `HELD_BACK`
-     * leaves exactly four candidates — garden, africa, night-time, home-pets —
-     * and `base` is forced open on every island, so this is the whole of what a
-     * child can ever be shown on this build.
+     * THE SIX COLLECTIONS THAT CAN BE OPENED TODAY. `unlock.ts`'s hold leaves
+     * exactly five candidates — garden, africa, night-time, home-pets and now
+     * farm — and `base` is forced open on every island, so this is the whole of
+     * what a child can ever be shown on this build.
+     *
+     * >>> FARM IS THE SIXTH PAGE, added 3 August by PB-074, which built it 16 of
+     * >>> 16 and made it the third complete collection after Garden and Home
+     * >>> Pets. The page count goes 5 -> 6 and the frame count 68 -> 84. Note
+     * >>> that a child still sees at most `MAX_ACTIVE` of these at once; this
+     * >>> test opens every one of them deliberately, to print the whole book.
      *
      * The dump is for a human to eyeball; the assertion under it is what keeps
-     * this test honest, and 68 is the same total `species-built.test.ts` pins
+     * this test honest, and 84 is the same total `species-built.test.ts` pins
      * from the other end.
      */
-    const OPENABLE = ['base', 'garden', 'home-pets', 'africa', 'night-time']
+    const OPENABLE = ['base', 'garden', 'home-pets', 'africa', 'night-time', 'farm']
     const { album, walk, heading, tally, slots } = setup()
     album.open([], OPENABLE)
 
@@ -440,7 +462,7 @@ describe('the album as a child sees it today', () => {
       cells: slots().length,
     }))
 
-    console.log('\n  THE ALBUM, 2 August 2026 — %d pages, %d frames',
+    console.log('\n  THE ALBUM, 3 August 2026 — %d pages, %d frames',
       book.length, book.reduce((n, p) => n + p.cells, 0))
     for (const [at, p] of book.entries()) {
       console.log('   %d. %s — "%s" — %d cells', at + 1, p.page, p.count, p.cells)
@@ -448,8 +470,8 @@ describe('the album as a child sees it today', () => {
     console.log('')
 
     expect(book.map(p => p.page)).toEqual(
-      ['Base Set', 'Garden', 'Home Pets', 'Africa', 'Night Time'])
-    expect(book.map(p => p.cells)).toEqual([24, 14, 16, 1, 13])
-    expect(book.reduce((n, p) => n + p.cells, 0)).toBe(68)
+      ['Base Set', 'Garden', 'Home Pets', 'Africa', 'Night Time', 'Farm'])
+    expect(book.map(p => p.cells)).toEqual([24, 14, 16, 1, 13, 16])
+    expect(book.reduce((n, p) => n + p.cells, 0)).toBe(84)
   })
 })
