@@ -1,5 +1,100 @@
 # Manager handoff
 
+> ## ⚠⚠ START HERE — 3 Aug 2026, morning. THE MANAGER ARRANGEMENT IS OVER.
+>
+> *Joe: **"stop the manager rule, you can resume your usual job of running
+> things."** The drumbeat/manager split is stood down. Work directly; use
+> subagents when they help, not as a required layer. **Keep the isolated
+> worktrees** — they were the one unambiguous win.*
+>
+> ### Where the tree is
+>
+> `main` and `origin/main` level, deployed. `tsc` **0**; build, smoke, parity,
+> channel green. **4530-odd passing, 8 failing** — and read the next section
+> before touching those 8.
+>
+> ### JUNO CAN NOW MEET ELEVEN HAND-ASSEMBLED ANIMALS
+>
+> badger · dormouse · hedgehog · mole · mouse · salamander · slow-worm · squirrel
+> · toad · tortoise · vole. Signed off, dealable, live. Every animal she had met
+> before today was one of Kenney's original twenty-four.
+>
+> Frog, newt and shrew are Garden's remaining three and are NOT pushed. Home Pets
+> 16/16 and Farm 16/16 are BUILT but unsigned, so they cannot be dealt — 60
+> species in the tree, 35 of them awaiting his push.
+>
+> ### THE MISTAKE THIS SESSION MADE, AND IT COST A WHOLE EVENING
+>
+> A manager reported **six of Joe's eleven animals as "damaged by the push tool"**,
+> with measured numbers. It was relayed to him as fact, five animals were withheld
+> from shipping, and a 19-test "damage guard" was left red to protect his daughter
+> from them.
+>
+> **Every one was his own deliberate edit.** He replaced the dormouse's and
+> tortoise's tails with other parts, re-sited the squirrel's tail (his own SD-001
+> draft), repainted the vole's, changed the mole's feet and rotated its claws, and
+> turned the slow worm's coil onto its back — *"i decided that snake like animals
+> are extended to the back and not propped up at the bottom."* His reply: **"all
+> my decisions. why am i being second guessed here?"**
+>
+> **The cause is structural and it will recur.** The assembly tests assert
+> `PACK_HEIGHT_MIN` 1.43, rule 9's 405-vertex floor and the pack's leg-sink range.
+> Those are **measurements of Kenney's twenty-four**, written when the job was
+> making new animals sit beside that pack. He is DESIGNING now. So a deliberate
+> silhouette arrives looking like a regression with an authoritative number
+> attached, and a manager reading only the failure calls it damage.
+>
+> **`git show <commit> -- <file>` BEFORE calling anything damaged.** Replaced-and-
+> substituted reads nothing like dropped. If it was his, the TEST is wrong.
+>
+> ### The two sanctioned opt-outs, and how to add more
+>
+> `AssemblyClaims.outsideHeightBand` and `AssemblyClaims.legRowMoved`
+> (`tests/island/assembly-assert.ts`). Each takes a written reason and is **checked
+> in BOTH directions** — bring the animal back inside the norm and the claim fails,
+> so an opt-out cannot rot into a lie. Copy that shape for any further pack norm.
+>
+> **Feet on y = 0 is never waived**, because it is a real invariant rather than a
+> description: `buildAssembly` grounds every species by translating its lowest
+> point to the floor on every build. Measured across all 60 — every one sits at
+> exactly 0.000000. **Nothing in this game is floating, and the auto-reground Joe
+> asked for already exists.**
+>
+> ### The 8 remaining reds — descriptions, NOT guards
+>
+> dormouse 4 · vole 2 · mole 1 · squirrel 1. Same class: pack norms against his
+> decisions, plus world-space pins. **No animal is broken behind them.** Joe:
+> *"dont burn tokens on tests that fails stuff that shouldnt be failed."* Rewrite
+> them to describe the animals he built, or declare the opt-out; delete outright
+> any test pinning a decision he has overturned.
+>
+> One fix worth copying: the squirrel's ear, muzzle and eye all failed by an
+> identical 0.00628 because they compared WORLD positions against bank offsets —
+> silently asserting where the animal's floor happens to be. A `local()` helper
+> takes the grounding translation back off. Three "wrong" parts that had not moved.
+>
+> ### Still open for Joe
+>
+> **JT-045** rename Juno's `Defuck` pet or leave it · **JT-049** water buffalo vs
+> Africa's Cape buffalo · **JT-050** eyes on a long neck · **PB-079** the
+> see-through hole in the shrew and newt (27% and 31% of their album portraits are
+> sky) · the budgie's blue-or-green contradiction · **PB-082** the round-trip
+> guard's 5s budget, now at 60 species · **PB-077**, whose named fix at
+> `def.ts:1313` turned out to be a NO-OP — the real fix changes the push wire
+> format, and it is what truncates his geometry to six decimals.
+>
+> ### Two measurements worth keeping
+>
+> **A collection is about an hour.** Farm: 132 min for 16. Handing every worker ONE
+> pre-measured digest killed the biggest cost; fanning out in waves did not help,
+> because a wave costs whatever its slowest agent costs.
+>
+> **Seven card-id collisions in two days**, every one from parallel agents dealing
+> out of a single `nextId`. The rule that works: the record already on `origin`
+> keeps its id, the newer one moves and says so in its own text.
+
+---
+
 > ## ⚠⚠ DRUMBEAT — WHY LOCAL `main` IS NOT PUSHED, 3 Aug 2026 (small hours)
 >
 > *Written by the drumbeat as it stood down. **Read this before you push anything.**
