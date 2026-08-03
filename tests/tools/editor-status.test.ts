@@ -183,15 +183,37 @@ describe('signed off is one call, and everything else in the game will ask it', 
    */
   const GARDEN = 'garden'
 
-  /** The eleven he signed off, and the three he has not. Together: all of Garden. */
+  /**
+   * The five that ship, and the nine that do not. Together: all of Garden.
+   *
+   * He pushed ELEVEN, and pushing is signing off (his ruling). Six of the eleven
+   * were then found DAMAGED BY THE PUSH TOOL — JT-048, measured: the slow-worm
+   * 1.3312 against `PACK_HEIGHT_MIN` 1.43 and off the ground, the mole 389 verts
+   * against rule 9's floor of 405, the squirrel's tail 0.1375 inside its body,
+   * the dormouse and tortoise tailless, the vole's tail 0.24 off the bank.
+   *
+   * Asked to choose, Joe said: *"ship the clean 5 for now."* So the six are
+   * withheld from sign-off rather than repaired or reverted — sign-off is what
+   * makes an animal dealable, so withholding it is what keeps a broken animal off
+   * his daughter's island, and reverting would mean guessing which of his own
+   * edits were tool damage.
+   *
+   * THE SIX ARE STILL BUILT AND STILL IN THE ALBUM, because the album shows built
+   * animals by his other ruling. Restoring them here is not a matter of adding a
+   * name back: the geometry has to be repaired first, and the JT-048 guard tests
+   * are what say when it has been.
+   */
   const SIGNED = [
-    'animal-badger', 'animal-dormouse', 'animal-hedgehog', 'animal-mole', 'animal-mouse',
-    'animal-salamander', 'animal-slow-worm', 'animal-squirrel', 'animal-toad',
-    'animal-tortoise', 'animal-vole',
+    'animal-badger', 'animal-hedgehog', 'animal-mouse', 'animal-salamander', 'animal-toad',
   ]
-  const NOT_SIGNED = ['animal-frog', 'animal-newt', 'animal-shrew']
+  /** The three never pushed, plus the six withheld under JT-048. */
+  const NOT_SIGNED = [
+    'animal-frog', 'animal-newt', 'animal-shrew',
+    'animal-dormouse', 'animal-mole', 'animal-slow-worm',
+    'animal-squirrel', 'animal-tortoise', 'animal-vole',
+  ]
 
-  it('accounts for every Garden animal — the eleven and the three are the whole collection', () => {
+  it('accounts for every Garden animal — the five and the nine are the whole collection', () => {
     /* The honesty guard, and it is doing real work here: if a name above were
      * misspelled, or if Garden gained a fifteenth member, the set assertions
      * below would be quietly checking something narrower than they claim. */
@@ -201,7 +223,7 @@ describe('signed off is one call, and everything else in the game will ask it', 
     for (const id of [...SIGNED, ...NOT_SIGNED]) expect(groupOf(id), id).toBe(GARDEN)
   })
 
-  it('finds exactly those eleven signed off in joe/names-audit.json, and the frog, the newt and the shrew not', () => {
+  it('finds exactly those five signed off in joe/names-audit.json, and the other nine not', () => {
     expect(auditDoc.names.length).toBeGreaterThan(0)
 
     /* Exactly these, and nothing else in any collection: an equality, not a

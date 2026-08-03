@@ -2,15 +2,9 @@
   "schemaVersion": 1,
   "species": [
     "animal-badger",
-    "animal-dormouse",
     "animal-hedgehog",
-    "animal-mole",
     "animal-mouse",
     "animal-salamander",
-    "animal-slow-worm",
-    "animal-squirrel",
-    "animal-toad",
-    "animal-tortoise",
-    "animal-vole"
+    "animal-toad"
   ]
 }
