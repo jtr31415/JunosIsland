@@ -1,10 +1,160 @@
 # Manager handoff
 
-> ## ⚠ START HERE — state at handover, 3 Aug 2026
+> ## ⚠ START HERE — state at handover, 3 Aug 2026 (merge-fallout run)
 >
-> *Written by the manager that built Farm. **This block is the current one.**
-> Everything below it is history, including the ones that call themselves
-> current — they were, earlier.*
+> *Written by the manager that separated the merge fallout from the real damage.
+> **This block is the current one.** Everything below it is history, including
+> the ones that call themselves current — they were, earlier.*
+>
+> ### The one thing to understand before you touch anything
+>
+> **19 tests are RED ON PURPOSE and they are the only thing standing between a
+> broken animal and a six-year-old.** They are JT-048 — six animals the push tool
+> damaged, which are now *signed off*, and sign-off means dealable. Do not fix
+> them, do not skip them, do not soften an assertion, and above all **do not
+> re-pin their fingerprints**: re-pinning certifies the damage as intended and
+> the guard is gone. JT-048 carries the measured numbers and awaits Joe's ruling.
+>
+> ### Branch and state
+>
+> Branch **`worktree-agent-ae0827dceef35af96`**, branched at `3a27980` (local
+> `main`, the Farm merge). **Nothing is pushed and nothing is merged.** Two
+> commits: `1a2fedd` (the sixteen Farm pins) and `01bd0ac` (counts, album table,
+> stand-ins), plus this handoff.
+>
+> ### The arithmetic, which is the whole report
+>
+> | | before | after |
+> |---|---|---|
+> | failing tests | **29** | **19** |
+> | failing files | 12 | 7 |
+> | passing tests | 4495 | **4521** |
+>
+> +26 passes = 10 repaired + **16 brand-new** per-species pin assertions.
+>
+> **Every one of the 19 remaining reds is JT-048, by name:** `assembly-squirrel`
+> 7, `assembly-dormouse` 4, `assembly-slow-worm` 3, `assembly-vole` 2,
+> `assembly-mole` 1, `assembly-corn-snake` 1, `gallery-source` 1. That is exactly
+> the tally the sign-off manager left. **No Group B test went green.**
+>
+> ### ⚠ TWO CORRECTIONS TO THE SPLIT I WAS HANDED — both established from evidence
+>
+> **1. `tests/tools/gallery-source.test.ts` is NOT merge fallout. It is JT-048.**
+> My brief listed it as Farm fallout, "likely the same cause". It is not, and I
+> did not touch it. The failing quantity is `h * shared > 0.85` at
+> `gallery-source.test.ts:417`. `shared` is **not** derived from the species set
+> — it is `1 / PACK_HEIGHT_MEDIAN`, regex-read out of a hardcoded `1.611185` in
+> `tools/workbench/public/viewer.ts:301`, untouched since 30 July. So the failing
+> number is one species' height times a constant:
+> `1.3311521428883073 × 0.620661190366097 = 0.8261944735634377` — **the damaged
+> slow-worm**. Measured four ways: all 60 species `0.8261944735634377` (FAIL);
+> **excluding Farm's 16, bit-identical `0.8261944735634377` (FAIL)**; excluding
+> the slow-worm alone `0.8883030117690841` (PASS). Farm changes it by *nothing*.
+> Farm's tallest (donkey, mule at 2.009953) merely tie the pre-existing fennec-fox
+> maximum, so they do not widen the band either. **This test was already red
+> before Farm merged.**
+>
+> **2. `assembly-corn-snake` is JT-048 collateral, not a damaged animal.** The
+> corn snake was never pushed and never touched: `git log --follow` on
+> `animal-corn-snake.ts` shows **one commit ever**, `b687fc9`, predating the
+> sign-off merge; it appears in no diff of `6413d21`. **19 of its 20 assertions
+> pass** — its own height 1.5504, feet on y=0, 502 verts. The single red,
+> `assembly-corn-snake.test.ts:136`, is a *cross-species agreement* test whose
+> EXPECTED side is read live out of the slow worm's module. The corn snake is the
+> surviving correct copy of that coil; the oracle moved, not the animal. The diff
+> is a readout of the damage: `stretch` z `1 -> 1.1`, x/y truncated
+> `0.7490636704119851 -> 0.749064`, and the 90° spin **duplicated** to 180°.
+>
+> **Both of these go green the moment the slow-worm's coil is repaired, and that
+> is exactly why neither may be touched now.** They are two independent witnesses
+> to one fault. Repair the slow worm when Joe rules, and they clear themselves.
+>
+> ### What I actually changed — five test files, no source file
+>
+> **The sixteen Farm pins** (`assembly-fingerprint.test.ts`). The Farm manager
+> was forbidden from touching this file and left the pins in its handoff block.
+> **I did not paste them on trust.** Each was re-read off `npm run pets:creature`
+> on the merged tree and compared *programmatically*, not by eye — 16/16 agreed,
+> 60 species parsed. Then the file's own generated per-species assertions
+> (`expect(creatureFingerprint(id)).toBe(want)`) verified them a second time and
+> independently by building each creature in-process. A mistyped pin would have
+> gone red by name. 63 passing where there were 60.
+>
+> **The counts** (`species-built.test.ts`): farm 0 -> 16, total 68 -> 84 of an
+> unchanged roster of 320, five collections with frames -> six.
+>
+> **The album** (`album-built.test.ts`): six pages, `[24, 14, 16, 1, 13, 16]` =
+> 84. Note this table test was **passing while its premise was false**, because
+> it hard-codes its openable list — which is why it is updated here rather than
+> left alone.
+>
+> **The stand-ins, and this is the part worth reading.** Five tests used `farm`
+> as their example of *a collection with nothing built* — it was the case they
+> were written against before Farm existed. `woodland` takes the role: sixteen
+> rostered, none built, not on `HELD_BACK_BY_JOE`. The `animal-sheep` pet fixture
+> became `animal-bear` for the same reason — a sheep has a frame now and can no
+> longer stand for a species the album refuses to draw.
+>
+> ### What I learned that is not in the code
+>
+> **A test can pin the wrong world and still be green.** Three of the tests I
+> touched were passing on stale premises: the album table (hard-coded openable
+> list), and two `farm`-as-empty tests whose assertions happened to survive. Only
+> the ones that read live counts went red. **When a collection lands, grep the
+> tests for its id — the red ones are not the whole of it.**
+>
+> **`species-unlock.test.ts` predicted this exact day and got the shape wrong**,
+> so I recorded the correction in the file rather than overwriting it quietly. It
+> expected sixteen records then zero models, which would have reddened its FIRST
+> assertion. Records and models landed together, so `shippedIn` and `builtIn`
+> still agree and the THIRD assertion went red instead. It was right about what
+> mattered: the hold is arithmetic over live built counts, so sixteen new species
+> released Farm on their own and `unlock.ts` was never edited.
+>
+> **PB-082 (`editor-round-trip.test.ts`) did not flake this run**, nor did
+> `coast`, `sealing`, `facedecals`. It is a timeout under CPU load whose cost
+> scales with species count and is now at 60 species. Do not widen its budget; if
+> it goes red, re-run it alone.
+>
+> ### Gate results — all six green, on the final tree
+>
+> ```
+> npm test    Test Files  7 failed | 184 passed (191)
+>             Tests      19 failed | 4521 passed | 1 skipped (4541)
+>             (the 19 are JT-048, named above, and are red on purpose)
+> tsc         TSC_EXIT=0
+> build       BUILD_EXIT=0   PWA precache 50 entries (1924.99 KiB)
+> smoke       all boot checks passed
+> parity      every step renders identically
+> channel     channel check passed — workbench absent from production
+> ```
+>
+> ### Where the next manager starts
+>
+> **JT-048 is the blocker and it is Joe's, not ours.** Six signed-off animals are
+> damaged and sign-off means dealable, so until he rules, that red suite is the
+> guard. The single highest-value repair is **the slow worm's coil** in
+> `src/island/species/parts/assembled/animal-slow-worm.ts:171-174`: restoring
+> `stretch: [COIL_STRETCH, COIL_STRETCH, 1]`, one 90° spin, and
+> `at: [0, HULL_BOTTOM_Y, 0]` would clear **5 of the 19** at once — its own 3,
+> plus corn-snake and gallery-source — and restore its 1.43 height and put it
+> back on the ground. **Do not do it on a guess.** Telling a tool artefact from
+> Joe's own deliberate edit is precisely the call that destroys his work; he
+> removed a bespoke nose on purpose last night and it looked identical to a
+> regression from inside the code.
+>
+> ### Decisions
+>
+> Raised this run: **none.** Picked up: **none.** `joe/tasks.json` was not
+> written, and `joe/species-edits.json` was not touched.
+>
+> ---
+>
+> ## Previous block — Farm (PB-074), superseded by the run above
+>
+> *Written by the manager that built Farm. Its one outstanding item — "paste
+> sixteen fingerprint pins" — **is now done**, verified rather than pasted; see
+> `1a2fedd`. The rest stands as history.*
 >
 > ### What this run did
 >
