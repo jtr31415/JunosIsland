@@ -1,5 +1,83 @@
 # Manager handoff
 
+> ## ⚠⚠ DRUMBEAT — WHY LOCAL `main` IS NOT PUSHED, 3 Aug 2026 (small hours)
+>
+> *Written by the drumbeat as it stood down. **Read this before you push anything.**
+> Everything below is the managers' own blocks and remains true.*
+>
+> ### The state
+>
+> Local `main` is **`ea9d733`**, and `origin/main` is **`c6cb2e3`** — a long way
+> behind. Six merges are local-only. `tsc` **0**; build, smoke, parity and channel
+> green; **4521 passing and 19 failing.**
+>
+> ### THE 19 RED TESTS ARE A GUARD. DO NOT MAKE THEM GREEN.
+>
+> `assembly-squirrel` 7 · `assembly-dormouse` 4 · `assembly-slow-worm` 3 ·
+> `assembly-vole` 2 · `assembly-mole` 1 · `assembly-corn-snake` 1 ·
+> `gallery-source` 1.
+>
+> Joe pushed eleven Garden animals from the editor and **the push tool damaged
+> six of them.** Measured: the slow-worm is 1.3312 against `PACK_HEIGHT_MIN` 1.43
+> **and off the ground**; the mole is 389 verts against rule 9's floor of 405; the
+> squirrel's tail joined **0.1375 inside its body**; the dormouse and tortoise lost
+> their tails; the vole's tail sits 0.24 off the bank.
+>
+> **Sign-off now means dealable** (his ruling: pressing "push to game" IS signing
+> off), and all eleven are signed off. So these 19 tests are the only thing between
+> a broken animal and his six-year-old daughter. **A green suite here would mean
+> the guard was removed, not that the animals were fixed.**
+>
+> Nothing was reverted, deliberately: telling a tool artefact from Joe's own edit
+> is the guess that destroys his work — he removed a bespoke nose on purpose the
+> same night and it was indistinguishable from a regression in the code. The
+> measured numbers and one-line fixes are in **JT-048**.
+>
+> ### The decision the next session is waiting on — Joe's, not yours
+>
+> Put to him and unanswered when the session ended:
+>
+> 1. **Fix the six**, then push all eleven. Highest-value single repair is the slow
+>    worm's coil (`animal-slow-worm.ts:171-174`) — it clears **5 of the 19** at once,
+>    and `assembly-corn-snake` and `gallery-source` clear with it, because both read
+>    the slow worm's module as their oracle rather than being damaged themselves.
+> 2. **Ship the clean five** — hedgehog, badger, mouse, salamander, toad — and
+>    withhold the six until fixed.
+> 3. **Hold everything** until he has looked at them.
+>
+> ### What is waiting to go live the moment that clears
+>
+> Home Pets 16/16 and **Farm 16/16** (both unsigned, so neither reaches a child);
+> the album showing only built animals; the unlocker counting built rather than
+> rostered, with unlocks ratcheted so a content push can never take back an album;
+> push writing sign-off; and the obscenity fix — **already pushed**, that one.
+>
+> ### Also open for him
+>
+> **JT-045** rename Juno's `Defuck` pet, or leave it · **JT-047** ruled, note still
+> empty · **JT-049** water buffalo vs Africa's Cape buffalo · **JT-050** eyes on a
+> long neck · **PB-079** the see-through hole in the shrew and newt · the budgie's
+> blue-or-green contradiction · **PB-082** the round-trip guard's budget, now at 60
+> species · **PB-077**, whose named fix was a NO-OP: `defineCreature` has registered
+> every def since `2b320ab`, and registration cannot help because it receives an
+> already-evaluated object. The real fix changes the push wire format.
+>
+> ### Operational, learned the hard way
+>
+> **Seven card-id collisions in two days.** Every parallel manager deals itself an
+> id from one `nextId` and they collide every time. The rule that works: the record
+> already on `origin` keeps its id, the newer one moves and says so in its own text.
+> **Isolated worktrees fixed the shared-tree contention** and should stay.
+>
+> **A collection takes about an hour, not two, and here is the measurement.** Farm:
+> 132 min for 16 — orientation 7.5, wave 1 45, wave 2 46, integration 6, fixes 13,
+> gates 8. Handing ONE pre-measured digest to every worker killed the biggest cost.
+> **Fanning out in waves did not help**: a wave costs whatever its slowest agent
+> costs, and builds ran 10–46 min regardless of how many ran beside them. Next
+> collection: one digest, ONE wave of sixteen.
+
+---
+
 > ## ⚠ START HERE — state at handover, 3 Aug 2026 (merge-fallout run)
 >
 > *Written by the manager that separated the merge fallout from the real damage.
