@@ -1,5 +1,79 @@
 # Manager handoff
 
+> ## ⚠⚠ NEXT SESSION'S JOB — OPTIMISE THE BUILD. Build no animals. 3 Aug 2026
+>
+> *Joe's instruction: the next session **focuses on optimising our build, not
+> building anything specifically.** Do not start a collection. Do not push
+> animals. The work below IS the work.*
+>
+> ### Why, in his words
+>
+> *"yesterday i blew 40% of a max 20 subscription and all i really have to show
+> for it is 5, maybe 11 new animals on the game. it also took like 12 hours...
+> fundamentally, we need to look at the project settings to make this more
+> efficient, **im building a kids game, not a banking OS**."*
+>
+> He is right and the numbers agree with him. Measured from the agents' own
+> reports: **~2.25M output tokens over 14 agent runs**, and only **~535k of it
+> built animals** (30 of them). ~1.2M went on discovering the pipeline was broken
+> in five separate SILENT ways — invisible mouth, pet that 404s and is dropped
+> without a word, push that writes nothing and reports success, an obscenity
+> generator, an unlocker that would never open the next collection. ~500k went on
+> merge reconciliation and test surgery.
+>
+> **That pipeline work was real and it is now DONE.** Steady-state an animal is
+> ~18k tokens, not 75k. The rest is the five changes below.
+>
+> ### The five changes. He reviewed them and said "that is all good and correct."
+>
+> **1. Worker agents run on a cheaper model.** Top model for design and diagnosis
+> only. Building an animal from a pre-measured digest, updating a stale test,
+> writing a collection record — none of it needs Opus. **Single biggest lever.**
+>
+> **2. Stop fingerprint-pinning individual animals.** `assembly-fingerprint.test.ts`
+> and the per-species world-space pins. Test the ENGINE instead — feet on the
+> ground, one hull, triangle budget, every mesh traces to the bank. He is the
+> reviewer and the editor shows him the animal. Per-animal pins tax every edit he
+> makes and are exactly what reported six of his own deliberate changes as damage.
+>
+> **3. Pack norms become warnings, never failures.** `PACK_HEIGHT_MIN`, rule 9's
+> 405-vertex floor, the leg-sink range — all measurements of Kenney's twenty-four,
+> written when the job was MATCHING that pack. He is designing now.
+> `AssemblyClaims.outsideHeightBand` and `legRowMoved` are the started version;
+> finish the job so a norm reports rather than fails.
+>
+> **4. Species prose drops to a short rationale**, ~15 lines rather than ~220. The
+> essays existed because context died between sessions under the manager
+> arrangement, which is now stood down. Keep the reasoning for a genuinely
+> surprising choice; drop the per-number justification.
+>
+> **5. One agent per collection, ONE wave, with a pre-measured digest.** Measured
+> on Farm: a wave costs whatever its slowest agent costs, so sixteen animals in one
+> wave is ~45 min regardless of how many run beside each other. Handing every
+> worker one digest instead of letting each re-read the specs killed the largest
+> single cost of the Home Pets run.
+>
+> ### What NOT to cut
+>
+> **The gates.** Full suite, `tsc`, build, smoke, parity, channel. They are cheap
+> in TOKENS — they cost CPU, not context — and they stopped a broken build reaching
+> Juno more than once. Cutting them would be optimising the wrong axis.
+>
+> ### The target
+>
+> A 16-animal collection for roughly **a fifth** of what Farm cost. Farm was 132
+> minutes and ~195k tokens for sixteen.
+>
+> ### Where to start
+>
+> The 8 remaining red tests are the perfect first case, because they are the tax
+> this whole plan is about: dormouse 4, vole 2, mole 1, squirrel 1, all of them
+> pack norms or world-space pins failing on Joe's deliberate edits. Fixing them by
+> DELETING the per-animal pins rather than re-pinning them is change 2 and change 3
+> done on a live example.
+
+---
+
 > ## ⚠⚠ START HERE — 3 Aug 2026, morning. THE MANAGER ARRANGEMENT IS OVER.
 >
 > *Joe: **"stop the manager rule, you can resume your usual job of running
