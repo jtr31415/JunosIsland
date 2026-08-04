@@ -66,7 +66,11 @@ a feature is a spec decision, not an implementation detail.**
 ### Pacing knobs that already exist in `balance.json`
 
 - `pages.mix: ["find","build","build","build"]` — the 3:1 you asked for
-- `pages.wordsPerFindPage: 3`
+- `pages.wordsPerFindPage: 3` — **DEAD CONFIG, measured 4 August 2026.** It is
+  declared here and typed in `balance/index.ts:35` and **nothing reads it.** A
+  find page's length is `generateRead`'s own `n = min(12, 3 + history.length)`,
+  so it GROWS from three words to twelve within a sitting and this number has
+  never had any effect on anything.
 - `tile` / `egg` cost curves
 - `governor.tilesPerPet: 1.5`
 
@@ -100,14 +104,20 @@ frozen against ids 1 and 2 and renumbering would change what a rung generates.
 | 1 | 4 | within five | `3 + 2` |
 | 2 | 1 | to ten | `6 + 3` |
 | 3 | 3 | teens plus units, no regrouping | `14 + 3` |
-| 4 | 2 | bridging ten | `8 + 7` |
-| 5 | 5 | whole tens to a hundred | `20 + 30` |
+| 4 | 5 | whole tens to a hundred | `20 + 30` |
+| 5 | 2 | bridging ten | `8 + 7` |
 | 6 | 6 | two-digit plus units, no regrouping | `34 + 5` |
 | 7 | 7 | two-digit plus units, bridging | `37 + 5` |
 
 Read down it and the shape is: count within a hand, then within two; meet a ten
-that sits still; break a ten open; discover that tens count like units; then do
-rungs 3 and 4 again at a size too big for fingers.
+that sits still; discover that tens count like units; break a ten open; then do
+the last two ideas again at a size too big for fingers.
+
+**Rungs 4 and 5 were swapped** hours after they landed, on Joe's word: whole tens
+now comes BEFORE bridging. `20 + 30` is `2 + 3` with a new name and needs no
+regrouping at all, so it belongs on the near side of the first rung that does. A
+child who had already earned bridging skips it — `nextStage` only ever climbs,
+and she has the harder skill already.
 
 - **Rung 1 sits BELOW where anyone starts.** `STARTS_TICKED` ticks sums 1, so the
   cadence never walks down to it and no child is moved onto it. It is there for a

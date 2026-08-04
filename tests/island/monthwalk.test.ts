@@ -722,8 +722,14 @@ describe('the improver — settled rungs whisper, and wake without falling', () 
      * off the ladder in its own order.
      */
     const climbed = w.h.levelFor('sums')
-    expect(climbed.slice(0, 3)).toEqual([1, 3, 2])
-    expect(climbed).toEqual(STAGES.sums.filter(s => climbed.includes(s)))
+    /* A CONTIGUOUS RUN UP THE LADDER FROM WHERE THEY STARTED. Written against
+     * the ladder rather than as a literal so it survives Joe reordering the
+     * rungs, which he did hours after adding them ("switch rung 4 and 5").
+     * They begin ticked on sums 1 and climb; nothing may be skipped and nothing
+     * may arrive out of order. */
+    const from = STAGES.sums.indexOf(1)
+    expect(climbed.length, 'a good month climbed nothing').toBeGreaterThanOrEqual(3)
+    expect(climbed).toEqual(STAGES.sums.slice(from, from + climbed.length))
     expect(w.h.levelFor('takingAway')).toContain(1)
     expect(whispers, 'a retired rung was never visited again').toBeGreaterThan(0)
 

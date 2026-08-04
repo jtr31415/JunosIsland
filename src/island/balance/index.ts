@@ -32,7 +32,7 @@ export interface Balance {
    * a replacement — see `honeymoonPay`.
    */
   pay: { item: number; honeymoon: number }
-  pages: { wordsPerFindPage: number; mix: PageKind[] }
+  pages: { maxFindWords: number; mix: PageKind[] }
   governor: {
     /**
      * How long the island stays a sandbox — the opening stretch in which no wall
@@ -566,6 +566,39 @@ export function pageKind(pageIndex: number): PageKind {
   const mix = balance.pages.mix
   return mix[pageIndex % mix.length] as PageKind
 }
+
+/**
+ * The most words a FIND page may ask a child to find.
+ *
+ * Joe, 4 August 2026: *"on the reading side make the word finding 25% more
+ * rewarding. it drags on for too long."*
+ *
+ * THE DRAG, measured. `generateRead` grows a page with
+ * `n = min(MAX, MIN + history.length)` — three words on the first page of a
+ * sitting, twelve by the tenth — while EVERY reading page pays the same one item
+ * toward the egg (`flow.ts`, `challengePassed`). A build page is one word for
+ * that item; a late find page was twelve. The reward per word had quietly fallen
+ * to a twelfth of a build page's.
+ *
+ * Nine rather than twelve is the 25%: same pay, a quarter less to do. Pages
+ * shorter than the cap are untouched, so the ramp a child climbs at the start of
+ * a sitting still ramps — this only takes the top off.
+ *
+ * WHY A CAP HERE AND NOT A SMALLER `MAX` IN THE GENERATOR. `tools/golden/
+ * golden.json` pins `generateRead`'s output, and `n` decides how many draws the
+ * generator spends — so lowering `MAX` would move every number in that stream
+ * and redden an anchor that may never be re-blessed to make a test pass. The cap
+ * is applied to the page AFTER it is generated (`deal.ts`), so the generator is
+ * untouched and the golden still holds.
+ *
+ * IT REPLACES `wordsPerFindPage`, which was declared here, typed, and read by
+ * NOTHING — dead since it was written. A find page's length has always come from
+ * the generator, so that number never had any effect on anything.
+ *
+ * Read through a function for the reason `itemPay` is: the dev overlay may
+ * replace `balance.pages` wholesale after import (`applyDevBalance`).
+ */
+export const maxFindWords = (): number => Math.max(1, balance.pages.maxFindWords)
 
 /**
  * The A6 report's thresholds, read through a function for the same reason

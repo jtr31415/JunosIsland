@@ -2,7 +2,7 @@
   "tile":     { "base": 2, "cap": 32, "tau": 6 },
   "egg":      { "base": 2, "cap": 28, "tau": 5 },
   "pay":      { "item": 2, "honeymoon": 3 },
-  "pages":    { "wordsPerFindPage": 3,
+  "pages":    { "maxFindWords": 9,
                 "mix": ["find", "build", "build", "build"] },
   "governor": { "grace":      { "pets": 5, "tiles": 10 },
                 "corridor":   { "crowded": 1.5, "empty": 3.0 },

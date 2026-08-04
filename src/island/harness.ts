@@ -71,10 +71,22 @@ export const STAGES: Record<Path, readonly number[]> = {
    *   1. within five            (4)  NEW, 4 Aug. Below where anyone starts.
    *   2. to ten                 (1)  where every island begins
    *   3. teens plus units       (3)  no regrouping
-   *   4. bridging ten           (2)  the ten has to be broken open
-   *   5. whole tens to a hundred(5)  NEW. 20 + 30 — place value, no new sum
+   *   4. whole tens to a hundred(5)  NEW. 20 + 30 — place value, no new sum
+   *   5. bridging ten           (2)  the ten has to be broken open
    *   6. two-digit plus units   (6)  NEW. 34 + 5 — rung 3, past twenty
-   *   7. two-digit, bridging    (7)  NEW. 37 + 5 — rung 4, past twenty
+   *   7. two-digit, bridging    (7)  NEW. 37 + 5 — rung 5, past twenty
+   *
+   * >>> RUNGS 4 AND 5 WERE SWAPPED on Joe's word, hours after they landed:
+   * >>> *"switch rung 4 and 5 please."* Whole tens now comes BEFORE bridging.
+   * >>> It reads better as a ladder — `20 + 30` is `2 + 3` with a new name and
+   * >>> needs no regrouping at all, so it belongs on the near side of the first
+   * >>> rung that does. Bridging is then the last idea before the same two
+   * >>> skills are repeated past twenty at rungs 6 and 7.
+   * >>>
+   * >>> A child who has ALREADY earned bridging skips whole tens: `nextStage`
+   * >>> only ever climbs, so she goes straight from bridging to rung 6. That is
+   * >>> the right way round — she has the harder skill already — and it is the
+   * >>> reason the swap costs nobody anything.
    *
    * Joe, 4 August 2026: *"add some more summation levels."* Three became seven.
    * The four that were there are UNTOUCHED — same ids, same generators, same
@@ -89,7 +101,7 @@ export const STAGES: Record<Path, readonly number[]> = {
    * Everything that walks the ladder — `tickedStages`, `topTicked`,
    * `nextStage`, `settledOn` — walks THIS ORDER and never the numeric one.
    */
-  sums: [4, 1, 3, 2, 5, 6, 7],
+  sums: [4, 1, 3, 5, 2, 6, 7],
   takingAway: [1, 2, 3],
   reading: [1],
   building: [1],

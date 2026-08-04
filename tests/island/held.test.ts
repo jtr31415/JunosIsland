@@ -460,3 +460,74 @@ describe('what a paused page pays — JT-009', () => {
     expect(Number.isInteger(f.readProgress)).toBe(true)
   })
 })
+
+/*
+ * ------------------------------------------------------------------------
+ * THE FIND PAGE IS CAPPED — Joe, 4 August 2026: *"on the reading side make the
+ * word finding 25% more rewarding. it drags on for too long."*
+ *
+ * A find page grows with the sitting (`generateRead`, `n = min(12, 3 + history
+ * .length)`) while every reading page pays the same one item toward the egg. A
+ * build page was one word for that item and a late find page was twelve, so the
+ * reward per word had fallen to a twelfth of a build page's. `maxFindWords` cuts
+ * the top off: same pay, a quarter less to do.
+ *
+ * The cap is applied to the DEALT page and never to the generator, because
+ * `golden.json` pins `generateRead`'s stream. These tests are the proof of that
+ * separation as much as of the cap.
+ */
+describe('the find page is capped, and the generator is not', () => {
+  it('never deals more words than the cap, however long the sitting', () => {
+    const { stores, deps } = reading(21)
+    let longest = 0
+    for (let page = 0; page < 40; page++) {
+      const card = dealReading(stores, deps, 'find', false)
+      if (card.kind !== 'find') throw new Error('asked for a find page')
+      expect(card.picks.length).toBeLessThanOrEqual(balance.pages.maxFindWords)
+      longest = Math.max(longest, card.picks.length)
+    }
+    // And it really does reach the cap, or the assertion above proves nothing.
+    expect(longest).toBe(balance.pages.maxFindWords)
+  })
+
+  it('leaves the generator ramping to its own full length underneath', () => {
+    /*
+     * THE SEPARATION, stated. The stored page keeps every word the generator
+     * drew — that history is what `MIN + history.length` ramps off and what the
+     * golden pins — and only the copy handed to the child is cut. Shortening
+     * the stored page would flatten the ramp: the next page would be as long as
+     * this one instead of one longer.
+     */
+    const { stores, deps } = reading(22)
+    for (let page = 0; page < 40; page++) dealReading(stores, deps, 'find', false)
+
+    const stored = stores.read.history.map(p => p.length)
+    expect(Math.max(...stored), 'the generator was capped, not the page')
+      .toBeGreaterThan(balance.pages.maxFindWords)
+    // The ramp is intact: it climbs one word a page until the generator's own
+    // ceiling, exactly as it did before the cap existed.
+    expect(stored.slice(0, 5)).toEqual([3, 4, 5, 6, 7])
+  })
+
+  it('gives the child a shorter page than the one that was generated', () => {
+    const { stores, deps } = reading(23)
+    for (let page = 0; page < 20; page++) dealReading(stores, deps, 'find', false)
+    const card = dealReading(stores, deps, 'find', false)
+    if (card.kind !== 'find') throw new Error('asked for a find page')
+    const generated = stores.read.history[stores.read.idx]!
+    expect(generated.length).toBeGreaterThan(card.picks.length)
+    // A prefix, not a re-draw: the words she is asked for are the words the
+    // generator chose, in the order it chose them.
+    expect(card.picks).toEqual(generated.slice(0, card.picks.length))
+  })
+
+  it('hands back the same capped page when she walks away and returns', () => {
+    // The held card must survive the cap, or leaving a page would re-roll it —
+    // which is the whole thing this file exists to prevent.
+    const { stores, deps } = reading(24)
+    for (let page = 0; page < 15; page++) dealReading(stores, deps, 'find', false)
+    const first = dealReading(stores, deps, 'find', false)
+    const again = dealReading(stores, deps, 'find', true)
+    expect(asText(again)).toBe(asText(first))
+  })
+})

@@ -43,7 +43,7 @@ describe('the stages that exist', () => {
      * The original four are untouched and in the same relative order; ids 4, 5,
      * 6 and 7 are new. See STAGES in harness.ts for the ladder and why the ids
      * are not in numeric order. */
-    expect(STAGES.sums).toEqual([4, 1, 3, 2, 5, 6, 7])
+    expect(STAGES.sums).toEqual([4, 1, 3, 5, 2, 6, 7])
     expect(STAGES.takingAway).toEqual([1, 2, 3])
     expect(STAGES.reading).toEqual([1])
     expect(STAGES.building).toEqual([1])
@@ -1887,14 +1887,20 @@ describe('the sums ladder is array order, not numeric order', () => {
     expect(rungAbove(ladder([1]))).toBe(3)
   })
 
-  it('offers 2 above rung three, which is the top of the ladder', () => {
-    expect(rungAbove(ladder([1, 3]))).toBe(2)
+  it('offers whole tens above teens-plus-units, since the 4/5 swap', () => {
+    /* Rungs 4 and 5 were swapped on 4 August (Joe: "switch rung 4 and 5"), so
+     * the rung above teens-plus-units is now whole tens rather than bridging. */
+    expect(rungAbove(ladder([1, 3]))).toBe(5)
   })
 
-  it('offers 5 above bridging, which is no longer the top of the ladder', () => {
-    /* Bridging WAS the last position; on 4 August three rungs were added above
-     * it, so a child who has earned it now has somewhere to go. */
-    expect(rungAbove(ladder([1, 3, 2]))).toBe(5)
+  it('offers two-digit work above bridging, which is no longer the top', () => {
+    /* Bridging WAS the last position; rungs were added above it on 4 August, so
+     * a child who has earned it has somewhere to go. After the 4/5 swap the rung
+     * above bridging is 6 — two-digit plus units — and whole tens sits below it.
+     *
+     * A child who earned bridging under the OLD order therefore skips whole
+     * tens, which is the right way round: she already has the harder skill. */
+    expect(rungAbove(ladder([1, 3, 2]))).toBe(6)
   })
 
   it('offers nothing above the last rung in the array', () => {

@@ -20,6 +20,7 @@
  * `SumItem` — `flow.ts` imports nothing from `core/` and this keeps it that
  * way. The flow carries one bit; the card stays where it already was.
  */
+import { maxFindWords } from './balance'
 import { generateRead } from '../core/generators/read'
 import type { ReadDeps, ReadPick, ReadState } from '../core/generators/read'
 import { generateBuild } from '../core/generators/build'
@@ -74,7 +75,21 @@ export function dealReading(
       () => generateBuild(s.build, { rng: d.rng, drawGreen: d.drawGreen, level: d.level }))
     return { kind: 'build', item }
   }
-  return { kind: 'find', picks: deal(s.read, held, () => generateRead(s.read, d)) }
+  /*
+   * CAPPED AFTER GENERATION, and the order of those two words is the whole
+   * point — see `maxFindWords` for why the generator itself may not be changed.
+   *
+   * `generateRead` runs in full and its page goes into `s.read.history` in full,
+   * so the rng stream, the anti-repeat guard and the `MIN + history.length` ramp
+   * all behave exactly as they did and `golden.json` still anchors. What the
+   * child is handed is a COPY, cut to the cap.
+   *
+   * `slice` rather than a mutation for the same reason: shortening the stored
+   * page would shrink the history the ramp is measured from, and the next page
+   * would be as long as this one instead of one longer.
+   */
+  const page = deal(s.read, held, () => generateRead(s.read, d))
+  return { kind: 'find', picks: page.slice(0, maxFindWords()) }
 }
 
 /**
