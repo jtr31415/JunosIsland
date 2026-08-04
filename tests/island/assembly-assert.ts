@@ -77,7 +77,7 @@ import {
   EYE_CARD_Z, LEG_ROW, PACK_HEIGHT_MIN, PACK_HEIGHT_MAX,
   BODY_VERTS_MIN, BODY_VERTS_MAX, MODEL_VERTS_MIN, MODEL_VERTS_MAX,
   MODEL_TRIS_MIN, MODEL_TRIS_MAX,
-  type AssemblyBuild, type Spin,
+  type Spin,
 } from '../../src/island/species/parts'
 import { PARTS_BANK, partById, type BakedPart }
   from '../../src/island/species/parts/bank.generated'
@@ -355,22 +355,31 @@ function counts(g: THREE.Group): { verts: number; tris: number; body: number } {
  * Check one budget. Inside the band, or declared over it with a `flag` that says
  * so — never quietly over, and never relaxed to make a species fit.
  */
+/**
+ * A PACK NORM — reported, never failed. Joe's ruling of 3 August.
+ *
+ * `MODEL_VERTS_MIN/MAX` and their siblings are MEASUREMENTS OF KENNEY'S TWENTY-
+ * FOUR, taken while the job was making new animals sit convincingly beside that
+ * pack. They are not a law anybody agreed to, and they stopped describing the
+ * work the moment Joe started DESIGNING rather than matching: his own deliberate
+ * edits arrive here looking like regressions with an authoritative number
+ * attached. Six of his animals were reported to him as damaged on that basis on
+ * 3 August and every single one was his own choice.
+ *
+ * So this prints and moves on. The number still reaches him — a creature that
+ * has quietly tripled its triangle count is worth knowing about — but it is
+ * information, not a gate. What actually protects the child is the sign-off in
+ * `signed-off.json`, which is his own eyes on the animal.
+ */
 function budget(
   what: 'bodyVerts' | 'verts' | 'tris',
-  got: number, lo: number, hi: number,
-  spec: AssemblyBuild, over: AssemblyClaims['overBudget'],
+  got: number, lo: number, hi: number, id: string,
 ): void {
-  expect(got, `${what} is below the pack's own floor of ${lo}`).toBeGreaterThanOrEqual(lo)
-  const said = over?.[what]
-  if (got <= hi) {
-    expect(said, `${what} is ${got}, inside ${lo}-${hi} — it does not need declaring`)
-      .toBeUndefined()
-    return
+  if (got < lo) {
+    console.warn(`[pack norm] ${id}: ${what} is ${got}, under the pack's ${lo}`)
+  } else if (got > hi) {
+    console.warn(`[pack norm] ${id}: ${what} is ${got}, over the pack's ${hi}`)
   }
-  expect(said, `${what} is ${got}, over the pack's ${hi}, and nothing declares it`)
-    .toBeDefined()
-  expect(spec.flag, `${what} is over budget and the flag does not say so`)
-    .toMatch(said!)
 }
 
 /* ---------------------------------------------------------------- the harness --- */
@@ -407,30 +416,26 @@ export function assertAssembly(claims: AssemblyClaims): void {
 
     /* --------------------------------------------- 0. height, checked FIRST --- */
 
-    it('stands inside the pack\'s measured height band, feet on y = 0', () => {
+    it('stands with its feet on y = 0, and its height is reported against the pack', () => {
       const b = worldBox(build())
+
+      /* THE GENUINE INVARIANT, and it is not waived by anything. `buildAssembly`
+       * grounds every species by translating its lowest point to the floor, so an
+       * animal off the ground means the BUILDER is wrong — never that Joe chose
+       * something. Measured across all sixty species this holds exactly. */
       expect(b.min.y, 'feet are not on the ground').toBeCloseTo(0, 3)
+
+      /* The band itself is a pack norm and now REPORTS. See `budget` above for
+       * the whole reasoning: it is a measurement of Kenney's twenty-four, Joe is
+       * designing rather than matching, and a deliberate silhouette must not
+       * arrive as a failure with an authoritative number attached. */
       const h = b.max.y - b.min.y
-      // 1.43 is a FLOOR and not a range: a bare 1.250 cube on standard legs is
-      // already 1.43125, so there is no headroom underneath at all and a species
-      // designed low fails here before anything is added to it. `HEIGHT_FLOOR`
-      // in parts/hulls.ts carries the whole derivation.
-      if (claims.outsideHeightBand !== undefined) {
-        /* Declared out of band, with a reason. Checked BOTH ways so the opt-out
-         * cannot rot into a lie: if the animal is brought back inside the band,
-         * this fails and the claim has to go. */
-        expect(claims.outsideHeightBand.length, 'an opt-out needs a reason').toBeGreaterThan(0)
-        expect(
-          h < PACK_HEIGHT_MIN || h > PACK_HEIGHT_MAX,
-          `${id} claims to sit outside the pack band and ${h.toFixed(4)} is inside it — drop the claim`,
-        ).toBe(true)
-      } else {
-        expect(h, `${h.toFixed(4)} is shorter than anything in the pack`)
-          .toBeGreaterThan(PACK_HEIGHT_MIN)
-        expect(h, `${h.toFixed(4)} is taller than anything in the pack`)
-          .toBeLessThan(PACK_HEIGHT_MAX)
+      if (h < PACK_HEIGHT_MIN || h > PACK_HEIGHT_MAX) {
+        console.warn(
+          `[pack norm] ${id}: height ${h.toFixed(4)} is outside the pack's `
+          + `${PACK_HEIGHT_MIN}-${PACK_HEIGHT_MAX}`,
+        )
       }
-      if (claims.height !== undefined) expect(h).toBeCloseTo(claims.height, 3)
     })
 
     /* -------------------------------------------------------- 1. ONE mass --- */
@@ -459,8 +464,13 @@ export function assertAssembly(claims: AssemblyClaims): void {
       const vols = all.map(m => ({ name: m.name, vol: volumeOf(m) }))
         .sort((a, b) => b.vol - a.vol)
       expect(vols[0]!.name, 'something is bigger than the hull').toBe('hull')
+      /* ONE engine-wide margin, not a per-animal pin. Species used to raise this
+       * to whatever their own ratio happened to measure — 20 on the hamster, 16
+       * on the gerbil — which turned "the hull is clearly the biggest mass" into
+       * a pin that went red whenever Joe made a feature larger. The invariant is
+       * the margin; the exact ratio never was one. */
       expect(vols[0]!.vol / vols[1]!.vol, `${vols[1]!.name} is close to hull-sized`)
-        .toBeGreaterThan(claims.massRatio ?? 3)
+        .toBeGreaterThan(3)
     })
 
     /* --------------------------------- 1b. the hull is the STANDARD SIZE --- */
@@ -553,7 +563,12 @@ export function assertAssembly(claims: AssemblyClaims): void {
         bank.add(claimed)
       }
 
-      if (claims.parts !== undefined) expect([...bank].sort()).toEqual([...claims.parts].sort())
+      /* The exact `parts` list is GONE with the rest of the per-animal pins
+       * (3 Aug). Every mesh still has to TRACE to the bank and still has to be a
+       * rigid copy of the shape it claims — those are properties of the builder
+       * and no edit of Joe's can falsify them. "This animal wears exactly these
+       * eight shapes" is a description of one draft, and it went red every time
+       * he added a part on purpose. */
       expect([...bespoke].sort()).toEqual([...(claims.authored ?? [])].sort())
       // Rule 1 is adapt-before-author. Authoring is Joe's call, taken once, and
       // the species that wears one says so where he reads it (§2's escape clause).
@@ -654,12 +669,12 @@ export function assertAssembly(claims: AssemblyClaims): void {
     it('stays inside rule 9\'s budgets, or declares exactly where it does not', () => {
       const g = build()
       const { verts, tris, body } = counts(g)
-      budget('bodyVerts', body, BODY_VERTS_MIN, BODY_VERTS_MAX, spec!, claims.overBudget)
-      budget('verts', verts, MODEL_VERTS_MIN, MODEL_VERTS_MAX, spec!, claims.overBudget)
-      budget('tris', tris, MODEL_TRIS_MIN, MODEL_TRIS_MAX, spec!, claims.overBudget)
-      // Pinned exactly, so a regression that stays inside the band is still red.
-      if (claims.verts !== undefined) expect(verts).toBe(claims.verts)
-      if (claims.tris !== undefined) expect(tris).toBe(claims.tris)
+      budget('bodyVerts', body, BODY_VERTS_MIN, BODY_VERTS_MAX, id)
+      budget('verts', verts, MODEL_VERTS_MIN, MODEL_VERTS_MAX, id)
+      budget('tris', tris, MODEL_TRIS_MIN, MODEL_TRIS_MAX, id)
+      /* The exact `verts`/`tris` pins are GONE with the rest of the per-animal
+       * pins (3 Aug). A count that has to be re-pinned every time Joe moves a
+       * part is a chore, not a guard, and the counts above still reach him. */
     })
 
     /* ---------------------------------------------------- 6. the texture --- */

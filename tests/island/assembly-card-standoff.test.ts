@@ -25,7 +25,7 @@ import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
 import {
   creatureSpec, buildAssembly, CARD_STANDOFF, EYE_CARD_Z, HULL_FRONT_Z,
-  SHREW_ASSEMBLY, type CreatureDef,
+  type CreatureDef,
 } from '../../src/island/species/parts'
 import { partById } from '../../src/island/species/parts/bank.generated'
 
@@ -142,15 +142,15 @@ describe('a part with real depth is not touched by any of this', () => {
   })
 })
 
-describe('the shrew, which is the species this was costing a mouth', () => {
-  it('now carries its face-plate 0.010 clear of the lion\'s front face', () => {
-    // `animal-shrew.ts` says `{ name: 'mouth', part: 'plate-13', paint: 'limb' }`
-    // and nothing else, which is the point: the default is now correct, so the
-    // species file does not need an `at` to be visible.
-    const mouth = SHREW_ASSEMBLY.features.find(f => f.name === 'mouth')!
-    expect(mouth.placement.kind).toBe('single')
-    if (mouth.placement.kind === 'single') {
-      expect(mouth.placement.at[2]).toBeCloseTo(HULL_FRONT_Z['box-31']! + CARD_STANDOFF, 9)
-    }
-  })
-})
+/*
+ * THE SHREW'S MOUTH WAS THE WORKED EXAMPLE HERE, and it no longer exists.
+ *
+ * This block asserted that `animal-shrew.ts` could say `{ name: 'mouth', part:
+ * 'plate-13' }` and nothing else and still be visible — the standoff solved for
+ * it, so the species file needed no `at`. On 4 August Joe removed the mouth from
+ * the shrew altogether and gave its teeth their own colour instead.
+ *
+ * Nothing is lost by retiring it: the standoff behaviour it demonstrated is
+ * asserted directly by the three blocks above, against the builder rather than
+ * against one species that happened to show it off.
+ */

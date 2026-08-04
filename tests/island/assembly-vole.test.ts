@@ -139,19 +139,23 @@ describe('animal-vole: the tail is the elephant\'s TRUNK, and Kenney\'s name is 
     const tail = VOLE_ASSEMBLY.features.find(f => f.name === 'tail')!
     expect(tail.placement.kind).toBe('single')
     if (tail.placement.kind === 'single') {
-      // Joined at THIS hull's rear face; y untouched by the join, so it is the
-      // bank's recorded height for the shape.
+      // Joined at THIS hull's rear face, on the midline.
       expect(tail.placement.at[2]).toBeCloseTo(-HULL_FRONT_Z_USUAL, 9)
-      expect(tail.placement.at[1]).toBeCloseTo(trunk.offset[1]!, 9)
       expect(tail.placement.at[0]).toBe(0)
+      /* The HEIGHT is no longer pinned to the bank's recorded offset for the
+       * shape. It was 0.482248, the elephant's own; Joe raised it to 0.725 in
+       * the editor, which is a carry decision and his to make. */
     }
     // Sunk the elephant's own 0.000 — the pack did not bury it, so neither does
-    // this — and the centre then lands on the recorded offset with the sign
-    // flipped, because the elephant wears this shape on `box-03` too and its
-    // 0.837606 IS 0.625 plus the shape's own half-depth.
+    // this.
     expect(tail.sink).toBe(0)
     expect(trunk.attachment!.sunkFractionMean).toBe(0)
-    recovers(world(build(), 'tail').z, -trunk.offset[2]!, 'the tail')
+    /* The centre used to be required to land on the bank's recorded offset with
+     * the sign flipped, which was the evidence that the donor transfer was
+     * exact. Joe shrank the stub to 0.45 in the editor, so a scaled copy cannot
+     * recover the full-size offset and never will again. The claim that
+     * survives — the base sits ON the flat rear face, nothing floating — is the
+     * next test down, and it is the one that would show on screen. */
   })
 
   it('lands its base on the FLAT rear face — §3, nothing floats', () => {
@@ -313,21 +317,24 @@ describe('animal-vole: rule 9 has a FLOOR, and this is the animal that found it'
   it('strains nothing, so it carries no flag', () => {
     expect(VOLE_ASSEMBLY.flag).toBeUndefined()
     expect(VOLE_ASSEMBLY.hull.stretch).toBeUndefined()
-    // Not one hand-chosen coordinate: every `at` below is either a hull face or
-    // a number lifted whole out of the bank record for that shape.
-    for (const f of VOLE_ASSEMBLY.features) {
-      if (f.placement.kind === 'row') continue
-      const part = partById(f.part)!
-      const at = f.placement.at
-      for (const i of [0, 1, 2] as const) {
-        const ok = Math.abs(at[i]! - part.offset[i]!) < 1e-6
-          || Math.abs(Math.abs(at[i]!) - HULL_FRONT_Z_USUAL) < 1e-6
-          || Math.abs(at[i]! - 1.43125) < 1e-6
-          || at[i] === 0
-          || (f.name === 'eye' && i === 2)
-        expect(ok, `${f.name}: at[${i}] = ${at[i]} came from nowhere`).toBe(true)
-      }
-    }
+    /*
+     * "NOT ONE HAND-CHOSEN COORDINATE" WAS RETIRED HERE. It walked every `at` on
+     * the animal and required each number to be either a hull face, a station on
+     * the pack's grid, or a value lifted whole out of the bank's record for that
+     * shape — anything else failed as having "come from nowhere".
+     *
+     * That was a good rule for the period when an agent was assembling animals
+     * out of the bank and a number with no provenance meant somebody had eyeballed
+     * it. It is the wrong rule now: Joe designs these in the workbench editor, and
+     * choosing a coordinate by eye is what the editor is FOR. He moved this tail
+     * to y = 0.725 there, so the test failed him for using the tool that was built
+     * for him — the same class of mistake as the pack norms, and it is his
+     * ruling of 3 August that settles it.
+     *
+     * `assertAssembly` still requires every mesh to be a rigid copy of a bank
+     * shape and every placement to be translation-only. What a number is ALLOWED
+     * TO BE is no longer this file's business.
+     */
   })
 
   it('fits between two trees more easily than the mouse does', () => {

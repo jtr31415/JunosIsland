@@ -14,7 +14,7 @@ import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
 import {
   buildAssembled, DORMOUSE_ASSEMBLY, SQUIRREL_ASSEMBLY, MOUSE_ASSEMBLY,
-  EYE_CARD_Z, HULL_FRONT_Z_USUAL, HULL_BOTTOM_Y, HEIGHT_FLOOR,
+  EYE_CARD_Z, HULL_FRONT_Z_USUAL, HEIGHT_FLOOR,
 } from '../../src/island/species/parts'
 import { partById } from '../../src/island/species/parts/bank.generated'
 import { speciesRecord } from '../../src/island/species/registry'
@@ -68,67 +68,46 @@ const build = (id = 'animal-dormouse'): THREE.Group => {
 const boxOf = (g: THREE.Group, name: string): THREE.Box3 =>
   new THREE.Box3().setFromObject(g.getObjectByName(name)!)
 
-describe('animal-dormouse: the brush is carried LOW, and that is the whole animal', () => {
-  it('wears the SAME shape as the shipped squirrel and separates on carry alone', () => {
-    // Both animals wear `box-23`, the fox's brush — the bank's one round,
-    // barely-tapering plume. Nothing else in the bank is a bushy tail, so the
-    // separation cannot come from the shape and has to come from the placement.
-    expect(DORMOUSE_ASSEMBLY.features.some(f => f.part === 'box-23')).toBe(true)
-    expect(SQUIRREL_ASSEMBLY.features.some(f => f.part === 'box-23')).toBe(true)
+/*
+ * "THE BRUSH IS CARRIED LOW, AND THAT IS THE WHOLE ANIMAL" WAS RETIRED.
+ *
+ * Three assertions, and every one of them was about the dormouse wearing
+ * `box-23` — the fox's brush, the same plume the squirrel wears — carried low
+ * and untwisted so that the two animals separated on placement alone. The
+ * arithmetic was nice: the tail's height transferred from the fox as a FRACTION
+ * of its hull rather than as an absolute, because the fox's body is 1.505 tall
+ * against this cube's 1.250.
+ *
+ * Joe swapped the shape in the editor (`84cd17a`): the brush left and the cat's
+ * `wedge-07` arrived, 0.555 deep where the brush was 0.910, and it is carried up
+ * rather than trailed. So the dormouse and the squirrel no longer wear the same
+ * shape at all, and the separation this block was written to prove is now made
+ * by the shapes themselves.
+ *
+ * These were four of the eight reds the 3 August handoff left standing and
+ * marked as DESCRIPTIONS rather than guards, in his words: *"dont burn tokens on
+ * tests that fails stuff that shouldnt be failed."* `git show` has them.
+ */
+describe('animal-dormouse: the tail, and what it still has to do', () => {
+  it('carries a tail that is not the squirrel\'s, which is the separation', () => {
+    /* `garden.ts` names dormouse/squirrel as a confusable pair. It used to be
+     * resolved by carry, with one shape between them; it is resolved by SHAPE
+     * now. Either is a valid answer — what must never happen is the two wearing
+     * the same shape the same way, which is what this asserts. */
+    /* Found by ROLE and not by name. The editor's push names an extra after the
+     * part it wears, so the dormouse's tail is a feature called `wedge-07` — a
+     * lookup for `name === 'tail'` finds nothing and silently passes. */
+    const tailOf = (spec: typeof DORMOUSE_ASSEMBLY): typeof spec.features[number] | undefined =>
+      spec.features.find(f => f.name === 'tail' || (partById(f.part)?.roles.includes('tail') ?? false))
+    const ours = tailOf(DORMOUSE_ASSEMBLY)!
+    const theirs = tailOf(SQUIRREL_ASSEMBLY)!
+    expect(ours, 'the dormouse has no tail at all').toBeTruthy()
+    expect(theirs, 'the squirrel has no tail at all').toBeTruthy()
 
-    const ours = DORMOUSE_ASSEMBLY.features.find(f => f.name === 'tail')!
-    const theirs = SQUIRREL_ASSEMBLY.features.find(f => f.name === 'tail')!
-    // The squirrel's is spun 45 degrees onto the rear chamfer's own normal.
-    // Ours is not spun at all: it trails along the shape's own measured `z -1`.
-    expect(theirs.spin).toEqual([{ axis: 'x', deg: 45 }])
-    expect(ours.spin).toBeUndefined()
-
-    // And the consequence, measured on the built geometry rather than argued:
-    // 0.77 between where the two animals put the same mass.
-    const mine = boxOf(build(), 'tail')
-    const squirrel = boxOf(build('animal-squirrel'), 'tail')
-    expect(squirrel.max.y - mine.max.y).toBeGreaterThan(0.7)
-    // Ours tops out BELOW its own back; theirs stands 0.39 clear above its ears.
-    expect(mine.max.y).toBeLessThan(HEIGHT_FLOOR - 0.2)
-    expect(squirrel.max.y).toBeGreaterThan(HEIGHT_FLOOR)
-  })
-
-  it('takes everything about the tail from the fox except its height', () => {
-    const fox = partById('box-23')!
-    const tail = DORMOUSE_ASSEMBLY.features.find(f => f.name === 'tail')!
-    // Joined at the cube's own rear face, and sunk the fox's own burial — the
-    // only value the pack ever gave this shape.
-    if (tail.placement.kind === 'single') {
-      expect(tail.placement.at[0]).toBe(0)
-      expect(tail.placement.at[2]).toBe(-HULL_FRONT_Z_USUAL)
-    }
-    expect(tail.sink).toBeCloseTo(fox.attachment!.sunkFractionMean, 9)
-    expect(fox.attachment!.sunkFractionMin).toBe(fox.attachment!.sunkFractionMax)
-    // Which recovers the fox's own recorded z to five decimals: the donor
-    // transfer checked against a number it did not use.
-    const g = build()
-    expect(g.getObjectByName('tail')!.getWorldPosition(new THREE.Vector3()).z)
-      .toBeCloseTo(fox.offset[2]!, 4)
-  })
-
-  it('transfers the tail\'s height as a FRACTION, because the fox\'s hull is taller', () => {
-    const fox = partById('box-23')!
-    const foxHull = partById('box-21')!
-    // The bank records this tail at 0.86875 — measured on `box-21`, which is
-    // 1.5051 tall. Carried at that ABSOLUTE height on the 1.250 cube it would
-    // sit above the equator, i.e. higher than the fox carries it, which is the
-    // wrong direction for the animal that has to be the low-slung one.
-    expect(fox.offset[1]).toBeCloseTo(0.86875, 6)
-    expect(foxHull.size[1]).toBeCloseTo(1.505075, 6)
-    const fraction = (fox.offset[1]! - HULL_BOTTOM_Y) / foxHull.size[1]!
-    expect(fraction).toBeCloseTo(0.4568, 4)
-    // What transfers is the fraction. This is the file's ONE hand-placed number
-    // and this line is its arithmetic.
-    const tail = DORMOUSE_ASSEMBLY.features.find(f => f.name === 'tail')!
-    if (tail.placement.kind === 'single') {
-      expect(tail.placement.at[1]).toBeCloseTo(HULL_BOTTOM_Y + fraction * 1.25, 6)
-      expect(tail.placement.at[1]).toBeLessThan(0.80625) // below the hull's equator
-    }
+    const samePart = ours.part === theirs.part
+    const sameSpin = JSON.stringify(ours.spin ?? null) === JSON.stringify(theirs.spin ?? null)
+    const sameAt = JSON.stringify(ours.placement) === JSON.stringify(theirs.placement)
+    expect(samePart && sameSpin && sameAt, 'the two tails are indistinguishable').toBe(false)
   })
 })
 
@@ -251,15 +230,20 @@ describe('animal-dormouse: what it did not have to say, and what it costs', () =
     expect(p['limb']).toBe(signed.accent)   // legs and the nose
   })
 
-  it('is as tall as the EARS, which is the measurement that says the tail is low', () => {
+  it('stands on the ground, and its height is the pack\'s business not this file\'s', () => {
+    /* This used to assert that the EARS set the animal's height and the tail
+     * topped out 0.294 below them — the measurement that said "the tail is low".
+     * The `wedge-07` Joe put on it is carried UP: the whole animal now measures
+     * 1.710 where the ears reach 1.501, so the tail is the tallest thing on it
+     * and the old reading is simply not this animal any more.
+     *
+     * Height against the pack's band is reported by `assertAssembly` rather than
+     * failed (his 3 August ruling), so what is left here is the one part that is
+     * a genuine invariant: it is standing on the floor. */
     const g = build()
     const whole = new THREE.Box3().setFromObject(g)
-    // The ears set the height and the tail tops out 0.29 below them. On the
-    // squirrel the same shape sets the height and stands 0.39 above the ears.
-    expect(whole.max.y).toBeCloseTo(boxOf(g, 'ear-r').max.y, 6)
-    expect(boxOf(g, 'ear-r').max.y - boxOf(g, 'tail').max.y).toBeCloseTo(0.294, 2)
-    // 1.5012, which is also the 1.5 `garden.ts` already claims for this animal.
-    expect(whole.max.y - whole.min.y).toBeCloseTo(1.5, 2)
+    expect(whole.min.y).toBeCloseTo(0, 6)
+    expect(whole.max.y).toBeGreaterThan(0)
   })
 
   it('fits between two trees — the tail costs depth, and this is what it costs', () => {

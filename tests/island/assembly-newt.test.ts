@@ -53,15 +53,16 @@ const crests = (): typeof NEWT_ASSEMBLY.features =>
 const BACK_Y = 1.43125
 
 describe('animal-newt: low is a HULL, not a ground clearance', () => {
-  it('takes the lion\'s shallow body rather than stretching the cube', () => {
-    // A newt is long and low in life and the pack has no room for that at all:
-    // a bare cube on standard legs is already 1.43125 against a floor of 1.43.
-    // So "low" is spent on the one axis that is free — `box-31` is 1.125 deep
-    // where the cube is 1.250 — and it is Kenney's own shape at Kenney's own
-    // size, which is adaptation and not a stretch.
-    expect(NEWT_ASSEMBLY.hull.part).toBe('box-31')
-    expect(partById('box-31')!.size).toEqual([1.25, 1.25, 1.125])
-    expect(NEWT_ASSEMBLY.hull.at).toEqual([0, 0.80625, -0.0625])
+  it('takes one of Kenney\'s own hulls at Kenney\'s own size, never a stretch', () => {
+    /* A newt is long and low in life and the pack has no room for that at all:
+     * a bare cube on standard legs is already 1.43125 against a floor of 1.43.
+     *
+     * This used to pin `box-31`, the lion's 1.125-deep body, as the way that was
+     * paid for. Joe moved the animal onto `box-03` on 4 August. The claim worth
+     * keeping is the one that survives him choosing a different hull: whatever
+     * he picks, it is an AUTHORED shape used unmodified — no stretch — which is
+     * rule 1's purest case and the thing a `stretchWhy` would have to excuse. */
+    expect(partById(NEWT_ASSEMBLY.hull.part), 'the hull is not a bank shape').toBeTruthy()
     expect(NEWT_ASSEMBLY.hull.stretch).toBeUndefined()
     // Same bottom as every other hull, so the leg row did not have to move.
     expect(box(build(), 'hull').min.y).toBeCloseTo(HULL_BOTTOM_Y, 3)
@@ -190,9 +191,12 @@ describe('animal-newt: the crest is the dog\'s NOSE, and §3.1 is why that is al
   it('spaces them 3/16 apart so they overlap into ONE fin', () => {
     const at = crests().map(f => (f.placement.kind === 'single' ? f.placement.at[2] : NaN))
     expect(at).toEqual([0.3125, 0.125, -0.0625, -0.25, -0.4375])
-    // The middle blade sits on the hull's own centre, and the row is symmetric
-    // about it. Every station is on the pack's 1/16 grid.
-    expect(at[2]).toBe(NEWT_ASSEMBLY.hull.at[2])
+    /* Every station is on the pack's 1/16 grid, and the five are evenly spaced.
+     * The row used to be asserted as centred on the hull's own z as well; that
+     * stopped being true on 4 August when Joe moved the newt from `box-31` (z
+     * centre -0.0625) onto `box-03` (z centre 0) and left the crest where it
+     * was. The crest is carried slightly forward of the hull's middle now, which
+     * is his call — the spacing below is what makes it read as one fin. */
     for (const z of at) expect(Number.isInteger(z * 16)).toBe(true)
     // Spacing 0.1875 against a blade 0.3208 long: they overlap, on purpose, so
     // the five read as a continuous wavy fin rather than as five fence posts.
@@ -246,8 +250,10 @@ describe('animal-newt: the orange is PAINTED, and it is an underside', () => {
   })
 
   it('costs no geometry: the same shape Kenney drew, with one seam split', () => {
+    // Read off the hull the species actually wears, so it survives Joe changing
+    // it — which he did on 4 August, from `box-31` to `box-03`.
     const hull = build().getObjectByName('hull') as THREE.Mesh
-    expect(hull.geometry.getIndex()!.count / 3).toBe(partById('box-31')!.tris)
+    expect(hull.geometry.getIndex()!.count / 3).toBe(partById(NEWT_ASSEMBLY.hull.part)!.tris)
   })
 
   it('paints the legs and the crest from the dark slot, not the coat', () => {
@@ -266,9 +272,9 @@ describe('animal-newt: what it costs', () => {
 
   it('fits between two trees — the tail is the length, and it is under the fox\'s', () => {
     const s = new THREE.Box3().setFromObject(build()).getSize(new THREE.Vector3())
-    // `pets.ts:652` charges keep-out from max(width, depth) / 2. The whip is the
-    // whole of the depth here; the shallow hull is what keeps it this low.
-    expect(Math.max(s.x, s.z) / 2).toBeCloseTo(0.863, 2)
+    // `pets.ts:652` charges keep-out from max(width, depth) / 2. The tail is the
+    // whole of the depth here. The fox's own 1.15 is the constraint; the exact
+    // figure is not pinned, since it moves whenever Joe re-sites the tail.
     expect(Math.max(s.x, s.z) / 2).toBeLessThan(1.15)
   })
 })

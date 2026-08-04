@@ -133,10 +133,12 @@ describe('animal-guinea-pig: the tail that is not there, and must not be added',
       expect(tailShapes.has(f.part), `feature "${f.name}" wears the tail shape ${f.part}`)
         .toBe(false)
     }
-    // And nothing hangs off the back at all: the hull's own rear face is the
-    // rearmost point on the animal, which is what "tailless" looks like measured.
-    const g = build()
-    expect(new THREE.Box3().setFromObject(g).min.z).toBeCloseTo(boxOf(g, 'hull').min.z, 4)
+    /* A fourth way — "the hull's own rear face is the rearmost point on the
+     * animal" — was retired on 4 August. Joe added a `box-04` high at the back
+     * (y 1.45) which reaches 0.08 behind the shell, so the measurement is no
+     * longer true even though the CLAIM is: that shape is not a tail, is not a
+     * tail-role part, and does not hang off the rump. The three ways above say
+     * the actual thing, and the third survives a rename. */
   })
 
   it('refuses `box-18` by name — the stub that belongs to the HAMSTER', () => {
@@ -368,21 +370,31 @@ describe('animal-guinea-pig: box-41\'s half-width is two PADS, and the flank is 
     // is the same 0.625 this hull presents.
     const full = 0.625 + ear.size[0]! / 2 - ear.attachment!.sunkFractionMean * ear.size[0]!
     expect(full).toBeCloseTo(ear.offset[0]!, 6)
-    const placed = feature('ear').placement
-    if (placed.kind === 'pair') {
-      expect(placed.at).toEqual([0.625, ear.offset[1], ear.offset[2]])
-    }
-    // Left to solve it would have joined at the PADS' plane and stood clear of the
-    // flank by the difference. Pinned, because that is the mistake this hull invites.
+    /* The ear's own station used to be pinned to the elephant's recorded offset
+     * — [0.625, 0.809375, 0.147998], the flank plane, low on the sides. Joe
+     * moved it to [0.4125, 1.2875, 0.4] on 4 August: up onto the head and
+     * forward. That is a design decision about what a guinea pig's ears look
+     * like, and it is his. The bank facts above are what this block is for.
+     *
+     * The 0.05 below still matters and is not about the ear's station: the pads
+     * plane sits 0.05 outside the flank, which is the mistake this hull invites. */
     expect(0.675 - 0.625).toBeCloseTo(0.05, 9)
   })
 
-  it('halves the ear UNIFORMLY, into the pack\'s own small-ear size class', () => {
+  it('shrinks the ear into the pack\'s own small-ear size class', () => {
     const ear = partById('tube-04')!
-    expect(feature('ear').stretch).toEqual([0.5, 0.5, 0.5])
-    // Uniform, so nothing is deformed: the shape stays Kenney's and only its size
-    // is ours. §3 measured ears varying 2.97x naturally and says stretching an ear
-    // is safe; JT-043 is Joe's own "a bit of clever sizing... will get a lot done".
+    /* This used to pin the stretch to a UNIFORM [0.5, 0.5, 0.5] and argue that
+     * uniformity was what kept the shape Kenney's. Joe made it [0.7, 0.35, 0.7]
+     * on 4 August — flatter and rounder, a deliberate deformation, and exactly
+     * the "bit of clever sizing" JT-043 is his own words for. §3 measured ears
+     * varying 2.97x naturally and says stretching an ear is safe.
+     *
+     * What is still asserted: it is SMALLER than the shape's own size on every
+     * axis, so this remains a small ear and not a rabbit's. */
+    const stretch = feature('ear').stretch!
+    for (const [i, v] of stretch.entries()) {
+      expect(v, `the ear is not shrunk on axis ${i}`).toBeLessThanOrEqual(1)
+    }
     const heights = PARTS_BANK.filter(p => p.roles.includes('ear'))
       .map(p => p.size[1]!).sort((a, b) => a - b)
     const median = heights[(heights.length - 1) / 2]!
@@ -393,18 +405,19 @@ describe('animal-guinea-pig: box-41\'s half-width is two PADS, and the flank is 
     const distinct = [...new Set(heights.map(h => h.toFixed(6)))].sort()
     expect(distinct.slice(-3)).toContain(ear.size[1]!.toFixed(6))
     expect(distinct.slice(-2)).not.toContain(ear.size[1]!.toFixed(6))
-    expect(ear.size[1]! * 0.5).toBeLessThan(median)
-    expect(ear.size[1]! * 0.5).toBeGreaterThan(partById('box-05')!.size[1]!)
+    // Shrunk on its own y it lands under the median, which is the size class.
+    expect(ear.size[1]! * stretch[1]!).toBeLessThan(median)
     const g = build()
     const e = boxOf(g, 'ear-r')
-    expect(e.max.y - e.min.y).toBeCloseTo(ear.size[1]! * 0.5, 3)
-    // And it is EMBEDDED in the flank the hull actually has — its inner face lies
-    // inside 0.625 by the elephant's own burial, halved along with the rest of it.
-    // Joined at the bounding box's 0.675 instead it would have stood 0.027 clear.
-    const buried = ear.attachment!.sunkFractionMean * ear.size[0]! * 0.5
-    expect(e.min.x).toBeCloseTo(0.625 - buried, 3)
+    /* No world-space check of the built height here. The ear carries two quarter
+     * turns (`y 90` then `x 90`), so the shape's own y is not the world y and
+     * comparing them was only ever right while the stretch was uniform. */
+    /* And it is EMBEDDED — §3, nothing floats. Its inner face lies inside the
+     * shell rather than standing clear of it. This used to be pinned to the
+     * flank plane's own 0.625 less the elephant's burial; the ear is up on the
+     * head now, so the check is that it is inside the shell at all, which is the
+     * thing that would look wrong on screen. */
     expect(e.min.x).toBeLessThan(0.625)
-    expect(0.675 - buried).toBeGreaterThan(0.625)
   })
 
   it('puts one cream blotch on each flank at the card\'s OWN recorded x', () => {
@@ -551,10 +564,12 @@ describe('animal-guinea-pig: the coat is three of Kenney\'s regions, not a paint
     expect(flag).not.toMatch(/RULE 1|RULE 9/i)
     expect(GUINEA_PIG_ASSEMBLY.features.some(f => f.part.startsWith('bespoke-'))).toBe(false)
     expect(GUINEA_PIG_ASSEMBLY.hull.stretch).toBeUndefined()
-    // The ONE stretch on the animal, and it is the ear, and it is uniform.
-    const stretched = GUINEA_PIG_ASSEMBLY.features.filter(f => f.stretch !== undefined)
-    expect(stretched.map(f => f.name)).toEqual(['ear'])
-    expect(new Set(stretched[0]!.stretch!).size).toBe(1)
+    /* The HULL is unstretched, which is the claim that matters — a stretched
+     * shell is the thing rule 1 and `stretchWhy` exist for. Which features carry
+     * a stretch is Joe's business: it was just the ear until 4 August, when he
+     * added a stretched `box-04` at the back. */
+    expect(GUINEA_PIG_ASSEMBLY.features.some(f => f.name === 'ear' && f.stretch !== undefined))
+      .toBe(true)
   })
 })
 
@@ -584,17 +599,19 @@ describe('animal-guinea-pig: the biggest rodent on the page, and it costs little
     }
   })
 
-  it('fits between two trees, and it is the EARS that set the radius', () => {
+  it('fits between two trees, which is what its size has to buy', () => {
     const g = build()
     const s = new THREE.Box3().setFromObject(g).getSize(new THREE.Vector3())
-    // `pets.ts:652` charges keep-out from max(width, depth) / 2. With no tail the
-    // depth is the hull plus a nose, so a species this big is still cheap to walk
-    // around: 0.78 against the fox's 1.15, which is the pack's own worst.
-    expect(s.x).toBeGreaterThan(s.z)
-    expect(Math.max(s.x, s.z) / 2).toBeCloseTo(0.782, 2)
+    /* `pets.ts:652` charges keep-out from max(width, depth) / 2, and the fox's
+     * own 1.15 — the pack's worst — is the constraint. With no tail the depth is
+     * the hull plus a nose, so the biggest rodent on the page is still cheap to
+     * walk around.
+     *
+     * The radius used to be pinned at 0.782 and attributed to the EARS standing
+     * off the flank. Joe moved the ears up onto the head on 4 August, so the
+     * width is the shell's own now and neither number describes the animal. */
     expect(Math.max(s.x, s.z) / 2).toBeLessThan(1.15)
-    // Width comes from the ear pair standing off the flank, not from the hull.
-    expect(s.x).toBeGreaterThan(partById('box-41')!.size[0]!)
-    expect(boxOf(g, 'ear-r').max.x).toBeCloseTo(s.x / 2, 3)
+    // The widest thing on the animal is now the shell itself, not the ear pair.
+    expect(boxOf(g, 'ear-r').max.x).toBeLessThanOrEqual(s.x / 2 + 1e-6)
   })
 })

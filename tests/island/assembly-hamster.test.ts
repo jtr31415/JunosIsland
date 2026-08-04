@@ -250,44 +250,38 @@ describe('animal-hamster: the tail is the elephant\'s TRUNK, and it is a nub', (
     expect(reach('box-18')).toBeLessThan(reach('box-23') / 2)  // the fox's brush
   })
 
-  it('carries Kenney\'s wrong name, and the spin is what corrects it', () => {
-    const trunk = partById('box-18')!
-    // Every other tail in the bank attaches z -1 — off the back. This one is
-    // z +1, off the FRONT of a face, because it is the elephant's trunk.
-    expect(trunk.attachment!.axis).toBe('z')
-    expect(trunk.attachment!.dir).toBe(1)
-    for (const p of PARTS_BANK.filter(q => q.roles.includes('tail') && q.id !== 'box-18')) {
-      expect(p.attachment!.dir, `${p.id} faces the same way as the trunk`).toBe(-1)
-    }
-    const tail = HAMSTER_ASSEMBLY.features.find(f => f.name === 'tail')!
-    expect(tail.spin).toEqual([{ axis: 'y', deg: 180 }])
-    expect(tail.sink).toBe(0)
-    expect(trunk.attachment!.sunkFractionMean).toBe(0)
-    // Joined at the cube's own rear face, nothing chosen.
-    if (tail.placement.kind === 'single') {
-      expect(tail.placement.at).toEqual([0, trunk.offset[1], -HULL_FRONT_Z_USUAL])
-    }
-    // And the centre lands on the bank's recorded offset, MIRRORED — the donor
-    // transfer recovering a number it never read, because the elephant wears
-    // this shape on this same box-03.
-    expect(boxOf(build(), 'tail').getCenter(new THREE.Vector3()).z)
-      .toBeCloseTo(-trunk.offset[2]!, 4)
-  })
-
-  it('is not sunk deeper, and the reason is what would hang under the rump', () => {
+  /*
+   * TWO ASSERTIONS ABOUT `box-18` WERE RETIRED HERE ON 4 AUGUST.
+   *
+   * They described the hamster wearing the elephant's trunk as a tail: spun 180
+   * about y to face backwards, joined at the cube's own rear face, sunk the
+   * elephant's own 0.000, its centre landing on the bank's recorded offset
+   * mirrored. It was a nice transfer and it is no longer this animal.
+   *
+   * Joe replaced it in the editor with a `tube-03` at the rear, stretched
+   * [0.7, 0.8, 1.2] and turned about x. The bank facts above — that `box-18` is
+   * the shortest reach in the bank, and the only tail shape that attaches z +1 —
+   * are still true of the BANK and are still asserted there; they simply no
+   * longer say anything about the hamster. `git show` has the originals.
+   */
+  it('carries its rear shape embedded, and it stays cheap to walk past', () => {
+    /* What replaced the nub, stated as the two things that actually matter for
+     * an animal on the island: nothing floats (§3), and the keep-out circle
+     * `pets.ts:652` charges for stays under the fox's own 1.15. The exact shape
+     * and its station are Joe's to change without this going red. */
     const g = build()
-    const t = boxOf(g, 'tail'), h = boxOf(g, 'hull')
-    // Sunk the elephant's own 0.000 the whole shape sits behind the rear face,
-    // so its lowest vertex — 0.0106 under the hull's own bottom — is in clear
-    // air rather than poking through a bottom that chamfers up from z = -0.3125.
-    expect(t.max.z).toBeCloseTo(-HULL_FRONT_Z_USUAL, 4)
-    expect(h.min.y - t.min.y).toBeCloseTo(0.0106, 3)
-    const bottom = welded('box-03').filter(q => Math.abs(q[1]! + 0.625) < 1e-6)
-    expect(Math.max(...bottom.map(q => Math.abs(q[2]!)))).toBeCloseTo(0.3125, 6)
-    // It costs 0.2126 of keep-out and it is the only thing on the animal that
-    // reaches more than 0.11 away from the shell.
-    expect(t.min.z + t.max.z).toBeLessThan(0)
-    expect(partById('box-18')!.size[2]! / 2).toBeCloseTo(0.2126, 4)
+    const hull = boxOf(g, 'hull')
+    const rear = HAMSTER_ASSEMBLY.features.find(f => {
+      const at = f.placement.kind === 'single' ? f.placement.at : null
+      return at !== null && at[2]! < 0
+    })
+    expect(rear, 'nothing is carried at the rear at all').toBeTruthy()
+
+    const t = boxOf(g, rear!.name)
+    // Embedded: it overlaps the hull rather than floating behind it.
+    expect(t.max.z, 'the rear shape floats clear of the hull').toBeGreaterThan(hull.min.z)
+    const s = new THREE.Box3().setFromObject(g).getSize(new THREE.Vector3())
+    expect(Math.max(s.x, s.z) / 2).toBeLessThan(1.15)
   })
 })
 
@@ -446,42 +440,38 @@ describe('animal-hamster: pale feet, a painted belly, and one cell per picture',
 })
 
 describe('animal-hamster: the one that is round, measured', () => {
-  it('is the pack\'s own cube with nothing long on it', () => {
+  it('stays cheap to walk past, and nothing runs forward off its face', () => {
     const g = build()
     const s = new THREE.Box3().setFromObject(g).getSize(new THREE.Vector3())
-    // `pets.ts:652` charges keep-out from max(width, depth) / 2. The width is
-    // the shell's own 1.250 and the depth is 1.783, of which the nub is 0.425
-    // and the nose 0.108 — nothing else on the animal adds any at all.
-    expect(s.x).toBeCloseTo(1.25, 3)
-    expect(Math.max(s.x, s.z) / 2).toBeCloseTo(0.892, 2)
-    expect(Math.max(s.x, s.z) / 2).toBeLessThan(1.15)   // the fox's, the pack's worst
-    expect(s.z - 1.25).toBeCloseTo(partById('box-18')!.size[2]!
-      + (boxOf(g, 'nose').max.z - HULL_FRONT_Z_USUAL), 3)
-    // Every mesh except the nub is inside a box only 0.11 bigger than the hull.
+    /* `pets.ts:652` charges keep-out from max(width, depth) / 2, and the fox's
+     * own 1.15 is the constraint that matters. The width used to be pinned at
+     * the shell's bare 1.250; it is 1.434 now, because on 4 August Joe added a
+     * stretched `box-34` pair to the flanks — cheek pouches, which is a hamster
+     * having the one feature a hamster is known for. That is a design decision,
+     * so the width is not pinned and the keep-out is. */
+    expect(Math.max(s.x, s.z) / 2).toBeLessThan(1.15)
+    // And the face is still blunt: nothing on it runs forward the way a snout
+    // would, which is what separates this one from the gerbil and the rat.
     for (const name of ['ear-r', 'ear-l', 'eye-r', 'eye-l', 'nose', 'mouth']) {
       const b = boxOf(g, name)
       expect(b.max.z - HULL_FRONT_Z_USUAL, `${name} runs forward`).toBeLessThan(0.11)
     }
   })
 
-  it('does not take a long tail or a big ear, which is the sibling contract', () => {
-    // `home-pets.ts` puts six rodents on one album page and gives this one
-    // "stub" and "round". The guinea pig has no tail, the gerbil and the degu
-    // are tufted, the chinchilla is bushy and the rat's is thin and long — so
-    // the shortest shape in the bank belongs to this species and to no other.
-    const tail = HAMSTER_ASSEMBLY.features.find(f => f.name === 'tail')!
-    const reach = (id: string): number => partById(id)!.size[2]!
-    for (const p of PARTS_BANK.filter(q => q.roles.includes('tail'))) {
-      expect(reach(tail.part), `${p.id} is shorter than the stub`)
-        .toBeLessThanOrEqual(reach(p.id))
-    }
-    // And the ear is near the bottom of twenty-three by longest extent: only
-    // three shapes in the whole ear family are smaller than 0.3150, and all
-    // three are the bee's and the koala's, which no rodent would wear.
+  it('does not take a big ear, which is half the sibling contract', () => {
+    /* `home-pets.ts` puts six rodents on one album page and gives this one
+     * "stub" and "round". The TAIL half of this assertion is gone: it read the
+     * `tail` feature, and Joe removed it on 4 August in favour of a `tube-03`
+     * at the rear, so "the shortest tail shape in the bank belongs to this
+     * species" is no longer a claim this animal makes. The ear half stands. */
     const ears = PARTS_BANK.filter(p => p.roles.includes('ear'))
     expect(ears).toHaveLength(23)
+    // Near the bottom of twenty-three by longest extent: only three shapes in
+    // the whole ear family are smaller, and all three are the bee's and the
+    // koala's, which no rodent would wear.
     const smaller = ears.filter(p => p.shape.longest < partById('box-02')!.shape.longest)
     expect(smaller.map(p => p.id).sort()).toEqual(['box-05', 'box-27', 'box-28'])
+    expect(HAMSTER_ASSEMBLY.features.find(f => f.name === 'ear')?.part).toBe('box-02')
     expect(HAMSTER_ASSEMBLY.palette['coat']).toBe(0xc9803c)
   })
 })

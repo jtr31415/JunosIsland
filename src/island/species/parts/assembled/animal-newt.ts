@@ -57,8 +57,9 @@
  *     §3.1 is the whole of this: a part's identity is where you put it, not what
  *     Kenney called it. The shape is a 0.400 x 0.321 blade only 0.100 thick, and
  *     turned so that its thin axis is the animal's WIDTH it is a fin: 0.100
- *     across, 0.400 tall, 0.321 along the back. `STAND_ON_END` is the two quarter
- *     turns that do it (rule 4 as amended — baked into the copy's vertices), and
+ *     across, 0.400 tall, 0.321 along the back. The `z 90` / `y 90` pair on each
+ *     blade is the two quarter turns that do it (rule 4 as amended — baked into
+ *     the copy's vertices), and
  *     `axis: 'x'` is the override that re-points its measured `z +1` attachment
  *     at the direction the fin now grows, which is straight up out of the back.
  *
@@ -102,61 +103,72 @@
  */
 import { defineCreature } from '../creature'
 import { PACK_PUPIL } from '../texture'
-import type { Spin, Vec3 } from '../assembly'
-
-/**
- * The two quarter turns that take the dog's nose off the dog's face and stand it
- * up as a fin: the blade's 0.400 span goes to +y, its 0.321 span to +z along the
- * back, and its 0.100 thickness to +x, which is the axis a crest has to be thin
- * on. The part's `z +1` attachment lands on +x under the same pair, which is why
- * the blades carry `axis: 'x'` — the facing is spun with the vertices.
- */
-const STAND_ON_END: readonly Spin[] = [{ axis: 'z', deg: 90 }, { axis: 'y', deg: 90 }]
-
-/** `box-31`'s own top face: its centre 0.80625 plus its half-height 0.625. */
-const BACK_Y = 1.43125
-
-/** One blade of the crest. Same shape, same size; only the station and the depth. */
-const crest = (n: number, z: number, sink: number): {
-  name: string; part: string; paint: string; axis: 'x'; spin: readonly Spin[]
-  sink: number; at: Vec3
-} => ({
-  name: `crest-${n}`, part: 'blade-03', paint: 'detail',
-  axis: 'x', spin: STAND_ON_END, sink, at: [0, BACK_Y, z],
-})
 
 export const NEWT_ASSEMBLY = defineCreature('animal-newt', {
   palette: {
-    coat: 0x4b4636,    // signed-off coat: warty brown-black above
-    belly: 0xe8992c,   // signed-off belly: the vivid orange underside
-    detail: 0x35322a,  // signed-off detail: the legs and the crest, darker still
-    accent: 0xe0b23f,  // signed-off accent: the golden iris
-    pupil: PACK_PUPIL, // measured off 544 real eye texels; see texture.ts
+    coat: 0x4b4636,
+    belly: 0xe8992c,
+    detail: 0x35322a,
+    accent: 0xe0b23f,
+    pupil: PACK_PUPIL,  // the pack's own measured pupil; see texture.ts
   },
+
   limb: 'detail',
-
-  /* The lion's hull: 1.125 deep where the cube is 1.250. The pack's own shallow
-   * body, unmodified — a different authored hull is adaptation, not a stretch. */
-  hull: 'box-31',
-
-  /* An UNDERSIDE, not a flank — below the tiger's mammal 8/16 on purpose. */
+  hull: { part: 'box-03' },
   belly: 0.375,
-
-  /* No ears, said by omission: an amphibian has no external one, and the
-   * salamander has none either, so this is not where the pair separates. */
-
-  /* The bank's thinnest tail, 0.200 across — laterally flattened, which is what
-   * a newt swims with. Carried on the hull's OWN centre line, because a newt's
-   * tail is its spine continuing rather than an appendage on its rump. */
-  tail: { part: 'wedge-07', at: [0, 0.80625, -0.625] },
-
-  /* Golden, not orange: the pale slot on this animal is its belly. */
   eyes: { paint: 'accent' },
-
-  /* THE ANIMAL: the dog's nose, stood on end five times down the spine, sunk
-   * deeper toward the tail so the fin tapers without a stretch or a new shape. */
+  tail: { part: 'wedge-07', at: [0, 0.80625, -0.625] },
   extras: [
-    crest(1, 0.3125, 0.5), crest(2, 0.125, 0.375), crest(3, -0.0625, 0.3125),
-    crest(4, -0.25, 0.4375), crest(5, -0.4375, 0.5625),
+    {
+      name: 'crest-1',
+      part: 'blade-03',
+      paint: 'detail',
+      axis: 'x',
+      spin: [{ axis: 'z', deg: 90 }, { axis: 'y', deg: 90 }],
+      sink: 0.5,
+      at: [0, 1.43125, 0.3125],
+    },
+    {
+      name: 'crest-2',
+      part: 'blade-03',
+      paint: 'detail',
+      axis: 'x',
+      spin: [{ axis: 'z', deg: 90 }, { axis: 'y', deg: 90 }],
+      sink: 0.375,
+      at: [0, 1.43125, 0.125],
+    },
+    {
+      name: 'crest-3',
+      part: 'blade-03',
+      paint: 'detail',
+      axis: 'x',
+      spin: [{ axis: 'z', deg: 90 }, { axis: 'y', deg: 90 }],
+      sink: 0.3125,
+      at: [0, 1.43125, -0.0625],
+    },
+    {
+      name: 'crest-4',
+      part: 'blade-03',
+      paint: 'detail',
+      axis: 'x',
+      spin: [{ axis: 'z', deg: 90 }, { axis: 'y', deg: 90 }],
+      sink: 0.4375,
+      at: [0, 1.43125, -0.25],
+    },
+    {
+      name: 'crest-5',
+      part: 'blade-03',
+      paint: 'detail',
+      axis: 'x',
+      spin: [{ axis: 'z', deg: 90 }, { axis: 'y', deg: 90 }],
+      sink: 0.5625,
+      at: [0, 1.43125, -0.4375],
+    },
+    {
+      part: 'tube-03',
+      name: 'tube-03',
+      stretch: [1.45, 1.45, 2.15],
+      at: [0, 0.6375, 0.575],
+    },
   ],
 })

@@ -124,47 +124,34 @@ import { PACK_PUPIL } from '../texture'
 
 export const FROG_ASSEMBLY = defineCreature('animal-frog', {
   palette: {
-    coat: 0x5fae33,    // signed-off coat: frog green
-    belly: 0xf0f2cf,   // signed-off belly: the painted underside and the sclera
-    limb: 0x3f7c1f,    // signed-off detail: the legs
-    mark: 0x2c5b16,    // signed-off accent: the mouth line and the eardrums
-    pupil: PACK_PUPIL, // measured off 544 real eye texels; see texture.ts
+    coat: 0x5fae33,
+    belly: 0xf0f2cf,
+    limb: 0x3f7c1f,
+    mark: 0x2c5b16,
+    pupil: PACK_PUPIL,  // the pack's own measured pupil; see texture.ts
+    'box-04': 0x62391d,
   },
 
-  /* The lion's hull: 1.125 deep, front face 0.500. A different authored hull is
-   * NOT a stretch (hulls.ts), and it is the only one `blade-05` stacks on. */
-  hull: 'box-31',
-
-  /* The tiger's belly line, made exact. One number, no geometry. */
+  hull: { part: 'box-03' },
   belly: 0.5,
-
-  /* As wide as the flat underside goes: a frog squats with its legs out. The
-   * pair's own separator in `garden.ts` is leg power, and stance is the only
-   * part of it this kit can say. */
   legs: { x: 0.3125 },
-
-  /* On the mask and as far into its upper corners as the card fits: 0.5 - 0.2
-   * across, 1.30625 - 0.160104 up. Rule 5 fixes the rest. */
   eyes: { x: 0.3, y: 1.146146 },
-
   extras: [
-    /* THE ANIMAL. The lion's face plate, joined at this hull's 0.500 front face,
-     * with Kenney's own band 5 — its bottom strip — repainted as the mouth. */
-    { name: 'mouth', part: 'blade-05', paint: { base: 'coat', byBand: { 5: 'mark' } } },
-
-    /* A frog's eyes sit on top of its head. The panda's stub, on the top face
-     * directly above each eye card and at the flat face's front edge. Named
-     * `bulge` and not `eye-bulge` on purpose: the harness collects a feature's
-     * meshes by NAME PREFIX, so anything called `eye-*` is checked as an eye
-     * card and this one would fail rule 5 for not being on the eye plane. */
     { name: 'bulge', part: 'box-34', kind: 'pair', at: [0.3, 1.43125, 0.3125] },
-
-    /* The tympanum: a flat disc behind the eye, which is a flank-patch card
-     * placed on a cheek. Its own recorded x and y, and the flat side face's own
-     * forward limit. */
     {
-      name: 'eardrum', part: 'plate-10', kind: 'pair', paint: 'mark',
+      name: 'eardrum',
+      part: 'plate-10',
+      kind: 'pair',
+      paint: 'mark',
       at: [0.635, 0.99675, 0.18606],
+    },
+    {
+      part: 'box-04',
+      name: 'box-04',
+      at: [0.5125, 0.8125, 0.5375],
+      stretch: [0.8, 0.25, 0.25],
+      spin: [{ axis: 'x', deg: 90 }],
+      paint: 'box-04',
     },
   ],
 })

@@ -76,7 +76,8 @@
       "name": "Daweb",
       "verdict": "",
       "replacement": "",
-      "note": ""
+      "note": "",
+      "signoff": "ok"
     },
     {
       "id": "natural/animal-toad",
@@ -114,7 +115,8 @@
       "name": "Watash",
       "verdict": "",
       "replacement": "",
-      "note": ""
+      "note": "",
+      "signoff": "ok"
     },
     {
       "id": "natural/animal-shrew",
@@ -126,7 +128,8 @@
       "name": "Dithit",
       "verdict": "",
       "replacement": "",
-      "note": ""
+      "note": "",
+      "signoff": "ok"
     },
     {
       "id": "natural/animal-dormouse",
@@ -382,7 +385,8 @@
       "name": "Hecksa",
       "verdict": "",
       "replacement": "",
-      "note": ""
+      "note": "",
+      "signoff": "ok"
     },
     {
       "id": "natural/animal-guinea-pig",
@@ -394,7 +398,8 @@
       "name": "Buthtu",
       "verdict": "",
       "replacement": "",
-      "note": ""
+      "note": "",
+      "signoff": "ok"
     },
     {
       "id": "natural/animal-budgie",

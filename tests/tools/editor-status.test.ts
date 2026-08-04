@@ -184,67 +184,63 @@ describe('signed off is one call, and everything else in the game will ask it', 
   const GARDEN = 'garden'
 
   /**
-   * The five that ship, and the nine that do not. Together: all of Garden.
+   * GARDEN IS COMPLETE, and this no longer names who is signed off.
    *
-   * He pushed ELEVEN, and pushing is signing off (his ruling). Six of the eleven
-   * were then found DAMAGED BY THE PUSH TOOL — JT-048, measured: the slow-worm
-   * 1.3312 against `PACK_HEIGHT_MIN` 1.43 and off the ground, the mole 389 verts
-   * against rule 9's floor of 405, the squirrel's tail 0.1375 inside its body,
-   * the dormouse and tortoise tailless, the vole's tail 0.24 off the bank.
+   * It used to hold a hand-written list — eleven signed, three not — and assert
+   * the audit file matched it exactly. That list was wrong twice over by the time
+   * it was read. It was written when six of Joe's eleven were believed damaged by
+   * the push tool; every one of those six turned out to be his own deliberate
+   * edit (see the 3 August handoff), so the story the list encoded was retracted.
+   * And on 4 August he signed off the frog, the newt and the shrew and said *"i
+   * have completed the garden collection"*, which made the list wrong again.
    *
-   * Asked to choose, Joe said: *"ship the clean 5 for now."* So the six are
-   * withheld from sign-off rather than repaired or reverted — sign-off is what
-   * makes an animal dealable, so withholding it is what keeps a broken animal off
-   * his daughter's island, and reverting would mean guessing which of his own
-   * edits were tool damage.
+   * A test that has to be edited every time Joe ticks an animal is a chore rather
+   * than a guard — his 3 August ruling on per-animal pins applies here just as it
+   * does to fingerprints. So what is asserted below is what will still be true
+   * after he signs off Home Pets and Farm:
    *
-   * THE SIX ARE STILL BUILT AND STILL IN THE ALBUM, because the album shows built
-   * animals by his other ruling. Restoring them here is not a matter of adding a
-   * name back: the geometry has to be repaired first, and the JT-048 guard tests
-   * are what say when it has been.
+   *   1. Garden, the collection he has declared finished, is finished — all
+   *      fourteen ticked. This is the milestone, and it is stated over the roster
+   *      rather than over a copy of it.
+   *   2. `signedOff` — the one call the egg pool asks — agrees with the audit
+   *      file for EVERY row in it, whichever way each row happens to be set.
+   *      That is the real contract of this module, and no sign-off can falsify it.
    */
-  const SIGNED = [
-    'animal-badger', 'animal-dormouse', 'animal-hedgehog', 'animal-mole', 'animal-mouse',
-    'animal-salamander', 'animal-slow-worm', 'animal-squirrel', 'animal-toad',
-    'animal-tortoise', 'animal-vole',
-  ]
-  /** The three he has not pushed. */
-  const NOT_SIGNED = ['animal-frog', 'animal-newt', 'animal-shrew']
+  it('accounts for every Garden animal against the roster, not a copy of it', () => {
+    /* The honesty guard: if the roster moved under this test, or a Garden member
+     * were missing from the audit file, the assertions below would be quietly
+     * checking something narrower than they claim. */
+    const members = [...(collection(GARDEN)?.members ?? [])]
+    expect(members.length, 'Garden has no members — the roster moved under this test')
+      .toBeGreaterThan(0)
 
-  it('accounts for every Garden animal — the eleven and the three are the whole collection', () => {
-    /* The honesty guard, and it is doing real work here: if a name above were
-     * misspelled, or if Garden gained a fifteenth member, the set assertions
-     * below would be quietly checking something narrower than they claim. */
-    const members = [...(collection(GARDEN)?.members ?? [])].sort()
-    expect(members.length, 'Garden has no members — the roster moved under this test').toBeGreaterThan(0)
-    expect([...SIGNED, ...NOT_SIGNED].sort()).toEqual(members)
-    for (const id of [...SIGNED, ...NOT_SIGNED]) expect(groupOf(id), id).toBe(GARDEN)
+    const audited = new Set(auditDoc.names.map(row => row.speciesId ?? ''))
+    for (const id of members) {
+      expect(groupOf(id), id).toBe(GARDEN)
+      expect(audited.has(id), `${id} is a Garden member with no row in names-audit.json`).toBe(true)
+    }
   })
 
-  it('finds exactly those eleven signed off in joe/names-audit.json, and the frog, the newt and the shrew not', () => {
+  it('finds the whole of Garden signed off — the collection Joe has completed', () => {
     expect(auditDoc.names.length).toBeGreaterThan(0)
 
-    /* Exactly these, and nothing else in any collection: an equality, not a
-     * count, so an extra tick anywhere in the file is as loud as a missing one. */
-    const ticked = auditDoc.names.filter(row => row.signoff === SIGNED_OFF)
-      .map(row => row.speciesId ?? '').sort()
-    expect(ticked).toEqual(SIGNED)
-
-    /* And through the call the rest of the game asks, which is the thing that
-     * decides whether an animal is in the egg pool. */
-    for (const id of SIGNED) {
-      expect(signedOff(auditDoc.names, id), `${id} should be signed off`).toBe(true)
+    const members = [...(collection(GARDEN)?.members ?? [])]
+    for (const id of members) {
+      expect(signedOff(auditDoc.names, id), `${id} should be signed off — Garden is complete`)
+        .toBe(true)
     }
-    for (const id of NOT_SIGNED) {
-      expect(signedOff(auditDoc.names, id), `${id} has NOT been signed off`).toBe(false)
-    }
+  })
 
-    /* Every other animal in the file is still waiting — stated over the file
-     * rather than over a list, so a collection added tomorrow is covered by it. */
+  it('answers for every row exactly as that row is written', () => {
+    /* The contract the rest of the game depends on: `signedOff` is one call and
+     * it never disagrees with the file it reads. Stated over every row, so it
+     * covers the ticked and the unticked alike and needs no edit when either
+     * set changes. */
     for (const row of auditDoc.names) {
       const id = row.speciesId ?? ''
-      if (SIGNED.includes(id)) continue
-      expect(signedOff(auditDoc.names, id), `${id} has not been signed off`).toBe(false)
+      if (!id) continue
+      expect(signedOff(auditDoc.names, id), `${id} disagrees with its own row`)
+        .toBe(row.signoff === SIGNED_OFF)
     }
   })
 })

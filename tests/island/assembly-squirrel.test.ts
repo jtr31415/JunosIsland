@@ -367,13 +367,17 @@ describe('the tail is CARRIED UP, on the cube\'s own measured chamfer', () => {
     // 0.2576 measured; the guard is that it does not reach the floor, not the
     // 0.4 the chamfer solve used to give.
     expect(tail.min.y).toBeGreaterThan(0.2)
-    // And it goes UP rather than back, which is what stops it being the fox. The
-    // fox wears this exact shape at z = -0.918642 trailing behind its hull; the
-    // squirrel's centre is 0.24 further FORWARD and 0.61 higher.
+    /* And it is carried FORWARD rather than trailing, which is what stops it
+     * being the fox: the fox wears this exact shape at z = -0.918642, streaming
+     * out behind its hull.
+     *
+     * The height half of this — "and 0.61 higher" — is gone. Joe has since
+     * brought the tail down to a centre of 0.758, below the fox's own 0.869, and
+     * it is the ground clearance above plus the forward carry here that separate
+     * the two silhouettes now. His call, made with the animal in front of him. */
     const fox = partById('box-23')!.offset
     const c = named(g, 'tail')[0]!.position
     expect(c.z).toBeGreaterThan(fox[2])
-    expect(c.y).toBeGreaterThan(fox[1] + 0.5)
   })
 
   it('stays SHORTER front-to-back than the fox it stands beside', () => {

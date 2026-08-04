@@ -237,46 +237,34 @@ import { PACK_PUPIL } from '../texture'
 
 export const HAMSTER_ASSEMBLY = defineCreature('animal-hamster', {
   palette: {
-    coat: 0xc9803c,    // proposed coat: Syrian "golden" — orange-brown, not sandy
-    belly: 0xf2e8d2,   // proposed belly: the cream underside, the nub, the feet, the sclera
-    ear: 0x6b5347,     // proposed detail: the ear's inner disc, the nose and the mouth line
-    limb: 0xb0713a,    // proposed accent: the legs — see below, they need their own cell
-    pupil: PACK_PUPIL, // measured off 544 real eye texels; see texture.ts
+    coat: 0xc9803c,
+    belly: 0xf2e8d2,
+    ear: 0x6b5347,
+    limb: 0xb0713a,
+    pupil: PACK_PUPIL,  // the pack's own measured pupil; see texture.ts
   },
 
-  /* The tiger's mammal belly line, made exact: golden above, cream below, and no
-   * geometry at all. 8/16 is the only point on the pack's grid inside its zone. */
   belly: 0.5,
-
-  /* JT-044 spent on PALE FEET rather than hooves. 3/16 is the nearest point on
-   * the pack's own grid to `box-01`'s own bottom chamfer edge, which sits at
-   * 0.2042 of its height — so the cream stops inside the foot, not up the shin.
-   * The base is `limb` and not `coat` because `assembly.ts:493` allows a slot ONE
-   * boundary — "one cell, one picture" — and the coat's is spent on the belly. */
   legs: { paint: { base: 'limb', patch: { below: 'belly', at: 0.1875 } } },
-
-  /* SMALL and HIGH — the beaver's and the polar bear's round top-face button, on
-   * the beaver's own numbers on the beaver's own hull, standing 0.070 proud.
-   * Band 7 is Kenney's own inner-ear disc on it: 10 triangles, free. */
-  ears: { part: 'box-02', paint: { base: 'coat', byBand: { 7: 'ear' } } },
-
-  /* The bank's one ROUND eye — 0.400 x 0.400, `symmetry: radial` — against the
-   * default almond. A hamster's eye is a bead and this is the only bead here. */
   eyes: { part: 'plate-08' },
-
-  /* THE ANIMAL. The elephant's TRUNK under Kenney's wrong name, the only `z +1`
-   * tail shape in the bank and the only stub in it: 0.4252 of reach against
-   * 0.5552 for the next shortest. Spun to face backwards, joined at the cube's
-   * rear face, landing on the recorded offset mirrored. */
-  tail: { part: 'box-18', paint: 'belly', spin: [{ axis: 'y', deg: 180 }] },
-
-  /* A blunt face and no snout at all: the panda's wide, shallow nose button
-   * straight onto the cube's front face, projecting 0.1081 and nothing else. */
+  ears: { part: 'box-02', paint: { base: 'coat', byBand: { 7: 'ear' } } },
   nose: { part: 'tube-08', paint: 'ear' },
-
-  /* The mouth, SOLVED rather than hard-coded — `CARD_STANDOFF` puts it 0.010
-   * proud of the front face, which is this card's own recorded z of 0.6350. */
   extras: [
     { part: 'plate-03', name: 'mouth', paint: 'ear' },
+    {
+      part: 'box-34',
+      name: 'box-34',
+      at: [0.5375, 0.825, 0.35],
+      spin: [{ axis: 'y', deg: -90 }],
+      stretch: [1.75, 1.75, 1.75],
+      kind: 'pair',
+    },
+    {
+      part: 'tube-03',
+      name: 'tube-03',
+      at: [0, 0.7625, -0.5375],
+      spin: [{ axis: 'x', deg: -180 }],
+      stretch: [0.7, 0.8, 1.2],
+    },
   ],
 })

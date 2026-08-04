@@ -171,43 +171,30 @@ import { PACK_PUPIL } from '../texture'
 
 export const SHREW_ASSEMBLY = defineCreature('animal-shrew', {
   palette: {
-    coat: 0x6d5b4a,    // signed-off coat: dark greyish-brown
-    belly: 0xc0ae9a,   // signed-off belly: the underside, the sclera and the teeth
-    muzzle: 0x4a3d31,  // signed-off detail: the pointed snout
-    limb: 0x2e251d,    // signed-off accent: legs, the whip and the mouth line
-    pupil: PACK_PUPIL, // measured off 544 real eye texels; see texture.ts
+    coat: 0x6d5b4a,
+    belly: 0xc0ae9a,
+    muzzle: 0x4a3d31,
+    limb: 0x2e251d,
+    pupil: PACK_PUPIL,  // the pack's own measured pupil; see texture.ts
+    tooth: 0xeeebe7,
   },
 
-  /* The lion's hull: 1.125 deep. Shallower buys back the keep-out a snout and a
-   * whip on the same animal would otherwise cost. Not a stretch — see hulls.ts. */
-  hull: 'box-31',
-
-  /* The pack's own mammal belly line, made exact. One number, no geometry. */
+  hull: { part: 'box-03' },
   belly: 0.5,
-
-  /* NO EARS. A shrew's are buried in fur, and this absent line is the single
-   * biggest thing separating it from the mouse's dish ears. */
-
-  /* The tiger's whip, on a rear face that is the tiger's own plane to six
-   * decimals, carried LOW: 1.43125 - 1.046587/2 puts the tip exactly on the line
-   * of its own back, which is why this animal measures a bare hull. */
-  tail: { part: 'wedge-18', paint: 'limb', at: [0, 0.907957, -0.625] },
-
-  /* The bee's antenna doing a fourth job (§3.1): the bank's only true point,
-   * turned a quarter onto its nose so it aims forward and droops. Joined on the
-   * midline, at the lion's own nose height, on the lion's own front face. */
+  tail: { part: 'wedge-18', paint: 'limb', at: [0, 1.1, -0.625] },
   snout: {
     part: 'cone-01',
     paint: 'muzzle',
     spin: [{ axis: 'x', deg: 90 }],
-    at: [0, 0.83902, 0.5],
+    at: [0, 0.7875, 0.5875],
   },
-
-  /* No nose button — see above. The mouth line and the front teeth instead, and
-   * neither carries a number: both are pure donor transfers onto this hull's own
-   * front face, which is 1.000 square and flat and swallows all three of them. */
   extras: [
-    { name: 'mouth', part: 'plate-13', paint: 'limb' },
-    { name: 'tooth', part: 'wedge-01', paint: 'belly', kind: 'pair' },
+    {
+      name: 'tooth',
+      part: 'wedge-01',
+      paint: 'tooth',
+      kind: 'pair',
+      at: [0.075, 0.6375, 0.625],
+    },
   ],
 })

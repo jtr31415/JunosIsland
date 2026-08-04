@@ -21,8 +21,7 @@
 import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
 import {
-  buildAssembled, SHREW_ASSEMBLY, MOUSE_ASSEMBLY, EYE_CARD_Z, HULL_FRONT_Z, HEIGHT_FLOOR,
-  CARD_STANDOFF,
+  buildAssembled, SHREW_ASSEMBLY, MOUSE_ASSEMBLY,
 } from '../../src/island/species/parts'
 import { partById } from '../../src/island/species/parts/bank.generated'
 import { assertAssembly } from './assembly-assert'
@@ -78,60 +77,18 @@ describe('animal-shrew: it has NO EARS, and that is the whole first read', () =>
   })
 })
 
-describe('animal-shrew: the lion\'s hull, and what a shallower body buys', () => {
-  it('takes an authored hull unmodified — which is not a stretch and says no why', () => {
-    const lion = partById('box-31')!
-    expect(SHREW_ASSEMBLY.hull.part).toBe('box-31')
-    expect(SHREW_ASSEMBLY.hull.at).toEqual([0, 0.80625, -0.0625])
-    // `hulls.ts`: the pack drew ten hulls and using one of them at Kenney's own
-    // proportions is rule 1's purest case. A `stretchWhy` would be a sentence
-    // this species cannot honestly give.
-    expect(SHREW_ASSEMBLY.hull.stretch).toBeUndefined()
-    expect(lion.size).toEqual([1.25, 1.25, 1.125])
-    // 1.125 deep, and depth is what `pets.ts:652` charges keep-out for. The whole
-    // reason to be on this hull rather than the cube.
-    expect(lion.size[2]).toBeLessThan(partById('box-03')!.size[2]!)
-  })
-
-  it('puts the eye card at the absolute plane anyway, floating 0.135 proud', () => {
-    const card = partById('plate-01')!
-    expect(feature('eye').placement).toEqual({
-      kind: 'pair', at: [card.offset[0], card.offset[1], EYE_CARD_Z],
-    })
-    // The constant that looks wrong and is not: this hull's front face is 0.500
-    // and the card is still at 0.6350, so it stands 0.135 proud — which is what
-    // the LION does, because this is the lion's own hull and that is the lion's
-    // own eye card. Never corrected onto the hull it happens to sit on.
-    expect(HULL_FRONT_Z['box-31']).toBe(0.5)
-    expect(EYE_CARD_Z - HULL_FRONT_Z['box-31']!).toBeCloseTo(0.135, 6)
-  })
-
-  it('has a front face that is 1.000 square and FLAT, which is why three things fit on it', () => {
-    // Measured off the record, not assumed off the size. `box-31` chamfers its
-    // rear hard and leaves its face alone: the four front points are
-    // (+/-0.5, +/-0.5, 0.5625) and the four rear ones (+/-0.3125, +/-0.3125).
-    const lion = partById('box-31')!
-    const at = (z: number): number[][] => {
-      const out: number[][] = []
-      for (const vi of new Set(lion.indices)) {
-        const p = [lion.positions[vi * 3]!, lion.positions[vi * 3 + 1]!, lion.positions[vi * 3 + 2]!]
-        if (Math.abs(p[2]! - z) < 1e-6) out.push(p)
-      }
-      return out
-    }
-    const front = at(0.5625), rear = at(-0.5625)
-    expect(Math.max(...front.map(p => Math.abs(p[0]!)))).toBeCloseTo(0.5, 6)
-    expect(Math.max(...front.map(p => Math.abs(p[1]!)))).toBeCloseTo(0.5, 6)
-    expect(Math.max(...rear.map(p => Math.abs(p[1]!)))).toBeCloseTo(0.3125, 6)
-    // Every feature on the face is inside that square, in world terms.
-    const g = build()
-    for (const name of ['snout', 'mouth', 'tooth-r']) {
-      const b = boxOf(g, name)
-      expect(b.min.y, `${name} is off the flat face`).toBeGreaterThan(0.80625 - 0.5)
-      expect(b.max.x, `${name} is off the flat face`).toBeLessThan(0.5)
-    }
-  })
-})
+/*
+ * "THE LION'S HULL, AND WHAT A SHALLOWER BODY BUYS" WAS RETIRED ON 4 AUGUST.
+ *
+ * Three assertions about `box-31`, the lion's shallow hull: that the shrew wore
+ * it unstretched, that its 1.000-square front face was what let a snout, a mouth
+ * and two teeth sit on it, and that the eye card stood 0.135 proud of it.
+ *
+ * Joe moved this animal onto `box-03` in the editor on 4 August. The block was
+ * a description of the hull it used to wear, not a guard on anything — the eye
+ * card's absolute plane, which is the part that actually matters, is checked for
+ * every species by `assertAssembly`. `git show` has the original.
+ */
 
 describe('animal-shrew: the tiger\'s whip, on a plane the tiger shares', () => {
   it('recovers the tiger\'s own recorded z, because the two hulls have ONE rear face', () => {
@@ -165,24 +122,13 @@ describe('animal-shrew: the tiger\'s whip, on a plane the tiger shares', () => {
     expect(tail.max.z - hull.min.z).toBeCloseTo(0.0766, 3)
   })
 
-  it('carries it LOW, and that one chosen number is why the animal is not a tiger', () => {
-    const tiger = partById('wedge-18')!
-    const tail = feature('tail')
-    // The tiger's own recorded height is 1.1867, which would put the tip at 1.710
-    // and make this the tallest of Garden's four small brown creatures. It is
-    // signed off as the shortest. So: 1.43125 - 1.046587/2, the hull's own top
-    // less the tail's own half-height.
-    expect(tiger.offset[1]).toBeCloseTo(1.186701, 6)
-    if (tail.placement.kind === 'single') {
-      expect(tail.placement.at[1]).toBe(0.907957)
-      expect(tail.placement.at[1]).toBeCloseTo(HEIGHT_FLOOR - tiger.size[1]! / 2, 5)
-    }
-    // Which lands the tip exactly on the line of its own back, so the whole
-    // animal measures the bare hull on standard legs and nothing more.
-    const g = build()
-    expect(boxOf(g, 'tail').max.y).toBeCloseTo(boxOf(g, 'hull').max.y, 4)
-    expect(new THREE.Box3().setFromObject(g).max.y).toBeCloseTo(HEIGHT_FLOOR, 4)
-  })
+  /*
+   * "CARRIES IT LOW" WAS RETIRED ON 4 AUGUST. It pinned the tail's height to
+   * 0.907957 — the hull's own top less the tail's half-height — so that the
+   * shrew stayed the shortest of Garden's four small brown creatures. Joe raised
+   * the tail to 1.1 in the editor. That is a carry decision by the animal's
+   * author, and the pin existed only to hold the number he has now changed.
+   */
 })
 
 describe('animal-shrew: the point on the front of its face', () => {
@@ -203,22 +149,12 @@ describe('animal-shrew: the point on the front of its face', () => {
     expect(snout.max.x - snout.min.x).toBeCloseTo(cone.size[0]!, 4)
   })
 
-  it('joins at the lion\'s own nose height and buries the pack\'s own 0.125', () => {
-    const snout = feature('snout')
-    // Every coordinate recovered: the midline, the lion's nose-tip height on the
-    // lion's own hull (`box-32`), and this hull's own front face.
-    expect(partById('box-32')!.offset[1]).toBeCloseTo(0.83902, 5)
-    expect(snout.placement).toEqual({
-      kind: 'single', at: [0, partById('box-32')!.offset[1], HULL_FRONT_Z['box-31']],
-    })
-    // Sunk its own measured fraction, which is 0.125 in units — §3's own floor,
-    // and the same burial the hedgehog's twenty spikes get.
-    expect(partById('cone-01')!.attachment!.sunkUnitsMean).toBe(0.125)
-    const g = build()
-    expect(boxOf(g, 'hull').max.z - boxOf(g, 'snout').min.z).toBeCloseTo(0.125, 4)
-    // And it stands 0.275 proud, which is the whole silhouette claim.
-    expect(boxOf(g, 'snout').max.z - boxOf(g, 'hull').max.z).toBeCloseTo(0.2754, 3)
-  })
+  /*
+   * "JOINS AT THE LION'S OWN NOSE HEIGHT" WAS RETIRED ON 4 AUGUST. It pinned the
+   * snout's three coordinates to the lion's recorded nose height on the lion's
+   * own front face — coordinates that only meant anything while the shrew wore
+   * `box-31`. It is on `box-03` now and Joe has re-sited the snout with it.
+   */
 
   it('DROOPS, because the turn takes the cone\'s own forward lean downward', () => {
     // Unspun, `cone-01` leans forward: its tip sits at z = +0.0628 off its own
@@ -255,29 +191,20 @@ describe('animal-shrew: the point on the front of its face', () => {
   })
 })
 
-describe('animal-shrew: the mouth and the teeth, which cost nothing to place', () => {
-  it('draws the mouth with the lion\'s own face-plate, joined rather than copied', () => {
-    const card = partById('plate-13')!
-    expect(card.roles).toEqual(['card'])
-    // Zero thickness and sunk its own measured 0.000, so it lies ON the face.
-    expect(card.size[2]).toBe(0)
-    expect(card.attachment!.sunkFractionMean).toBe(0)
-    // Plus CARD_STANDOFF. Until that constant existed this mouth joined at
-    // 0.500 and, having no thickness to be shifted by, FINISHED at 0.500 —
-    // coplanar with the hull's own front face, z-fighting it, invisible. It is
-    // now proud by the pack's own 0.010 and the definition still says nothing.
-    expect(feature('mouth').placement).toEqual({
-      kind: 'single', at: [0, card.offset[1], HULL_FRONT_Z['box-31']! + CARD_STANDOFF],
-    })
-    // NOT the eye card's absolute-plane rule. `EYE_CARD_Z` is pinned across all
-    // 48 cards in the pack at sd 0.0000; the face-plate family is not, and its
-    // recorded 0.670 is a deeper hull's number. Joined here, it lands on the face
-    // instead of 0.170 in front of it.
-    expect(card.offset[2]).toBeCloseTo(0.670, 3)
-    const g = build()
-    expect(boxOf(g, 'mouth').max.z - boxOf(g, 'hull').max.z).toBeCloseTo(CARD_STANDOFF, 6)
-  })
-
+describe('animal-shrew: the teeth, which cost nothing to place', () => {
+  /*
+   * THE MOUTH IS GONE, and with it the assertion that drew it.
+   *
+   * The shrew used to carry `plate-13`, the lion's face-plate, as a mouth line
+   * joined `CARD_STANDOFF` proud of the hull's front face. On 4 August Joe
+   * removed it in the editor and gave the teeth a colour slot of their own
+   * (`tooth: 0xeeebe7`) — so the incisors read on their own against the muzzle
+   * rather than against a painted line. The definition now carries exactly one
+   * extra, and it is the pair below.
+   *
+   * The old assertion is in `git show`. What replaced it is not a weaker check
+   * of the same thing; it is a check of the animal that exists.
+   */
   it('mirrors ONE tooth mesh, and the bank holds the other half to prove it', () => {
     const right = partById('wedge-01')!, left = partById('wedge-02')!
     // Rule 6: paired parts are one mesh, mirrored — there is no way to place a
@@ -294,27 +221,28 @@ describe('animal-shrew: the mouth and the teeth, which cost nothing to place', (
     expect(SHREW_ASSEMBLY.features.some(f => f.part === 'wedge-02')).toBe(false)
   })
 
-  it('puts them where the beaver puts them: below its own muzzle, and proud by its own 0.036', () => {
+  it('reads as incisors: a pair, under the snout, on its own colour', () => {
     const tooth = partById('wedge-01')!
     const t = feature('tooth')
-    // §3.1: the bank files this under `nose`, and the placement is what says what
-    // it is. The beaver wears two of them at y = 0.561, below its own `tube-01`
-    // muzzle at y = 0.815 — two lobes under a muzzle are incisors.
-    expect(tooth.offset[1]).toBeCloseTo(0.561036, 6)
+    /* §3.1: the bank files this shape under `nose`, and the PLACEMENT is what
+     * says what it is — two small lobes low on the face, under the muzzle, are
+     * incisors. The beaver is where that reading comes from: it wears the same
+     * pair at y = 0.561, below its own `tube-01` muzzle at y = 0.815.
+     *
+     * Stated as the relationship rather than as Joe's chosen coordinates. He
+     * re-sited these to [0.075, 0.6375, 0.625] on 4 August when he moved the
+     * animal onto `box-03` and dropped the mouth line; the exact station is his,
+     * and pinning it only meant the test went red when he used the editor. */
     expect(tooth.offset[1]!).toBeLessThan(partById('tube-01')!.offset[1]!)
-    if (t.placement.kind === 'pair') {
-      expect(t.placement.at).toEqual([tooth.offset[0], tooth.offset[1], HULL_FRONT_Z['box-31']])
-    }
-    // Sunk its own 0.219, its centre stands the beaver's own 0.0363 proud of
-    // whatever front face it joins — which the beaver's own record confirms:
-    // 0.661290 against `box-03`'s front face of 0.625. Four decimals, because
-    // the bank rounds both the offset and the sunk fraction to six.
-    expect(tooth.offset[2]! - 0.625).toBeCloseTo(0.0363, 4)
+    expect(t.placement.kind).toBe('pair')
+
     const g = build()
-    expect(g.getObjectByName('tooth-r')!.getWorldPosition(new THREE.Vector3()).z - 0.5)
-      .toBeCloseTo(0.0363, 4)
-    // And they sit under the mouth line, not through it.
-    expect(boxOf(g, 'tooth-r').min.y).toBeLessThan(boxOf(g, 'mouth').min.y)
+    // Under the snout, not through it, and out at the front of the face.
+    expect(boxOf(g, 'tooth-r').min.y).toBeLessThan(boxOf(g, 'snout').min.y)
+    expect(boxOf(g, 'tooth-r').max.z).toBeGreaterThan(boxOf(g, 'hull').max.z)
+    // And on their own signed-off colour, which is what replaced the mouth line.
+    expect(t.paint.base).toBe('tooth')
+    expect(SHREW_ASSEMBLY.palette['tooth']).toBe(0xeeebe7)
   })
 })
 
@@ -329,17 +257,22 @@ describe('animal-shrew: what a definition did NOT have to say', () => {
 
   it('paints its belly at the pack\'s own mammal line and adds no geometry for it', () => {
     expect(SHREW_ASSEMBLY.hull.paint.patch).toEqual({ below: 'belly', at: 0.5 })
-    // Same triangles as an unpatched hull; only the seam splits.
+    // Same triangles as an unpatched hull; only the seam splits. Read off the
+    // hull the species actually wears, so it survives Joe changing it.
     const hull = build().getObjectByName('hull') as THREE.Mesh
-    expect(hull.geometry.getIndex()!.count / 3).toBe(partById('box-31')!.tris)
+    expect(hull.geometry.getIndex()!.count / 3).toBe(partById(SHREW_ASSEMBLY.hull.part)!.tris)
   })
 
   it('uses all four of its signed-off colours, and each of them twice over', () => {
-    // §0: the names and the facts are signed-off data. These four are
-    // `garden.ts`'s own for this species and nothing here is a new colour.
-    expect(SHREW_ASSEMBLY.palette).toEqual({
-      coat: 0x6d5b4a, belly: 0xc0ae9a, muzzle: 0x4a3d31, limb: 0x2e251d, pupil: 0x4c4f5e,
-    })
+    /* §0: the names and the facts are signed-off data. These four are
+     * `garden.ts`'s own for this species — asserted as PRESENT AND UNCHANGED
+     * rather than as the whole palette, because the whole palette is Joe's to
+     * extend. He added a `tooth` slot on 4 August and an equality here turned
+     * that into a failure about colours he had not touched. */
+    expect(SHREW_ASSEMBLY.palette['coat']).toBe(0x6d5b4a)
+    expect(SHREW_ASSEMBLY.palette['belly']).toBe(0xc0ae9a)
+    expect(SHREW_ASSEMBLY.palette['muzzle']).toBe(0x4a3d31)
+    expect(SHREW_ASSEMBLY.palette['limb']).toBe(0x2e251d)
     const slots = new Set(SHREW_ASSEMBLY.features.map(f => f.paint.base))
     expect(slots).toContain('belly')  // the sclera, and the teeth
     expect(slots).toContain('muzzle') // the snout
@@ -355,8 +288,8 @@ describe('animal-shrew: what a definition did NOT have to say', () => {
     // `pets.ts:652` charges keep-out from max(width, depth) / 2. `garden.ts` warns
     // that a snout in front and a thin tail behind is the most expensive
     // combination in the collection and once measured a bigger circle than a fox.
-    // The shallower hull is what pays for it: 0.94 against the fox's own 1.15.
+    // The fox's own 1.15 is the number that matters; the exact figure is not
+    // pinned, since it moves whenever Joe re-sites the snout or the whip.
     expect(Math.max(s.x, s.z) / 2).toBeLessThan(1.15)
-    expect(Math.max(s.x, s.z) / 2).toBeCloseTo(0.939, 2)
   })
 })

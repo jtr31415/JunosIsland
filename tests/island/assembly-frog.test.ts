@@ -16,8 +16,7 @@
 import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
 import {
-  buildAssembled, FROG_ASSEMBLY, EYE_CARD_Z, HULL_FRONT_Z_USUAL, OTHER_HULLS,
-  hullFrontZ,
+  buildAssembled, FROG_ASSEMBLY, EYE_CARD_Z,
 } from '../../src/island/species/parts'
 import { partById, type BakedPart } from '../../src/island/species/parts/bank.generated'
 import { assertAssembly } from './assembly-assert'
@@ -76,112 +75,32 @@ function flat(p: BakedPart, face: 0 | 1 | 2, along: 0 | 1 | 2): number {
   return out
 }
 
-describe('animal-frog: the face is three layers 0.010 apart', () => {
-  it('stacks hull 0.500 -> mask 0.625 -> eye card 0.6350, and the card survives', () => {
-    const g = build()
-    // 1. The hull's front face. `box-31` is the one hull under the usual 0.625.
-    expect(hullFrontZ('box-31')).toBe(0.5)
-    expect(boxOf(g, 'hull').max.z).toBeCloseTo(0.5, 6)
-    // 2. The mask, joined there and 0.125 thick, presents its raised centre at
-    //    0.625 — which is where an ORDINARY hull's front face already is.
-    expect(partById('blade-05')!.size[2]).toBe(0.125)
-    expect(boxOf(g, 'mouth').max.z).toBeCloseTo(0.625, 6)
-    expect(boxOf(g, 'mouth').max.z).toBeCloseTo(HULL_FRONT_Z_USUAL, 6)
-    // 3. And the eye card is still in front of it, by the same 0.010 of daylight
-    //    the pack gives a card over a 0.625 face.
-    expect(world(g, 'eye-r').z).toBeCloseTo(EYE_CARD_Z, 6)
-    expect(EYE_CARD_Z - boxOf(g, 'mouth').max.z).toBeCloseTo(0.01, 6)
-  })
-
-  it('would be SWALLOWED on any of the seven usual hulls, and that is measured', () => {
-    // The same plate joined at a 0.625 front face puts its centre panel at 0.750,
-    // which is 0.115 IN FRONT of an eye card that cannot move (rule 5). The
-    // choice of `box-31` is therefore forced by the extra, not by taste.
-    const swallowed = HULL_FRONT_Z_USUAL + partById('blade-05')!.size[2]!
-    expect(swallowed).toBeCloseTo(0.75, 6)
-    expect(swallowed - EYE_CARD_Z).toBeCloseTo(0.115, 6)
-    expect(EYE_CARD_Z).toBeLessThan(swallowed)
-    // And `box-31` is the shallow hull by name, not by a number typed here.
-    expect(OTHER_HULLS.shallower).toBe('box-31')
-    expect(FROG_ASSEMBLY.hull.part).toBe('box-31')
-    expect(FROG_ASSEMBLY.hull.stretch).toBeUndefined()
-  })
-
-  it('is the lion\'s own plate on the lion\'s own hull, so the transfer is exact', () => {
-    const plate = partById('blade-05')!, hull = partById('box-31')!
-    expect([...new Set(plate.provenance.map(p => p.species))]).toEqual(['lion'])
-    expect([...new Set(hull.provenance.map(p => p.species))]).toEqual(['lion'])
-    // Joined at this hull's front face, sunk its own measured 0.000 — and its
-    // centre lands on the bank's recorded offset for the shape, to the digit.
-    expect(at('mouth')).toEqual([0, plate.offset[1], 0.5])
-    expect(feature('mouth').sink).toBe(0)
-    expect(world(build(), 'mouth').z).toBeCloseTo(plate.offset[2]!, 6)
-    // 1.000 square, which is exactly this hull's flat front face — `box-03`'s is
-    // only 0.625 square, so the plate would hang off the chamfer of the cube.
-    expect(plate.size[0]).toBe(1)
-    expect(plate.size[1]).toBe(1)
-    expect(flat(hull, 2, 0) * 2).toBeCloseTo(1, 6)
-    expect(flat(hull, 2, 1) * 2).toBeCloseTo(1, 6)
-    expect(flat(partById('box-03')!, 2, 0) * 2).toBeCloseTo(0.625, 6)
-  })
-
-  it('takes the wide mouth from Kenney\'s own band 5 and adds no geometry for it', () => {
-    const plate = partById('blade-05')!
-    expect(feature('mouth').paint).toEqual({ base: 'coat', byBand: { 5: 'mark' } })
-    // Band 5 exists on the shape, and it is the plate's BOTTOM strip: the four
-    // triangles whose corners all sit at or below -0.3125 of a 1.000 face. This
-    // is why one `byBand` entry is a mouth line and not a stripe somewhere else.
-    const banded = [...plate.bands.keys()].filter(t => plate.bands[t] === 5)
-    expect(banded).toHaveLength(4)
-    for (const t of banded) {
-      for (let k = 0; k < 3; k++) {
-        const vi = plate.indices[t * 3 + k]!
-        expect(plate.positions[vi * 3 + 1]!).toBeLessThanOrEqual(-0.3125)
-      }
-    }
-    // And it lands low on the face: a frog's mouth is a wide line under a tall
-    // gap, not a muzzle. Its own strip is the bottom 0.1875 of the plate.
-    // Four decimals, not six: positions come back off a `Float32BufferAttribute`
-    // and 0.30625 returns as 0.3062205. Same float32 dust `assembly-assert.ts`
-    // snaps for, and it is on every measurement taken off a built mesh below.
-    expect(boxOf(build(), 'mouth').min.y).toBeCloseTo(0.30625, 4)
-  })
-})
-
-describe('animal-frog: the eyes are as high and as wide as the mask allows', () => {
-  it('solves both numbers off the mask rather than choosing them', () => {
-    const card = partById('plate-01')!
-    // x: the mask is 1.000 square about the hull's midline, so the widest a
-    // 0.400 card can sit and stay on it is 0.500 - 0.200.
-    expect(at('eye')[0]).toBeCloseTo(0.5 - card.size[0]! / 2, 9)
-    // y: the mask's top edge is 1.30625, so the highest a 0.320208 card can sit
-    // is that minus its own half-height.
-    const maskTop = partById('box-31')!.offset[1]! + 0.5
-    expect(maskTop).toBeCloseTo(1.30625, 9)
-    expect(at('eye')[1]).toBeCloseTo(maskTop - card.size[1]! / 2, 5)
-    // z is not a choice at all and never was — rule 5, made unsayable.
-    expect(at('eye')[2]).toBe(EYE_CARD_Z)
-    expect(feature('eye').sink).toBe(0)
-    expect(feature('eye').stretch).toBeUndefined()
-    // And it is NOT the pack's default eye, which is what a frog's face is not.
-    expect(at('eye')[0]).not.toBeCloseTo(card.offset[0]!, 3)
-    expect(at('eye')[1]).not.toBeCloseTo(card.offset[1]!, 3)
-  })
-
-  it('lands the two cards exactly in the mask\'s upper corners', () => {
-    const g = build()
-    const mask = boxOf(g, 'mouth'), eye = boxOf(g, 'eye-r')
-    // Touching on the outside and on the top, inside everywhere else: the eye is
-    // as far into the corner as it goes without leaving the face.
-    expect(eye.max.x).toBeCloseTo(mask.max.x, 4)
-    expect(eye.max.y).toBeCloseTo(mask.max.y, 4)
-    expect(eye.min.x).toBeGreaterThan(mask.min.x)
-    expect(eye.min.y).toBeGreaterThan(mask.min.y)
-    // Nowhere near the mouth line: the gap between eye and lip is over half the
-    // face, which is the proportion that reads as a frog and not as a mammal.
-    expect(eye.min.y - 0.49375).toBeGreaterThan(0.4)
-  })
-})
+/*
+ * TWO DESCRIBE BLOCKS WERE RETIRED HERE ON 4 AUGUST, and `git show` is where
+ * they still live if anyone wants them back.
+ *
+ * They were "the face is three layers 0.010 apart" and "the eyes are as high and
+ * as wide as the mask allows" — about twenty assertions, all resting on two
+ * things that are no longer true of this animal:
+ *
+ *   - the hull was `box-31`, the lion's shallow one, chosen because it was the
+ *     only hull the face plate could stack on without swallowing the eye card;
+ *   - the face was `blade-05`, the lion's plate, with Kenney's own band 5
+ *     repainted as the mouth line.
+ *
+ * On 4 August Joe rebuilt the frog's face in the editor: the hull is `box-03`,
+ * the plate is gone, and a `box-04` turned on its side does the mouth instead.
+ * That is a design change by the animal's author, so the tests describing the
+ * old face are not failures — they are a description of a draft that has been
+ * replaced, and re-deriving twenty numbers for the new face would only put the
+ * next redesign back in the same place. His ruling of 3 August: *"dont burn
+ * tokens on tests that fails stuff that shouldnt be failed."*
+ *
+ * What still guards this animal: `assertAssembly` at the top of this file (the
+ * engine invariants — feet on the ground, one mass, every mesh traced to the
+ * bank, eye cards at their absolute size, translation-only placement), the
+ * frog/toad separation below, and Joe's own sign-off in `signed-off.json`.
+ */
 
 describe('animal-frog: a frog\'s eyes sit on top of its head', () => {
   it('wears the pack\'s ROUNDER stub, and wears it as an eye and not as an ear', () => {
@@ -279,16 +198,14 @@ describe('animal-frog: the eardrum is a flank patch on a cheek', () => {
 
 describe('animal-frog: what separates it from the toad', () => {
   it('carries no ears and no tail, so it carries the separation elsewhere', () => {
-    // `garden.ts` names this pair as the confusable one and neither animal may
-    // have an ear or a tail. The four things that do the work instead:
-    //   1. the mask's mouth line, 2. the eyes and their bulges,
-    //   3. the shallow hull, 4. the palette.
-    expect(FROG_ASSEMBLY.features.map(f => f.name).sort())
-      .toEqual(['bulge', 'eardrum', 'eye', 'leg', 'mouth'])
-    // The hull is 1.125 deep against the cube's 1.250 — a tenth shallower, on
-    // the axis a child sees from the side.
-    expect(partById('box-31')!.size[2]).toBe(1.125)
-    expect(partById('box-03')!.size[2]).toBe(1.25)
+    /* `garden.ts` names frog/toad as the confusable pair and neither animal may
+     * have an ear or a tail. THAT is the claim, and it is stated as the property
+     * rather than as the exact feature list it used to pin — Joe redesigned this
+     * animal on 4 August and a list of five names went red for a change that had
+     * nothing to do with the separation. */
+    const names = FROG_ASSEMBLY.features.map(f => f.name)
+    expect(names.some(n => n.startsWith('ear') && n !== 'eardrum'), 'a frog with an ear').toBe(false)
+    expect(names.some(n => n.startsWith('tail')), 'a frog with a tail').toBe(false)
     // And the palette is `garden.ts`'s own signed-off four for this species.
     expect(FROG_ASSEMBLY.palette['coat']).toBe(0x5fae33)
     expect(FROG_ASSEMBLY.palette['belly']).toBe(0xf0f2cf)
@@ -297,7 +214,7 @@ describe('animal-frog: what separates it from the toad', () => {
   })
 
   it('stands as wide as the flat underside allows, which is the crouch', () => {
-    const hull = partById('box-31')!
+    const hull = partById(FROG_ASSEMBLY.hull.part)!
     const leg = feature('leg')
     // `garden.ts` separates frog from toad on leg power above all else (1.15
     // against 0.40) and this kit cannot lengthen a leg without straining rule 1,
@@ -313,17 +230,19 @@ describe('animal-frog: what separates it from the toad', () => {
 
   it('paints its belly at the pack\'s own line and adds no geometry for it', () => {
     expect(FROG_ASSEMBLY.hull.paint.patch).toEqual({ below: 'belly', at: 0.5 })
-    // Same welded points as an unpatched hull; only the seam splits.
+    // Same welded points as an unpatched hull; only the seam splits. Read off
+    // the hull the species actually wears, so it survives Joe changing it.
     const hull = build().getObjectByName('hull') as THREE.Mesh
-    expect(hull.geometry.getIndex()!.count / 3).toBe(partById('box-31')!.tris)
+    expect(hull.geometry.getIndex()!.count / 3).toBe(partById(FROG_ASSEMBLY.hull.part)!.tris)
   })
 
   it('fits between two trees, and strains nothing', () => {
     const s = new THREE.Box3().setFromObject(build()).getSize(new THREE.Vector3())
-    // `pets.ts:652` charges keep-out from max(width, depth) / 2. Nothing here
-    // reaches sideways except two 0.010-proud cards, so the frog is the cheapest
-    // Garden animal to walk past — the fox's own is 1.15.
-    expect(Math.max(s.x, s.z) / 2).toBeCloseTo(0.635, 3)
+    /* `pets.ts:652` charges keep-out from max(width, depth) / 2, and THAT is the
+     * constraint: the frog has to be cheap to walk past. The exact figure is not
+     * pinned any more — it moved from 0.635 to 0.665 when Joe redesigned the
+     * face, which is a change to the animal and not a regression. The fox's own
+     * 1.15 is the number that actually matters. */
     expect(Math.max(s.x, s.z) / 2).toBeLessThan(1.15)
     expect(FROG_ASSEMBLY.flag).toBeUndefined()
   })

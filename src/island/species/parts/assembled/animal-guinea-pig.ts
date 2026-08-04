@@ -213,64 +213,26 @@ import { PACK_PUPIL } from '../texture'
 
 export const GUINEA_PIG_ASSEMBLY = defineCreature('animal-guinea-pig', {
   palette: {
-    coat: 0x8f4a26,    // chestnut: the lower flanks, the chest and the rump (band 7)
-    saddle: 0x33251d,  // the dark half of a tortoiseshell cavy: back, ears, nose (band 15)
-    patch: 0xf2ece1,   // cream: the underside and muzzle (band 3), the blotches, the sclera
-    limb: 0x6b3a20,    // the legs, a shade under the coat
-    pupil: PACK_PUPIL, // measured off 544 real eye texels; see texture.ts
+    coat: 0x8f4a26,
+    saddle: 0x33251d,
+    patch: 0xf2ece1,
+    limb: 0x6b3a20,
+    pupil: PACK_PUPIL,  // the pack's own measured pupil; see texture.ts
+    'box-04': 0xe6e2e0,
   },
 
-  /* The pale slot is a PATCH here and not a belly, so it is named for what it does
-   * and `under` is pointed at it by hand — otherwise it would fall back to the
-   * coat and paint the sclera chestnut. */
   under: 'patch',
-
-  /* THE BIGGEST BODY IN THE PACK, and the only shell bigger than the 1.250 cube on
-   * every axis. Its three bands are Kenney's own cuts and they are this animal's
-   * patching: pale underside and muzzle, dark back and upper flanks, chestnut
-   * between. NO `belly` — a level painted line is the least patch-like marking a
-   * coat can have, and this hull's own cut wanders 0.067 of its height, which is
-   * exactly what a patch does. */
-  hull: {
-    part: 'box-41',
-    paint: { base: 'coat', byBand: { 3: 'patch', 15: 'saddle' } },
-  },
-
-  /* NO `tail`, AND THAT IS THE ANIMAL. A cavy has no external tail at all, it is
-   * the only tailless rodent in this collection, and `home-pets.ts` spends that
-   * fact as the group's cheapest separation. `box-18`, the bank's only stub, is
-   * REFUSED here on purpose and belongs to the HAMSTER's row. Do not add one. */
-
-  /* The elephant's flap, HALVED uniformly — the only ear shape in the bank that
-   * attaches on x and is not the koala dish the chinchilla needs. Joined at the
-   * flank plane x = 0.625 rather than at this shell's bounding box, because 0.675
-   * is only the tiger's two shoulder pads and an ear left to solve would stand
-   * clear of the body. y and z are the elephant's own recorded numbers, and its y
-   * sits 0.022 below this hull's equator: low, and on the side. */
+  hull: { part: 'box-41', paint: { base: 'coat', byBand: { 3: 'patch', 15: 'saddle' } } },
   ears: {
     part: 'tube-04',
     paint: 'saddle',
-    stretch: [0.5, 0.5, 0.5],
-    at: [0.625, 0.809375, 0.147998],
+    stretch: [0.7, 0.35, 0.7],
+    at: [0.4125, 1.2875, 0.4],
+    spin: [{ axis: 'y', deg: 90 }, { axis: 'x', deg: 90 }],
   },
-
-  /* The tiger's own nose on the tiger's own hull, sunk the TIGER's burial and not
-   * the shape's two-donor mean — the lion sinks this shape 0.000 onto a flat face
-   * plate and the tiger 0.585813 into the muzzle, and the mean is a depth neither
-   * animal has. At the tiger's own the centre recovers the bank's recorded
-   * z = 0.710352 to six decimals. */
   nose: { part: 'box-32', paint: 'saddle', sink: 0.585813 },
-
   extras: [
-    /* A mouth, on the muzzle the hull already has. Left to SOLVE: `CARD_STANDOFF`
-     * is what the goldfish, firefly and glow-worm were hand-coding around, and it
-     * is fixed at source now. */
     { name: 'mouth', part: 'plate-13', paint: 'saddle' },
-
-    /* One cream blotch a flank, at the card's own recorded placement. The bank's
-     * only marking cards are these and `plate-10`, both side-mounted at x = 0.635,
-     * and this hull's flank plane is the same 0.625 the card's donors wore it on,
-     * so the pack's own 0.010 of daylight carries over untouched. */
     {
       name: 'blotch',
       part: 'plate-11',
@@ -278,13 +240,20 @@ export const GUINEA_PIG_ASSEMBLY = defineCreature('animal-guinea-pig', {
       paint: 'patch',
       at: [0.635, 0.69375, 0.095994],
     },
+    {
+      part: 'box-04',
+      name: 'box-04',
+      paint: 'box-04',
+      spin: [{ axis: 'z', deg: 90 }, { axis: 'y', deg: 90 }],
+      at: [-0.0125, 1.45, -0.0375],
+      stretch: [0.85, 1, 0.85],
+    },
   ],
-
-  flag: 'THE PATCHING IS SYMMETRIC AND CANNOT BE ANYTHING ELSE, and a real guinea '
-    + 'pig\'s patching is asymmetric by definition — that is what makes one cavy tell '
-    + 'apart from the next in a hutch of six. What IS here is a genuine three-colour '
-    + 'coat with irregular boundaries, and none of it is faked: `box-41` arrives cut '
-    + 'into three regions by Kenney (band 3 the underside and muzzle, band 7 the lower '
+  flag: 'THE PATCHING IS SYMMETRIC AND CANNOT BE ANYTHING ELSE, and a real guinea pig\'s '
+    + 'patching is asymmetric by definition — that is what makes one cavy tell apart '
+    + 'from the next in a hutch of six. What IS here is a genuine three-colour coat '
+    + 'with irregular boundaries, and none of it is faked: `box-41` arrives cut into '
+    + 'three regions by Kenney (band 3 the underside and muzzle, band 7 the lower '
     + 'flanks and rump, band 15 the back and upper flanks — measured as two connected '
     + 'components of 84 triangles, a mirror pair, so it is one unbroken region a side '
     + 'and not a set of stripes), plus one `plate-11` cream blotch on each flank laid '
