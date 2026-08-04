@@ -142,6 +142,24 @@ body.calm-colours .word.red { color: #1d5c2a; background: #e8f8dd; }
 .zrow { display: flex; }
 .tgrid { display: grid; grid-template-columns: repeat(10, 1fr); gap: .35rem; }
 
+/*
+ * The DIGIT ROW: one key per digit, for answers the 0-20 track cannot hold.
+ *
+ * Deliberately not a .tgrid. The track's ten columns mean "and the row beneath
+ * is ten more", which is the whole reason it is shaped that way; ten digits in
+ * ten columns would inherit that reading and say something untrue. A single
+ * flat strip 0-9 says "these are the keys", nothing more — so no fives
+ * colour-blocking either, because a digit is a column, not a quantity.
+ */
+.drow {
+  display: flex;
+  gap: .35rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: min(94vw, 34rem);
+}
+.nchip.dchip { background: var(--paper); color: var(--ink); }
+
 .nchip {
   width: clamp(1.9rem, 5.2vmin, 3rem);
   aspect-ratio: 1;

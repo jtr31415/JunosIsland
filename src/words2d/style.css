@@ -93,6 +93,9 @@
   .numpad{display:flex;flex-direction:column;align-items:center;gap:1.6vmin;pointer-events:none}
   .zrow{display:flex}
   .tgrid{display:grid;grid-template-columns:repeat(10,1fr);gap:.9vmin;width:min(94vw,560px)}
+  /* the digit row for answers past twenty — keys, not quantities, so no fives */
+  .drow{display:flex;flex-wrap:wrap;justify-content:center;gap:.9vmin;width:min(94vw,560px)}
+  .nchip.dchip{width:clamp(38px,8.4vmin,50px);background:#fff;color:#2b3646}
   .nchip{pointer-events:auto;cursor:pointer;display:flex;align-items:center;justify-content:center;
     aspect-ratio:1;min-height:30px;border-radius:1.4vmin;font-weight:700;
     font-size:clamp(13px,3.6vmin,21px);
