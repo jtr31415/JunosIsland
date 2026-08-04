@@ -759,17 +759,24 @@ describe('the hold on unbuilt collections is derived live, and a record is not a
      * >>> block is making. The predicate takes built counts and cannot be fooled
      * >>> by records however the counts are derived.
      */
+    /*
+     * >>> AND WOODLAND JOINED THEM ON 4 AUGUST, which is the prediction below
+     * >>> coming true after all: its records and its models are landing a few
+     * >>> species at a time and none of them is pushed, so it reads records > 0
+     * >>> and released = 0 exactly as the other three do. `unlock.ts` was not
+     * >>> touched for that either.
+     */
     const recordsWithoutModels = COLLECTIONS.map((c) => c.id)
       .filter((id) => shippedIn(id).length > 0 && builtIn(id).length === 0)
     expect(recordsWithoutModels.sort(), 'the set of records-with-nothing-released moved')
-      .toEqual(['africa', 'farm', 'night-time'])
+      .toEqual(['africa', 'farm', 'night-time', 'woodland'])
     for (const id of recordsWithoutModels) {
       expect(heldBack(BUILT, id), `${id} is offered with nothing released in it`).toBe(true)
     }
 
-    // Woodland today: no records, no models, held back. The assertion that
-    // matters is that the SECOND clause is what does the refusing, and it still
-    // will when woodland's records land.
+    // Woodland today: records, models, nothing released, held back. The
+    // assertion that matters is that the SECOND clause is what does the
+    // refusing, and it is — `built` here is `builtIn`, which is RELEASED.
     expect(built('woodland')).toBe(0)
     expect(heldBack(BUILT, 'woodland')).toBe(true)
     expect(HELD_BACK_BY_JOE).not.toContain('woodland')

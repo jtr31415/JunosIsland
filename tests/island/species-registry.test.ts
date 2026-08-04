@@ -105,11 +105,15 @@ describe('the species registry', () => {
     // (PB-074) — sixteen of sixteen, every one hand-assembled. It is the first
     // collection to arrive complete in a single run since the kit route was
     // retired, and the second collection the parts route has closed.
-    expect(REGISTRY.size).toBe(84)
+    // 87 SINCE 4 AUG, and it is WOODLAND being rebuilt on the parts route —
+    // the third collection the kit purge emptied and the last one still empty.
+    // It arrives a few species at a time rather than whole, so this number and
+    // the woodland line below move together and the two are the same fact.
+    expect(REGISTRY.size).toBe(87)
     expect(shippedIn('base')).toHaveLength(24)
     expect(shippedIn('garden')).toHaveLength(14)      // COMPLETE — the slow worm is assembled
     expect(shippedIn('home-pets')).toHaveLength(16)   // COMPLETE — all 16 hand-assembled (PB-073)
-    expect(shippedIn('woodland')).toHaveLength(0)     // all 16 were kit-built
+    expect(shippedIn('woodland')).toHaveLength(3)     // rebuilding: 16 rostered
     expect(shippedIn('africa')).toHaveLength(1)       // crocodile; 13 kit-built deleted
     expect(shippedIn('farm')).toHaveLength(16)        // COMPLETE — all 16 hand-assembled (PB-074)
     expect(shippedIn('night-time')).toHaveLength(13)  // 16 rostered; bat, sugar glider, scorpion
@@ -148,9 +152,12 @@ describe('the species registry', () => {
     // thirteen or fourteen, because Farm had no member the bank could not
     // express. So the schedule above now has a rate to read off it, and the
     // remaining 236 are about fifteen runs rather than an unknown quantity.
+    // 233 since 4 Aug, and the −3 is the first of WOODLAND. This one is being
+    // built a few species at a time rather than in one measured sweep, so it is
+    // the first collection to move this number more than once.
     const rostered = COLLECTIONS.flatMap(c => c.members)
     expect(rostered).toHaveLength(320)
-    expect(rostered.filter(id => !speciesRecord(id))).toHaveLength(236)
+    expect(rostered.filter(id => !speciesRecord(id))).toHaveLength(233)
   })
 
   it('has THREE complete collections — garden, and home-pets and farm rebuilt properly', () => {

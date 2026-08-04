@@ -6,19 +6,30 @@
  * geometry — every number is a multiplier off a kit's one reference silhouette,
  * so retuning the whole collection is an edit to a `REF` and not to this file.
  *
- * COMPLETE, AND THE FIRST COLLECTION THAT IS. Phase 2 shipped fourteen and left
- * `animal-pheasant` and `animal-capercaillie` out on purpose: they are game
- * birds, the songbird kit did not exist, and a bird pressed into the quadruped
- * kit is a four-legged pheasant — the exact failure roster §1's "kits before
- * species" rule exists to prevent. Phase 3 built the songbird kit
- * (`kits/songbird.ts`), so the two of them are here now, as `SongbirdBuild`
- * records, and Woodland is 16/16.
+ * >>> EVERYTHING FROM HERE TO THE END OF THIS HEADER IS THE KIT ERA, AND THE
+ * >>> KITS ARE GONE. Joe retired that route on 2 August 2026 and all sixteen
+ * >>> kit builds were deleted; the header was kept because the SEPARATION work
+ * >>> in it is measured and survives the mechanism, and it is what the assembly
+ * >>> rebuild below was written against. Read the numbers as proportions, not as
+ * >>> fields: there is no `REF`, no `body` multiplier and no kit to retune, and
+ * >>> a hull is never scaled at all (`HullDef.stretch` is `never`). What still
+ * >>> binds is the keep-out ceiling of 1.6, the stockiness argument, and roster
+ * >>> §4's look-alike list at the bottom.
+ * >>>
+ * >>> THE TWO GAME BIRDS ARE BUILDABLE NOW and the paragraph below is out of
+ * >>> date on that too. It was written when a bird meant a kit; on the assembly
+ * >>> route `animal-chicken` and its four Farm siblings established a galliform
+ * >>> idiom out of the pack's own parts — two legs, `box-06` as a folded flank
+ * >>> wing, `tube-02` as the bill, `plate-08` as the round eye — and the
+ * >>> pheasant and the capercaillie are built on it, not pressed into a
+ * >>> quadruped. `tests/island/species-woodland.test.ts` no longer exists; the
+ * >>> sixty per-animal test files went on Joe's ruling of 4 August.
  *
- * SO THIS FILE IS TWO-KITTED, which nothing else in `collections/` is yet.
- * Fourteen quadrupeds and two songbirds, and the tests read the build union
- * rather than assuming `QuadrupedBuild` — see the note at the top of
- * `tests/island/species-woodland.test.ts`, where the old "these two are absent"
- * assertion became "these two must not resolve to a frozen pack animal".
+ * The paragraph this replaces claimed the collection was COMPLETE, which was
+ * true of the kit and not of the standard, and that sentence is why a count of
+ * 100 built species was once reported to Joe when the real figure to spec was
+ * 17. A file describing its own output is not evidence about whether the output
+ * is wanted.
  *
  * WHY THE NUMBERS ARE STOCKIER THAN THE ANIMALS. All 24 live GLBs were measured
  * (see the `REF` comment in `kits/quadruped.ts`): the pack is 1.43–2.02 tall,
@@ -56,33 +67,51 @@
  * FROZEN, so every one of those separations is made on this side, in proportion
  * and palette, and is written down at the species it belongs to.
  */
+import { defineSpecies } from '../define'
+/*
+ * Evaluated for its SIDE EFFECT, not for a name: each species module under
+ * `parts/assembled/` registers its own build as it defines it, and
+ * `defineSpecies` picks that up by id. Without this line every record below
+ * would find no assembly and would build as a bare hull.
+ */
+import '../parts/assembled'
 import type { Species } from '../types'
 
 /**
- * EMPTY, on Joe's ruling of 2 August 2026, and deliberately still here.
+ * BEING REBUILT ON THE ASSEMBLY ROUTE, 4 August 2026. Empty before that.
  *
- * All sixteen were kit-built, and he retired that route: *"only the garden
+ * All sixteen were once kit-built, and Joe retired that route: *"only the garden
  * animals have been built to spec… the old blocky ones… do not build any more
  * of them"*, then *"remove all the blocky ones from the game completely,
  * including the album."* Deletion rather than replacement was safe because he
  * confirmed the state that made it safe — *"she has not collected any of them
- * yet"* — so no save points at a Woodland species.
+ * yet"* — so no save pointed at a Woodland species. The header above SURVIVED
+ * that deletion on purpose: it is the measured separation work for all sixteen
+ * and it is the design brief this rebuild was written against.
  *
- * This file used to open by calling itself "COMPLETE, AND THE FIRST COLLECTION
- * THAT IS", which was true of the kit and not of the standard, and that sentence
- * is why a count of 100 built species was reported to Joe when the real figure
- * to spec was 17. A file describing its own output is not evidence about
- * whether the output is wanted.
+ * IN ROSTER ORDER, which is the order `roster.ts:194-198` lists them and the
+ * order the album shows them. A collection whose file order disagrees with its
+ * roster order is a trap `species-garden.test.ts:149` already exists to catch,
+ * so a member arriving later is INSERTED at its rostered place, never appended.
  *
- * `roster.ts` still lists all sixteen members and is untouched: the roster says
- * what a collection WILL hold, this file says what is BUILT. Sixteen rostered
- * and none built is the ordinary "not made yet" state.
- *
- * The file survives its own contents because `registry.ts` imports
- * `WOODLAND_SPECIES`, and because the header above is the measured separation
- * work for all sixteen, which applies to whoever rebuilds them on the assembly
- * route. It also held the only two-kit collection in the repo — fourteen
- * quadrupeds and two songbirds — and that is worth knowing before someone
- * assumes a collection is one shape of animal.
+ * Every record below is one line. The reasoning for a species' SHAPE — which
+ * hull, which part stands in for the antler or the quill the bank does not have,
+ * what was refused and why — lives in its own `parts/assembled/animal-<id>.ts`,
+ * beside the number it justifies. What belongs here is what is true of the
+ * COLLECTION: the header's look-alike work, and one line per species saying
+ * which field holds it apart from its nearest neighbour.
  */
-export const WOODLAND_SPECIES: readonly Species[] = []
+export const WOODLAND_SPECIES: readonly Species[] = [
+
+  /* The small squirrel that has to not BE `animal-squirrel`: a whip tail
+   * against that animal's plume, and small round ears against its tufts. */
+  defineSpecies('animal-chipmunk', 'bespoke'),
+
+  /* The black tail tip is the one fact a child is told about a stoat, and it
+   * is Kenney's own end-band on the tiger's whip — paint, not a second part. */
+  defineSpecies('animal-stoat', 'bespoke'),
+
+  /* Held apart from the FROZEN `animal-bunny` by the bank's biggest ear paired
+   * with its smallest tail. A hare that reads as a big rabbit has failed. */
+  defineSpecies('animal-hare', 'bespoke'),
+]

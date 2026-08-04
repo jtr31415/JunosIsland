@@ -108,6 +108,9 @@ export { TURKEY_ASSEMBLY } from './animal-turkey'
 export { DONKEY_ASSEMBLY } from './animal-donkey'
 export { GOAT_ASSEMBLY } from './animal-goat'
 export { WATER_BUFFALO_ASSEMBLY } from './animal-water-buffalo'
+export { HARE_ASSEMBLY } from './animal-hare'
+export { STOAT_ASSEMBLY } from './animal-stoat'
+export { CHIPMUNK_ASSEMBLY } from './animal-chipmunk'
 /* -- append the next species' line directly above this one -- */
 
 import { assembledBuilds } from './register'

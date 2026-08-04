@@ -554,7 +554,11 @@ describe('joe/names-audit.json', () => {
     // Joe's three fields empty, which is what an unaudited name looks like —
     // the bench grew, the review did not happen, and this file is careful to
     // keep those two facts separate.
-    expect(audit.names).toHaveLength(60)
+    // 63 SINCE 4 AUG, and the +3 is the first of WOODLAND, rebuilt on the parts
+    // route a few species at a time. Same shape as every growth above it: the
+    // rows are born with Joe's three fields empty, so the bench grew and the
+    // review did not happen, and this file keeps those two facts separate.
+    expect(audit.names).toHaveLength(63)
   })
 
   it('gives every creature its own name, so the playground question works', () => {
