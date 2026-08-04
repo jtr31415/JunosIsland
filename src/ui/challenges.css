@@ -125,16 +125,61 @@ body.calm-colours .word.red { color: #1d5c2a; background: #e8f8dd; }
   cursor: pointer;
 }
 
+/*
+ * A count is now stacked: the big green tens, then the leftover units, then the
+ * key that says what a green one is worth. The five-column grid that used to be
+ * .dotbox itself moved down to .units, where it still means what it always
+ * meant — count these in fives.
+ */
 .dotbox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .28rem;
+  padding: .3rem;
+}
+
+.tens {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: .28rem;
+  max-width: 7.2rem;
+}
+
+.units {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: .22rem;
-  padding: .3rem;
 }
 
 .dot { width: .62rem; height: .62rem; border-radius: 999px; }
 .dot.o { background: #ff9d4d; }
 .dot.b { background: #4aa8ff; }
+
+/* One big dot is ten little ones. Bigger AND green — never only the colour,
+   because the size is the part that survives a colour-blind eye. */
+.bigdot {
+  width: 1.3rem; height: 1.3rem;
+  border-radius: 999px;
+  background: var(--grass);
+  box-shadow: inset 0 -.14rem 0 rgba(0, 40, 0, .16);
+}
+
+/* The key: big dot = ten little ones, five and five so it echoes the blocks
+   above it. Its dots are .keydot, not .dot — they are a picture, not a count. */
+.tenkey {
+  display: flex;
+  align-items: center;
+  gap: .3rem;
+  margin-top: .1rem;
+  padding-top: .28rem;
+  border-top: 1px solid rgba(35, 64, 79, .16);
+}
+.keyeq { font-weight: 900; font-size: .8rem; color: var(--ink); }
+.keyten { display: grid; grid-template-columns: repeat(5, 1fr); gap: .16rem; }
+.keydot { width: .42rem; height: .42rem; border-radius: 999px; background: #ff9d4d; }
+.tenkey .bigdot { width: .9rem; height: .9rem; }
 
 .numpad { display: grid; gap: .45rem; justify-items: center; margin-top: .7rem; }
 .numpad.done { opacity: .45; pointer-events: none; }

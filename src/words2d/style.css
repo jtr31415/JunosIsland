@@ -84,12 +84,25 @@
     background:rgba(255,255,255,.92);color:#7a3fb8;font-weight:700;
     font-size:max(5vmin,20px);display:flex;align-items:center;justify-content:center;
     box-shadow:0 3px 10px rgba(0,0,20,.3);animation:pop .4s cubic-bezier(.34,1.6,.64,1) both}
+  /* the count is place-valued: big green tens, then units, then the key */
   .dotbox{background:rgba(255,255,255,.94);border-radius:1.6vmin;padding:1.8vmin;
-    display:grid;grid-template-columns:repeat(5,auto);gap:1.2vmin;
+    display:flex;flex-direction:column;align-items:center;gap:1.4vmin;
     box-shadow:0 3px 10px rgba(0,0,20,.3);animation:pop .35s cubic-bezier(.34,1.6,.64,1) both}
+  .tens{display:flex;flex-wrap:wrap;justify-content:center;gap:1.2vmin;max-width:30vmin}
+  .units{display:grid;grid-template-columns:repeat(5,auto);gap:1.2vmin}
   .dot{width:2.6vmin;height:2.6vmin;min-width:10px;min-height:10px;border-radius:50%}
   .dot.o{background:#ff8c42}
   .dot.b{background:#2456c4}
+  /* one big dot is ten little ones — bigger AND green, so size carries it too */
+  .bigdot{width:5.4vmin;height:5.4vmin;min-width:21px;min-height:21px;border-radius:50%;
+    background:#3aa93a;box-shadow:inset 0 -.6vmin 0 rgba(0,40,0,.18)}
+  .tenkey{display:flex;align-items:center;gap:1.4vmin;padding-top:1.2vmin;
+    border-top:1px solid rgba(0,0,20,.14)}
+  .tenkey .bigdot{width:3.6vmin;height:3.6vmin;min-width:14px;min-height:14px}
+  .keyeq{font-weight:700;font-size:max(2.6vmin,11px);color:#2b3646}
+  .keyten{display:grid;grid-template-columns:repeat(5,auto);gap:.8vmin}
+  .keydot{width:1.7vmin;height:1.7vmin;min-width:7px;min-height:7px;border-radius:50%;
+    background:#ff8c42}
   .numpad{display:flex;flex-direction:column;align-items:center;gap:1.6vmin;pointer-events:none}
   .zrow{display:flex}
   .tgrid{display:grid;grid-template-columns:repeat(10,1fr);gap:.9vmin;width:min(94vw,560px)}
