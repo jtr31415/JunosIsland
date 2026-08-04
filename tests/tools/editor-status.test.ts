@@ -269,9 +269,14 @@ describe('how far along one animal is, computed and never recorded', () => {
    * The rules are `signoff.ts`'s and are deliberately not restated here.
    */
   it('calls a fact the gate would refuse started, however finished it looks', () => {
+    /* The over-LENGTH case left this list on 4 August: Joe removed the 20-word
+     * ceiling ("let me worry about length, dont guard it"), so a long fact is no
+     * longer something the gate refuses and asserting it here would be asserting
+     * a rule that does not exist. Everything else the gate still refuses is
+     * unchanged — too short, too many sentences, no full stop, American
+     * spelling. */
     const bad = [
       'A hedgehog rolls.',
-      'A hedgehog rolls into a tight ball and snuffles about the garden after dark, hunting all night long for slugs and beetles.',
       'A hedgehog rolls up. It eats slugs. It sleeps all winter.',
       'A hedgehog rolls into a tight ball when it feels afraid',
       'A hedgehog has gray spines and rolls into a tight ball.',

@@ -45,7 +45,7 @@
  */
 import { describe, it, expect } from 'vitest'
 import {
-  OPEN_AT, MAX_ACTIVE, HELD_BACK_BY_JOE, RELATED_GROUP, heldBack,
+  OPEN_AT, MAX_ACTIVE, HELD_BACK_BY_JOE, RELATED_GROUP, PIPELINE_ORDER, heldBack,
   completion, isComplete, activeIds, candidates, nextToOpen, fillToCap,
 } from '../../src/island/species/unlock'
 import type { UnlockState } from '../../src/island/species/unlock'
@@ -135,9 +135,10 @@ function allOwned(
 }
 
 describe('the dials are the numbers Joe gave, spelled out', () => {
-  it('opens at 80%, caps at 4, and holds back Joe\'s three by name', () => {
+  it('opens at 80%, caps at 3, and holds back Joe\'s three by name', () => {
     expect(OPEN_AT).toBe(0.80)
-    expect(MAX_ACTIVE).toBe(4)
+    /* FOUR BECAME THREE on 4 August — Joe: "have 3 albums on the go." */
+    expect(MAX_ACTIVE).toBe(3)
     // Joe's half of the hold, and the only half his sentence is about. The
     // other half is a measurement rather than a ruling and gets its own
     // describe block below, because the two are undone by different people.
@@ -246,7 +247,10 @@ describe('"never more than 4 collections active"', () => {
    * >>> the cap is a rule about the cadence and must be measurable whatever Joe
    * >>> has pushed this afternoon.
    */
-  const fourActive = ['garden', 'home-pets', 'night-time', 'africa']
+  /* As many non-base collections as the cap allows, so the board sits exactly
+   * at it. Sliced rather than typed out, because the cap moved from 4 to 3 on
+   * 4 August and the rule under test is about the cap, not about a number. */
+  const fourActive = ['garden', 'home-pets', 'night-time', 'africa'].slice(0, MAX_ACTIVE)
 
   it('counts active as opened-and-not-complete', () => {
     // Base is the completed fifth: twenty-four owned of twenty-four built, which
@@ -259,7 +263,7 @@ describe('"never more than 4 collections active"', () => {
     expect(isComplete(s, 'base')).toBe(true)
   })
 
-  it('blocks a fifth even when an open collection is past 80%', () => {
+  it('blocks one past the cap even when an open collection is past 80%', () => {
     const s = board({
       open: fourActive,
       owned: { garden: atOpen('garden'), 'home-pets': atOpen('home-pets') },
@@ -271,9 +275,9 @@ describe('"never more than 4 collections active"', () => {
 
   it('counts base as an active collection like any other while it is unfinished', () => {
     const s = board({
-      open: ['base', 'garden', 'home-pets', 'night-time'],
+      open: ['base', 'garden', 'home-pets', 'night-time'].slice(0, MAX_ACTIVE),
       owned: { base: atOpen('base') },
-      lastOpened: 'night-time',
+      lastOpened: 'home-pets',
     })
     expect(activeIds(s)).toHaveLength(MAX_ACTIVE)
     expect(nextToOpen(s, mulberry32(6))).toBeNull()
@@ -291,7 +295,7 @@ describe('"at 4 open collections active a new one opens up only when another is 
   // Base plus three, so `africa` is the one left in reserve for the completion
   // to buy. See the note on `fourActive` above for why the old ocean/ice/outback
   // board cannot stage this any more.
-  const four = ['base', 'garden', 'home-pets', 'night-time']
+  const four = ['base', 'garden', 'home-pets', 'night-time'].slice(0, MAX_ACTIVE)
 
   it('releases exactly one when one of the four is finished, and then blocks again', () => {
     // Same four, but Garden is now complete: three active, and the finished one
@@ -301,7 +305,7 @@ describe('"at 4 open collections active a new one opens up only when another is 
       owned: { ...allOwned(['garden']), 'home-pets': 3 },
       lastOpened: 'night-time',
     })
-    expect(activeIds(released)).toHaveLength(3)
+    expect(activeIds(released)).toHaveLength(MAX_ACTIVE - 1)
     const opened = nextToOpen(released, mulberry32(7))
     expect(opened).not.toBeNull()
 
@@ -318,22 +322,21 @@ describe('"at 4 open collections active a new one opens up only when another is 
 
   it('a second completion buys a second opening', () => {
     /*
-     * THE ONLY TEST HERE THAT NEEDS A POOL WIDER THAN THE REGISTRY HAS. Five
-     * collections open with two of them finished leaves nothing in reserve
-     * today: base plus the four buildable ones IS every collection the cadence
-     * can offer, so a real board would return null for want of stock rather
-     * than for want of entitlement, and the test would pass for the wrong
-     * reason. So `farm` and `woodland` — real roster rows, both at zero built
-     * since PB-036 deleted the kit route — are given animals for this one
-     * assertion. Farm is being built right now; on the day it lands this map
-     * stops being hypothetical and can go.
+     * TWO FINISHED, so two slots are free and the cadence still has something to
+     * put in the first of them. The board is at the cap with two of its three
+     * complete: one active, two below the line.
+     *
+     * On `PLENTY` rather than the live board, for the reason its own note gives —
+     * the real supply is two collections wide today, so a live board would return
+     * null for want of STOCK rather than for want of entitlement and the test
+     * would pass for the wrong reason.
      */
     const s = board({
-      open: ['base', 'garden', 'home-pets', 'night-time', 'africa'],
+      open: ['base', 'garden', 'home-pets'],
       owned: allOwned(['garden', 'home-pets'], PLENTY),
-      lastOpened: 'africa',
+      lastOpened: 'home-pets',
     })
-    expect(activeIds(s)).toHaveLength(3)
+    expect(activeIds(s)).toHaveLength(MAX_ACTIVE - 2)
     expect(nextToOpen(s, mulberry32(8))).not.toBeNull()
   })
 })
@@ -400,38 +403,113 @@ describe('"avoid consecutive collections that may be perceived as related"', () 
     return steps
   }
 
-  it('never opens two of the same group in a row while an alternative exists', () => {
+  it('separates related collections IN THE ORDER, which is where that rule lives now', () => {
     /*
-     * >>> THIS RUNS ON A WIDENED POOL, AND IT HAS TO, or it asserts nothing.
-     * >>> The four collections with animals in them today — garden, home-pets,
-     * >>> night-time, africa — are in FOUR DIFFERENT groups (temperate,
-     * >>> domestic, nocturnal, exotic-hot), so on the live registry there is no
-     * >>> pair the rule could ever be asked about and every walk passes
-     * >>> vacuously. A test that passes because its body is unreachable claims
-     * >>> cover it does not have, which this file has already been bitten by
-     * >>> once (see the Red List test below).
-     * >>>
-     * >>> So `farm` and `woodland` are given their sixteen. They are the exact
-     * >>> pairs the table's `domestic` and `temperate` rows exist for — farm with
-     * >>> home-pets, woodland with garden — and both are real roster rows that
-     * >>> had all sixteen until PB-036 deleted the kit route on 2 August. This is
-     * >>> the board this test ran on until that commit, restored as a
-     * >>> hypothesis; it becomes the real board again as they are rebuilt.
+     * >>> THE FILTER IS GONE, 4 August 2026, and its job moved into the pipeline.
+     *
+     * This used to walk the roster asserting that `draw` never picked a
+     * collection sharing a `RELATED_GROUP` with the last one opened — a filter
+     * with a documented fallback for when avoiding the group left nothing to
+     * open at all. Both existed because the draw was uniform over the whole pool
+     * and could put Africa next to Jungle.
+     *
+     * Joe replaced the random draw with an explicit order: *"keep a set order in
+     * which they are opened ... order of the collections is your's to set."* An
+     * order does the same job without a filter and without a fallback branch —
+     * so the property is now a fact about `PIPELINE_ORDER` and is asserted
+     * directly against it, which is both stronger and readable at a glance.
+     *
+     * `RELATED_GROUP` survives as the RECORD of which collections read as
+     * related to a five-year-old. It is what the order was built from, and this
+     * is what stops the two drifting apart.
      */
-    const built6 = { ...BUILT, farm: 16, woodland: 16 }
-    const groups = new Set(offerable(built6).map((id) => RELATED_GROUP[id]))
-    expect(groups.size, 'the pool has no two collections in one group to test with')
-      .toBeLessThan(offerable(built6).length)
+    const inPipeline = PIPELINE_ORDER.filter((id) => id !== 'base')
+    for (let i = 1; i < inPipeline.length; i++) {
+      const here = RELATED_GROUP[inPipeline[i]!]
+      const before = RELATED_GROUP[inPipeline[i - 1]!]
+      if (here === undefined || before === undefined) continue
+      /*
+       * THE CONSERVATION LADDER IS THE ONE EXEMPTION, and it is the opposite
+       * case rather than a hole. Those four share a group and run consecutively
+       * ON PURPOSE — their order carries the meaning, least threatened to most —
+       * so a habitat page dropped between `vulnerable` and `endangered` would
+       * break the only thing they are for. The rule stops a draw feeling
+       * repetitive; a ladder is not repetition.
+       */
+      if (here === 'conservation' && before === 'conservation') continue
+      expect(here, `${inPipeline[i - 1]} is followed by ${inPipeline[i]}`).not.toBe(before)
+    }
 
-    for (let seed = 0; seed < 60; seed++) {
-      const steps = run(seed, built6)
-      expect(steps.length).toBe(offerable(built6).length)
-      for (let i = 1; i < steps.length; i++) {
-        const prev = RELATED_GROUP[steps[i - 1]!.id]
-        const alternatives = steps[i]!.pool.filter((id) => RELATED_GROUP[id] !== prev)
-        if (alternatives.length === 0) continue // the fallback; its own test below
-        expect(RELATED_GROUP[steps[i]!.id], `seed ${seed}, step ${i}`).not.toBe(prev)
-      }
+    // And the ladder really is in threat order, which is why it is exempt.
+    expect(PIPELINE_ORDER.filter((id) => RELATED_GROUP[id] === 'conservation'))
+      .toEqual(['near-threatened', 'vulnerable', 'endangered', 'critically-endangered'])
+  })
+
+  it('offers the pipeline in order, and offers nothing that is not in it', () => {
+    /*
+     * The order IS the cadence now, so this is the assertion that the pool comes
+     * out of `candidates` in the order a child will meet it. A collection left
+     * out of `PIPELINE_ORDER` is offered to nobody — deliberate, and the safe
+     * direction to fail: an unplaced collection is one nobody has decided where
+     * to put, and showing it early is a decision by accident.
+     */
+    const s = state({ open: ['base'], built: PLENTY })
+    const pool = candidates(s)
+    const want = PIPELINE_ORDER.filter((id) => id !== 'base' && !heldBack(PLENTY, id))
+    expect(pool).toEqual(want)
+
+    // And every collection the roster has is either in the pipeline or held back,
+    // so nothing can be silently unreachable.
+    const placed = new Set(PIPELINE_ORDER)
+    for (const c of COLLECTIONS) {
+      const known = placed.has(c.id) || HELD_BACK_BY_JOE.includes(c.id)
+      expect(known, `${c.id} is in neither PIPELINE_ORDER nor Joe's hold`).toBe(true)
+    }
+  })
+
+  it('weights the front of the queue 50 / 35 / 15, over many draws', () => {
+    /*
+     * Joe: *"probability of opening the earliest: 50%, 2nd: 35%, 3rd: 15%."*
+     *
+     * Measured over 4,000 seeded draws from the same board, so it is the real
+     * distribution rather than the arithmetic restated. The tolerance is wide
+     * enough that sampling noise cannot fail it and narrow enough that swapping
+     * two weights, or going back to a uniform draw, would.
+     */
+    const s = state({ open: ['base'], built: PLENTY })
+    const pool = candidates(s)
+    expect(pool.length, 'need at least three waiting to measure this').toBeGreaterThanOrEqual(3)
+
+    const hits = new Map<string, number>()
+    const N = 4000
+    for (let seed = 0; seed < N; seed++) {
+      const id = nextToOpen(state({
+        open: ['base'], owned: allOwned(['base'], PLENTY), built: PLENTY,
+      }), mulberry32(seed))
+      if (id !== null) hits.set(id, (hits.get(id) ?? 0) + 1)
+    }
+
+    const share = (id: string): number => (hits.get(id) ?? 0) / N
+    expect(share(pool[0]!), `${pool[0]} should be ~50%`).toBeGreaterThan(0.45)
+    expect(share(pool[0]!), `${pool[0]} should be ~50%`).toBeLessThan(0.55)
+    expect(share(pool[1]!), `${pool[1]} should be ~35%`).toBeGreaterThan(0.30)
+    expect(share(pool[1]!), `${pool[1]} should be ~35%`).toBeLessThan(0.40)
+    expect(share(pool[2]!), `${pool[2]} should be ~15%`).toBeGreaterThan(0.11)
+    expect(share(pool[2]!), `${pool[2]} should be ~15%`).toBeLessThan(0.19)
+    // And nothing past the third place is ever drawn.
+    for (const id of pool.slice(3)) expect(hits.get(id) ?? 0, `${id} was drawn`).toBe(0)
+  })
+
+  it('opens the last collection in the game with certainty, not with 50%', () => {
+    /* The weights are normalised over what is actually waiting. Without that,
+     * half the draws would fall past the end of a one-item list and a child would
+     * be told nothing opens when something plainly should. */
+    const only = { ...PLENTY }
+    for (const c of COLLECTIONS) if (c.id !== 'base' && c.id !== 'farm') only[c.id] = 0
+    for (let seed = 0; seed < 50; seed++) {
+      const s = state({ open: ['base'], owned: allOwned(['base'], only), built: only })
+      expect(candidates(s)).toEqual(['farm'])
+      expect(nextToOpen(s, mulberry32(seed))).toBe('farm')
     }
   })
 

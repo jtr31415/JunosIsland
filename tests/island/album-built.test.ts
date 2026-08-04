@@ -36,9 +36,9 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import * as THREE from 'three'
-import { createAlbum } from '../../src/island/album'
+import { createAlbum, PAGE_SLOTS } from '../../src/island/album'
 import type { AlbumWorld } from '../../src/island/album'
-import { collection } from '../../src/island/species/roster'
+import { collection, COLLECTIONS } from '../../src/island/species/roster'
 import { builtIn } from '../../src/island/species/built'
 import { speciesRecord } from '../../src/island/species/registry'
 import type { Pet } from '../../src/island/flow'
@@ -167,7 +167,10 @@ function setup() {
   const on = (): HTMLButtonElement => turns()[1] as HTMLButtonElement
 
   /** Every cell on the page, filled or blank. */
-  const slots = (): HTMLElement[] => all('.album-cell')
+  /* Spacers are LAYOUT, not slots — see PAGE_SLOTS in album.ts. Every page is
+   * padded to the same length so the card cannot change height between pages;
+   * a count of what the album SHOWS must not include the padding. */
+  const slots = (): HTMLElement[] => all('.album-cell:not(.album-spacer)')
   /** The cells that belong to a friend the child owns — the ones with a name. */
   const owned = (): HTMLElement[] => all('.album-cell:not(.album-blank)')
   const heading = (): string => all('.album-set-title')[0]?.textContent ?? ''
@@ -248,6 +251,55 @@ describe('the count and the frames can never disagree', () => {
 })
 
 /* --------------------------------------------- B: only the built members --- */
+
+describe('every page is the same size, so the arrows never move', () => {
+  /*
+   * Joe, 4 August: *"the pages in the album. keep them the same size. kids will
+   * quickly press the arrows, they move from page to page, the click off page
+   * and it closes: frustration -> bad UX."*
+   *
+   * The card had no reserved height, so it shrank to whatever page was showing.
+   * The page-turns sit at the BOTTOM of the card, so turning from the base set's
+   * 24 to Garden's 14 pulled the arrow up out from under a child's finger; the
+   * next tap landed on the backdrop, and the backdrop closes the album.
+   *
+   * `PAGE_SLOTS` hidden spacers make up the difference. These assertions are on
+   * the CELL COUNT rather than on a pixel height because jsdom has no layout —
+   * but the count is the mechanism, and it is what would regress.
+   */
+  it('lays out PAGE_SLOTS cells on every page, however short the album', () => {
+    const { album, root } = setup()
+    album.open([], ['base', 'garden', 'home-pets'])
+    const turns = [...root.querySelectorAll('.album-page-turn')] as HTMLButtonElement[]
+
+    for (let page = 0; page < 3; page++) {
+      const cells = root.querySelectorAll('.album-grid > *')
+      expect(cells, `page ${page} is not the standard size`).toHaveLength(PAGE_SLOTS)
+      turns[1]!.click()
+    }
+  })
+
+  it('reserves the base set\'s size, which is the largest there will ever be', () => {
+    // Joe: "keep the size of the original set. it will never be larger."
+    expect(PAGE_SLOTS).toBe(collection('base')?.members.length)
+    for (const c of COLLECTIONS) expect(c.members.length, c.id).toBeLessThanOrEqual(PAGE_SLOTS)
+  })
+
+  it('pads with cells that are hidden, aria-hidden and hold no animal', () => {
+    /* A spacer that announced itself would have a screen reader read ten empty
+     * cells at the end of Garden, and one that was `display: none` would not
+     * hold the space that is the entire point. */
+    const { album, root } = setup()
+    album.open([], ['garden'])
+    const spacers = [...root.querySelectorAll('.album-spacer')] as HTMLElement[]
+    expect(spacers.length).toBe(PAGE_SLOTS - builtIn('garden').length)
+    for (const s of spacers) {
+      expect(s.getAttribute('aria-hidden')).toBe('true')
+      expect(s.textContent).toBe('')
+      expect(s.querySelector('img')?.getAttribute('src') ?? '').toBe('')
+    }
+  })
+})
 
 describe('a partial collection shows only what has been RELEASED', () => {
   /*

@@ -132,8 +132,9 @@ function setup() {
   return {
     root, album,
     sections: () => all('.album-set'),
-    slots: () => all('.album-cell'),
-    blanks: () => all('.album-blank'),
+    /* Spacers are LAYOUT, not slots — see PAGE_SLOTS in album.ts. */
+    slots: () => all('.album-cell:not(.album-spacer)'),
+    blanks: () => all('.album-blank:not(.album-spacer)'),
     owned: () => all('.album-cell:not(.album-blank)'),
     headings: () => all('.album-set-title'),
     dots: () => all('.album-dot'),

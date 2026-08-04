@@ -250,10 +250,15 @@ describe('THE RATCHET — a finished album is never unfinished by a content push
     const wide: Record<string, number> = {
       ...REAL, farm: 16, woodland: 16, ocean: 16, 'night-time': 15,
     }
-    // Three still being worked on, plus the one she finished. That is the whole
-    // shape of the promise: completing the fourth is what frees the slot, so
-    // the ratchet has to hold her at THREE active, not at the cap.
+    /* Every slot but one still being worked on, plus the one she finished. That
+     * is the whole shape of the promise: completing the last of them is what
+     * frees a slot, so the ratchet has to hold her one BELOW the cap.
+     *
+     * Sized off `MAX_ACTIVE` rather than typed out, because the cap went from
+     * four to three on 4 August ("have 3 albums on the go") and this test is
+     * about the ratchet, not about the number. */
     const open = ['base', 'garden', 'home-pets', 'night-time']
+      .slice(0, MAX_ACTIVE - 1).concat('night-time')
     // Night Time finished at the OLD count of thirteen; the rest barely started.
     const owned = { base: 1, garden: 1, 'home-pets': 1, 'night-time': 13 }
 

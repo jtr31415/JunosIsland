@@ -169,7 +169,20 @@ export const titleFromId = (speciesId: string): string => {
  * this file and that file agree has something to point at.
  */
 export const FACT_MIN_WORDS = 6
-export const FACT_MAX_WORDS = 20
+/**
+ * THE UPPER LIMIT IS GONE — Joe, 4 August 2026.
+ *
+ * *"i need the 20 word limit in the editor gone, i sometimes need 23 or 25. let
+ * me worry about length, dont guard it."*
+ *
+ * It was 20 and it BLOCKED the push, so a 23-word fact he had written and was
+ * happy with could not reach the game until he cut two words he wanted. Length
+ * is a judgement about a sentence a six-year-old has to read, and he is the one
+ * reading it to her — a number in a gate cannot make that judgement for him.
+ *
+ * The floor stays. Six words is the difference between a fact and a fragment,
+ * and nothing about his ruling touches it.
+ */
 export const FACT_MAX_SENTENCES = 2
 /** Not exhaustive, and not meant to be — the same regex the gate uses. */
 export const AMERICAN = /\b(color|colors|gray|behavior|burrowing in the fall|fall)\b/i
@@ -195,7 +208,8 @@ export function factProblems(fact: string): Problem[] {
   }
   const n = words(text)
   if (n < FACT_MIN_WORDS) out.push({ field: 'fact', say: `${n} words — a fact needs at least ${FACT_MIN_WORDS}`, blocks: true })
-  if (n > FACT_MAX_WORDS) out.push({ field: 'fact', say: `${n} words — ${FACT_MAX_WORDS} is as long as it may be`, blocks: true })
+  /* No upper bound. See `FACT_MAX_SENTENCES` above for Joe's ruling: length is
+   * his call, and the sentence count below is what still keeps a fact short. */
   if (sentences(text) > FACT_MAX_SENTENCES) {
     out.push({ field: 'fact', say: `${sentences(text)} sentences — one or two, no more`, blocks: true })
   }

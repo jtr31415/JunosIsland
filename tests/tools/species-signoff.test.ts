@@ -138,7 +138,10 @@ describe('the fact rules are the gate\'s rules, not the panel\'s own', () => {
     }
 
     expect(only(ofWords(5))).toContain('5 words')
-    expect(only(ofWords(21))).toContain('21 words')
+    /* The 21-word case is gone: Joe removed the ceiling on 4 August — *"i
+     * sometimes need 23 or 25. let me worry about length, dont guard it"* — so a
+     * long fact is no longer one of the ways the gate goes red. The FLOOR above
+     * stays, and is asserted at the bound below. */
     expect(only('A mole digs. It eats worms. It lives here.')).toContain('3 sentences')
     expect(only('A mole digs long tunnels under the grass')).toContain('full stop')
     expect(only('A mole has gray fur and digs long tunnels.')).toContain('gray')
@@ -149,6 +152,15 @@ describe('the fact rules are the gate\'s rules, not the panel\'s own', () => {
     expect(factProblems(ofWords(6))).toEqual([])
     expect(factProblems(ofWords(20))).toEqual([])
     expect(factProblems('A mole digs tunnels. It eats worms all day.')).toEqual([])
+  })
+
+  it('lets a LONG fact through, which is the whole of Joe\'s 4 August ruling', () => {
+    /* The lengths he named — *"i sometimes need 23 or 25"* — plus one well past
+     * them, because the point is that there is no ceiling rather than a higher
+     * one. If a number ever comes back, this is the test that says so. */
+    for (const n of [21, 23, 25, 40]) {
+      expect(factProblems(ofWords(n)), `${n} words`).toEqual([])
+    }
   })
 
   it('an empty box is a blocking problem and not a crash', () => {
@@ -259,9 +271,19 @@ describe('what a name he typed himself does, and does not, stop', () => {
   })
 
   it('a fact that fails the gate blocks the push even with everything else settled', () => {
-    const v = view(UNBUILT, '', ofWords(21))
+    /* The fixture was a 21-word fact until 4 August, when Joe removed the
+     * ceiling; it is a THREE-SENTENCE fact now, which the gate still refuses.
+     * The claim under test never was about length — it is that a fact problem
+     * blocks the push however settled everything else is. */
+    const v = view(UNBUILT, '', 'A mole digs. It eats worms. It lives here.')
     expect(v.problems.some(p => p.field === 'fact' && p.blocks)).toBe(true)
     expect(v.ready).toBe(false)
+  })
+
+  it('does NOT block a long fact, however settled everything else is', () => {
+    // The other side of the same ruling, at the seam where it would bite him.
+    const v = view(UNBUILT, '', ofWords(25))
+    expect(v.problems.filter(p => p.field === 'fact')).toEqual([])
   })
 })
 

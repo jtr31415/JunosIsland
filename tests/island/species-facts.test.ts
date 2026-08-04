@@ -150,11 +150,26 @@ describe('joe/species-facts.json — the checking discipline', () => {
 })
 
 describe('joe/species-facts.json — written for a six-year-old', () => {
-  it('keeps every fact short enough to read aloud', () => {
+  it('keeps every fact long enough to BE a fact', () => {
+    /*
+     * THE UPPER BOUND WAS 20 AND IS GONE — Joe, 4 August 2026: *"i need the 20
+     * word limit in the editor gone, i sometimes need 23 or 25. let me worry
+     * about length, dont guard it."*
+     *
+     * Removing it from `signoff.ts` alone would have been theatre. That guard
+     * blocks the push and this one blocks `npm test`, which gates the deploy —
+     * so a 23-word fact he was happy with would have sailed out of the editor
+     * and stopped the game reaching his daughter an hour later, against a file
+     * he could no longer see. That is the exact failure the editor's own comment
+     * says it exists to prevent, arriving from the other side.
+     *
+     * The floor stays: six words is the difference between a fact and a
+     * fragment, and his ruling was about the ceiling. The sentence count below
+     * is what still keeps a fact readable aloud.
+     */
     for (const f of facts) {
       const words = f.fact.trim().split(/\s+/).length
       expect(words, `${f.speciesId}: "${f.fact}"`).toBeGreaterThanOrEqual(6)
-      expect(words, `${f.speciesId}: "${f.fact}"`).toBeLessThanOrEqual(20)
     }
   })
 

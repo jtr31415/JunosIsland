@@ -104,6 +104,27 @@ describe('a fresh island', () => {
     expect(opened.completed).toEqual([])
   })
 
+  it('KEEPS a child who already has four open albums on all four', () => {
+    /*
+     * Joe, 4 August, lowering the cap from four to three: *"dont affect what
+     * kids have already."*
+     *
+     * Juno is carrying four right now, because four was the cap until today. The
+     * cadence only ever ADDS — `activeIds(state) >= MAX_ACTIVE` returns null
+     * rather than closing anything — so the lower cap means she opens nothing
+     * new until she finishes one, and loses nothing. This is the assertion that
+     * says so, because "it only adds" is the kind of property that is true until
+     * somebody writes a prune.
+     */
+    const four = ['base', 'garden', 'home-pets', 'night-time']
+    const owned = [...allOf(BASE_COLLECTION), ...allOf('garden')]
+    const before = { open: four, lastOpened: 'night-time', completed: [] }
+    const after = advance(owned, before, rng(), { ...BUILT, 'night-time': 13 })
+
+    for (const id of four) expect(after.open, `${id} was taken away`).toContain(id)
+    expect(after.open.length).toBeGreaterThanOrEqual(four.length)
+  })
+
   it('never seeds one Joe is holding back', () => {
     for (let seed = 1; seed < 40; seed++) {
       const opened = advance([], NOTHING_OPENED, mulberry32(seed), BUILT)

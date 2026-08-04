@@ -459,6 +459,21 @@ body:has(.overlay:not(.hide)) .album-button { display: none; }
   image-rendering: auto;
 }
 
+/*
+ * A SLOT THAT ONLY HOLDS SPACE — see `PAGE_SLOTS` in album.ts.
+ *
+ * Every page lays out the same number of cells so the card cannot change height
+ * between pages: it did, and because the page-turns sit at the BOTTOM of the
+ * card, the arrow moved out from under a child's finger mid-tap and the miss
+ * landed on the backdrop, which closes the album.
+ *
+ * `visibility: hidden` and not `display: none` — the difference IS the fix. A
+ * hidden element still occupies its grid track; a removed one does not.
+ */
+.album-spacer {
+  visibility: hidden;
+}
+
 .album-name {
   font-weight: 800;
   font-size: clamp(.85rem, 2.4vmin, 1.15rem);

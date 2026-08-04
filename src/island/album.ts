@@ -102,7 +102,7 @@ import { setById } from './variants/sets'
 import { speciesRecord } from './species/registry'
 import { buildSpecies } from './species/kit'
 import { buildAssembly } from './species/parts/assembly'
-import { collection, SPECIES_COLLECTION } from './species/roster'
+import { collection, COLLECTIONS, SPECIES_COLLECTION } from './species/roster'
 import { builtIn } from './species/built'
 import type { Pet } from './flow'
 import type { Speaker } from '../platform/speech'
@@ -336,6 +336,39 @@ export interface AlbumFact {
  * than by coincidence, and so a test can say what the number is FOR.
  */
 export const FACT_ROWS = 3
+
+/**
+ * HOW MANY SLOTS EVERY PAGE LAYS OUT, whatever is actually on it.
+ *
+ * Joe, 4 August 2026: *"the pages in the album. keep them the same size. kids
+ * will quickly press the arrows, they move from page to page, the click off page
+ * and it closes: frustration -> bad UX. keep the size of the original set. it
+ * will never be larger."*
+ *
+ * THE BUG, precisely. A page is an album and albums are different lengths — 24
+ * for the base set, 14 for Garden. The card had no reserved height, so it shrank
+ * to fit whatever page was showing, and the pager is at the BOTTOM of the card.
+ * Turn from a long page to a short one and the arrow you are tapping moves
+ * upward, out from under your finger, mid-tap. The next tap lands on the
+ * backdrop, and the backdrop closes the album. A six-year-old pressing `›`
+ * quickly does not experience that as a layout change; she experiences the album
+ * as slamming shut on her for no reason.
+ *
+ * So every page lays out this many cells: the real ones, then hidden spacers.
+ *
+ * MEASURED OFF THE ROSTER rather than typed as 24. Joe is right that it will
+ * never be larger — the base set is the biggest collection there is — but a
+ * number typed here would be a promise about a file this one does not own, and
+ * `roster.ts` can answer the question directly.
+ *
+ * The alternative was a `min-height` in CSS, and it was rejected: a cell's height
+ * comes from its portrait's `aspect-ratio: 1` over a column width that is a
+ * fraction of the viewport, so any rem figure would be right at one window size
+ * and wrong at every other. Spacers are the same elements as the cells they
+ * stand in for, so they are exactly the right height by construction, at every
+ * size, for free.
+ */
+export const PAGE_SLOTS: number = Math.max(...COLLECTIONS.map(c => c.members.length))
 
 /**
  * What the card says, in reading order.
@@ -846,6 +879,32 @@ export function createAlbum(
   }
 
   /**
+   * A slot that holds the page's SIZE and says nothing at all.
+   *
+   * See `PAGE_SLOTS` for why every page is padded to the same length. This is
+   * the padding, and it is built exactly like `blankFor` above minus the picture
+   * — same classes, same img, same `aspect-ratio` — because the whole point is
+   * to occupy precisely the space a real slot would at any window size.
+   *
+   * `visibility: hidden` rather than `opacity: 0`: it still takes its space in
+   * the grid, and it is out of the tab order and off the accessibility tree
+   * without needing to be. It carries `aria-hidden` as well, for the same reason
+   * a blank does — there is nothing here to announce, and a screen reader
+   * counting ten invisible cells at the end of Garden would be reading out the
+   * layout rather than the album.
+   */
+  function spacer(): HTMLElement {
+    const cell = document.createElement('div')
+    cell.className = 'chunk album-cell album-blank album-spacer'
+    cell.setAttribute('aria-hidden', 'true')
+    const img = document.createElement('img')
+    img.className = 'album-portrait'
+    img.alt = ''
+    cell.append(img)
+    return cell
+  }
+
+  /**
    * One album: a heading, a count, and a slot for every BUILT species in it.
    *
    * IN ROSTER ORDER, never in the order they were found. The roster order is the
@@ -863,6 +922,10 @@ export function createAlbum(
     if (!set) return null
 
     const members = builtIn(id)
+    /* Every page lays out the same number of slots — see `PAGE_SLOTS`. The real
+     * cells come first, then hidden ones make up the difference, so the card is
+     * the same height on the fourteenth page as on the first. */
+    const spacers = Math.max(0, PAGE_SLOTS - members.length)
 
     const section = document.createElement('section')
     section.className = 'album-set'
@@ -883,6 +946,7 @@ export function createAlbum(
       const pet = mine.get(species)
       row.append(pet ? cellFor(pet) : blankFor(species))
     }
+    for (let i = 0; i < spacers; i++) row.append(spacer())
 
     section.append(head, row)
     return section

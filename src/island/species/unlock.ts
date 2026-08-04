@@ -27,7 +27,6 @@
  * overrides the provisional ship queue for the purpose of unlocking; the ship
  * numbers remain what they were, an authoring order for the workbench.
  */
-import { ri } from '../../core/rng'
 import type { Rng } from '../../core/rng'
 import type { Collection } from './types'
 
@@ -58,10 +57,105 @@ export const OPEN_AT = 0.80
  * `nextToOpen` below. A collection the child has finished still shows in the
  * album; it just stops occupying one of the four slots.
  *
- * Not marked provisional: Joe gave 4 as a bound ("never more than 4"), not as a
- * feel dial, and the sentence that follows it only parses against a hard cap.
+ * Not marked provisional: Joe gave the number as a bound ("never more than"),
+ * not as a feel dial, and the sentence that follows it only parses against a
+ * hard cap.
+ *
+ * >>> FOUR BECAME THREE on 4 August 2026 — Joe: *"have 3 albums on the go."*
+ * >>> Nothing about the rules changed with it; the cap is a number and this is
+ * >>> the number. A child already carrying four open albums KEEPS all four: the
+ * >>> cadence only ever adds, and `activeIds(state) >= MAX_ACTIVE` simply means
+ * >>> nothing new opens for her until she finishes one. *"dont affect what kids
+ * >>> have already."*
  */
-export const MAX_ACTIVE = 4
+export const MAX_ACTIVE = 3
+
+/**
+ * THE PIPELINE. Which collection opens next, in order, for every child.
+ *
+ * Joe, 4 August 2026: *"keep a set order in which they are opened ... once a
+ * collection is complete, a new one is enabled. that way we have a rolling
+ * pipeline. order of the collections is your's to set, but start with what we
+ * have already."*
+ *
+ * ## This replaces "random order"
+ *
+ * JT-027 said *"random order"* and the draw was uniform over everything
+ * available. That was right when nothing was built and any three of twenty-one
+ * were as good as any other three. It is wrong now: the collections differ
+ * enormously in how ready and how familiar they are, and a five-year-old opening
+ * Ice before Farm meets a page of animals she has never heard of instead of a
+ * cow. An order is a curriculum, and a random draw cannot express one.
+ *
+ * ## The order, and why it is this
+ *
+ * The first three are not a choice — they are what is already open on her
+ * island, and re-ordering them would be exactly the "affect what kids have
+ * already" he ruled out. After that it runs outward from what a British
+ * five-year-old can name, and only then to the exotic and the abstract:
+ *
+ *   base, garden, home-pets   what she has. Untouched.
+ *   woodland                  the same walk as the garden, one field further.
+ *   farm                      a cow, a sheep, a hen. Named before she reads.
+ *   birds                     still the garden, now looking up.
+ *   ocean                     the seaside — met on holiday, not on a screen.
+ *   night-time                the first page that needs imagination.
+ *   africa                    the zoo animals. Every child's favourites, and
+ *                             deliberately not first: they are the reward.
+ *   ice, jungle, outback      further out, one climate at a time.
+ *   critters, raptors         the specialist pages, once the broad ones are done.
+ *   near-threatened ... critically-endangered
+ *                             LAST, and in that order, because they are a
+ *                             conservation ladder rather than a habitat and only
+ *                             mean anything to a child who has met the animals
+ *                             on them. `types.ts` treats them apart too.
+ *
+ * `legendary`, `dinosaurs` and `prehistoric` are absent on purpose: they are
+ * `HELD_BACK_BY_JOE`. Appending them here would be deciding something that is
+ * his, and `heldBack` would refuse them anyway.
+ *
+ * ## Relatedness is expressed HERE now, not by a filter
+ *
+ * `RELATED_GROUP` and the "avoid consecutive related collections" rule existed
+ * because a random draw could put Africa next to Jungle. An explicit order does
+ * that job better and without a fallback branch, and the order above is built to
+ * satisfy it: garden and woodland have home-pets between them, home-pets and
+ * farm have woodland, africa and jungle have ice, and the two bird pages sit at
+ * opposite ends. `species-unlock.test.ts` asserts that pairwise rather than
+ * trusting this paragraph — it caught `home-pets, farm` in the first draft.
+ *
+ * THE ONE EXEMPTION IS THE CONSERVATION LADDER, and it is the opposite case.
+ * Those four share a group and run consecutively ON PURPOSE: their order carries
+ * the meaning — least threatened to most — so interleaving a habitat page
+ * between `vulnerable` and `endangered` would break the one thing they are for.
+ * The rule exists to stop a draw feeling repetitive; a ladder is not repetition.
+ *
+ * A collection missing from this list is not offerable at all — asserted in
+ * `species-unlock.test.ts`, so adding one to the roster and forgetting it here
+ * is a red test rather than a collection no child is ever shown.
+ */
+export const PIPELINE_ORDER: readonly string[] = [
+  'base', 'garden', 'home-pets',
+  'woodland', 'farm', 'birds', 'ocean', 'night-time', 'africa',
+  'ice', 'jungle', 'outback', 'critters', 'raptors',
+  'near-threatened', 'vulnerable', 'endangered', 'critically-endangered',
+]
+
+/**
+ * How the next album is chosen from the front of the pipeline.
+ *
+ * Joe: *"probability of opening the earliest: 50%, 2nd: 35%, 3rd: 15%."*
+ *
+ * Not a uniform draw over the whole pool and not a strict queue either. The
+ * earliest waiting collection is the likeliest by a distance, so the order is
+ * the order in practice — but two children who have played the same amount do
+ * not have identical islands, which is roster §3's "playground currency" and the
+ * whole reason JT-027 asked for randomness in the first place. This keeps both.
+ *
+ * With fewer than three waiting the weights are normalised over what is there,
+ * so the last collection in the game opens with probability 1 rather than 0.5.
+ */
+export const OPEN_WEIGHTS: readonly number[] = [0.50, 0.35, 0.15]
 
 /**
  * The three Joe is holding back by JUDGEMENT. His call, and only his to undo.
@@ -401,9 +495,19 @@ export function activeIds(state: UnlockState): readonly string[] {
  * from `Object.keys(state.owned)`, whose order is the caller's accident.
  */
 export function candidates(state: UnlockState): readonly string[] {
-  return state.roster
-    .map((c) => c.id)
-    .filter((id) => id !== 'base' && !state.open.includes(id) && !heldBack(state.built, id))
+  /*
+   * IN PIPELINE ORDER since 4 August, not roster order — see `PIPELINE_ORDER`.
+   * The order IS the feature now: `draw` weights the first three 50/35/15, so
+   * what this returns first is what a child is most likely to be given next.
+   *
+   * Driven off `PIPELINE_ORDER` rather than sorting the roster by it, so a
+   * collection nobody has placed in the pipeline is not offered at all. That is
+   * the safe direction to fail: an unplaced collection is one nobody has decided
+   * where to put, and showing it to a child early is a decision by accident.
+   */
+  const known = new Set(state.roster.map((c) => c.id))
+  return PIPELINE_ORDER.filter((id) => known.has(id)
+    && id !== 'base' && !state.open.includes(id) && !heldBack(state.built, id))
 }
 
 /**
@@ -470,26 +574,39 @@ function draw(state: UnlockState, rng: Rng): string | null {
   const pool = candidates(state)
   if (pool.length === 0) return null
 
-  // Rule 4. "avoid consecutive collections that may be perceived as related".
-  const lastGroup = state.lastOpened === null ? undefined : RELATED_GROUP[state.lastOpened]
-  const unrelated = lastGroup === undefined
-    ? pool
-    : pool.filter((id) => RELATED_GROUP[id] !== lastGroup)
+  /*
+   * RULE 4 IS GONE, and its job moved into `PIPELINE_ORDER`.
+   *
+   * It filtered out candidates sharing a `RELATED_GROUP` with `lastOpened` —
+   * "avoid consecutive collections that may be perceived as related" — and
+   * needed a documented fallback for the case where avoiding them left nothing
+   * to open at all. Both existed because the draw was uniform over the whole
+   * pool and could put Africa next to Jungle.
+   *
+   * An explicit order does that job better: the pipeline separates the related
+   * pairs by construction, so there is no filter to fight and no empty-pool
+   * branch to fall back from. `RELATED_GROUP` is kept as the record of WHICH
+   * collections read as related — it is what the order was built from, and it is
+   * asserted against the order in `species-unlock.test.ts`.
+   *
+   * RULE 5, WEIGHTED. Joe: *"probability of opening the earliest: 50%, 2nd:
+   * 35%, 3rd: 15%."* Still the caller's seeded stream, never `Math.random`, so a
+   * save reproduces and a test can pin the draw (`src/core/rng.ts:23`).
+   */
+  const front = pool.slice(0, OPEN_WEIGHTS.length)
+  const weights = OPEN_WEIGHTS.slice(0, front.length)
+  const total = weights.reduce((a, b) => a + b, 0)
 
-  // >>> THE FALLBACK, AND IT IS DELIBERATE — READ THIS BEFORE FILING A BUG.
-  // If avoiding the last group would leave NOTHING to open, we open a related
-  // one anyway. Relatedness is a cosmetic ordering preference; the child having
-  // something new to collect is not. The case is real and reachable: with the
-  // four conservation tiers grouped together, a late game can arrive at a pool
-  // that is nothing but conservation tiers right after a conservation tier
-  // opened. A child must never be stuck on an empty island because of a
-  // presentation rule, so this branch prefers a slightly repetitive album to a
-  // dead one. It looks like a missing filter. It is not.
-  const choices = unrelated.length > 0 ? unrelated : pool
-
-  // Rule 5. The caller's seeded stream, never Math.random, so a save reproduces
-  // and a test can pin the draw (`src/core/rng.ts:23`).
-  return choices[ri(rng, choices.length)] ?? null
+  /* Normalised over what is actually waiting, so the last collection in the game
+   * opens with probability 1 rather than 0.5 — otherwise half the draws would
+   * fall past the end of the list and open nothing. */
+  let ticket = rng() * total
+  for (const [at, id] of front.entries()) {
+    ticket -= weights[at] as number
+    if (ticket < 0) return id
+  }
+  // Float dust only: `rng()` is [0, 1) so the loop above all but always returns.
+  return front[front.length - 1] ?? null
 }
 
 /**

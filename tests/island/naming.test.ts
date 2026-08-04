@@ -32,7 +32,7 @@ import {
   collection, collectionOf, COLLECTIONS, SPECIES_NAMES,
 } from '../../src/island/species/roster'
 import { NAME_BANDS } from '../../src/island/species/types'
-import { SHIPPED_SPECIES, BASE_SPECIES } from '../../src/island/species/registry'
+import { SHIPPED_SPECIES } from '../../src/island/species/registry'
 import { SETS } from '../../src/island/variants/sets'
 import { petName, _rejected } from '../../src/core/names'
 import { mulberry32 } from '../../src/core/rng'
@@ -246,8 +246,22 @@ describe('one name per species — JT-029', () => {
       return first
     }
 
+    /*
+     * TWO MORE JOINED THE OTTER ON 4 AUGUST, and they are a different mechanism.
+     * The otter moved because the ALLOCATOR resolved a collision. The budgie and
+     * the lovebird moved because Joe overruled the draw in `name-pins.json`: it
+     * gave them `Pewod` and `Vagod`, which read badly out loud to a child, and
+     * he chose `Plewod` and `Vapod`. A pin outranks the draw by design.
+     *
+     * They are named here rather than filtered out, so a THIRD unexplained name
+     * moving is still a red line with an id in it.
+     */
+    const OVERRULED = ['animal-budgie', 'animal-lovebird']
     const moved = ALL_SPECIES.filter(s => givenName(s) !== alone(s))
-    expect(moved).toEqual(['animal-otter'])
+    expect(moved.sort()).toEqual(['animal-budgie', 'animal-lovebird', 'animal-otter'])
+    for (const id of OVERRULED) expect(NAME_PINS[`${NATURAL_SET}/${id}`]).toBe(givenName(id))
+    // And the collision fix itself still moved exactly one: the otter.
+    expect(moved.filter(s => !OVERRULED.includes(s))).toEqual(['animal-otter'])
 
     // The warthog came first in roster order (Africa is collection 4, Woodland
     // is 9), so the warthog KEPT `Gichesh` and the otter redrew. Priority is
@@ -437,27 +451,35 @@ describe('pins', () => {
    * The collections Joe has NOT deployed are deliberately unpinned — *"all the
    * ones not yet deployed i will vet anyway and change as needed then."*
    */
-  it('pins the base twenty-four, and nothing that is not yet deployed', () => {
+  it('pins every DEPLOYED collection, and nothing Joe has still to vet', () => {
+    /* A name a child can already be dealt must not drift, so the pinned set is
+     * exactly the released collections. The rest stay on the draw until he vets
+     * them: *"all the ones not yet deployed i will vet anyway and change as
+     * needed then."* */
+    const DEPLOYED = ['base', 'garden', 'home-pets']
     const raw = JSON.parse(readFileSync(
       resolve(root, 'src/island/species/name-pins.json'), 'utf8')) as
       { schemaVersion: number; pins: Record<string, string> }
     expect(raw.schemaVersion).toBe(1)
-    expect(Object.keys(raw.pins)).toHaveLength(24)
-    expect(Object.keys(NAME_PINS)).toHaveLength(24)
 
-    // Every pin is a base species, keyed under the natural set, and non-empty.
-    const base = new Set(BASE_SPECIES.map(s => s.id))
+    const want = DEPLOYED.flatMap(id => [...(collection(id)?.members ?? [])])
+    expect(Object.keys(raw.pins).sort())
+      .toEqual(want.map(id => `${NATURAL_SET}/${id}`).sort())
+    expect(Object.keys(NAME_PINS)).toHaveLength(want.length)
+
     for (const [key, name] of Object.entries(raw.pins)) {
-      expect(key.startsWith('natural/'), key).toBe(true)
-      expect(base.has(key.slice('natural/'.length)), `${key} is not a base species`).toBe(true)
       expect(name.length, key).toBeGreaterThan(0)
     }
-    expect(new Set(Object.values(raw.pins)).size, 'two species share a pinned name').toBe(24)
+    expect(new Set(Object.values(raw.pins)).size, 'two species share a pinned name')
+      .toBe(want.length)
 
-    // The three Joe read out loud, so a silent re-pin is a red line with a name.
+    // Read out loud by Joe, so a silent re-pin is a red line with a name on it.
     expect(raw.pins['natural/animal-bunny']).toBe('Chudup')
     expect(raw.pins['natural/animal-fox']).toBe('Zapvo')
     expect(raw.pins['natural/animal-tiger']).toBe('Vizorm')
+    // His two overrules of 4 August, for names that read badly out loud.
+    expect(raw.pins['natural/animal-lovebird']).toBe('Vapod')
+    expect(raw.pins['natural/animal-budgie']).toBe('Plewod')
   })
 
   it('pins no name the old unseeded generator could embarrass a child with', () => {
