@@ -585,8 +585,8 @@
       "id": "PB-082",
       "title": "The round-trip guard times out under load, because its cost scales with the species count",
       "detail": "tests/tools/editor-round-trip.test.ts round-trips EVERY registered species through emit, write and dynamic import. Home Pets took that set from 30 to 44 and it now exceeds vitest's default 5s under full-suite load, while passing alone in ~2s. Farm makes it 60. Deliberately not fixed by raising the timeout: the standing rule here is that moving a constant to make a gate green buries real faults. Wants a measurement and a decision — per-species cases, a longer budget justified by data, or the trip proved once and sampled thereafter.",
-      "state": "open",
-      "run": ""
+      "state": "done",
+      "run": "c3d8c08"
     },
     {
       "id": "PB-083",
