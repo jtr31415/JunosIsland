@@ -89,13 +89,27 @@ vi.mock('../../src/island/species/parts/assembly', async () => {
 
 /* ------------------------------------------------------------------ */
 
-const NIGHT_BUILT = builtIn('night-time')
-const NIGHT_UNBUILT = (collection('night-time')?.members ?? [])
-  .filter(m => !NIGHT_BUILT.includes(m))
+/*
+ * THE PARTIAL COLLECTION MOVED FROM NIGHT TIME TO HOME PETS ON 4 AUGUST.
+ *
+ * `builtIn` filters on RELEASED now (Joe: *"i only want to see in the album the
+ * silhouette cards for the animals that have successfully pushed"*), and Night
+ * Time is built-but-unpushed from end to end, so it has no page at all — it
+ * moved from being this file's partial-album example to being one of its
+ * no-page examples. Home Pets is the partial album now: fifteen pushed of
+ * sixteen rostered, with `animal-rat` built and waiting.
+ *
+ * Kept general rather than hard-coded so the fixture follows Joe's pushing
+ * rather than needing an edit every time he ticks one.
+ */
+const PART_SET = 'home-pets'
+const PART_SHOWN = builtIn(PART_SET)
+const PART_HIDDEN = (collection(PART_SET)?.members ?? [])
+  .filter(m => !PART_SHOWN.includes(m))
 
 /** Assembly record -> species id, so a recorded build can be named. */
 const NAMED_SHAPE = new Map<unknown, string>()
-for (const id of NIGHT_BUILT) {
+for (const id of PART_SHOWN) {
   const a = speciesRecord(id)?.assembly
   if (a) NAMED_SHAPE.set(a, id)
 }
@@ -203,14 +217,17 @@ afterEach(() => { document.body.innerHTML = '' })
 describe('the count and the frames can never disagree', () => {
   it('draws exactly as many cells as the heading promises, on a partial album', () => {
     /*
-     * Night Time is the case that used to lie: sixteen rostered, thirteen built,
-     * and a heading that said sixteen over a grid of sixteen frames of which
-     * three could never be filled. Both halves come from `builtIn` now, read
-     * once — see `sectionFor`.
+     * The case that used to lie was a heading promising more than the grid could
+     * ever fill. Both halves come from `builtIn` now, read once — see
+     * `sectionFor` — so whatever the filter is, they cannot disagree.
+     *
+     * Home Pets is the partial album as of 4 August: sixteen rostered, fifteen
+     * RELEASED. `animal-rat` is built and not yet pushed, so it has no frame.
+     * (It used to be Night Time at thirteen of sixteen, on the built filter.)
      */
     const { album, slots, promised } = setup()
-    album.open([], ['night-time'])
-    expect(promised()).toBe(13)
+    album.open([], ['home-pets'])
+    expect(promised()).toBe(15)
     expect(slots()).toHaveLength(promised())
   })
 
@@ -232,32 +249,40 @@ describe('the count and the frames can never disagree', () => {
 
 /* --------------------------------------------- B: only the built members --- */
 
-describe('a partial collection shows only what somebody has built', () => {
-  it('gives Night Time thirteen frames, not sixteen', () => {
-    // `animal-bat` and `animal-sugar-glider` want a membrane, `animal-scorpion`
-    // a pincer, and the bank has neither. Three frames that can never be filled.
+describe('a partial collection shows only what has been RELEASED', () => {
+  /*
+   * "Built" became "released" on 4 August — Joe: *"i only want to see in the
+   * album the silhouette cards for the animals that have successfully pushed."*
+   * See `built.ts`'s header for the reversal and why the base 24 are exempt.
+   *
+   * The examples had to move with it. Night Time and Africa are BUILT and not
+   * pushed, so they have no page at all now and are covered by the "no page"
+   * block below. Home Pets is the partial album instead, and it is a better
+   * example than either was: the missing one is missing because Joe has not
+   * pushed it yet, which is exactly the state this filter exists to show.
+   */
+  it('gives Home Pets fifteen frames, not sixteen', () => {
+    // `animal-rat` is built and unpushed. One frame that should not be promised.
     const { album, slots, tally } = setup()
-    album.open([], ['night-time'])
-    expect(collection('night-time')?.members).toHaveLength(16)
-    expect(slots()).toHaveLength(13)
-    expect(tally()).toBe('0 of 13')
+    album.open([], ['home-pets'])
+    expect(collection('home-pets')?.members).toHaveLength(16)
+    expect(slots()).toHaveLength(15)
+    expect(tally()).toBe('0 of 15')
   })
 
-  it('gives Africa one frame, not sixteen', () => {
-    // The crocodile alone, built bespoke on the assembly kit. PB-036 deleted the
-    // other fifteen and their frames stayed behind until this change.
+  it('gives Garden all fourteen, because Joe has pushed every one', () => {
     const { album, slots, tally, heading } = setup()
-    album.open([], ['africa'])
-    expect(collection('africa')?.members).toHaveLength(16)
-    expect(slots()).toHaveLength(1)
-    expect(tally()).toBe('0 of 1')
-    expect(heading()).toBe('Africa0 of 1')
+    album.open([], ['garden'])
+    expect(collection('garden')?.members).toHaveLength(14)
+    expect(slots()).toHaveLength(14)
+    expect(tally()).toBe('0 of 14')
+    expect(heading()).toBe('Garden0 of 14')
   })
 
-  it('counts the friend they own against the built total, not the rostered one', () => {
+  it('counts the friend they own against the released total, not the rostered one', () => {
     const { album, tally } = setup()
-    album.open([pet('p9', 'Snap', 'animal-crocodile')], ['africa'])
-    expect(tally()).toBe('1 of 1')
+    album.open([pet('p9', 'Snap', 'animal-hedgehog')], ['garden'])
+    expect(tally()).toBe('1 of 14')
   })
 })
 
@@ -323,20 +348,24 @@ describe('BRIEF §19: nothing the child owns is lost by the filter', () => {
 
   it('D1: keeps a pet whose species is rostered but has no frame', () => {
     /*
-     * Night Time IS shown — thirteen of it is built — but `animal-bat` is not one
-     * of the thirteen, so the page she met it on no longer has a slot for it.
+     * The page IS shown, but this pet's species is not one of the members with a
+     * frame on it — so the page she met it on no longer has a slot for it.
      * `shown` is built from `builtIn` rather than from the roster precisely so
      * this pet falls onto "More friends" instead of off the end of the book.
+     *
+     * The example is Home Pets and the rat since 4 August: Night Time has no
+     * page at all now, which is a different case and is covered above.
      */
-    const pets = [FOX, BAT]
-    expect(NIGHT_UNBUILT).toContain('animal-bat')
-    nobodyVanishes(pets, ['base', 'night-time'])
+    const RAT = pet('p2', 'Squeak', 'animal-rat')
+    const pets = [FOX, RAT]
+    expect(PART_HIDDEN).toContain('animal-rat')
+    nobodyVanishes(pets, ['base', PART_SET])
 
-    const { album, cell } = reach(pets, ['base', 'night-time'], 'More friends', 'Squeak')
+    const { album, cell } = reach(pets, ['base', PART_SET], 'More friends', 'Squeak')
     expect(cell.getAttribute('role')).toBe('button')
     expect(cell.getAttribute('aria-label')).toContain('Squeak')
     cell.click()
-    expect(album.popped()).toBe(BAT)
+    expect(album.popped()).toBe(RAT)
   })
 
   it('D2: keeps a pet from a collection that is hidden entirely', () => {
@@ -389,21 +418,22 @@ describe('the prefetch warms the page they are about to reach', () => {
   const warmed = (): string[] =>
     shapes.made.map(b => NAMED_SHAPE.get(b)).filter((id): id is string => !!id)
 
-  it('warms the thirteen built night-time species and none of the three unbuilt', async () => {
+  it('warms the released members of the next page and none of the held-back', async () => {
     /*
      * A STALE INDEX HERE IS A SILENT WRONG-PORTRAIT BUG, which is why this is
-     * asserted by name rather than by count. The three unbuilt members have no
-     * record at all, so `shapeOf` would fall through to the island's own cache
-     * and ask it for `animal-bat` — `asked` is what proves it never does.
+     * asserted by name rather than by count. A member with no frame must never be
+     * asked for: `shapeOf` would fall through to the island's own cache and ask
+     * it for an animal the page does not show, and `asked` is what proves it
+     * never does.
      */
     const { album, asked } = setup()
-    album.open([], ['base', 'night-time'])
+    album.open([], ['base', PART_SET])
     expect(warmed(), 'not during the turn itself').toEqual([])
 
     await settle()
-    expect(warmed().sort()).toEqual([...NIGHT_BUILT].sort())
-    expect(warmed()).toHaveLength(13)
-    for (const id of NIGHT_UNBUILT) expect(asked, id).not.toContain(id)
+    expect(warmed().sort()).toEqual([...PART_SHOWN].sort())
+    expect(PART_HIDDEN.length, 'the partial set is no longer partial').toBeGreaterThan(0)
+    for (const id of PART_HIDDEN) expect(asked, id).not.toContain(id)
   })
 
   it('is not shifted by a hidden collection sitting in the argument', () => {
@@ -411,22 +441,24 @@ describe('the prefetch warms the page they are about to reach', () => {
      * `pages` has already had the empty collections taken out, so `at + 1` must
      * mean the page the child is one tap away from — not the id one along in the
      * list the caller happened to pass. Woodland is in the argument and is not a
-     * page, so the warm after page 0 is still Night Time's thirteen.
+     * page, so the warm after page 0 is still the partial set's own members.
      *
-     * >>> WAS FARM; PB-074 built it, so it is a page now and cannot be the
-     * >>> hidden one. Woodland is empty and takes the role.
+     * >>> WAS FARM; PB-074 built it, so it was a page. Then on 4 August the
+     * >>> filter became RELEASED and Farm went back to having no page — as did
+     * >>> Night Time and Africa. Woodland keeps the role; any of the four would
+     * >>> do, and none of them is a page.
      */
     const { album } = setup()
-    album.open([], ['base', 'woodland', 'night-time'])
+    album.open([], ['base', 'woodland', PART_SET])
     return settle().then(() => {
-      expect(warmed().sort()).toEqual([...NIGHT_BUILT].sort())
+      expect(warmed().sort()).toEqual([...PART_SHOWN].sort())
     })
   })
 
   it('warms one page ahead and no further', async () => {
-    // Night Time is three pages away here, so nothing of it may be touched yet.
+    // The partial set is two pages away here, so nothing of it may be touched.
     const { album } = setup()
-    album.open([], ['base', 'garden', 'home-pets', 'night-time'])
+    album.open([], ['base', 'garden', PART_SET])
     await settle()
     expect(warmed()).toEqual([])
   })
@@ -435,21 +467,25 @@ describe('the prefetch warms the page they are about to reach', () => {
 /* ---------------------------------------------------- F: the album, out loud --- */
 
 describe('the album as a child sees it today', () => {
-  it('prints the book page by page, and there are 84 frames in it', () => {
+  it('prints the book page by page, and there are 53 frames in it', () => {
     /*
-     * THE SIX COLLECTIONS THAT CAN BE OPENED TODAY. `unlock.ts`'s hold leaves
-     * exactly five candidates — garden, africa, night-time, home-pets and now
-     * farm — and `base` is forced open on every island, so this is the whole of
-     * what a child can ever be shown on this build.
+     * THE WHOLE BOOK A CHILD CAN BE SHOWN ON THIS BUILD. `base` is forced open on
+     * every island and the rest are what `unlock.ts`'s hold can offer; this test
+     * opens every one of them deliberately, to print the book (a child still sees
+     * at most `MAX_ACTIVE` at once).
      *
-     * >>> FARM IS THE SIXTH PAGE, added 3 August by PB-074, which built it 16 of
-     * >>> 16 and made it the third complete collection after Garden and Home
-     * >>> Pets. The page count goes 5 -> 6 and the frame count 68 -> 84. Note
-     * >>> that a child still sees at most `MAX_ACTIVE` of these at once; this
-     * >>> test opens every one of them deliberately, to print the whole book.
+     * >>> 4 AUGUST: SIX PAGES BECAME THREE, and 84 frames became 53. Joe: *"i
+     * >>> only want to see in the album the silhouette cards for the animals that
+     * >>> have successfully pushed."* Africa, Night Time and Farm are BUILT and
+     * >>> unpushed from end to end, so they have no page at all — the same rule
+     * >>> that hid Woodland, applied to the animals rather than to the modelling.
+     * >>>
+     * >>> What is left is the honest book: 24 base + 14 Garden + 15 Home Pets.
+     * >>> Every frame in it is an animal an egg can actually contain, which is
+     * >>> the whole point of the change. It grows again the moment he pushes.
      *
      * The dump is for a human to eyeball; the assertion under it is what keeps
-     * this test honest, and 84 is the same total `species-built.test.ts` pins
+     * this test honest, and 53 is the same total `species-built.test.ts` pins
      * from the other end.
      */
     const OPENABLE = ['base', 'garden', 'home-pets', 'africa', 'night-time', 'farm']
@@ -469,9 +505,8 @@ describe('the album as a child sees it today', () => {
     }
     console.log('')
 
-    expect(book.map(p => p.page)).toEqual(
-      ['Base Set', 'Garden', 'Home Pets', 'Africa', 'Night Time', 'Farm'])
-    expect(book.map(p => p.cells)).toEqual([24, 14, 16, 1, 13, 16])
-    expect(book.reduce((n, p) => n + p.cells, 0)).toBe(84)
+    expect(book.map(p => p.page)).toEqual(['Base Set', 'Garden', 'Home Pets'])
+    expect(book.map(p => p.cells)).toEqual([24, 14, 15])
+    expect(book.reduce((n, p) => n + p.cells, 0)).toBe(53)
   })
 })

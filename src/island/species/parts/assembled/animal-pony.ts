@@ -263,143 +263,49 @@ import { defineCreature } from '../creature'
 import { PACK_PUPIL } from '../texture'
 
 export const PONY_ASSEMBLY = defineCreature('animal-pony', {
-  /* Insertion order IS the texture layout, so this list is data. The `hoof` slot
-   * is APPENDED under JT-044 — `palette` is an open record and a part is allowed
-   * a colour of its own; see the header for why a hoof is a colour and not a
-   * shape. */
   palette: {
-    coat: 0x9a5f33,    // UNREVIEWED: red bay — the barrel, the head, the ears
-    belly: 0xe2cfae,   // UNREVIEWED: the pangare pale — underside, muzzle, sclera
-    mane: 0x33281f,    // UNREVIEWED: the black points — mane, forelock, tail, nose
-    limb: 0x6d4525,    // UNREVIEWED: the leg above the hoof, a shade under the coat
-    hoof: 0x2b2724,    // UNREVIEWED: the horn. JT-044's two-tone leg, appended slot
-    pupil: PACK_PUPIL, // measured off 544 real eye texels; see texture.ts
+    coat: 0x9a5f33,
+    belly: 0xe2cfae,
+    mane: 0x33281f,
+    limb: 0x6d4525,
+    hoof: 0x2b2724,
+    pupil: PACK_PUPIL,  // the pack's own measured pupil; see texture.ts
   },
 
-  /* The 1.250 cube that 14 of the 24 originals share. NOT `box-41`, whose front
-   * face at z = 0.725 would bury both eye cards behind it (EYE_CARD_Z is 0.6350
-   * and is not a parameter), and NOT `box-12`, whose extra width is two fused ear
-   * lugs and would cost this animal its upright ears. */
   hull: 'box-03',
-
-  /* 8/16 — the tiger's own mammal line made exact, the only grid point inside §7's
-   * measured 0.4808-0.5481 zone, and this hull's own equator. Pangare pale. */
   belly: 0.5,
-
-  /* ===================================================================== *
-   * JT-044, AND THE LINE FIVE FARM SPECIES WILL COPY.
-   *
-   * `box-01` is 0.375 x 0.30625 x 0.375 and its 80 referenced points sit on
-   * exactly three y rows: -0.153125 (the sole, |x| <= 0.1250), -0.090625 (the
-   * full-width ring, |x| <= 0.1875) and +0.153125 (the top, |x| <= 0.1500). So
-   * the foot's bevel runs 0.0625 up from the sole — one 1/16 of a model unit,
-   * exactly — and the leg reaches full width at
-   *
-   *     0.0625 / 0.30625 = 0.204082 of its own height.
-   *
-   * `at` must be k/16 (`texture.ts:106`), which puts the two candidates either
-   * side of that:
-   *
-   *     3/16 = 0.1875 -> 0.057422, which is 0.005078 BELOW the top of the bevel:
-   *                      the hoof's top edge would land part-way down a sloping
-   *                      face, where it follows the bevel's silhouette instead of
-   *                      ringing the leg.
-   *     4/16 = 0.2500 -> 0.076563, which clears the bevel by 0.014063 and lands
-   *                      the line on the straight shank — a clean ring.
-   *
-   * So 4/16 is the LOWEST grid point that puts the whole of the leg's own
-   * bevelled foot inside the hoof, and it is the number this file spends. Two
-   * checks on it, neither used to get there: 0.25 x 0.30625 = 0.0765625 is
-   * exactly the pack's own chamfer cut for this part (0.25 of its smallest
-   * dimension, `authored.ts:307`), so the hoof is one chamfer deep; and the leg
-   * shows 0.30625 x (1 - 0.408163) = 0.18125 below the hull, so the hoof is
-   * 42.2% of the visible leg and its top edge sits 0.1047 clear of the belly.
-   *
-   * `patch` and NOT `byBand`, and the two are never combined on one part: the
-   * patch applies to the base slot only, so a banded triangle would ignore it.
-   * The legs are not spun and cannot be, so the boundary stays level.
-   * ===================================================================== */
   legs: { paint: { base: 'limb', patch: { below: 'hoof', at: 0.25 } } },
-
-  /* The tallest upright ear in the bank that is not the rabbit's: shows 0.2754
-   * proud at its own burial of 0.125001, which is §3's floor exactly, and tapers
-   * to 0.000 — a point, where every other ear this size is blunt. Widened 2x in x
-   * only, from the bee antenna's 0.1600 blade to 0.3200 against its own 0.3286
-   * depth, which is round to 2.6%. The y is the donor transfer's own recovery
-   * (1.506437, the bank's recorded offset); only the z is moved, because the
-   * bee's 0.4697 is past this hull's flat top face and floats 0.032 clear. */
-  ears: {
-    part: 'cone-01',
-    stretch: [2, 1, 1],
-    at: [0.2276, 1.43125, 0.25],
-    paint: 'coat',
-  },
-
-  /* The parrot's fan, TURNED UPSIDE DOWN. Its narrow stalk is the only part
-   * inboard of the join plane (12 points, local y -0.4561 to -0.3561), and the
-   * z-180 spin — which negates x and y and leaves the `z -1` facing alone — puts
-   * that stalk at the top and the broad tapering fall below it. A dock at the top
-   * of the croup with the hair hanging off it. Joined at 0.662654 so the root's
-   * upper end lands on y = 1.11875, where this hull's flat rear face stops; the
-   * fall then reaches 0.2066, just under the belly, and never breaks the back
-   * line. Its centre recovers the parrot's own z = -0.772919. */
+  eyes: { x: 0.2625, y: 1.0625 },
+  ears: { part: 'cone-01', stretch: [2, 1, 1], at: [0.2276, 1.43125, 0.25], paint: 'coat' },
   tail: {
     part: 'box-38',
     spin: [{ axis: 'z', deg: 180 }],
     at: [0, 0.662654, -0.625],
     paint: 'mane',
   },
-
-  /* The fox's muzzle, for Kenney's own horizontal cut, and painted the INVERSE of
-   * the badger's and the wolf's: coat over the bridge (band 7, untouched) and the
-   * pale pangare mealy lower muzzle (band 3, the lower 20 triangles). Its twin
-   * `tube-03` is the same bounding box to six decimals and has no cut at all. */
-  snout: { part: 'tube-06', paint: { base: 'coat', byBand: { 3: 'belly' } } },
-
-  /* The deer's nose — the pack's ungulate one, and small, which is what a horse
-   * has against a dog's pad. `on: 'snout'` anchors it to the muzzle's own placed
-   * front plane, so a nose that floats or buries cannot happen quietly. Not
-   * `wedge-10`, which is measurably a nose TIP and reads as a tongue. */
-  nose: { part: 'box-14', paint: 'mane' },
-
+  snout: {
+    part: 'tube-06',
+    paint: { base: 'coat', byBand: { 3: 'belly' } },
+    stretch: [1, 3.05, 2.55],
+    at: [0, 0.65, 0.4125],
+  },
+  nose: { part: 'box-14', paint: 'mane', stretch: [1, 3.05, 1], at: [0, 0.65, 0.9625] },
   extras: [
-    /* THE MANE. There is no mane in the bank and a `ridge` cannot carry a base
-     * shape (`creature.ts:761` resolves a ridge part with `partById` alone), so
-     * this is one re-cut square prism: a 0.125 wall, 0.625 long — exactly the
-     * length of `box-03`'s flat top face — standing 0.250 proud at the
-     * primitive's own declared half-buried sink. It runs z +0.250 to -0.375, from
-     * between the ears back to the withers. */
     {
       name: 'mane',
       part: 'bespoke-square-01',
       stretch: [0.1, 0.4, 0.5],
-      at: [0, 1.43125, -0.0625],
+      at: [0, 1.4375, 0.125],
       paint: 'mane',
     },
-    /* THE FORELOCK, on the front-top chamfer — §8's chamfer idiom spent on one
-     * part rather than a row. `box-03`'s own measured midpoint is 0.46875 on both
-     * axes (NOT the 0.5625 an uncut 1.000 face would give), and `{ axis: 'x',
-     * deg: 45 }` turns a `y +1` part onto that chamfer's outward normal
-     * (0, 0.7071, 0.7071). Half buried at the primitive's own declared sink, so
-     * it is 0.250 buried — twice §3's 0.125 floor — and 0.250 proud, which is
-     * what carries it past the hull's own top face at 1.43125 and its front at
-     * 0.625 so that a forelock is visible in silhouette rather than filling the
-     * chamfer flush. Its footprint just meets the ears behind it, which is
-     * exactly where a forelock grows. */
     {
       name: 'forelock',
       part: 'bespoke-square-01',
       stretch: [0.3, 0.4, 0.12],
-      spin: [{ axis: 'x', deg: 45 }],
+      spin: [{ axis: 'x', deg: 45 }, { axis: 'x', deg: 90 }],
       at: [0, 1.275, 0.46875],
       paint: 'mane',
     },
   ],
-
-  /* A pony standing still swishes and flicks. Both name features this species
-   * actually has, which `resolveMotion` checks at definition time. */
-  motion: [
-    { kind: 'wag', parts: ['tail'] },
-    { kind: 'twitch', parts: ['ear'] },
-  ],
+  motion: [{ kind: 'wag', parts: ['tail'] }, { kind: 'twitch', parts: ['ear'] }],
 })

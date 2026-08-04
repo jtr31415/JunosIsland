@@ -193,7 +193,8 @@
       "name": "Lisheg",
       "verdict": "",
       "replacement": "",
-      "note": ""
+      "note": "",
+      "signoff": "ok"
     },
     {
       "id": "natural/animal-goldfish",
@@ -205,7 +206,8 @@
       "name": "Vuforn",
       "verdict": "",
       "replacement": "",
-      "note": ""
+      "note": "",
+      "signoff": "ok"
     },
     {
       "id": "natural/animal-crocodile",
@@ -411,7 +413,8 @@
       "name": "Pewod",
       "verdict": "",
       "replacement": "",
-      "note": ""
+      "note": "",
+      "signoff": "ok"
     },
     {
       "id": "natural/animal-gerbil",
@@ -423,7 +426,8 @@
       "name": "Wuwit",
       "verdict": "",
       "replacement": "",
-      "note": ""
+      "note": "",
+      "signoff": "ok"
     },
     {
       "id": "natural/animal-pony",
@@ -435,7 +439,8 @@
       "name": "Wiwuff",
       "verdict": "",
       "replacement": "",
-      "note": ""
+      "note": "",
+      "signoff": "ok"
     },
     {
       "id": "natural/animal-ferret",
@@ -447,7 +452,8 @@
       "name": "Huzall",
       "verdict": "",
       "replacement": "",
-      "note": ""
+      "note": "",
+      "signoff": "ok"
     },
     {
       "id": "natural/animal-gecko",
@@ -459,7 +465,8 @@
       "name": "Nevod",
       "verdict": "",
       "replacement": "",
-      "note": ""
+      "note": "",
+      "signoff": "ok"
     },
     {
       "id": "natural/animal-chinchilla",
@@ -471,7 +478,8 @@
       "name": "Boopvi",
       "verdict": "reject",
       "replacement": "Boovip",
-      "note": "the pv sound is too hard"
+      "note": "the pv sound is too hard",
+      "signoff": "ok"
     },
     {
       "id": "natural/animal-canary",
@@ -483,7 +491,8 @@
       "name": "Zosush",
       "verdict": "",
       "replacement": "",
-      "note": ""
+      "note": "",
+      "signoff": "ok"
     },
     {
       "id": "natural/animal-cockatiel",
@@ -495,7 +504,8 @@
       "name": "Voodvo",
       "verdict": "",
       "replacement": "",
-      "note": ""
+      "note": "",
+      "signoff": "ok"
     },
     {
       "id": "natural/animal-terrapin",
@@ -507,7 +517,8 @@
       "name": "Pathid",
       "verdict": "",
       "replacement": "",
-      "note": ""
+      "note": "",
+      "signoff": "ok"
     },
     {
       "id": "natural/animal-rat",
@@ -531,7 +542,8 @@
       "name": "Vagod",
       "verdict": "",
       "replacement": "",
-      "note": ""
+      "note": "",
+      "signoff": "ok"
     },
     {
       "id": "natural/animal-degu",
@@ -543,7 +555,8 @@
       "name": "Bedno",
       "verdict": "",
       "replacement": "",
-      "note": ""
+      "note": "",
+      "signoff": "ok"
     },
     {
       "id": "natural/animal-sheep",

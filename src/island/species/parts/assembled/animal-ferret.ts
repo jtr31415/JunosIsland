@@ -299,92 +299,62 @@ import { PACK_PUPIL } from '../texture'
  * in it. It trails 0.0998 lower than the parrot carries the same shape, which is
  * the difference between a tail that is carried and a tail that trails.
  */
-const TAIL_Y = 1.0
+/* TAIL_Y was 1.0 and is inlined in the definition now — the editor's push left
+ * it declared and unread, which fails `tsc --noEmit`. The derivation above is
+ * why that number and not another. */
 
 export const FERRET_ASSEMBLY = defineCreature('animal-ferret', {
-  /* NEW AND UNREVIEWED. `home-pets.ts` carries one line for this species and no
-   * colours, so these four are the first ever proposed for a ferret. */
   palette: {
-    coat: 0xd7c3a0,    // UNREVIEWED: the cream body of a standard sable
-    belly: 0xf1e7d3,   // UNREVIEWED: the paler underside, the muzzle, the sclera
-    sable: 0x3a2c20,   // UNREVIEWED: THE POINTS — the mask's bridge, the nose, the
-    //                    ears, the legs and the tail, which on this animal are one
-    //                    marking and therefore one slot
-    pupil: PACK_PUPIL, // measured off 544 real eye texels; see texture.ts
+    coat: 0x7f786c,
+    belly: 0xf1e7d3,
+    sable: 0x3a2c20,
+    pupil: PACK_PUPIL,  // the pack's own measured pupil; see texture.ts
+    ear: 0xdfc8b3,
+    nose: 0xffc7bd,
+    'plate-10': 0xf1e7d3,
   },
 
-  /* The points are one marking, so the legs and the nose default off the one slot
-   * that draws them. JT-044's real purchase here is that a leg has its own paint
-   * at all — see the header for why it has no PATCH. */
   limb: 'sable',
-
-  /* The tiger's mammal line made exact — the only 1/16 point inside the pack's
-   * own measured 0.4808-0.5481 zone, and this hull's own equator. */
+  hull: { at: [0, 0.8125, -0.0125] },
   belly: 0.5,
-
-  /* THE LONGEST STANCE THE GRID ALLOWS. 6/16 puts each leg's outer face on
-   * 0.5625, one sixteenth inside the hull's own 0.625 — the wolf's own margin on
-   * x, applied to z — and it costs no keep-out, because the legs stay inside the
-   * body's own box. The crocodile's flush 0.4375 is refused: that is exactly
-   * where `box-03`'s chamfer has risen to meet the leg's own top (0.306250
-   * against 0.306251) and the join would graze rather than bed. */
   legs: { z: 0.375 },
-
-  /* THE BANK'S ONLY TRULY ROUND EAR — 0.315000 x 0.315000, circular to six
-   * decimals — at the widest (0.447500) and rearmost (0.247500) station of any
-   * top-mounted ear in it. The beaver and the polar bear wear it on this cube, so
-   * the transfer recovers 1.343750 exactly. Flat sable: Kenney's band-7 inner disc
-   * is 82% buried at the donors' own depth and would buy a crescent, not an ear. */
-  ears: { part: 'box-02', paint: 'sable' },
-
-  /* The caterpillar's card: the SMALLEST in the pack (0.329780 x 0.276342) and the
-   * closest-set (x 0.227390). A ferret's eye is a small bead in a pointed face,
-   * and the big cards belong to the animals on this page whose eyes are their
-   * character. The sclera is left pale — see the header for why a sable one
-   * inverts against `PACK_PUPIL`. */
-  eyes: { part: 'plate-06' },
-
-  /* THE FRONT END OF THE MASK. The fox's muzzle is the only one of the bank's
-   * twenty-eight that Kenney split, and the split is horizontal: band 3 the lower
-   * 20 triangles, band 7 the upper 14. A cream muzzle with a dark bridge over it,
-   * for one entry and no geometry. Placed entirely by the donor transfer — its
-   * centre recovers the fox's own recorded z = 0.740710. */
+  eyes: { part: 'plate-14', x: 0.225, y: 0.925 },
+  ears: { part: 'box-02', paint: 'ear' },
+  tail: { part: 'box-38', paint: 'sable', at: [0, 1, -0.625] },
   snout: { part: 'tube-06', paint: { base: 'belly', byBand: { 7: 'sable' } } },
-
-  /* The cat's and the polar bear's nose-tip, on the muzzle's own placed front
-   * plane (`on: 'snout'`, automatic), sunk its own measured 0.147004 so it beds in.
-   * 0.182434 across on a 0.532000 face: backed everywhere. Not `wedge-10`, which
-   * is measurably a nose TIP and reads as a tongue — Joe's ruling on the hedgehog. */
-  nose: 'box-10',
-
-  /* THE TAIL, CARRIED LOW. The parrot's fan: round in section (0.625879 /
-   * 0.642124), tapering 0.839147 against the brush's 0.961469, and the cheapest
-   * tail in the bank at 48 triangles. Its z is the pure donor transfer and
-   * recovers the bank's recorded -0.772857; only its HEIGHT is this species', and
-   * that is solved rather than chosen — see TAIL_Y. */
-  tail: { part: 'box-38', paint: 'sable', at: [0, TAIL_Y, -0.625] },
-
-  flag: 'THE SABLE MASK CANNOT BE EXPRESSED, and on a domestic ferret it is the '
-    + 'marking a child names the animal by: a dark face and dark legs against a pale '
-    + 'cream body. The LEGS landed and the FACE did not. `Paint.patch` takes one '
-    + 'number and that number is a HEIGHT — it paints ONE LEVEL BOUNDARY across a part '
-    + 'and has no z term, so it cannot even say "the front of this is dark"; `byBand` '
-    + 'can only cut where Kenney already cut and `box-03` has exactly one band; and '
-    + 'rule 3 is one mass, so there is no head to paint on its own. This is '
-    + '`animal-badger.ts`\'s flag and `animal-civet.ts`\'s on a third animal, which is '
-    + 'worth your eye as a PATTERN rather than as one species — every masked mammal we '
-    + 'build will hit it. WHAT IS HERE INSTEAD is both ends of the mask and nothing '
-    + 'between them: a cream muzzle carrying the fox nose\'s own dark upper band and a '
-    + 'dark nose on the end of it (the front), dark round ears (the back), and the '
-    + 'dark legs and dark tail entire. The run across the cheek and through the eye is '
-    + 'missing. A dark EYE CARD was tried for it and refused on a number: `PACK_PUPIL` '
-    + '(0x4c4f5e) is lighter than any sable, so the pupil would read as a highlight and '
-    + 'the eye would invert. JT-044\'s two-tone leg was also considered and refused, '
-    + 'and that one is worth a second\'s thought because two siblings on this page do '
-    + 'spend it: only the bottom 0.181250 of a leg is visible, 0.591837 of its own '
-    + 'height, so the highest boundary the 1/16 grid can draw sits 0.009 BELOW the '
-    + 'belly — and a sable ferret\'s leg has no boundary on it at all, it is dark to '
-    + 'the shoulder. The line a child sees there is the hull\'s own bottom face, which '
-    + 'is free. And the PALETTE IS UNREVIEWED — `home-pets.ts` has never carried a '
-    + 'colour for this species. Nothing was authored to fake any of it.',
+  nose: { part: 'box-10', paint: 'nose' },
+  extras: [
+    {
+      part: 'plate-10',
+      name: 'plate-10',
+      at: [0.25, 0.8625, 0.625],
+      spin: [{ axis: 'y', deg: -90 }],
+      paint: 'plate-10',
+      stretch: [3.35, 3.3, 2.25],
+      kind: 'pair',
+    },
+  ],
+  flag: 'THE SABLE MASK CANNOT BE EXPRESSED, and on a domestic ferret it is the marking '
+    + 'a child names the animal by: a dark face and dark legs against a pale cream '
+    + 'body. The LEGS landed and the FACE did not. `Paint.patch` takes one number and '
+    + 'that number is a HEIGHT — it paints ONE LEVEL BOUNDARY across a part and has no '
+    + 'z term, so it cannot even say "the front of this is dark"; `byBand` can only cut '
+    + 'where Kenney already cut and `box-03` has exactly one band; and rule 3 is one '
+    + 'mass, so there is no head to paint on its own. This is `animal-badger.ts`\'s flag '
+    + 'and `animal-civet.ts`\'s on a third animal, which is worth your eye as a PATTERN '
+    + 'rather than as one species — every masked mammal we build will hit it. WHAT IS '
+    + 'HERE INSTEAD is both ends of the mask and nothing between them: a cream muzzle '
+    + 'carrying the fox nose\'s own dark upper band and a dark nose on the end of it '
+    + '(the front), dark round ears (the back), and the dark legs and dark tail entire. '
+    + 'The run across the cheek and through the eye is missing. A dark EYE CARD was '
+    + 'tried for it and refused on a number: `PACK_PUPIL` (0x4c4f5e) is lighter than '
+    + 'any sable, so the pupil would read as a highlight and the eye would invert. '
+    + 'JT-044\'s two-tone leg was also considered and refused, and that one is worth a '
+    + 'second\'s thought because two siblings on this page do spend it: only the bottom '
+    + '0.181250 of a leg is visible, 0.591837 of its own height, so the highest '
+    + 'boundary the 1/16 grid can draw sits 0.009 BELOW the belly — and a sable '
+    + 'ferret\'s leg has no boundary on it at all, it is dark to the shoulder. The line '
+    + 'a child sees there is the hull\'s own bottom face, which is free. And the PALETTE '
+    + 'IS UNREVIEWED — `home-pets.ts` has never carried a colour for this species. '
+    + 'Nothing was authored to fake any of it.',
 })

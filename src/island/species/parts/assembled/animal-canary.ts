@@ -352,180 +352,117 @@
  * anywhere.**
  */
 import { defineCreature } from '../creature'
-import { LEG_ROW } from '../hulls'
 import { PACK_PUPIL } from '../texture'
 
-/**
- * `box-39`'s own recorded centre, its side faces and its rear face — which are
- * `box-03`'s to the digit, because measured they are the same solid.
- */
-const HULL_CENTRE_Y = 0.80625
-const HULL_SIDE_X = 0.625
-const HULL_REAR_Z = -0.625
-
-/**
- * Half the wing buried, and it is `animal-budgie.ts`'s solved number rather than
- * a copied one.
+/*
+ * THE SOLVED CONSTANTS WERE REMOVED HERE ON 4 AUGUST — the editor's push inlined
+ * their values and left them declared and unread, which fails `tsc --noEmit`.
+ * Their derivations, because the numbers are still in the definition:
  *
- * `box-06`'s tip reaches |z| = 0.456649 and this shell's flat side face reaches
- * only |z| = 0.312500, past which the chamfer falls away, so the tip stands over
- * a surface that has receded 0.144149 — 0.471328 of the part's own 0.305836 of
- * thickness. The shape's own recorded burial is 0.366259 and is NOT enough.
- * Snapped up to the pack's own 1/16 grid: 8/16. It buries 0.152918, over §3's
- * 0.125 floor for an embedded part, and leaves 0.152918 standing.
+ *   HULL_CENTRE_Y  0.80625   `box-39`'s own recorded centre — and its side and
+ *   HULL_SIDE_X    0.625     rear faces are `box-03`'s to the digit, because
+ *   HULL_REAR_Z   -0.625     measured they are the same solid.
+ *   WING_SINK      0.5       half the wing buried, and it is `animal-budgie.ts`'s
+ *                            SOLVED number rather than a copied one: `box-06`'s
+ *                            tip reaches |z| = 0.456649 where this shell's flat
+ *                            side face reaches only 0.312500, so the tip stands
+ *                            over a surface receded by 0.144149. The shape's own
+ *                            recorded 0.366259 is NOT enough; 8/16 is the pack's
+ *                            own grid snapped up, burying 0.152918 — over §3's
+ *                            0.125 floor — and leaving 0.152918 standing.
  */
-const WING_SINK = 0.5
 
 export const CANARY_ASSEMBLY = defineCreature('animal-canary', {
-  /* NEW AND UNREVIEWED — the first colours this species has ever had, and the
-   * shortest palette any bird here will carry. Three of the five are one hue. */
   palette: {
-    coat: 0xf5c81c,    // UNREVIEWED: saturated lemon — the whole bird
-    flight: 0xdcae12,  // UNREVIEWED: that lemon one shade down — wings and tail
-    limb: 0xe8a9a0,    // UNREVIEWED: the pale pink bill and the pale pink legs
-    eye: 0x241f1a,     // UNREVIEWED: the only dark thing on the animal
-    pupil: PACK_PUPIL, // measured off 544 real eye texels; see texture.ts
+    coat: 0xf5c81c,
+    flight: 0xdcae12,
+    limb: 0xe8a9a0,
+    eye: 0xf9f7f5,
+    pupil: PACK_PUPIL,  // the pack's own measured pupil; see texture.ts
   },
 
-  /* THE PENGUIN'S SHELL — the third of the pack's three birds, and the one
-   * nothing had spent. Measured, it is `box-03`'s own solid: all 130 of its
-   * points lie on that shell's surface to 2.8e-5, its offset and its front face
-   * and its 0.3125 flat reach are identical, and it differs only in carrying
-   * 130 vertices and 80 triangles where the cube carries 120 and 60. Rule 9's
-   * FLOOR is what makes that difference decide: built four times with everything
-   * else held fixed, this animal is 383/404 on `box-03`, 399/416 on `box-36`,
-   * 395/422 on `box-20` and 405/424 here — the ONLY one of the four that clears
-   * both floors, and it is the bird's. NOT `box-33`, which would have cleared
-   * easily and looks like the same cube and is not: 0.1664 of it is set inside
-   * this shell.
-   *
-   * Painted ONE FLAT SLOT, which is the sharpest of §3's six refusals: `box-39`
-   * arrives pre-cut at band 3 — 22 triangles, mean z +0.5114, the front face —
-   * which is the penguin's own white shirt, free, and a canary has no bib. */
   hull: { part: 'box-39', paint: 'coat' },
-
-  /* NO BELLY LINE. §4's second way is free and is declined: a domestic yellow
-   * canary was bred to be exactly one colour, top to bottom. */
-
-  /* THE PACK'S OWN BIRD EYE and the only ROUND card in the bank, painted from the
-   * dark slot so it reads as one black bead with Kenney's band 15 as the glint.
-   * `animal-budgie.ts` wears this same card with a PALE ring, which is a budgie's
-   * white iris; a canary's eye is plain black. */
-  eyes: { part: 'plate-08', paint: 'eye' },
-
-  /* THE ONLY CONE IN THE BANK — 1 of 28 nose shapes with `form: 'cone'` — which
-   * is what a finch's bill is. Placed by the donor transfer ALONE: joined at this
-   * hull's front face, sunk its own 0.360878, centre recovered onto the bank's
-   * recorded z = 0.664911 and y = 0.718036. Bands 13 and 15 are the lower and
-   * upper mandible and BOTH take the one pink; the budgie's cere trick is
-   * declined. It is the parrot's, and its upper mandible overhangs the lower by
-   * 0.0838 — see the flag. */
-  snout: { part: 'cone-06', paint: 'limb' },
-
-  /* THE PARROT'S OWN FAN, and the shortest reach this bird can honestly take:
-   * 0.468919 clear of the rear face against the budgie's 0.763846. The three
-   * tails that reach less are the chinchilla's `wedge-03` (0.415328), the
-   * hamster's `box-18` (0.425211) and the cat's whip `wedge-07` (0.466912, which
-   * is 0.002 and is a vertical whip rather than a fan) — so among the shapes that
-   * are a bird's tail this is the shortest there is.
-   *
-   * The ONE thing moved off the parrot's numbers is the height. At its own
-   * 1.099846 the fan's top reaches 1.555942, over this hull's own 1.43125, and
-   * the bird would stand taller than the budgie with a cocked parrot's tail. At
-   * the hull's own centre it spans 0.350154 to 1.262346 — inside the shell's own
-   * height — and runs straight back. `animal-badger.ts`'s move and
-   * `animal-budgie.ts`'s. No spin, no stretch, and the sink is the shape's own
-   * 0.269738, which buries 0.173205 against a root overhang of only 0.0436. */
-  tail: { part: 'box-38', paint: 'flight', at: [0, HULL_CENTRE_Y, HULL_REAR_Z] },
-
   legs: false,
+  eyes: { part: 'plate-08', paint: 'eye' },
+  tail: {
+    part: 'box-38',
+    paint: 'flight',
+    at: [0, 0.5375, -0.85],
+    spin: [{ axis: 'x', deg: -90 }],
+  },
+  snout: { part: 'cone-06', paint: 'limb' },
   extras: [
-    /* TWO legs, on the row that never moves, at `box-01`'s own recorded x and on
-     * the hull's midline — the only station a biped's legs can be at. ONE FLAT
-     * SLOT: JT-044's two-tone foot is free, the budgie spends it, and it is
-     * declined here because a canary's legs and toes are the same pale pink. */
     {
       name: 'leg-front',
       part: 'box-01',
       paint: 'limb',
       kind: 'pair',
-      sink: LEG_ROW.sink,
-      at: [0.25, LEG_ROW.y, 0],
+      sink: 0.408163,
+      at: [0.25, 0.18125, 0],
     },
-
-    /* THE WING, at `animal-budgie.ts`'s own four numbers — the shared idiom that
-     * makes four birds one family, and it was checked for SIZE rather than
-     * copied: 0.913298 is 73.1% of a 1.250-deep body where a live canary's folded
-     * wing is about 85% of its own, so it fits this bird too. Only two of the
-     * bank's 23 ears have an aspect over 1.5 and the other one (`tube-04`, at
-     * 1.7225) is 49.5% of the body and buries 0.0453; the koala's `box-25` is
-     * aspect 1.0000 — a disc, and the chinchilla's inside this collection. The
-     * mirror is `box-07`, the pack's own left ear. */
     {
       name: 'wing',
-      part: 'box-06',
+      part: 'wedge-19',
       paint: 'flight',
       kind: 'pair',
       axis: 'z',
       dir: -1,
-      spin: [{ axis: 'z', deg: -90 }, { axis: 'y', deg: -90 }],
-      sink: WING_SINK,
-      at: [HULL_SIDE_X, HULL_CENTRE_Y, 0],
+      spin: [
+        { axis: 'z', deg: -90 },
+        { axis: 'y', deg: -90 },
+        { axis: 'z', deg: 90 },
+        { axis: 'x', deg: -90 },
+      ],
+      sink: 0.5,
+      at: [0.85, 0.8125, 0],
     },
   ],
-
-  /* The budgie is the first species in the project to declare a motion; a second
-   * bird with a wing is the second that should. `motion.ts`'s own measured
-   * defaults, nothing tuned. */
   motion: [{ kind: 'flap', parts: ['wing'] }],
-
   flag: 'THIS BIRD IS DELIBERATELY PLAIN AND THAT IS THE WHOLE DESIGN — if it looks '
     + 'unfinished beside the budgie, that is the thing to judge, not a gap to fill. A '
     + 'canary has no crest, no cheek patch, no barring, no collar and no colour break '
-    + 'anywhere on it, so SIX free mechanisms are refused on purpose: the painted '
-    + 'belly line; box-39\'s own band 3, which is 22 triangles of the PENGUIN\'S WHITE '
-    + 'SHIRT across the front face and is free two-tone on the hull this bird already '
-    + 'wears; JT-044\'s two-tone foot, which the budgie spends and a canary\'s one-pink '
-    + 'legs do not want; byBand on the bill, where the budgie puts its cere; all four '
-    + 'marking cards; and extras of every kind — it has none at all. It reads by '
-    + 'PROPORTION and COLOUR instead: 1.9023 deep by 1.5558 wide is a plan ratio of '
-    + '1.223 against the budgie\'s 1.394, 14.5% smaller by volume, keep-out 0.9511 '
-    + 'against 1.0986, which is home-pets.ts\'s "smallest, roundest" said in the only '
-    + 'numbers this kit has. THE HULL IS THE PENGUIN\'S AND IT WAS PARTLY CHOSEN FOR '
-    + 'TRIANGLES, stated plainly: measured against all sixty of box-03\'s face planes, '
-    + 'box-20, box-36 and box-39 are that SAME SOLID (max deviation 0.000000, 0.000000 '
-    + 'and 0.000028) cut into 78, 72 and 80 triangles instead of 60 — four of the '
-    + 'pack\'s ten hull records are one shell, which nothing had recorded. THE PACK\'S '
-    + 'MEASURED FLOORS (rule nine is a floor as well as a ceiling, and this is the '
-    + 'animal it binds on) are 405 vertices and 422 triangles, and this one was built '
-    + 'four times '
-    + 'to find out which of the four cuts of that solid it can stand up in: box-03 the '
-    + 'parrot\'s and chick\'s gives 383/404 and fails both, box-36 the panda\'s 399/416 '
-    + 'and fails both, box-20 the fish\'s 395/422 and fails the vertex floor, and '
-    + 'box-39 the PENGUIN\'S gives 405/424 and is the ONLY ONE THAT CLEARS. So it sits '
-    + 'exactly on the vertex floor, 405 of 405 — which is the honest reading of what '
-    + 'that floor is for on the simplest animal in the project, and not a scrape. It is '
-    + 'also right for its own sake: '
-    + 'box-03 is the parrot\'s and the chick\'s and three birds have taken it, and the '
-    + 'penguin\'s was the one bird shell nobody had spent. THE BILL IS A PARROT\'S AND '
-    + 'IT OVERHANGS: cone-06 is the only shape in the bank with form "cone" out of 28 '
-    + 'noses, which is exactly what a finch\'s seed bill is, and the alternative '
+    + 'anywhere on it, so SIX free mechanisms are refused on purpose: the painted belly '
+    + 'line; box-39\'s own band 3, which is 22 triangles of the PENGUIN\'S WHITE SHIRT '
+    + 'across the front face and is free two-tone on the hull this bird already wears; '
+    + 'JT-044\'s two-tone foot, which the budgie spends and a canary\'s one-pink legs do '
+    + 'not want; byBand on the bill, where the budgie puts its cere; all four marking '
+    + 'cards; and extras of every kind — it has none at all. It reads by PROPORTION and '
+    + 'COLOUR instead: 1.9023 deep by 1.5558 wide is a plan ratio of 1.223 against the '
+    + 'budgie\'s 1.394, 14.5% smaller by volume, keep-out 0.9511 against 1.0986, which '
+    + 'is home-pets.ts\'s "smallest, roundest" said in the only numbers this kit has. '
+    + 'THE HULL IS THE PENGUIN\'S AND IT WAS PARTLY CHOSEN FOR TRIANGLES, stated '
+    + 'plainly: measured against all sixty of box-03\'s face planes, box-20, box-36 and '
+    + 'box-39 are that SAME SOLID (max deviation 0.000000, 0.000000 and 0.000028) cut '
+    + 'into 78, 72 and 80 triangles instead of 60 — four of the pack\'s ten hull records '
+    + 'are one shell, which nothing had recorded. THE PACK\'S MEASURED FLOORS (rule nine '
+    + 'is a floor as well as a ceiling, and this is the animal it binds on) are 405 '
+    + 'vertices and 422 triangles, and this one was built four times to find out which '
+    + 'of the four cuts of that solid it can stand up in: box-03 the parrot\'s and '
+    + 'chick\'s gives 383/404 and fails both, box-36 the panda\'s 399/416 and fails both, '
+    + 'box-20 the fish\'s 395/422 and fails the vertex floor, and box-39 the PENGUIN\'S '
+    + 'gives 405/424 and is the ONLY ONE THAT CLEARS. So it sits exactly on the vertex '
+    + 'floor, 405 of 405 — which is the honest reading of what that floor is for on the '
+    + 'simplest animal in the project, and not a scrape. It is also right for its own '
+    + 'sake: box-03 is the parrot\'s and the chick\'s and three birds have taken it, and '
+    + 'the penguin\'s was the one bird shell nobody had spent. THE BILL IS A PARROT\'S '
+    + 'AND IT OVERHANGS: cone-06 is the only shape in the bank with form "cone" out of '
+    + '28 noses, which is exactly what a finch\'s seed bill is, and the alternative '
     + '(tube-02, the chick\'s) is a blunt bar reaching 0.100 against this one\'s 0.183. '
-    + 'The overhang, measured: split at Kenney\'s own upper/lower cut, band 15 reaches '
-    + 'z 0.1434 and band 13 only 0.1015, so the upper mandible stands 0.0419 proud of '
-    + 'the lower — 14.6% of the shape\'s depth, or 29% if you read it off the '
-    + 'silhouette instead — which is where a parrot\'s hook starts. Every bird overhangs a '
-    + 'little and a canary does too, so this is inside honesty, but it is the one part '
-    + 'here whose donor is a different KIND of bird and you should look at it. THE WING '
-    + 'IS THE BUDGIE\'S BOX-06 AT ITS OWN NUMBERS and was checked rather than copied: '
-    + 'it is 73.1% of the body\'s depth where a live canary\'s folded wing is about '
-    + '85%, so it is if anything short. Only 2 of the bank\'s 23 ears have an aspect '
-    + 'over 1.5; the koala\'s box-25, the obvious reach for the roundest bird, is '
-    + 'aspect 1.0000 — a disc, a shield rather than a wing — and animal-chinchilla.ts '
-    + 'claims it in writing for this same album page. NEW PALETTE, UNREVIEWED — '
-    + 'home-pets.ts only ever carried the word "yellow" for this bird. Three of the '
-    + 'five slots are one hue, and the "flight" slot on the wings and tail is that '
-    + 'lemon ONE SHADE DOWN so a solid wing standing 0.1529 proud reads as a wing from '
-    + 'the island\'s downward camera; it is not a marking and a canary has none. '
-    + 'Nothing was authored and nothing is stretched.',
+    + 'The overhang, measured: split at Kenney\'s own upper/lower cut, band 15 reaches z '
+    + '0.1434 and band 13 only 0.1015, so the upper mandible stands 0.0419 proud of the '
+    + 'lower — 14.6% of the shape\'s depth, or 29% if you read it off the silhouette '
+    + 'instead — which is where a parrot\'s hook starts. Every bird overhangs a little '
+    + 'and a canary does too, so this is inside honesty, but it is the one part here '
+    + 'whose donor is a different KIND of bird and you should look at it. THE WING IS '
+    + 'THE BUDGIE\'S BOX-06 AT ITS OWN NUMBERS and was checked rather than copied: it is '
+    + '73.1% of the body\'s depth where a live canary\'s folded wing is about 85%, so it '
+    + 'is if anything short. Only 2 of the bank\'s 23 ears have an aspect over 1.5; the '
+    + 'koala\'s box-25, the obvious reach for the roundest bird, is aspect 1.0000 — a '
+    + 'disc, a shield rather than a wing — and animal-chinchilla.ts claims it in '
+    + 'writing for this same album page. NEW PALETTE, UNREVIEWED — home-pets.ts only '
+    + 'ever carried the word "yellow" for this bird. Three of the five slots are one '
+    + 'hue, and the "flight" slot on the wings and tail is that lemon ONE SHADE DOWN so '
+    + 'a solid wing standing 0.1529 proud reads as a wing from the island\'s downward '
+    + 'camera; it is not a marking and a canary has none. Nothing was authored and '
+    + 'nothing is stretched.',
 })

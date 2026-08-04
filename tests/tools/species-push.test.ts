@@ -781,9 +781,14 @@ describe('an edit of a built species replaces its definition and nothing else', 
       expect(definitionOf(after)).not.toContain('PACK_PUPIL')
       /* And now the import really is dead, which is the case where saying so is
        * the correct answer rather than a nuisance. */
-      expect(staleBindings(after)).toEqual(['PACK_PUPIL'])
+      /* AND IT IS CUT, since 4 August — Joe: *"they should turn from the editor
+       * into code pretty much the instant i press the button."* The push used to
+       * name the dead binding and leave the deletion to him, which is how one
+       * afternoon's pushing left 39 orphans and a build that would not compile. */
+      expect(staleBindings(after)).toEqual([])
+      expect(after).not.toContain("import { PACK_PUPIL }")
       expect(r.body.say).toContain('PACK_PUPIL')
-      expect(r.body.say).toContain('no longer read')
+      expect(r.body.say).toContain('removed for you')
     })
 
     it('does not substitute when the constant cannot be read at all', async () => {
@@ -794,7 +799,7 @@ describe('an edit of a built species replaces its definition and nothing else', 
       const r = await push(editPayload({ module: defToModuleSource('animal-x', withPupil(FIXTURE_PUPIL)) }))
       expect(r.code).toBe(200)
       expect(definitionOf(read(BUILT_REL))).toContain('0x123456')
-      expect(r.body.say).toContain('no longer read')
+      expect(r.body.say).toContain('removed for you')
     })
   })
 })

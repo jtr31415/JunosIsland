@@ -235,68 +235,42 @@ import { PACK_PUPIL } from '../texture'
 
 export const GERBIL_ASSEMBLY = defineCreature('animal-gerbil', {
   palette: {
-    coat: 0xb8874a,    // UNREVIEWED: warm sandy agouti — the first proposed for this species
-    belly: 0xf7f3e9,   // UNREVIEWED: the sharply demarcated white underside
-    tuft: 0x2f2721,    // UNREVIEWED: the tail's dark tip, the nose, and the eye's own dark
-    limb: 0x8f6636,    // UNREVIEWED: the legs and the muzzle, a shade under the coat
-    pupil: PACK_PUPIL, // measured off 544 real eye texels; see texture.ts
+    coat: 0xb8874a,
+    belly: 0xf7f3e9,
+    tuft: 0x2f2721,
+    limb: 0x8f6636,
+    pupil: PACK_PUPIL,  // the pack's own measured pupil; see texture.ts
   },
 
-  /* 6/16, NOT the usual 8/16. The pack's mammal line is the TIGER's, whose pale
-   * runs high up the flank; a gerbil's white is the underside and the bottom of
-   * the flank, cut level and cut sharp. 6/16 lands on world y 0.65, two sixteenths
-   * above the 0.49375 where this cube's bottom chamfer finishes rising. */
   belly: 0.375,
-
-  /* The hog's low broad dome, on the hog's own numbers on the hog's own hull — the
-   * transfer recovers 1.367793 against the recorded 1.367787. Small and lying
-   * back: 0.0845 proud, 0.1769 buried, against the big round ears the chinchilla
-   * and the degu are separated by. */
-  ears: 'cone-04',
-
-  /* The bank's LARGEST eye card, 1.506x the default's area, at the panda's own
-   * recorded point — and painted from the dark slot, because a gerbil's eye is a
-   * black bead with no sclera showing. The pack's own pupil is the catch-light. */
   eyes: { part: 'plate-14', paint: 'tuft' },
-
-  /* THE ANIMAL. The bank's joint-thinnest tail, 0.200 on its thin axis, with
-   * Kenney's OWN tip cut painted dark: band 3 is the outer 24.5% of its length. A
-   * degu's brush is a thicker SHAPE; this tuft is a cut on a slim tail.
-   *
-   * The one chosen coordinate in this file, and it is a bound rather than a taste:
-   * 1.017050 is the lowest this tail can be carried with its whole join
-   * cross-section still on the flat rear face — the inboard points land on
-   * y 0.49375 to 0.67595 inside a face that runs 0.49375 to 1.11875. */
+  ears: 'cone-04',
   tail: {
     part: 'wedge-18',
     paint: { base: 'coat', byBand: { 3: 'tuft' } },
     at: [0, 1.01705, -0.625],
   },
-
-  /* The beaver's muzzle — the pack's one rodent's — recovering its own 0.710803,
-   * with the fox's button on its placed front plane. Not `cone-06`, which is a
-   * BEAK, and not `wedge-10`, which reads as a tongue: the bank has no pointed
-   * muzzle and this is the nearest honest thing to one. */
   snout: 'tube-01',
-  nose: { part: 'box-22', paint: 'tuft' },
-
-  flag: 'THE UPRIGHT, BACK-HEAVY POSTURE CANNOT BE EXPRESSED, and it is what a child names '
-    + 'a gerbil by: long hind legs that let it sit up like a tiny kangaroo. `CreatureDef.legs` '
-    + 'is ONE ROW with five fields — x, y, z, paint, name — so there is no per-station height, '
-    + 'no second leg shape (`box-01` is the bank\'s only leg, 1 shape over 86 instances) and no '
-    + 'way to say "the back pair is longer". Carrying it in the BODY instead is measured out '
-    + 'too: the pack\'s ten shells all stop at the 1.250 cube bar two — the tiger\'s, which is '
-    + '1.300 and bigger in every direction (that is the degu\'s separation, not this animal\'s), '
-    + 'and `box-21`, which `animal-wolf.ts` measured as the standard cube with two fused EAR '
-    + 'LUGS on top, so it is a canid head and its wearer may have no ears at all. So this '
-    + 'gerbil stands on all fours. What it DOES have is the rest '
-    + 'of the animal, and all of it is measured: the bank\'s joint-thinnest tail (0.200 against '
-    + 'the thick group\'s 0.589-0.744) wearing Kenney\'s own tip cut painted dark — band 3, the '
-    + 'outer 24.5% of its length, which is the tuft and is what separates this animal from the '
-    + 'degu\'s brush; the largest eye card in the pack painted as a black bead; small ears '
-    + 'lying back at 0.0845 proud; and a WHITE BELLY cut level at 6/16 rather than the pack\'s '
-    + 'usual 8/16, because the 8/16 line is the tiger\'s and a tiger\'s pale runs high up the '
-    + 'flank where a gerbil\'s stops at the bottom of it. Also yours to rule on: THE PALETTE IS '
-    + 'NEW AND UNREVIEWED — this species has never had colours in `home-pets.ts` and these four '
-    + 'are the first ever proposed for it. Nothing here is stretched, spun or authored.',
+  nose: { part: 'box-22', paint: 'tuft', at: [0, 0.8125, 0.7125] },
+  flag: 'THE UPRIGHT, BACK-HEAVY POSTURE CANNOT BE EXPRESSED, and it is what a child '
+    + 'names a gerbil by: long hind legs that let it sit up like a tiny kangaroo. '
+    + '`CreatureDef.legs` is ONE ROW with five fields — x, y, z, paint, name — so there '
+    + 'is no per-station height, no second leg shape (`box-01` is the bank\'s only leg, '
+    + '1 shape over 86 instances) and no way to say "the back pair is longer". Carrying '
+    + 'it in the BODY instead is measured out too: the pack\'s ten shells all stop at '
+    + 'the 1.250 cube bar two — the tiger\'s, which is 1.300 and bigger in every '
+    + 'direction (that is the degu\'s separation, not this animal\'s), and `box-21`, '
+    + 'which `animal-wolf.ts` measured as the standard cube with two fused EAR LUGS on '
+    + 'top, so it is a canid head and its wearer may have no ears at all. So this '
+    + 'gerbil stands on all fours. What it DOES have is the rest of the animal, and all '
+    + 'of it is measured: the bank\'s joint-thinnest tail (0.200 against the thick '
+    + 'group\'s 0.589-0.744) wearing Kenney\'s own tip cut painted dark — band 3, the '
+    + 'outer 24.5% of its length, which is the tuft and is what separates this animal '
+    + 'from the degu\'s brush; the largest eye card in the pack painted as a black bead; '
+    + 'small ears lying back at 0.0845 proud; and a WHITE BELLY cut level at 6/16 '
+    + 'rather than the pack\'s usual 8/16, because the 8/16 line is the tiger\'s and a '
+    + 'tiger\'s pale runs high up the flank where a gerbil\'s stops at the bottom of it. '
+    + 'Also yours to rule on: THE PALETTE IS NEW AND UNREVIEWED — this species has '
+    + 'never had colours in `home-pets.ts` and these four are the first ever proposed '
+    + 'for it. Nothing here is stretched, spun or authored.',
 })

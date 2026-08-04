@@ -36,17 +36,28 @@
  *               invented on his behalf.
  *
  *   LEFT     5  `tests/island/species-<c>.test.ts` — a rework, not an edit
- *            6  `tests/island/assembly-<id>.test.ts` — the species' own
- *               invariants, which nobody but a human can state
- *            7  `tests/island/assembly-fingerprint.test.ts` — the pin, which
- *               must be READ off the built model and never computed here
  *            +  the two shared counts, `tests/island/naming.test.ts` and
  *               `tests/island/species-registry.test.ts`
  *
- * **So `npm test` is RED immediately after a push, and that is correct.** The
- * species is in the game and the guards that describe it are not written yet.
- * The reply says so in as many words rather than leaving him to find out from a
- * gate an hour later.
+ * >>> ITEMS 6 AND 7 ARE GONE, 4 August 2026, and with them the sentence that
+ * >>> used to stand here: *"so `npm test` is RED immediately after a push, and
+ * >>> that is correct."* It is not correct any more, and it was the single
+ * >>> biggest cost of pressing this button.
+ * >>>
+ * >>> Joe: *"we do not need to test the animals. if they look good in the editor,
+ * >>> they go. its costing a shit ton of time for needless tests. they should
+ * >>> turn from the editor into code pretty much the instant i press the
+ * >>> button."*
+ * >>>
+ * >>> The sixty per-animal test files and the per-animal fingerprint pins were
+ * >>> deleted on that ruling — 24,324 lines — and replaced by
+ * >>> `tests/island/assembly-engine.test.ts`, which sweeps the BUILDER's
+ * >>> invariants over every registered species with no per-animal numbers in it
+ * >>> at all. A new animal is covered the moment its file exists, and an edited
+ * >>> one cannot turn the suite red by being edited.
+ * >>>
+ * >>> **A push should now leave the tree green.** If it does not, that is a bug
+ * >>> in this file or in the builder, not homework for Joe.
  *
  * ## Order is a safety property here, not a preference
  *
@@ -505,6 +516,78 @@ export function staleBindings(source) {
   return names.filter(n => !new RegExp(`\\b${reLit(n)}\\b`).test(body))
 }
 
+/**
+ * Cut the bindings nothing reads any more, so a push lands as CODE THAT COMPILES.
+ *
+ * Joe, 4 August 2026: *"they should turn from the editor into code pretty much
+ * the instant i press the button."*
+ *
+ * `staleBindings` has always been able to NAME these; until today the push
+ * printed them and left the deletion to him. That was the wrong side of the
+ * trade and one day's pushing proved it: thirteen animals in a single afternoon
+ * left THIRTY-NINE orphaned declarations, every one of them a `tsc --noEmit`
+ * failure, and `npm test` gates the deploy — so a push that should have been
+ * instant instead stopped the game reaching his daughter until someone went
+ * through nine files by hand.
+ *
+ * WHAT IS DELETED, AND WHAT IS KEPT. The declaration goes; the comment above it
+ * STAYS, with a line added saying what the name was and what it was worth. That
+ * is the whole reason the old behaviour existed — these blocks carry the
+ * derivation of the number, and `animal-terrapin.ts`'s `MARK_Z` note is worth
+ * more than the `const` ever was. So nothing is lost that a person would want,
+ * and the file compiles.
+ *
+ * Cascades, because removing one can orphan another: `COIL_SINK` reads
+ * `COIL_THICK`, so cutting the first makes the second dead in turn. The loop
+ * runs until nothing more is stale, with a bound in case a future edit to
+ * `staleBindings` ever stops converging.
+ *
+ * Import specifiers are removed from their list; an import left with nothing in
+ * it goes entirely.
+ */
+export function withoutStaleBindings(source) {
+  let text = source
+  for (let pass = 0; pass < 12; pass++) {
+    const dead = staleBindings(text)
+    if (dead.length === 0) return text
+
+    const lines = text.split('\n')
+    const cut = new Set()
+    for (const name of dead) {
+      for (const [i, line] of lines.entries()) {
+        if (cut.has(i)) continue
+
+        /* A local `const`. Replaced by a note rather than simply dropped, so the
+         * comment block above it does not end up describing nothing. */
+        const local = LOCAL_CONST.exec(line)
+        if (local !== null && local[1] === name) {
+          const value = line.slice(local[0].length).trim().replace(/\s+$/, '')
+          lines[i] = `/* \`${name}\` was ${value} — inlined into the definition by the editor. */`
+          cut.add(i)
+          break
+        }
+
+        /* An import specifier. Drop the name; drop the whole line if it empties. */
+        const imported = IMPORT_BINDINGS.exec(line)
+        if (imported !== null) {
+          const kept = imported[1].split(',').map(s => s.trim()).filter(Boolean)
+            .filter(spec => (spec.split(/\s+as\s+/).pop() ?? '').trim() !== name)
+          if (kept.length === imported[1].split(',').map(s => s.trim()).filter(Boolean).length) continue
+          lines[i] = kept.length === 0
+            ? null
+            : line.replace(imported[1], ` ${kept.join(', ')} `)
+          cut.add(i)
+          break
+        }
+      }
+    }
+    const next = lines.filter(l => l !== null).join('\n')
+    if (next === text) return text
+    text = next
+  }
+  return text
+}
+
 /* ------------------------------------------------- 2. the export line --- */
 
 /**
@@ -911,7 +994,7 @@ export function pushSpecies(root, body) {
      */
     const { literal: defLiteral, restored } = withRestoredConstants(
       before, sent, constantLookup(root, modulePath, was))
-    const next = withUpdatedDefinition(was, speciesId, defLiteral)
+    let next = withUpdatedDefinition(was, speciesId, defLiteral)
 
     let movesNext = null
     if (moves !== undefined) {
@@ -930,7 +1013,10 @@ export function pushSpecies(root, body) {
     if (next === null) {
       note(skipped, 1, modulePath, `the definition on disk is already exactly this one`)
     } else {
-      writeText(root, modulePath, next)
+      /* CUT THE DEAD BINDINGS BEFORE WRITING — see `withoutStaleBindings`. This
+       * has to happen here rather than beside the reply below, or the file on
+       * disk keeps the orphans and only the message knows they went. */
+      writeText(root, modulePath, withoutStaleBindings(next))
       note(wrote, 1, modulePath,
         'the definition block, replaced in place — the doc comment, the imports and every '
         + 'derivation beside a number are exactly as they were')
@@ -966,11 +1052,10 @@ export function pushSpecies(root, body) {
         + 'rather than as a number, because that value is the one it always was.'
     const staleNote = stale.length === 0
       ? ''
-      : ` One thing is now yours: ${stale.join(', ')} in ${modulePath} is no longer read by `
-        + 'anything — either the number it stood for is one you changed, or it was written as a '
-        + 'derivation (`0.125 / 0.359219`) and the editor only ever sees the number that came out '
-        + 'of it. Delete the line, and the note above it if that note is only about that number, '
-        + 'or `npx tsc --noEmit` will point at it.'
+      : ` ${stale.join(', ')} in ${modulePath} stopped being read by anything — the number each `
+        + 'stood for is now inlined in the definition — so the declarations were removed for you '
+        + 'and the notes above them kept, with the old value written into each note. Nothing to '
+        + 'do; the file compiles as it stands.'
 
     return {
       speciesId,

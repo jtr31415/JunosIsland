@@ -58,31 +58,38 @@ const LIVE = COLLECTIONS.map(c => c.id).filter(id => built(id) > 0)
 /* ------------------------------------------------------------------ */
 
 describe('completion counts the animals that exist, not the ones the roster plans', () => {
-  it('finishes Night Time at thirteen, because thirteen is all there are', () => {
+  it('finishes Home Pets at fifteen, because fifteen is all there are', () => {
     /*
-     * THE EXACT BUG JT-047 CLOSED, written as the numbers that caused it.
-     * Sixteen rostered, thirteen built — `animal-bat`, `animal-sugar-glider`
-     * and `animal-scorpion` want a membrane and a pincer the parts bank does
-     * not have. Under the old maths this read 13/16 = 0.8125: over `OPEN_AT`,
-     * so it kept triggering, but never 1, so it never completed, never freed
-     * its slot, and held one of MAX_ACTIVE's four for good.
+     * THE EXACT BUG JT-047 CLOSED, written as the numbers that cause it today.
+     * Sixteen rostered, fifteen a child can be dealt — `animal-rat` is built and
+     * Joe has not pushed it. Dividing by the ROSTER this reads 15/16 = 0.9375:
+     * over `OPEN_AT`, so it keeps triggering, but never 1, so it never completes,
+     * never frees its slot, and holds one of MAX_ACTIVE's four for good.
+     *
+     * >>> The example was Night Time at 13 of 16 until 4 August, when the album
+     * >>> and the unlocker moved from BUILT to RELEASED and Night Time went to
+     * >>> zero — built end to end, pushed nowhere. Home Pets is the live case
+     * >>> now, and it is the same shape for a better reason: the gap is one Joe
+     * >>> has not pushed rather than one nobody can model.
      */
-    expect(collection('night-time')!.members).toHaveLength(16)
-    expect(REAL['night-time']).toBe(13)
+    expect(collection('home-pets')!.members).toHaveLength(16)
+    expect(REAL['home-pets']).toBe(15)
 
-    const s = state({ open: ['night-time'], owned: { 'night-time': 13 } })
-    expect(completion(s, 'night-time')).toBe(1)
-    expect(isComplete(s, 'night-time')).toBe(true)
+    const s = state({ open: ['home-pets'], owned: { 'home-pets': 15 } })
+    expect(completion(s, 'home-pets')).toBe(1)
+    expect(isComplete(s, 'home-pets')).toBe(true)
     // The old answer, named so a regression is recognisable rather than merely red.
-    expect(13 / 16).toBeCloseTo(0.8125, 4)
+    expect(15 / 16).toBeCloseTo(0.9375, 4)
   })
 
-  it('finishes Africa at one, which no amount of play could do before', () => {
-    expect(REAL['africa']).toBe(1)
-    const s = state({ open: ['africa'], owned: { africa: 1 } })
-    expect(completion(s, 'africa')).toBe(1)
-    // It used to be 1/16 = 6%, and there was no route to 100% at all.
-    expect(1 / 16).toBeCloseTo(0.0625, 4)
+  it('gives a collection with nothing pushed no route to completion at all', () => {
+    /* Africa used to be the "1 of 16, and no route to 100%" case. It is 0 of 16
+     * now — built and unpushed — so it is not offered at all, which is
+     * `unlock.ts`'s hold rather than a completion question. Asserted here so the
+     * two files cannot drift about what zero means. */
+    expect(REAL['africa']).toBe(0)
+    expect(REAL['night-time']).toBe(0)
+    expect(REAL['farm']).toBe(0)
   })
 
   it('lets a child finish EVERY live collection by owning what exists', () => {
@@ -303,17 +310,20 @@ describe('advance records completions, and never takes an album back', () => {
   })
 
   it('never removes an id from the completed record, however built moves', () => {
-    const owned = speciesOf('night-time')
+    /* Home Pets since 4 August — Night Time is 0 released and so cannot be
+     * completed at all now. The property is unchanged and so is the point:
+     * finishing a set is permanent, whatever Joe pushes afterwards. */
+    const owned = speciesOf('home-pets')
     const first: Opened = {
-      open: [BASE_COLLECTION, 'night-time'], lastOpened: 'night-time', completed: [],
+      open: [BASE_COLLECTION, 'home-pets'], lastOpened: 'home-pets', completed: [],
     }
     const done = advance(owned, first, mulberry32(5), REAL)
-    expect(done.completed).toContain('night-time')
+    expect(done.completed).toContain('home-pets')
 
-    // Joe builds two more. The record survives; the album survives.
-    const after = advance(owned, done, mulberry32(5), { ...REAL, 'night-time': 15 })
-    expect(after.completed).toContain('night-time')
-    expect(after.open).toContain('night-time')
+    // Joe pushes the rat. The record survives; the album survives.
+    const after = advance(owned, done, mulberry32(5), { ...REAL, 'home-pets': 16 })
+    expect(after.completed).toContain('home-pets')
+    expect(after.open).toContain('home-pets')
     for (const id of done.open) expect(after.open, id).toContain(id)
   })
 
@@ -388,9 +398,13 @@ describe('advance records completions, and never takes an album back', () => {
      * each. Run across a moving built map so a future change to the prune has
      * to come past this test.
      */
-    const owned = [...speciesOf('garden'), ...speciesOf('africa')]
+    /* The pair moved from garden+africa to garden+home-pets on 4 August, because
+     * Africa has nothing released and a child cannot own something in it. The
+     * property is the same and the maps below still move underneath it — one of
+     * them takes garden to ZERO, which is the case that matters most. */
+    const owned = [...speciesOf('garden'), ...speciesOf('home-pets')]
     const start: Opened = {
-      open: [BASE_COLLECTION, 'garden', 'africa'], lastOpened: 'africa', completed: [],
+      open: [BASE_COLLECTION, 'garden', 'home-pets'], lastOpened: 'home-pets', completed: [],
     }
     const maps = [
       REAL,
@@ -401,7 +415,7 @@ describe('advance records completions, and never takes an album back', () => {
     let at = start
     for (const map of maps) {
       const next = advance(owned, at, mulberry32(4), map)
-      for (const id of ['garden', 'africa', BASE_COLLECTION]) {
+      for (const id of ['garden', 'home-pets', BASE_COLLECTION]) {
         expect(next.open, `${id} survives`).toContain(id)
       }
       at = next

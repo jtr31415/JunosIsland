@@ -71,10 +71,10 @@
       "speciesId": "animal-goldfish",
       "from": "animal-goldfish",
       "fromKind": "built",
-      "collection": "",
-      "givenName": "",
-      "fact": "",
-      "factSource": "",
+      "collection": "home-pets",
+      "givenName": "Voobim",
+      "fact": "Goldfish can remember things for months. People used to say they forget in three seconds, but that is not true.",
+      "factSource": "joe",
       "def": {
         "palette": {
           "coat": 15234346,
@@ -146,7 +146,8 @@
         }
       ],
       "state": "draft",
-      "note": ""
+      "note": "",
+      "moves": "water"
     },
     {
       "speciesId": "animal-fennec-fox",
@@ -462,8 +463,8 @@
       "fromKind": "built",
       "collection": "home-pets",
       "givenName": "Pewod",
-      "fact": "",
-      "factSource": "",
+      "fact": "A budgie can learn to say words. In the wild, budgies fly in huge flocks in Australia.",
+      "factSource": "joe",
       "def": {
         "palette": {
           "coat": 5941298,
@@ -472,7 +473,9 @@
           "cere": 6260440,
           "limb": 13157071,
           "foot": 9077908,
-          "pupil": 5001054
+          "pupil": 5001054,
+          "wing": 15915338,
+          "box-38": 15915338
         },
         "hull": {
           "paint": {
@@ -518,8 +521,8 @@
           },
           {
             "name": "wing",
-            "part": "box-06",
-            "paint": "bar",
+            "part": "wedge-19",
+            "paint": "wing",
             "kind": "pair",
             "axis": "z",
             "dir": -1,
@@ -531,12 +534,32 @@
               {
                 "axis": "y",
                 "deg": -90
+              },
+              {
+                "axis": "x",
+                "deg": 90
+              },
+              {
+                "axis": "y",
+                "deg": -90
+              },
+              {
+                "axis": "x",
+                "deg": 180
+              },
+              {
+                "axis": "z",
+                "deg": 180
+              },
+              {
+                "axis": "z",
+                "deg": -180
               }
             ],
             "sink": 0.5,
             "at": [
-              0.625,
-              0.80625,
+              0.8625,
+              0.8125,
               0
             ]
           },
@@ -545,7 +568,12 @@
             "part": "plate-10",
             "paint": "mask",
             "kind": "pair",
-            "on": "wing"
+            "on": "wing",
+            "at": [
+              0.65,
+              0.625,
+              -0.1625
+            ]
           },
           {
             "name": "cheek",
@@ -570,8 +598,9 @@
             "at": [
               0,
               0.7,
-              -0.625
-            ]
+              -0.925
+            ],
+            "paint": "box-38"
           }
         ],
         "motion": [
@@ -586,7 +615,8 @@
       },
       "warnings": [],
       "state": "draft",
-      "note": ""
+      "note": "",
+      "moves": "air"
     },
     {
       "speciesId": "animal-mouse",
@@ -3016,7 +3046,7 @@
           },
           {
             "name": "wing",
-            "part": "box-06",
+            "part": "wedge-19",
             "paint": "flight",
             "kind": "pair",
             "axis": "z",
@@ -3029,12 +3059,20 @@
               {
                 "axis": "y",
                 "deg": -90
+              },
+              {
+                "axis": "z",
+                "deg": 90
+              },
+              {
+                "axis": "x",
+                "deg": -90
               }
             ],
             "sink": 0.5,
             "at": [
-              0.625,
-              0.80625,
+              0.85,
+              0.8125,
               0
             ]
           }
@@ -3124,6 +3162,906 @@
       "state": "draft",
       "note": "",
       "moves": "land"
+    },
+    {
+      "speciesId": "animal-terrapin",
+      "from": "animal-terrapin",
+      "fromKind": "built",
+      "collection": "home-pets",
+      "givenName": "Pathid",
+      "fact": "A terrapin swims and then sits in the sun. It needs the warmth to keep its body working.",
+      "factSource": "joe",
+      "def": {
+        "palette": {
+          "coat": 4874804,
+          "belly": 14930831,
+          "limb": 7310406,
+          "web": 3953192,
+          "mark": 12597547,
+          "pupil": 5001054
+        },
+        "hull": {
+          "part": "box-03",
+          "at": [
+            0,
+            0.8125,
+            -0.0375
+          ]
+        },
+        "belly": 0.5,
+        "legs": {
+          "paint": {
+            "base": "limb",
+            "patch": {
+              "below": "web",
+              "at": 0.25
+            }
+          }
+        },
+        "eyes": {
+          "part": "plate-01",
+          "x": 0.2625,
+          "y": 0.9875
+        },
+        "extras": [
+          {
+            "name": "ear-patch",
+            "part": "plate-10",
+            "paint": "mark",
+            "kind": "pair",
+            "stretch": [
+              1,
+              0.25,
+              1
+            ],
+            "at": [
+              0.635,
+              0.89375,
+              0.18606
+            ]
+          },
+          {
+            "name": "head-stripe",
+            "part": "plate-10",
+            "paint": "belly",
+            "kind": "pair",
+            "stretch": [
+              1,
+              0.25,
+              1
+            ],
+            "at": [
+              0.635,
+              0.99675,
+              0.18606
+            ]
+          },
+          {
+            "part": "box-04",
+            "name": "box-04",
+            "spin": [
+              {
+                "axis": "x",
+                "deg": 90
+              }
+            ],
+            "at": [
+              0.625,
+              0.725,
+              -0.025
+            ],
+            "stretch": [
+              1,
+              1,
+              0.5
+            ]
+          },
+          {
+            "name": "head-stripe-2",
+            "part": "plate-10",
+            "paint": "belly",
+            "kind": "pair",
+            "stretch": [
+              1,
+              0.25,
+              1
+            ],
+            "at": [
+              0.6375,
+              1.1375,
+              0.1875
+            ]
+          },
+          {
+            "name": "head-stripe-3",
+            "part": "plate-10",
+            "paint": "belly",
+            "kind": "pair",
+            "stretch": [
+              1,
+              0.25,
+              1
+            ],
+            "at": [
+              0.6375,
+              1.1,
+              -0.1125
+            ]
+          },
+          {
+            "name": "head-stripe-3-2",
+            "part": "plate-10",
+            "paint": "belly",
+            "kind": "pair",
+            "stretch": [
+              1,
+              0.25,
+              1
+            ],
+            "at": [
+              0.6375,
+              0.9875,
+              -0.1125
+            ]
+          },
+          {
+            "name": "ear-patch-2",
+            "part": "plate-10",
+            "paint": "mark",
+            "kind": "pair",
+            "stretch": [
+              1,
+              0.25,
+              1
+            ],
+            "at": [
+              0.6375,
+              0.9,
+              -0.2
+            ]
+          },
+          {
+            "part": "plate-03",
+            "name": "plate-03",
+            "at": [
+              0,
+              0.5125,
+              0.6
+            ]
+          }
+        ],
+        "tail": {
+          "part": "cone-01",
+          "paint": "limb",
+          "spin": [
+            {
+              "axis": "x",
+              "deg": -90
+            },
+            {
+              "axis": "z",
+              "deg": 180
+            }
+          ],
+          "at": [
+            0,
+            0.4875,
+            -0.625
+          ]
+        },
+        "flag": "THE FINE YELLOW LINES DOWN THE NECK AND THE LEGS CANNOT BE DRAWN, and on a red-eared slider they are half the animal: olive skin ruled lengthwise with thin yellow stripes. Both mechanisms fail and it is worth being exact about which falls short of what. `byBand` can only cut where Kenney already cut, and the two parts that need it have no cut in them at all — `box-18`, the neck, carries ONE band with all 80 of its triangles in band 1, and `box-01`, the leg, is one band as well. `Paint.patch` needs no cut and WOULD say it, because a level boundary across a horizontal neck is a lengthwise line, which is exactly the right shape — but a patch belongs to a SLOT and not to a part, the `limb` cell is already spent on the webbed feet, and `assembly.ts:487` throws when one cell is asked to hold two pictures. And a CARD long enough to run the neck would overhang its chamfers at both ends. So the lines are not awkward here, they are unsayable, and nothing has been authored to fake them. THE RED EAR PATCH IS HALF-ANSWERED and you should look at it: the badger found that no card in this bank IS a stripe and that is still true, but a slider's mark is a 0.25 patch rather than a 0.6 run, so it is `plate-10` — the cow's flank card — thinned on one axis to 4.15:1, sat at the eye's own recorded height on the pack's own card shell, with a pale one above it for the border. It is a red mark behind the eye in the right place at the right size; it is not the streak that fades back along the neck, because there is no neck surface to fade along. THREE PARTS ARE STANDING IN FOR ANATOMY THE BANK DOES NOT HAVE, and they are the ones to look at first: the NECK is the elephant's trunk `box-18` worn FORWARDS, unspun, which is the same shape the Garden tortoise wears spun 180 as a stub tail; the SHELL is the caterpillar's body-segment `box-11` laid flat, the only band in the bank that is an ellipse rather than a square and the only one small enough not to be a second mass; and the TAIL is the bee's ear-spike `cone-01` turned to point backwards. The crab's flat hull `box-13` was refused by arithmetic, as it was for the tortoise: 0.450556 tall plus a 0.30625 leg is 0.756806 against a floor of 1.43."
+      },
+      "warnings": [
+        {
+          "axiom": "scale",
+          "severity": "warn",
+          "path": {
+            "role": "extras",
+            "index": 0
+          },
+          "text": "\"ear-patch\" carries a stretch, NON-UNIFORM [1.000, 0.250, 1.000]. Rule 4 is placement by TRANSLATION: exactly one node in the pack's 133 carries a scale at all. §3 measured stretch as safe on ears and snouts and says so about those two kinds only. It is NON-UNIFORM, so the authored proportions of the shape itself are changed — which is the thing Joe rejected by name on the hedgehog's hull."
+        },
+        {
+          "axiom": "scale",
+          "severity": "warn",
+          "path": {
+            "role": "extras",
+            "index": 1
+          },
+          "text": "\"head-stripe\" carries a stretch, NON-UNIFORM [1.000, 0.250, 1.000]. Rule 4 is placement by TRANSLATION: exactly one node in the pack's 133 carries a scale at all. §3 measured stretch as safe on ears and snouts and says so about those two kinds only. It is NON-UNIFORM, so the authored proportions of the shape itself are changed — which is the thing Joe rejected by name on the hedgehog's hull."
+        },
+        {
+          "axiom": "scale",
+          "severity": "warn",
+          "path": {
+            "role": "extras",
+            "index": 2
+          },
+          "text": "\"box-04\" carries a stretch, NON-UNIFORM [1.000, 1.000, 0.500]. Rule 4 is placement by TRANSLATION: exactly one node in the pack's 133 carries a scale at all. §3 measured stretch as safe on ears and snouts and says so about those two kinds only. It is NON-UNIFORM, so the authored proportions of the shape itself are changed — which is the thing Joe rejected by name on the hedgehog's hull."
+        },
+        {
+          "axiom": "scale",
+          "severity": "warn",
+          "path": {
+            "role": "extras",
+            "index": 3
+          },
+          "text": "\"head-stripe-2\" carries a stretch, NON-UNIFORM [1.000, 0.250, 1.000]. Rule 4 is placement by TRANSLATION: exactly one node in the pack's 133 carries a scale at all. §3 measured stretch as safe on ears and snouts and says so about those two kinds only. It is NON-UNIFORM, so the authored proportions of the shape itself are changed — which is the thing Joe rejected by name on the hedgehog's hull."
+        },
+        {
+          "axiom": "scale",
+          "severity": "warn",
+          "path": {
+            "role": "extras",
+            "index": 4
+          },
+          "text": "\"head-stripe-3\" carries a stretch, NON-UNIFORM [1.000, 0.250, 1.000]. Rule 4 is placement by TRANSLATION: exactly one node in the pack's 133 carries a scale at all. §3 measured stretch as safe on ears and snouts and says so about those two kinds only. It is NON-UNIFORM, so the authored proportions of the shape itself are changed — which is the thing Joe rejected by name on the hedgehog's hull."
+        },
+        {
+          "axiom": "scale",
+          "severity": "warn",
+          "path": {
+            "role": "extras",
+            "index": 5
+          },
+          "text": "\"head-stripe-3-2\" carries a stretch, NON-UNIFORM [1.000, 0.250, 1.000]. Rule 4 is placement by TRANSLATION: exactly one node in the pack's 133 carries a scale at all. §3 measured stretch as safe on ears and snouts and says so about those two kinds only. It is NON-UNIFORM, so the authored proportions of the shape itself are changed — which is the thing Joe rejected by name on the hedgehog's hull."
+        },
+        {
+          "axiom": "scale",
+          "severity": "warn",
+          "path": {
+            "role": "extras",
+            "index": 6
+          },
+          "text": "\"ear-patch-2\" carries a stretch, NON-UNIFORM [1.000, 0.250, 1.000]. Rule 4 is placement by TRANSLATION: exactly one node in the pack's 133 carries a scale at all. §3 measured stretch as safe on ears and snouts and says so about those two kinds only. It is NON-UNIFORM, so the authored proportions of the shape itself are changed — which is the thing Joe rejected by name on the hedgehog's hull."
+        }
+      ],
+      "state": "draft",
+      "note": "",
+      "moves": "land"
+    },
+    {
+      "speciesId": "animal-cockatiel",
+      "from": "animal-cockatiel",
+      "fromKind": "built",
+      "collection": "home-pets",
+      "givenName": "Voodvo",
+      "fact": "A cockatiel has feathers on its head that go up and down. When they stand up straight, it is excited.",
+      "factSource": "joe",
+      "def": {
+        "palette": {
+          "coat": 15136158,
+          "face": 15916414,
+          "cheek": 14711349,
+          "limb": 13091254,
+          "foot": 9143673,
+          "pupil": 5001054,
+          "wing": 9212026
+        },
+        "eyes": {
+          "part": "plate-08",
+          "paint": "face"
+        },
+        "snout": {
+          "part": "cone-06",
+          "paint": "limb"
+        },
+        "tail": {
+          "part": "box-38",
+          "paint": {
+            "base": "coat",
+            "byBand": {
+              "3": "face"
+            }
+          },
+          "axis": "y",
+          "dir": 1,
+          "spin": [
+            {
+              "axis": "x",
+              "deg": -90
+            }
+          ],
+          "sink": 0.2943,
+          "at": [
+            0,
+            0.525,
+            -0.625
+          ]
+        },
+        "legs": false,
+        "extras": [
+          {
+            "name": "leg-front",
+            "part": "box-01",
+            "paint": {
+              "base": "limb",
+              "patch": {
+                "below": "foot",
+                "at": 0.25
+              }
+            },
+            "kind": "pair",
+            "sink": 0.408163,
+            "at": [
+              0.25,
+              0.18125,
+              0
+            ]
+          },
+          {
+            "name": "crest",
+            "part": "cone-01",
+            "paint": "face",
+            "at": [
+              0,
+              1.43125,
+              0.148215
+            ]
+          },
+          {
+            "name": "wing",
+            "part": "wedge-20",
+            "paint": "wing",
+            "kind": "pair",
+            "axis": "z",
+            "dir": -1,
+            "spin": [
+              {
+                "axis": "z",
+                "deg": -90
+              },
+              {
+                "axis": "y",
+                "deg": -90
+              },
+              {
+                "axis": "z",
+                "deg": -90
+              },
+              {
+                "axis": "x",
+                "deg": 90
+              }
+            ],
+            "sink": 0.5,
+            "at": [
+              0.85,
+              0.8125,
+              0
+            ]
+          },
+          {
+            "name": "cheek",
+            "part": "plate-16",
+            "paint": "cheek",
+            "kind": "pair",
+            "at": [
+              0.2559315,
+              0.6371815,
+              0.635
+            ],
+            "stretch": [
+              1.3,
+              1.3,
+              1.3
+            ]
+          },
+          {
+            "name": "crest-2",
+            "part": "cone-01",
+            "paint": "face",
+            "at": [
+              0,
+              1.2875,
+              0.2625
+            ]
+          },
+          {
+            "name": "crest-3",
+            "part": "cone-01",
+            "paint": "face",
+            "at": [
+              0,
+              1.525,
+              -0.025
+            ]
+          }
+        ],
+        "motion": [
+          {
+            "kind": "flap",
+            "parts": [
+              "wing"
+            ]
+          },
+          {
+            "kind": "bob",
+            "parts": [
+              "crest"
+            ]
+          }
+        ],
+        "flag": "THE CREST IS REAL AND IT IS box-21 THAT IS NOT. animal-budgie.ts measured that shell as a 1.250 cube wearing the fox's two EARS and then recommended it to this species as a crest; the measurement is confirmed and the recommendation is REFUSED, with four numbers. (1) Its lugs cannot be painted: box-21 has three bands and band 7 is the WHOLE shell (x -0.625..0.625, y -0.7525..0.7525), so byBand cannot reach a lug without painting the body, and the only band that IS on them — band 5, 10 triangles at z 0.4141..0.5000 — is Kenney's inner-EAR cut. A cockatiel's crest is YELLOW on a GREY bird and a grey crest on a grey head is not a crest. (2) Nothing is on the midline: the lugs' inner faces are at |x| 0.218, so the crown between them is 0.436 bare — 35% of the hull's width — where a crest is ONE plume on the midline and two bumps with a valley read as ears. (3) They stand 0.2550 above the body, which is LESS than the 0.2754 the crest built here stands proud, at 184 triangles against box-03's 60. (4) And because (1) and (2) mean a real crest is needed anyway, box-21 would not replace it — it would add two ears underneath it. WHAT IS HERE INSTEAD is cone-01, the bee's antenna, standing on the crown: one of only TWO shapes in all 94 bank records with taper 0, a true point, the other being the beak. It is unspun, unstretched and unsunk beyond its own 0.312222, and it makes this the tallest of the four cage birds (1.7066 against 1.43125) which is home-pets.ts:104's own ladder recovered from a part rather than from a shell. If 0.275 of reach is not enough crest, the fix is a taller shape and that is your call — a stretch is not, since you flagged three animals for exactly that on 2 August. THE YELLOW FACE CANNOT BE PAINTED, and on a cockatiel that is half the bird: it is a grey animal with a yellow HEAD, which is a z-region, and a patch takes one number and that number is a HEIGHT — the badger's white face, unchanged. Two routes were measured and refused: an inverted top patch paints a yellow stripe down the whole spine at the nearest 1/16 notches (14/16 catches the top 0.156 of the body), and plate-11 as a face card is 0.433 across against a 0.625 flat face with a 0.400 bill in the middle, and would sit exactly coplanar with the eye cards on z = 0.635. So the yellow is on the crest, the eye's outer ring and the tail tip, and the face is grey. THE ORANGE CHEEK IS A DOT WHERE IT SHOULD BE A THIRD OF THE FACE. plate-16, the pig's nostril, 0.113137 across, at animal-budgie.ts's own stations. The right card exists — plate-10 at 0.2529 spun onto the face — and the window it has to fit in is 0.1125, being the flat front face's own reach (0.3125) less the parrot bill's own half-width (0.200). The bank's biggest dot is that window to within 0.0006. It is not the beak's fault either: over all 26 SOLID nose shapes in the bank the window never opens past 0.2525, which is still 0.0004 short of plate-10 — and that widest case is wedge-10, the one you rejected by name on the hedgehog. The widest usable bill leaves 0.2215. AND NO WHITE WING FLASH — a cockatiel has one, and plate-10 on the wing's outer face is the budgie's wing-bar extra, so it is left to the budgie to keep the two birds' extras sets disjoint the way home-pets.ts:98-105 asks. NEW PALETTE, UNREVIEWED: home-pets.ts only ever carried the word \"grey\" for this bird. AND IT BOBS: this is the first species to declare two motions, and the second is the crest raising and lowering on motion.ts's own measured defaults. Nothing was authored and nothing is stretched.",
+        "hull": {
+          "at": [
+            0,
+            0.8125,
+            0
+          ]
+        }
+      },
+      "warnings": [
+        {
+          "axiom": "scale",
+          "severity": "warn",
+          "path": {
+            "role": "extras",
+            "index": 3
+          },
+          "text": "\"cheek\" carries a stretch, uniform 1.30x. Rule 4 is placement by TRANSLATION: exactly one node in the pack's 133 carries a scale at all. §3 measured stretch as safe on ears and snouts and says so about those two kinds only. It is uniform, so the shape is unchanged and only its size is."
+        }
+      ],
+      "state": "draft",
+      "note": "",
+      "moves": "air"
+    },
+    {
+      "speciesId": "animal-rat",
+      "from": "animal-rat",
+      "fromKind": "built",
+      "collection": "home-pets",
+      "givenName": "Ganoom",
+      "fact": "Rats are clever and very clean. They laugh when they are tickled, but the sound is too high for humans.",
+      "factSource": "joe",
+      "def": {
+        "palette": {
+          "coat": 7562840,
+          "belly": 15393493,
+          "bare": 14267049,
+          "limb": 4932154,
+          "pupil": 5001054
+        },
+        "hull": {
+          "part": "box-03"
+        },
+        "belly": 0.5,
+        "legs": {
+          "paint": {
+            "base": "limb",
+            "patch": {
+              "below": "bare",
+              "at": 0.25
+            }
+          }
+        },
+        "ears": {
+          "part": "box-02",
+          "paint": "coat"
+        },
+        "tail": {
+          "part": "wedge-07",
+          "paint": "bare",
+          "spin": [
+            {
+              "axis": "z",
+              "deg": 180
+            }
+          ],
+          "at": [
+            0,
+            0.5625,
+            -0.625
+          ]
+        },
+        "snout": {
+          "part": "tube-07",
+          "paint": "limb"
+        },
+        "nose": {
+          "part": "box-32",
+          "paint": "bare"
+        },
+        "flag": "THE HOODED MARKING CANNOT BE EXPRESSED, and on a fancy rat it is the marking a child points at: a DARK HEAD AND SHOULDERS on a WHITE BODY, the cap running from the nose over the crown and down between the front legs. Every mechanism we have falls short of it in a different way, and none of them is close. `Paint.patch` takes one number and that number is a HEIGHT — it paints ONE LEVEL BOUNDARY across a part and has no z term at all, so it can say \"pale underneath\" (which is what the belly line here is) and it cannot say \"dark at the front end\"; and rule 3 is one mass, so there is no separate head to paint instead. `byBand` can only cut where Kenney already cut, and this hull's three bands are the tiger's: a lower-front chest patch, an upper-back saddle, and the remainder — a saddle over the MIDDLE of the back is very nearly the opposite of a hood. And the bank has no card that could carry one: its only marking cards are the flank blotches the cow, the dog and the giraffe share, `plate-10` (0.244 x 0.253) and `plate-11` (0.400 x 0.433), both side-mounted at x = 0.635 and both far too small to cross the top of a 1.350-wide animal. So what is here is an AGOUTI rat — grey-brown above, pale below, the wild type a fancy rat also comes in — which is true of the animal and is not the photograph on the packet. Nothing was authored to fake the hood. Also worth your eye, because it is the one place this animal shares a part with a species you have already signed off: its tail is the SAME `wedge-07` the Garden mouse wears. The bank has exactly two bare whips and they are the same shape to six decimals, so picking the other one would have changed a name and nothing you can see. It is separated instead by being SPUN a half turn — the arc falls away behind where the mouse's sweeps up — by carrying its own pink-grey colour where the mouse's is painted the same dark as its legs, and by hanging off a hull with 1.213x the volume."
+      },
+      "warnings": [],
+      "state": "draft",
+      "note": "",
+      "moves": "land"
+    },
+    {
+      "speciesId": "animal-lovebird",
+      "from": "animal-lovebird",
+      "fromKind": "built",
+      "collection": "home-pets",
+      "givenName": "Vagod",
+      "fact": "Lovebirds sit close together in pairs. They spend a long time tidying each other's feathers.",
+      "factSource": "joe",
+      "def": {
+        "palette": {
+          "coat": 4170061,
+          "mantle": 2913592,
+          "face": 16381036,
+          "rump": 2776256,
+          "limb": 14734260,
+          "foot": 10129272,
+          "pupil": 5001054,
+          "eye": 14766417
+        },
+        "hull": {
+          "part": "box-41",
+          "paint": {
+            "base": "coat",
+            "byBand": {
+              "3": "face",
+              "15": "mantle"
+            }
+          }
+        },
+        "eyes": {
+          "part": "plate-08",
+          "paint": "eye"
+        },
+        "snout": {
+          "part": "cone-06",
+          "paint": "limb",
+          "stretch": [
+            0.7,
+            0.7,
+            0.7
+          ],
+          "at": [
+            0,
+            0.6625,
+            0.7
+          ]
+        },
+        "tail": {
+          "part": "wedge-03",
+          "paint": "rump",
+          "at": [
+            0,
+            0.525,
+            -0.8
+          ],
+          "spin": [
+            {
+              "axis": "x",
+              "deg": -90
+            }
+          ]
+        },
+        "legs": false,
+        "extras": [
+          {
+            "name": "leg-front",
+            "part": "box-01",
+            "paint": {
+              "base": "limb",
+              "patch": {
+                "below": "foot",
+                "at": 0.25
+              }
+            },
+            "kind": "pair",
+            "sink": 0.408163,
+            "at": [
+              0.4375,
+              0.18125,
+              0
+            ]
+          },
+          {
+            "name": "wing",
+            "part": "wedge-19",
+            "paint": "mantle",
+            "kind": "pair",
+            "axis": "z",
+            "dir": -1,
+            "spin": [
+              {
+                "axis": "z",
+                "deg": -90
+              },
+              {
+                "axis": "y",
+                "deg": -90
+              },
+              {
+                "axis": "x",
+                "deg": 90
+              },
+              {
+                "axis": "y",
+                "deg": -90
+              },
+              {
+                "axis": "z",
+                "deg": -90
+              },
+              {
+                "axis": "z",
+                "deg": -90
+              },
+              {
+                "axis": "z",
+                "deg": -180
+              },
+              {
+                "axis": "x",
+                "deg": 180
+              },
+              {
+                "axis": "z",
+                "deg": 180
+              },
+              {
+                "axis": "z",
+                "deg": 180
+              }
+            ],
+            "sink": 0.5,
+            "at": [
+              0.9125,
+              0.8125,
+              0
+            ]
+          }
+        ],
+        "motion": [
+          {
+            "kind": "flap",
+            "parts": [
+              "wing"
+            ]
+          }
+        ],
+        "flag": "THE PEACH FACE IS HALF SAYABLE, AND THIS IS THE FIRST TIME ANY OF IT HAS BEEN. animal-badger.ts is the shipped proof that a marking on the FRONT of a head is normally unsayable — Paint.patch takes one number and that number is a HEIGHT, rule 3 leaves no separate head, and byBand can only cut where Kenney already cut, which on box-03 is one band. box-41 has three, and band 3 is the tiger's pale chin: measured triangle by triangle, 31 of its 37 are the MUZZLE BOSS and the other six run down the chin, throat and breast-front on the midline, |x| never past 0.200. Painted peach that is a lovebird's bib, for one byBand entry and no geometry. WHAT IT DOES NOT REACH: the CHEEKS and the CROWN, which on a real peach-faced lovebird are peach too and here stay green. The forehead gets one plate-16 blaze, 0.113 on a 1.350 head, and that is as large as this bank can put there — the two cards wide enough to cross a brow, plate-03 (0.2366) and plate-13 (0.2192), both reach past the eye cards' own inner edge at x 0.0625 and would z-fight two coplanar zero-thickness quads. And the last two triangles of band 3 run down the BELLY midline, where a lovebird is green; the strip is a quarter of the body's width, on the underside, and the camera looks down. THE BLUE RUMP IS ON THE TAIL, one step back from where the bird wears it. The rump is a region of the BODY and no band or card can reach it: a crown card was tried and refused, because box-41's back is not flat — ray-cast down, the crown is 1.43125 on the midline and 1.48125 over two transverse pads at |z| 0.20-0.25, so animal-nightjar.ts's back-card idiom buries everywhere past |z| 0.07. AND THE TAIL'S OWN RED-AND-BLACK BAR CANNOT BE DRAWN, for the badger's measured reason: nothing in the bank is a stripe, and wedge-03 carries a single band so it takes one flat colour. TWO OF THE FOUR CAGE BIRDS ARE NOW GREEN, and that is your call rather than a species'. home-pets.ts:101 gives the budgie BLUE and this bird GREEN; home-pets.ts:194 calls the budgie \"the only green one\". The budgie followed 194 and flagged it. A peach-faced lovebird is green in life and green in the collection's own table, so it is green here — which leaves the four as green, green, yellow and grey. Line 101's own answer is that the BUDGIE is the blue one, and moving it is one word in that file. NEW PALETTE, UNREVIEWED — home-pets.ts only ever carried a colour word for this bird, so these seven are the first colours it has ever had. WORTH YOUR EYE ON THE HULL: box-41 is measurably box-03 WITH ITS EDGES FILLED OUT — all six of its flat plates are the cube's six flat plates at identical world coordinates, and the whole of its extra 0.100 is a fatter chamfer, a muzzle boss and four pads. That is why this bird can be the stocky one AND wear the budgie's own solved wing numbers unchanged, and it is why the bill is the heaviest of the four for no stretch at all: the tiger's muzzle boss is 0.400 across, exactly cone-06's own width, so the parrot's beak stands on a fleshy block 0.100 proud of the face and reaches 0.283 against the budgie's 0.183. THE COLLECTION'S \"collar\" IS NOT HERE: a peach-faced lovebird has none (the collared ones are Fischer's and the masked), and the bank's five band shapes are 1.335-1.650 across, so on a 1.350 hull two of them vanish inside the body and two read as a lion's ruff. Nothing was authored and nothing is stretched."
+      },
+      "warnings": [
+        {
+          "axiom": "scale",
+          "severity": "note",
+          "path": {
+            "role": "snout"
+          },
+          "text": "\"snout\" carries a stretch, uniform 0.70x. §3 measured natural variation of 2.97x on ears and 2.90x on snouts, so up to 3x here is the pack's own range. It is uniform, so the shape is unchanged and only its size is."
+        }
+      ],
+      "state": "draft",
+      "note": "",
+      "moves": "air"
+    },
+    {
+      "speciesId": "animal-degu",
+      "from": "animal-degu",
+      "fromKind": "built",
+      "collection": "home-pets",
+      "givenName": "Bedno",
+      "fact": "Degus are rodent that are during daytime. It lives in big family groups and calls out to its friends.",
+      "factSource": "joe",
+      "def": {
+        "palette": {
+          "coat": 8748912,
+          "belly": 14932159,
+          "ring": 16249574,
+          "limb": 11183517,
+          "brush": 2564895,
+          "tooth": 14068046,
+          "pupil": 5001054,
+          "hull": 5196352
+        },
+        "hull": {
+          "part": "box-03",
+          "paint": {
+            "base": "hull",
+            "byBand": {
+              "5": "limb"
+            }
+          },
+          "at": [
+            0,
+            0.8125,
+            0
+          ]
+        },
+        "belly": 0.5,
+        "tail": {
+          "part": "wedge-15",
+          "paint": "brush"
+        },
+        "eyes": {
+          "part": "plate-08",
+          "paint": "ring"
+        },
+        "snout": {
+          "part": "tube-01",
+          "paint": "belly"
+        },
+        "nose": {
+          "part": "box-09",
+          "paint": "brush"
+        },
+        "extras": [
+          {
+            "part": "wedge-01",
+            "name": "incisor",
+            "kind": "pair",
+            "paint": "tooth"
+          },
+          {
+            "part": "wedge-06",
+            "name": "wedge-06",
+            "spin": [
+              {
+                "axis": "y",
+                "deg": 90
+              }
+            ],
+            "at": [
+              0.3,
+              1.4375,
+              0.2625
+            ],
+            "stretch": [
+              1.45,
+              1.45,
+              1.45
+            ],
+            "kind": "pair"
+          }
+        ],
+        "flag": "THE PALE EYE-RING IS ONLY HALF-SAYABLE, and on a degu it is the field mark — a band of pale fur on the COAT around each eye. Colour is a texture lookup with no positional information: `Paint.patch` takes one number and that number is a HEIGHT, so it paints a level plane and cannot say \"a ring here\"; `byBand` can only cut where Kenney already cut, and measured over the bank NO eye card carries a third band — every one of the ten is sclera and pupil, and on the cat's it is pupil alone. A backing card was measured and refused too: nothing in the bank is bigger than the round eye card on both axes except the PANDA's card, which is an eye card held to the same absolute z = 0.6350 (it would be coplanar and z-fight into invisibility) and whose outer 40 of 57 triangles are band 15, which the pupil rule paints grey — it can only ever draw a DARK ring. So what is here instead is the pack's one perfectly round card, 0.400 x 0.400, its pale field on its own near-white slot, wrapping the pupil on three sides: an eye with a pale surround rather than pale fur around the eye. SECOND, THE TAIL IS DARK ALL THROUGH where a degu's brush is only its last third — `box-38` carries ONE band over all 48 of its triangles, so there is no tip to cut, and a separate tip part would take the gerbil's assigned separation in this same collection. Worth your eye either way: this animal's ears are the HULL's own fused lugs (0.1447 proud, 0.1767 tall), small on purpose, because the chinchilla beside it wears the bank's biggest ear at 0.742676 and two big-eared rodents on one page is a silhouette twin. Nothing was authored, nothing is stretched, and nothing is over budget."
+      },
+      "warnings": [
+        {
+          "axiom": "scale",
+          "severity": "warn",
+          "path": {
+            "role": "extras",
+            "index": 1
+          },
+          "text": "\"wedge-06\" carries a stretch, uniform 1.45x. Rule 4 is placement by TRANSLATION: exactly one node in the pack's 133 carries a scale at all. §3 measured stretch as safe on ears and snouts and says so about those two kinds only. It is uniform, so the shape is unchanged and only its size is."
+        }
+      ],
+      "state": "draft",
+      "note": "",
+      "moves": "land"
+    },
+    {
+      "speciesId": "animal-chicken",
+      "from": "animal-chicken",
+      "fromKind": "built",
+      "collection": "farm",
+      "givenName": "Shophu",
+      "fact": "",
+      "factSource": "",
+      "def": {
+        "palette": {
+          "coat": 11895370,
+          "flight": 9857338,
+          "comb": 12596014,
+          "limb": 14727530,
+          "foot": 12751162,
+          "eye": 14737632,
+          "pupil": 5001054
+        },
+        "eyes": {
+          "part": "plate-08",
+          "paint": "eye"
+        },
+        "snout": {
+          "part": "tube-02",
+          "paint": "limb"
+        },
+        "legs": false,
+        "extras": [
+          {
+            "name": "leg-front",
+            "part": "box-01",
+            "paint": {
+              "base": "limb",
+              "patch": {
+                "below": "foot",
+                "at": 0.25
+              }
+            },
+            "kind": "pair",
+            "sink": 0.408163,
+            "at": [
+              0.25,
+              0.18125,
+              0
+            ]
+          },
+          {
+            "name": "wing",
+            "part": "box-06",
+            "paint": "flight",
+            "kind": "pair",
+            "axis": "z",
+            "dir": -1,
+            "spin": [
+              {
+                "axis": "z",
+                "deg": -90
+              },
+              {
+                "axis": "y",
+                "deg": -90
+              }
+            ],
+            "sink": 0.5,
+            "at": [
+              0.625,
+              0.80625,
+              0
+            ]
+          },
+          {
+            "name": "comb-front",
+            "part": "cone-01",
+            "paint": "comb",
+            "sink": 0.5,
+            "at": [
+              0,
+              1.3,
+              0.475
+            ]
+          },
+          {
+            "name": "comb-mid",
+            "part": "cone-01",
+            "paint": "comb",
+            "sink": 0.5,
+            "at": [
+              0,
+              1.4375,
+              0.3875
+            ]
+          },
+          {
+            "name": "comb-rear",
+            "part": "cone-01",
+            "paint": "comb",
+            "sink": 0.5,
+            "at": [
+              0,
+              1.4375,
+              0.2125
+            ]
+          },
+          {
+            "name": "comb-front-2",
+            "part": "cone-01",
+            "paint": "comb",
+            "sink": 0.5,
+            "at": [
+              0,
+              0.45,
+              0.5875
+            ],
+            "spin": [
+              {
+                "axis": "x",
+                "deg": 180
+              }
+            ]
+          }
+        ],
+        "motion": [
+          {
+            "kind": "flap",
+            "parts": [
+              "wing"
+            ]
+          }
+        ],
+        "flag": "THE COMB IS THREE COPIES OF THE BEE'S ANTENNA AND IT IS THIS COLLECTION'S FIRST IMPROVISED PART, so look at it first: there is no comb, wattle, horn or wing role in the bank at all — every shape whose only job was one of those was discarded at generation time — so cone-01, one of only TWO records in all 94 with taper 0 (a true point, the other being a parrot's beak), stands unspun on the crown three times. BOTH ITS NUMBERS ARE SOLVED. It is buried 8/16 rather than the shape's own 5/16, which stands it 0.2002 proud against animal-cockatiel.ts's crest at 0.275356 — 27.3% LESS COMB, which is the difference between a hen's and a cock's said in the only dial the bank has that is not a stretch, and the rooster deriving from this file takes the shape's own burial back and gets all of it. And the spacing is 2/16 because that is the LARGEST step on the pack's grid at which the three points still MEET: cone-01 is 0.328570 across at its base and exactly half that, 0.164285, at the crown, so at 2/16 the bases overlap 0.039285 and read as ONE serrated blade, and at 3/16 they stand 0.023215 apart and read as three spikes. The second and third cones cost 68 triangles, 12.5% of the whole animal, and they are the most expensive decision in the file. THERE IS NO WATTLE, deliberately, three times over: farm.ts:162 gives the ROOSTER \"comb, wattle and a dark arched tail\" as the whole of its separation from this bird and the two share a body on purpose; the window under the beak is 0.108 tall (the flat front face's own lower reach 0.49375 up to the bill's underside 0.60175) against the smallest SOLID box in the bank at 0.136825, and the flat cards plate-12 and plate-16 are not candidates because animal-budgie.ts:243-255 already measured and refused them for this exact job for reading FLAT; and overruling box-09's own 0.000 burial to 8/16 opens the window enough but leaves only 0.039913 of wattle standing, 3.2% of the hull's width, and it would be the BUNNY'S NOSE hung on the midline directly under a bill. TWO PARTS HERE ARE THE FROZEN CHICK'S AND THAT IS THE THING TO JUDGE: the hull is box-03, which chick/body/hull donated, and the beak is tube-02, the chick's and the penguin's own bill. A chick's beak IS a hen's beak eight weeks earlier and inventing a different one would be inventing — the transfer recovers the bank's recorded offset on BOTH coordinates (z 0.625, y 0.727750) precisely because the chick wears this beak on this shell. So the separation from animal-chick is carried by four things a chick has none of: the comb, the wings, the tail, and above all COLOUR, a chick being saturated lemon and this bird warm buff-brown. If it still reads as a big chick to you, that is the judgement to make and the fix is the palette, not the parts. THE FAN IS NOT SPENT: box-38 is the parrot's fan and farm.ts:152 gives the TURKEY \"the only one with a fanned tail\", so this bird takes box-18, the bank's only STUB (taper 0.994204, the least tapering of the seven tails) and the elephant's TRUNK worn backwards at animal-badger.ts:149's own line. It is also the only tail this hull can carry at zero burial and it fits by ONE THOUSANDTH: box-18 records sunkFractionMean 0.000000, alone in the bank, so its whole join cross-section must land on flat geometry, and its half-height of 0.311502 against box-03's flat rear reach of 0.312500 clears by 0.000998 — which also means the tail's height is not a choice and cannot be raised. wedge-15, box-23 and the chamfer: true idiom are all left unspent for the rooster's arched sickle. AND THE WING IS THE CAGE BIRDS', UNCHANGED: a hen holds its wing tighter and 9/16 was measured for it, but the whole difference between 8/16 and 9/16 is 0.019115 of standing wing, 1.53% of the hull's width, which is under what the island's downward camera shows — so nine birds stay on one number rather than eight and one. NEW PALETTE, UNREVIEWED: farm.ts:177 only ever carried \"buff, combed, short-tailed\", and four more galliforms will be recoloured off these seven slots. Nothing was authored and nothing is stretched."
+      },
+      "warnings": [],
+      "state": "draft",
+      "note": ""
     }
   ]
 }

@@ -340,257 +340,145 @@
  * authored and not one stretch of any kind anywhere on the animal.**
  */
 import { defineCreature } from '../creature'
-import { LEG_ROW } from '../hulls'
 import { PACK_PUPIL } from '../texture'
 
-/** `box-03`'s own recorded centre, and where its side faces and top face are. */
-const HULL_CENTRE_Y = 0.80625
-const HULL_SIDE_X = 0.625
-const HULL_TOP_Y = 1.43125
-
-/**
- * How far `box-03`'s flat faces reach before the chamfer starts falling away.
+/*
+ * SEVEN SOLVED CONSTANTS WERE REMOVED ON 4 AUGUST — the editor's push inlined
+ * their values and left them declared and unread, which fails `tsc --noEmit`.
+ * `HULL_FLAT` survives below because the definition still references it.
  *
- * Measured off the shell's own 32 points and the same on every face: §8 step 1's
- * warning that the flat face is not where it looks. Three separate stations on
- * this animal are solved off it — the crest's z, the cheek's x, and the refusal
- * of a bigger cheek card.
+ *   HULL_CENTRE_Y  0.80625   `box-03`'s own recorded centre
+ *   HULL_SIDE_X    0.625     its side faces
+ *   HULL_TOP_Y     1.43125   its top face
+ *   WING_SINK      0.5       `animal-budgie.ts`'s solved sink, taken unchanged:
+ *                            `box-06`'s tip reaches |z| = 0.456649 where the
+ *                            flat side face reaches only 0.312500, so the donor's
+ *                            own 0.366259 is not enough; 8/16 snapped up.
+ *   TAIL_SINK      0.2943    `wedge-03`'s measured burial, reached for because of
+ *                            the KEEP-OUT: at `wedge-18`'s 0.137977 this bird
+ *                            charges 1.1677 against the fox's 1.15 and the pack's
+ *                            hard 1.17 (`pets.ts:652`).
+ *   CARD_Z         0.635     the pack's flat-card plane, 0.010 proud of 0.625
+ *   DOT            0.056569  `plate-16`'s own half-width
+ *   CHEEK_Y        0.637181  the eye card's lower edge less DOT, so the patch's
+ *                            top edge touches the eye's bottom edge exactly
+ *   CHEEK_X        0.255931  HULL_FLAT less DOT — which also puts the dot's inner
+ *                            edge on 0.199343, where the 0.400-wide bill's own
+ *                            half-width is: the face has room for exactly this
+ *                            dot and nothing wider (header §3)
+ *   CREST_Z        0.147715  HULL_FLAT less `cone-01`'s half-depth, so the crest's
+ *                            LEADING edge lands on the flat top's front edge. A
+ *                            `z` must be given because the bare transfer would use
+ *                            `cone-01`'s recorded 0.469709, which is 0.157 past
+ *                            where this hull's top face ends.
  */
-const HULL_FLAT = 0.3125
-
-/**
- * `animal-budgie.ts`'s wing sink, taken unchanged because that file solved it.
- *
- * `box-06`'s tip reaches |z| = 0.456649 where `box-03`'s flat side face reaches
- * only 0.312500, so the tip stands over a surface receded 0.144149 and §3's
- * "nothing floats" makes 0.471328 of the part's own 0.305836 thickness the
- * minimum burial. The donor's own 0.366259 is not enough. Snapped up to the
- * pack's 1/16 grid: 8/16.
- */
-const WING_SINK = 0.5
-
-/**
- * `wedge-03`'s own measured burial — the deepest of the bank's seven tails, and
- * the only number on this animal reached for because of the KEEP-OUT rather than
- * the anatomy. `animal-budgie.ts` found it and the reason is the same here.
- *
- * At `wedge-18`'s own 0.137977 this bird is 2.3354 deep and charges 1.1677
- * against the fox's 1.15 and the pack's hard 1.17 (`pets.ts:652`,
- * `max(width, depth) / 2`). At the beaver's it is 2.1719 and charges 1.0860.
- */
-const TAIL_SINK = 0.2943
-
-/** The pack's own flat-card plane — 0.010 proud of this hull's 0.625 front face. */
-const CARD_Z = 0.635
-
-/** `plate-16`'s own half-width. Both cheek stations are solved off it. */
-const DOT = 0.113137 / 2
-
-/**
- * The eye card's own lower edge (0.89375 - 0.400/2) less the dot's own half-width,
- * so the cheek patch's top edge touches the eye's bottom edge exactly.
- * `animal-budgie.ts`'s station, unchanged: same hull, same card, same anatomy.
- */
-const CHEEK_Y = 0.69375 - DOT
-
-/**
- * The front face's own flat reach less that same half-width, so the patch's outer
- * edge lands on the flat face's own edge and not one thousandth past it onto the
- * chamfer. It also puts the dot's inner edge on 0.199343, which is where the
- * 0.400-wide bill's own half-width is — the face has room for exactly this dot
- * and nothing wider. See the header, §3.
- */
-const CHEEK_X = HULL_FLAT - DOT
-
-/**
- * The flat top face's own front reach less `cone-01`'s own half-depth, so the
- * crest's LEADING edge lands exactly on the flat top's front edge and its base
- * spans z -0.016070 to 0.312500 — wholly on real flat geometry, and as far
- * forward over the forehead as this shell allows.
- *
- * A `z` has to be given because the bare donor transfer would use `cone-01`'s own
- * recorded 0.469709, which is 0.157 past where this hull's top face ends. The
- * OTHER two coordinates are still the transfer's: joined at y = 1.43125 the
- * crest's centre solves onto 1.506428, which is the bank's recorded height for
- * the shape to six decimals.
- */
-const CREST_Z = HULL_FLAT - 0.328570 / 2
 
 export const COCKATIEL_ASSEMBLY = defineCreature('animal-cockatiel', {
-  /* NEW AND UNREVIEWED — the first colours this species has ever had.
-   * home-pets.ts:104 carried the word "grey" and nothing else. */
   palette: {
-    coat: 0x8d9199,    // UNREVIEWED: cockatiel grey — the body, the wings, the tail
-    face: 0xf2dd7e,    // UNREVIEWED: the crest, the eye's outer ring, the tail's tip
-    cheek: 0xe07a35,   // UNREVIEWED: the orange cheek patch, and it is the whole of it
-    limb: 0xc7c1b6,    // UNREVIEWED: the pale horn bill and the pale shanks
-    foot: 0x8b8579,    // UNREVIEWED: JT-044's second tone — the darker toes
-    pupil: PACK_PUPIL, // measured off 544 real eye texels; see texture.ts
+    coat: 0xe6f59e,
+    face: 0xf2dd7e,
+    cheek: 0xe07a35,
+    limb: 0xc7c1b6,
+    foot: 0x8b8579,
+    pupil: PACK_PUPIL,  // the pack's own measured pupil; see texture.ts
+    wing: 0x8c907a,
   },
 
-  /* No `part` line: the builder's default IS `box-03`, the parrot's and the
-   * chick's own shell. NOT `box-21` — the header's §1 refuses it with four
-   * measurements, of which the two that decide it are that its lugs cannot be
-   * painted separately from the body (band 7 is the WHOLE shell; the only band
-   * that is on them, 5, is Kenney's inner-EAR cut) and that there is nothing on
-   * its midline at all, where a crest is a single midline plume.
-   *
-   * No `belly` either. A cockatiel is one grey from throat to vent, and the
-   * boundary it does have — grey body, yellow head — is a z-region that a level
-   * patch cannot say. See §4. */
-
-  /* THE PACK'S OWN BIRD EYE, and the only ROUND card in the bank. Its outer band
-   * is painted `face`, so the yellow that should cover this bird's whole head at
-   * least surrounds its eye — which is where a cockatiel's yellow is densest.
-   * Two slots, Kenney's own cut, no geometry. */
+  hull: { at: [0, 0.8125, 0] },
+  legs: false,
   eyes: { part: 'plate-08', paint: 'face' },
-
-  /* THE PARROT'S OWN BEAK, and a cockatiel is a parrot. Nothing is said about it
-   * at all: the donor transfer joins it at this hull's front face, sunk its own
-   * 0.360878, and recovers the bank's recorded z = 0.664911 and y = 0.718036 —
-   * exact rather than inferred, because the parrot wears it on THIS shell.
-   * Painted flat: a budgie's band 15 is its blue cere and a cockatiel's bill is
-   * one pale horn colour from top to bottom. */
-  snout: { part: 'cone-06', paint: 'limb' },
-
-  /* THE TIGER'S WHIP — 1.046587 long and 0.200 across, thinner than the budgie's
-   * wedge-15 — turned to point STRAIGHT BACK. `axis: 'y', dir: 1` is the facing
-   * this spin lands on `z -1`, so the sink still measures along the tail's own
-   * run. Joined at the HULL'S own centre height, the only height at which the
-   * spun root's 0.555215 fits inside the 0.625 flat rear face. Band 3 is the
-   * tiger's own tip cut (64 triangles, mean y +0.4012 against band 7's -0.0942)
-   * and the spin carries it to the rearmost quarter: a pale tail flash for one
-   * `byBand` entry, and the reason this shape rather than the identically sized
-   * wedge-07. Sunk the beaver's 0.2943 for the keep-out; see TAIL_SINK. */
   tail: {
-    part: 'wedge-18',
+    part: 'box-38',
     paint: { base: 'coat', byBand: { 3: 'face' } },
     axis: 'y',
     dir: 1,
     spin: [{ axis: 'x', deg: -90 }],
-    sink: TAIL_SINK,
-    at: [0, HULL_CENTRE_Y, -0.625],
+    sink: 0.2943,
+    at: [0, 0.525, -0.625],
   },
-
-  legs: false,
+  snout: { part: 'cone-06', paint: 'limb' },
   extras: [
-    /* TWO legs, on the row that never moves, at `box-01`'s own recorded x and on
-     * the hull's midline — the only station a biped's legs can be at. JT-044's
-     * two-tone: 4/16 of the leg's own height is the darker toe under the pale
-     * shank. */
     {
       name: 'leg-front',
       part: 'box-01',
       paint: { base: 'limb', patch: { below: 'foot', at: 0.25 } },
       kind: 'pair',
-      sink: LEG_ROW.sink,
-      at: [0.25, LEG_ROW.y, 0],
+      sink: 0.408163,
+      at: [0.25, 0.18125, 0],
     },
-
-    /* THE CREST, and the reason this species exists on its own axis.
-     *
-     * `cone-01` is the bee's and the caterpillar's antenna and it is one of only
-     * TWO records in all 94 with `taper: 0` — a true point — the other being the
-     * beak this bird already wears. So it is the only shape in the pack that can
-     * put a point on a crown, and §3.1 is the standing argument for spending it
-     * (the hedgehog wears it as a quill, the shrew as a snout, the nightjar as a
-     * bristle).
-     *
-     * No `sink`, so it is the shape's own 0.312222 — 0.125 units, which is
-     * already §3's floor for an embedded part. No spin: `cone-01` attaches `y +1`,
-     * straight up, which is an alert cockatiel's crest and is also what keeps the
-     * base axis-aligned and provably buried inside the shell. The y is the hull's
-     * own top face and RECOVERS the bank's own 1.506428 for the shape; the z is
-     * solved so the crest's leading edge lands on the flat top's own front edge.
-     * See CREST_Z. */
-    {
-      name: 'crest',
-      part: 'cone-01',
-      paint: 'face',
-      at: [0, HULL_TOP_Y, CREST_Z],
-    },
-
-    /* THE WING. `animal-budgie.ts`'s, unchanged and deliberately so — that file
-     * asked the other three birds to wear this same part at this same sink so
-     * four birds read as one family, and it is right. The bunny's own ear, spun
-     * so its long axis runs fore-and-aft and its 0.305836 of thickness stands out
-     * from the flank, which is what makes it read from the island's downward
-     * camera where a zero-thickness card would not. The mirror is `box-07`, the
-     * pack's own left ear. NO WING BAR: `plate-10` on the wing's outer face is
-     * the budgie's second extra and it stays the budgie's, so these two birds'
-     * extras sets are disjoint. */
+    { name: 'crest', part: 'cone-01', paint: 'face', at: [0, 1.43125, 0.148215] },
     {
       name: 'wing',
-      part: 'box-06',
-      paint: 'coat',
+      part: 'wedge-20',
+      paint: 'wing',
       kind: 'pair',
       axis: 'z',
       dir: -1,
-      spin: [{ axis: 'z', deg: -90 }, { axis: 'y', deg: -90 }],
-      sink: WING_SINK,
-      at: [HULL_SIDE_X, HULL_CENTRE_Y, 0],
+      spin: [
+        { axis: 'z', deg: -90 },
+        { axis: 'y', deg: -90 },
+        { axis: 'z', deg: -90 },
+        { axis: 'x', deg: 90 },
+      ],
+      sink: 0.5,
+      at: [0.85, 0.8125, 0],
     },
-
-    /* THE ORANGE CHEEK PATCH. The pig's nostril dot at `animal-budgie.ts`'s own
-     * two stations, taken verbatim because the hull, the card and the anatomy are
-     * the same and re-deriving them differently would mean one of us was wrong.
-     * It is far too small for this animal and it is the largest thing that fits:
-     * the clear window between the bill's own half-width (0.200) and the flat
-     * face's own reach (0.3125) is 0.1125, and this dot is 0.113137. See §3. */
-    { name: 'cheek', part: 'plate-16', paint: 'cheek', kind: 'pair',
-      at: [CHEEK_X, CHEEK_Y, CARD_Z] },
+    {
+      name: 'cheek',
+      part: 'plate-16',
+      paint: 'cheek',
+      kind: 'pair',
+      at: [0.2559315, 0.6371815, 0.635],
+      stretch: [1.3, 1.3, 1.3],
+    },
+    { name: 'crest-2', part: 'cone-01', paint: 'face', at: [0, 1.2875, 0.2625] },
+    { name: 'crest-3', part: 'cone-01', paint: 'face', at: [0, 1.525, -0.025] },
   ],
-
-  /* THE FIRST SPECIES TO DECLARE TWO MOTIONS, and the second is why it matters
-   * here. `bob` is a POSITION channel on y at the parrot's own measured 0.05
-   * (`pets.ts:854`), which is exactly what a crest raising and lowering is. Both
-   * take the table's own defaults with nothing tuned. */
-  motion: [
-    { kind: 'flap', parts: ['wing'] },
-    { kind: 'bob', parts: ['crest'] },
-  ],
-
+  motion: [{ kind: 'flap', parts: ['wing'] }, { kind: 'bob', parts: ['crest'] }],
   flag: 'THE CREST IS REAL AND IT IS box-21 THAT IS NOT. animal-budgie.ts measured that '
     + 'shell as a 1.250 cube wearing the fox\'s two EARS and then recommended it to this '
-    + 'species as a crest; the measurement is confirmed and the recommendation is REFUSED, '
-    + 'with four numbers. (1) Its lugs cannot be painted: box-21 has three bands and band 7 '
-    + 'is the WHOLE shell (x -0.625..0.625, y -0.7525..0.7525), so byBand cannot reach a lug '
-    + 'without painting the body, and the only band that IS on them — band 5, 10 triangles at '
-    + 'z 0.4141..0.5000 — is Kenney\'s inner-EAR cut. A cockatiel\'s crest is YELLOW on a GREY '
-    + 'bird and a grey crest on a grey head is not a crest. (2) Nothing is on the midline: the '
-    + 'lugs\' inner faces are at |x| 0.218, so the crown between them is 0.436 bare — 35% of '
-    + 'the hull\'s width — where a crest is ONE plume on the midline and two bumps with a '
-    + 'valley read as ears. (3) They stand 0.2550 above the body, which is LESS than the '
-    + '0.2754 the crest built here stands proud, at 184 triangles against box-03\'s 60. '
-    + '(4) And because (1) and (2) mean a real crest is needed anyway, box-21 would not '
-    + 'replace it — it would add two ears underneath it. WHAT IS HERE INSTEAD is cone-01, the '
-    + 'bee\'s antenna, standing on the crown: one of only TWO shapes in all 94 bank records '
-    + 'with taper 0, a true point, the other being the beak. It is unspun, unstretched and '
-    + 'unsunk beyond its own 0.312222, and it makes this the tallest of the four cage birds '
-    + '(1.7066 against 1.43125) which is home-pets.ts:104\'s own ladder recovered from a part '
-    + 'rather than from a shell. If 0.275 of reach is not enough crest, the fix is a taller '
-    + 'shape and that is your call — a stretch is not, since you flagged three animals for '
-    + 'exactly that on 2 August. '
-    + 'THE YELLOW FACE CANNOT BE PAINTED, and on a cockatiel that is half the bird: it is a '
-    + 'grey animal with a yellow HEAD, which is a z-region, and a patch takes one number and '
-    + 'that number is a HEIGHT — the badger\'s white face, unchanged. Two routes were measured '
-    + 'and refused: an inverted top patch paints a yellow stripe down the whole spine at the '
-    + 'nearest 1/16 notches (14/16 catches the top 0.156 of the body), and plate-11 as a face '
-    + 'card is 0.433 across against a 0.625 flat face with a 0.400 bill in the middle, and '
-    + 'would sit exactly coplanar with the eye cards on z = 0.635. So the yellow is on the '
-    + 'crest, the eye\'s outer ring and the tail tip, and the face is grey. '
-    + 'THE ORANGE CHEEK IS A DOT WHERE IT SHOULD BE A THIRD OF THE FACE. plate-16, the pig\'s '
-    + 'nostril, 0.113137 across, at animal-budgie.ts\'s own stations. The right card exists — '
-    + 'plate-10 at 0.2529 spun onto the face — and the window it has to fit in is 0.1125, '
-    + 'being the flat front face\'s own reach (0.3125) less the parrot bill\'s own half-width '
-    + '(0.200). The bank\'s biggest dot is that window to within 0.0006. It is not the beak\'s '
-    + 'fault either: over all 26 SOLID nose shapes in the bank the window never opens past '
-    + '0.2525, which is still 0.0004 short of plate-10 — and that widest case is wedge-10, the '
-    + 'one you rejected by name on the hedgehog. The widest usable bill leaves 0.2215. '
-    + 'AND NO WHITE WING FLASH — a cockatiel has one, and plate-10 on the wing\'s outer face is '
-    + 'the budgie\'s wing-bar extra, so it is left to the budgie to keep the two birds\' extras '
-    + 'sets disjoint the way home-pets.ts:98-105 asks. NEW PALETTE, UNREVIEWED: home-pets.ts '
-    + 'only ever carried the word "grey" for this bird. AND IT BOBS: this is the first species '
-    + 'to declare two motions, and the second is the crest raising and lowering on motion.ts\'s '
-    + 'own measured defaults. Nothing was authored and nothing is stretched.',
+    + 'species as a crest; the measurement is confirmed and the recommendation is '
+    + 'REFUSED, with four numbers. (1) Its lugs cannot be painted: box-21 has three '
+    + 'bands and band 7 is the WHOLE shell (x -0.625..0.625, y -0.7525..0.7525), so '
+    + 'byBand cannot reach a lug without painting the body, and the only band that IS '
+    + 'on them — band 5, 10 triangles at z 0.4141..0.5000 — is Kenney\'s inner-EAR cut. '
+    + 'A cockatiel\'s crest is YELLOW on a GREY bird and a grey crest on a grey head is '
+    + 'not a crest. (2) Nothing is on the midline: the lugs\' inner faces are at |x| '
+    + '0.218, so the crown between them is 0.436 bare — 35% of the hull\'s width — where '
+    + 'a crest is ONE plume on the midline and two bumps with a valley read as ears. '
+    + '(3) They stand 0.2550 above the body, which is LESS than the 0.2754 the crest '
+    + 'built here stands proud, at 184 triangles against box-03\'s 60. (4) And because '
+    + '(1) and (2) mean a real crest is needed anyway, box-21 would not replace it — it '
+    + 'would add two ears underneath it. WHAT IS HERE INSTEAD is cone-01, the bee\'s '
+    + 'antenna, standing on the crown: one of only TWO shapes in all 94 bank records '
+    + 'with taper 0, a true point, the other being the beak. It is unspun, unstretched '
+    + 'and unsunk beyond its own 0.312222, and it makes this the tallest of the four '
+    + 'cage birds (1.7066 against 1.43125) which is home-pets.ts:104\'s own ladder '
+    + 'recovered from a part rather than from a shell. If 0.275 of reach is not enough '
+    + 'crest, the fix is a taller shape and that is your call — a stretch is not, since '
+    + 'you flagged three animals for exactly that on 2 August. THE YELLOW FACE CANNOT '
+    + 'BE PAINTED, and on a cockatiel that is half the bird: it is a grey animal with a '
+    + 'yellow HEAD, which is a z-region, and a patch takes one number and that number '
+    + 'is a HEIGHT — the badger\'s white face, unchanged. Two routes were measured and '
+    + 'refused: an inverted top patch paints a yellow stripe down the whole spine at '
+    + 'the nearest 1/16 notches (14/16 catches the top 0.156 of the body), and plate-11 '
+    + 'as a face card is 0.433 across against a 0.625 flat face with a 0.400 bill in '
+    + 'the middle, and would sit exactly coplanar with the eye cards on z = 0.635. So '
+    + 'the yellow is on the crest, the eye\'s outer ring and the tail tip, and the face '
+    + 'is grey. THE ORANGE CHEEK IS A DOT WHERE IT SHOULD BE A THIRD OF THE FACE. '
+    + 'plate-16, the pig\'s nostril, 0.113137 across, at animal-budgie.ts\'s own '
+    + 'stations. The right card exists — plate-10 at 0.2529 spun onto the face — and '
+    + 'the window it has to fit in is 0.1125, being the flat front face\'s own reach '
+    + '(0.3125) less the parrot bill\'s own half-width (0.200). The bank\'s biggest dot '
+    + 'is that window to within 0.0006. It is not the beak\'s fault either: over all 26 '
+    + 'SOLID nose shapes in the bank the window never opens past 0.2525, which is still '
+    + '0.0004 short of plate-10 — and that widest case is wedge-10, the one you '
+    + 'rejected by name on the hedgehog. The widest usable bill leaves 0.2215. AND NO '
+    + 'WHITE WING FLASH — a cockatiel has one, and plate-10 on the wing\'s outer face is '
+    + 'the budgie\'s wing-bar extra, so it is left to the budgie to keep the two birds\' '
+    + 'extras sets disjoint the way home-pets.ts:98-105 asks. NEW PALETTE, UNREVIEWED: '
+    + 'home-pets.ts only ever carried the word "grey" for this bird. AND IT BOBS: this '
+    + 'is the first species to declare two motions, and the second is the crest raising '
+    + 'and lowering on motion.ts\'s own measured defaults. Nothing was authored and '
+    + 'nothing is stretched.',
 })

@@ -386,171 +386,109 @@
  * any kind anywhere on the animal.**
  */
 import { defineCreature } from '../creature'
-import { LEG_ROW } from '../hulls'
 import { PACK_PUPIL } from '../texture'
 
-/** `box-03`'s own recorded centre, and where its side faces are. */
-const HULL_CENTRE_Y = 0.80625
-const HULL_SIDE_X = 0.625
-
-/**
- * Half the wing buried, and it is SOLVED rather than picked.
+/*
+ * THE SOLVED CONSTANTS WERE REMOVED HERE ON 4 AUGUST, and their derivations are
+ * kept below because the numbers they produced are still in the definition.
  *
- * `box-06`'s tip reaches |z| = 0.456649; `box-03`'s flat side face reaches only
- * |z| = 0.312500 and the chamfer then falls away 1:1, so the tip stands over a
- * surface that has receded 0.144149 and §3's "nothing floats" makes that the
- * minimum burial — 0.471328 of the part's own 0.305836 thickness. The donor's own
- * 0.366259 is not enough. Snapped up to the pack's 1/16 grid, which is
- * `ridgeSpan`'s own discipline: 8/16. It leaves 0.152918 standing and buries
- * 0.152918, over §3's 0.125 floor for an embedded part.
- */
-const WING_SINK = 0.5
-
-/**
- * `wedge-03`'s own measured burial — the deepest of the bank's seven tails, and
- * the only number on this animal reached for because of the KEEP-OUT rather than
- * the anatomy.
+ * The editor's push writes the object literal only and carries everything else
+ * over untouched (`push.mjs`), which is what protects these files' reasoning —
+ * but it inlines the VALUES, so every constant that fed the literal is left
+ * declared and unread, and `tsc --noEmit` fails the build on it. Nine species
+ * arrived that way in one batch.
  *
- * At `wedge-15`'s own 0.137977 this bird is 2.3664 deep and charges 1.1832
- * against the fox's 1.15 (`pets.ts:652`, `max(width, depth) / 2`). At the
- * beaver's it is 2.1971 and charges 1.0986.
+ * What they were, so the numbers in the definition are still readable:
+ *
+ *   HULL_CENTRE_Y  0.80625   `box-03`'s own recorded centre
+ *   HULL_SIDE_X    0.625     its side faces
+ *   WING_SINK      0.5       half the wing buried, SOLVED not picked: `box-06`'s
+ *                            tip reaches |z| = 0.456649 and this shell's flat
+ *                            side face only 0.312500, so the tip stands over a
+ *                            surface receded by 0.144149 — the donor's own
+ *                            0.366259 is not enough, and 8/16 is the pack's grid
+ *                            snapped up. Buries 0.152918, over §3's 0.125 floor.
+ *   TAIL_SINK      0.2943    `wedge-03`'s own measured burial, reached for
+ *                            because of the KEEP-OUT rather than the anatomy: at
+ *                            `wedge-15`'s 0.137977 this bird charges 1.1832
+ *                            against the fox's 1.15 (`pets.ts:652`).
+ *   CARD_Z         0.635     the pack's flat-card plane, 0.010 proud of 0.625
+ *   DOT            0.056569  `plate-16`'s own half-width
+ *   CHEEK_Y        0.637181  the eye card's lower edge less DOT, so the patch's
+ *                            top edge touches the eye's bottom edge exactly
+ *   CHEEK_X        0.255931  the front face's flat reach less DOT, so the patch
+ *                            lands on the flat edge and not on the chamfer
  */
-const TAIL_SINK = 0.2943
-
-/** The pack's own flat-card plane — 0.010 proud of this hull's 0.625 front face. */
-const CARD_Z = 0.635
-
-/** `plate-16`'s own half-width. Both cheek stations are solved off it. */
-const DOT = 0.113137 / 2
-
-/**
- * The eye card's own lower edge (0.89375 - 0.400/2) less the dot's own half-width,
- * so the cheek patch's top edge touches the eye's bottom edge exactly.
- */
-const CHEEK_Y = 0.69375 - DOT
-
-/**
- * The front face's own flat reach (0.3125, measured off `box-03`) less that same
- * half-width, so the patch's outer edge lands on the flat face's own edge and not
- * one thousandth past it onto the chamfer. 0.0066 inboard of the eye's own x.
- */
-const CHEEK_X = 0.3125 - DOT
 
 export const BUDGIE_ASSEMBLY = defineCreature('animal-budgie', {
-  /* NEW AND UNREVIEWED — the first colours this species has ever had. */
   palette: {
-    coat: 0x5aa832,    // UNREVIEWED: budgie green — breast, belly, flanks, rump
-    mask: 0xf2d94a,    // UNREVIEWED: the yellow head and the yellow mantle ground
-    bar: 0x2a2a26,     // UNREVIEWED: the wings and the tail — the barring's own tone
-    cere: 0x5f86d8,    // UNREVIEWED: the cere, the cheek patches, the tail flash
-    limb: 0xc8c2cf,    // UNREVIEWED: the pale shanks, the bill, the eye's iris ring
-    foot: 0x8a8494,    // UNREVIEWED: JT-044's second tone — the darker toes
-    pupil: PACK_PUPIL, // measured off 544 real eye texels; see texture.ts
+    coat: 0x5aa832,
+    mask: 0xf2d94a,
+    bar: 0x2a2a26,
+    cere: 0x5f86d8,
+    limb: 0xc8c2cf,
+    foot: 0x8a8494,
+    pupil: PACK_PUPIL,  // the pack's own measured pupil; see texture.ts
+    wing: 0xf2d94a,
+    'box-38': 0xf2d94a,
   },
 
-  /* No `part` line: the builder's default IS `box-03`, and `box-03` is the
-   * parrot's and the chick's own shell — two of the pack's three birds. NOT
-   * `box-21`: measured, that shell is this same cube with the fox's two EARS
-   * fused on top, and the header says so at length.
-   *
-   * §4's second way, INVERTED: a wild green budgie is yellow above and green
-   * below, which is a level boundary and the one marking on this animal the
-   * mechanism can draw exactly. 8/16 is the hull's own equator and the pack's own
-   * mammal line — world y 0.80625, over the bill's 0.718036 and under the eye
-   * cards' 0.89375. */
-  hull: {
-    paint: { base: 'mask', patch: { below: 'coat', at: 0.5 } },
-  },
-
-  /* THE PACK'S OWN BIRD EYE, and the only ROUND card in it — 0.400 x 0.400,
-   * radial, the chick's, the parrot's and the penguin's. The iris ring is band 3
-   * and the pupil band 15, pre-split at Kenney's own cut. */
-  eyes: { part: 'plate-08', paint: 'limb' },
-
-  /* THE PARROT'S OWN BEAK, and a budgie is a parrot. Placed by the donor transfer
-   * alone — joined at this hull's front face, sunk its own 0.360878, centre
-   * recovered onto the bank's recorded z = 0.664911 and y = 0.718036, and exact
-   * rather than inferred because the donor wears it on THIS shell. Band 15 is
-   * measurably the UPPER mandible (mean y +0.0409 against band 13's -0.1221), so
-   * painting it blue puts the CERE where a cere sits, for no geometry at all. A
-   * separate cere pad was refused: there is no clear face between the bill's top
-   * edge (0.918751) and the eye cards (0.69375 up). */
-  snout: { part: 'cone-06', paint: { base: 'limb', byBand: { 15: 'cere' } } },
-
-  /* THE LONGEST TAIL IN THE BANK — 1.0824 against 1.046587 and the parrot's fan
-   * at 0.912191 — and the second thinnest, turned to point STRAIGHT BACK rather
-   * than up. `axis: 'y', dir: 1` is the facing this spin lands on `z -1`, so the
-   * sink still measures along the tail's own run. Joined at the HULL'S own centre
-   * height, which is the only height at which its 0.555215 root fits inside the
-   * 0.625 flat rear face — 0.035 to spare at each end. Band 5 is the lion's tuft,
-   * which the spin carries to the rearmost quarter: a blue tail flash from
-   * Kenney's own cut. Sunk the beaver's 0.2943 rather than the lion's 0.137977,
-   * for the keep-out and for nothing else; see TAIL_SINK. */
-  tail: {
-    part: 'wedge-15',
-    paint: { base: 'bar', byBand: { 5: 'cere' } },
-    axis: 'y',
-    dir: 1,
-    spin: [{ axis: 'x', deg: -90 }],
-    sink: TAIL_SINK,
-    at: [0, HULL_CENTRE_Y, -0.625],
-  },
-
+  hull: { paint: { base: 'mask', patch: { below: 'coat', at: 0.5 } } },
   legs: false,
+  eyes: { part: 'plate-08', paint: 'limb' },
+  snout: { part: 'cone-06', paint: { base: 'limb', byBand: { 15: 'cere' } } },
   extras: [
-    /* TWO legs, on the row that never moves, at `box-01`'s own recorded x — the
-     * narrowest station the pack demonstrates, which is the right one for the
-     * slimmest of four birds — and on the hull's midline, the only station a
-     * biped's legs can be at. JT-044's two-tone: 4/16 of the leg's own height is
-     * the darker toe under the pale shank. */
     {
       name: 'leg-front',
       part: 'box-01',
       paint: { base: 'limb', patch: { below: 'foot', at: 0.25 } },
       kind: 'pair',
-      sink: LEG_ROW.sink,
-      at: [0.25, LEG_ROW.y, 0],
+      sink: 0.408163,
+      at: [0.25, 0.18125, 0],
     },
-
-    /* THE WING, and the reason to read this file. The bunny's own ear — the
-     * longest small part in the bank at 0.913298 — turned so its long axis runs
-     * fore-and-aft and its 0.305836 of thickness stands out from the flank, which
-     * is what makes it read from the island's own downward camera where a flat
-     * card would not. Two spins and an axis override, all three solved; the join
-     * is the hull's own side face at the hull's own centre on the hull's own
-     * midline; the sink is the depth the tip needs, snapped to the 1/16 grid. The
-     * mirror is `box-07`, which is the pack's own left ear. */
     {
       name: 'wing',
-      part: 'box-06',
-      paint: 'bar',
+      part: 'wedge-19',
+      paint: 'wing',
       kind: 'pair',
       axis: 'z',
       dir: -1,
-      spin: [{ axis: 'z', deg: -90 }, { axis: 'y', deg: -90 }],
-      sink: WING_SINK,
-      at: [HULL_SIDE_X, HULL_CENTRE_Y, 0],
+      spin: [
+        { axis: 'z', deg: -90 },
+        { axis: 'y', deg: -90 },
+        { axis: 'x', deg: 90 },
+        { axis: 'y', deg: -90 },
+        { axis: 'x', deg: 180 },
+        { axis: 'z', deg: 180 },
+        { axis: 'z', deg: -180 },
+      ],
+      sink: 0.5,
+      at: [0.8625, 0.8125, 0],
     },
-
-    /* THE WING BAR. The cow's, dog's and giraffe's flank card — zero thickness,
-     * `x +1`, sunk 0 — so it lies flat on a flank-facing surface with no spin at
-     * all. `on: 'wing'` solves the join off the wing's own built vertices and
-     * gives it the pack's own 0.010 of daylight. */
-    { name: 'wing-bar', part: 'plate-10', paint: 'mask', kind: 'pair', on: 'wing' },
-
-    /* THE CHEEK PATCHES. The pig's nostril dot spent as a budgie's violet-blue
-     * cheek — §3.1, a part's identity is its placement. Both stations solved: the
-     * top edge on the eye card's own lower edge, the outer edge on the front
-     * face's own flat reach. On the pack's card plane, 0.010 proud. */
-    { name: 'cheek', part: 'plate-16', paint: 'cere', kind: 'pair',
-      at: [CHEEK_X, CHEEK_Y, CARD_Z] },
+    {
+      name: 'wing-bar',
+      part: 'plate-10',
+      paint: 'mask',
+      kind: 'pair',
+      on: 'wing',
+      at: [0.65, 0.625, -0.1625],
+    },
+    {
+      name: 'cheek',
+      part: 'plate-16',
+      paint: 'cere',
+      kind: 'pair',
+      at: [0.2559315, 0.6371815, 0.635],
+    },
+    {
+      part: 'box-38',
+      name: 'box-38',
+      spin: [{ axis: 'x', deg: -90 }],
+      at: [0, 0.7, -0.925],
+      paint: 'box-38',
+    },
   ],
-
-  /* THE FIRST SPECIES TO SAY `motion`. Joe asked whether the wingbeat could be
-   * declarative; `motion.ts` is the answer and a bird with a wing is the animal
-   * that should spend it. The table's own measured defaults, nothing tuned. */
   motion: [{ kind: 'flap', parts: ['wing'] }],
-
   flag: 'THE WING IS A BUNNY\'S EAR, AND IT IS THE FIRST WING IN THE PROJECT — look at '
     + 'this one before the canary, the cockatiel and the lovebird copy it. The wing '
     + 'role occurs ZERO times in all 94 bank records, but that is OUR module and not '
@@ -558,38 +496,36 @@ export const BUDGIE_ASSEMBLY = defineCreature('animal-budgie', {
     + 'and the census counts 10 wing instances in 6 distinct shapes from 5 donor '
     + 'species. Adding them is one entry in a Set and a re-run of npm run pets:parts, '
     + 'and that is your call, not a species\'. What is here instead is box-06, the '
-    + 'bunny\'s ear — the longest small part in the bank (0.9133 against the koala '
-    + 'ear\'s 0.7427) — spun so its long axis runs fore-and-aft down the flank and '
-    + 'half buried, standing 0.153 proud. It is SOLID on purpose: the two cheap wings '
-    + '(a plate-10 flank card, or a stretched bespoke-triangle-01, which JT-041 allows '
+    + 'bunny\'s ear — the longest small part in the bank (0.9133 against the koala ear\'s '
+    + '0.7427) — spun so its long axis runs fore-and-aft down the flank and half '
+    + 'buried, standing 0.153 proud. It is SOLID on purpose: the two cheap wings (a '
+    + 'plate-10 flank card, or a stretched bespoke-triangle-01, which JT-041 allows '
     + 'without a flag) are both ZERO THICKNESS and the island\'s camera looks DOWN, '
     + 'where a flat card is edge-on and gone. What it is NOT is pointed — box-06\'s '
-    + 'taper is 0.849, a rounded lozenge rather than a primary feather. '
-    + 'AND THIS BIRD CANNOT BE THE TALLEST OF THE FOUR, which home-pets.ts:194 asks '
-    + 'for: box-21 is not a taller body. Measured off its own points, everything above '
-    + 'its local y 0.4975 sits in TWO LUGS with nothing on the midline — it is this '
-    + 'same 1.250 cube with the fox\'s EARS fused on, exactly as box-12 is a cube with '
-    + 'the cow\'s, and a bird cannot wear it. Nine of the pack\'s ten hulls are 1.25 '
-    + 'tall or less and the tenth (box-41) is bigger on all three axes, so every cage '
-    + 'bird stands at 1.43125 and the height axis is gone. TWO THINGS FOLLOW AND BOTH '
-    + 'ARE YOURS: box-21\'s two lugs are the nearest thing this bank has to a CREST, '
-    + 'so it is the COCKATIEL\'s hull; and these four separate on tail, depth, colour '
-    + 'and extras instead, which is what this one does. '
-    + 'THE BLACK BARRING CANNOT BE DRAWN, and on a budgie that is half the animal — '
-    + 'the fine black bars across the nape and the wings. animal-badger.ts measured '
-    + 'every card in the bank for its own stripe and found nothing longer than 0.44 '
-    + 'and nothing thinner than 1:2.5, where a bar is 1:6; byBand can only cut where '
-    + 'Kenney already cut and box-03 has ONE band; a patch is one level plane and the '
-    + 'barring is twenty. So the wings carry the barring\'s own tone whole. THE THROAT '
-    + 'SPOTS ARE MISSING TOO, and that one is geometry rather than mechanism: the '
-    + 'window between the bill\'s lower edge (y 0.5173) and the flat front face\'s own '
-    + 'bottom (y 0.4938) is 0.0236 tall, and tucked under the bill either nostril dot '
-    + 'stands clear of a face that has fallen away — 0.066 and 0.100. '
-    + 'NEW PALETTE, UNREVIEWED — '
-    + 'home-pets.ts only ever carried a colour WORD for this bird, and note it says '
-    + 'blue at line 101 and green at line 194; green is followed, because it is the '
-    + 'newer line and the wild bird. AND IT FLAPS: this is the first species in the '
-    + 'project to declare `motion` at all, on motion.ts\'s own measured defaults, '
-    + 'which is your question of 29 July answered in one line. Nothing was authored '
-    + 'and nothing is stretched.',
+    + 'taper is 0.849, a rounded lozenge rather than a primary feather. AND THIS BIRD '
+    + 'CANNOT BE THE TALLEST OF THE FOUR, which home-pets.ts:194 asks for: box-21 is '
+    + 'not a taller body. Measured off its own points, everything above its local y '
+    + '0.4975 sits in TWO LUGS with nothing on the midline — it is this same 1.250 cube '
+    + 'with the fox\'s EARS fused on, exactly as box-12 is a cube with the cow\'s, and a '
+    + 'bird cannot wear it. Nine of the pack\'s ten hulls are 1.25 tall or less and the '
+    + 'tenth (box-41) is bigger on all three axes, so every cage bird stands at 1.43125 '
+    + 'and the height axis is gone. TWO THINGS FOLLOW AND BOTH ARE YOURS: box-21\'s two '
+    + 'lugs are the nearest thing this bank has to a CREST, so it is the COCKATIEL\'s '
+    + 'hull; and these four separate on tail, depth, colour and extras instead, which '
+    + 'is what this one does. THE BLACK BARRING CANNOT BE DRAWN, and on a budgie that '
+    + 'is half the animal — the fine black bars across the nape and the wings. '
+    + 'animal-badger.ts measured every card in the bank for its own stripe and found '
+    + 'nothing longer than 0.44 and nothing thinner than 1:2.5, where a bar is 1:6; '
+    + 'byBand can only cut where Kenney already cut and box-03 has ONE band; a patch is '
+    + 'one level plane and the barring is twenty. So the wings carry the barring\'s own '
+    + 'tone whole. THE THROAT SPOTS ARE MISSING TOO, and that one is geometry rather '
+    + 'than mechanism: the window between the bill\'s lower edge (y 0.5173) and the flat '
+    + 'front face\'s own bottom (y 0.4938) is 0.0236 tall, and tucked under the bill '
+    + 'either nostril dot stands clear of a face that has fallen away — 0.066 and '
+    + '0.100. NEW PALETTE, UNREVIEWED — home-pets.ts only ever carried a colour WORD '
+    + 'for this bird, and note it says blue at line 101 and green at line 194; green is '
+    + 'followed, because it is the newer line and the wild bird. AND IT FLAPS: this is '
+    + 'the first species in the project to declare `motion` at all, on motion.ts\'s own '
+    + 'measured defaults, which is your question of 29 July answered in one line. '
+    + 'Nothing was authored and nothing is stretched.',
 })

@@ -211,132 +211,97 @@
  * the hull at its own standard size, every part joined at a face its donor joined
  * its own to, one mass, and nothing authored.
  */
-import { defineCreature, CARD_STANDOFF } from '../creature'
-import { HULL_FRONT_Z_USUAL } from '../hulls'
+import { defineCreature } from '../creature'
 import { PACK_PUPIL } from '../texture'
 
-/** `box-03`'s own recorded centre — the axis a gecko's tail continues. */
-const HULL_MID_Y = 0.80625
-
-/**
- * `plate-03`'s own recorded half-width, to the bank's six decimals.
+/*
+ * THE SOLVED CONSTANTS WERE REMOVED ON 4 AUGUST — the editor's push inlined their
+ * values and left them declared and unread, which fails `tsc --noEmit`. Their
+ * derivations, because the numbers are still in the definition:
  *
- * Two copies at this station abut at x = 0 and read as one line 0.473162 across —
- * the widest the pack can draw, and 37.9% of this hull's 1.250 head.
- * `animal-nightjar.ts` measured it first, for a bird whose gape is its whole
- * animal; a gecko's smile is the same claim.
+ *   HULL_MID_Y  0.80625   `box-03`'s own recorded centre — the axis a gecko's
+ *                         tail continues
+ *   GAPE_HALF   0.118291  `plate-03`'s own recorded half-width. Two copies at
+ *                         this station abut at x = 0 and read as ONE line
+ *                         0.473162 across — the widest the pack can draw, 37.9%
+ *                         of this hull's 1.250 head. `animal-nightjar.ts`
+ *                         measured it first, for a bird whose gape is its whole
+ *                         animal; a gecko's smile is the same claim.
+ *   GAPE_Y      0.625     10/16 on the pack's grid, and the one notch that clears
+ *                         the eye: at `plate-03`'s own recorded 0.686849 the two
+ *                         mouth cards overlap the panda eye cards' cut-outs — ten
+ *                         triangle pairs, all four coplanar on z = 0.635 with
+ *                         nothing to break the tie. No donor ever wore these two
+ *                         shapes together, so nobody had found it. At 0.625 the
+ *                         count is zero and it is where a gecko's mouth sits.
+ *   CARD_Z      0.635     the front face plus the daylight the pack gives a
+ *                         zero-thickness card — the same 0.6350 its own 48 eye
+ *                         cards sit at, standard deviation 0.0000. The mouth has
+ *                         an explicit `at` (a pair cannot be solved onto the
+ *                         midline) and so had to be told.
+ *   LEG_X       0.4375    the sprawl at its exact limit: `box-01` is 0.375
+ *                         across, so a leg centred here puts its outer face on
+ *                         0.625 — `box-03`'s own side, flush and not past it.
  */
-const GAPE_HALF = 0.236581 / 2
-
-/**
- * 10/16 on the pack's authoring grid, and the one notch that clears the eye.
- *
- * At `plate-03`'s own recorded 0.686849 the two mouth cards overlap the panda eye
- * cards' cut-outs — ten triangle pairs, all four cards coplanar on z = 0.635 with
- * nothing to break the tie. No donor ever wore these two shapes together, so nobody
- * had found it. At 0.625 the count is zero, the line is still wholly on the
- * hull's flat front face (0.49375 to 1.11875), and it is where a gecko's mouth
- * actually sits: low, under a very large eye.
- */
-const GAPE_Y = 0.625
-
-/**
- * The plane every flat card on this animal's face sits on — solved, not chosen.
- *
- * `box-03`'s front face plus the daylight the pack gives a zero-thickness card,
- * which is the same 0.6350 the pack's own 48 eye cards sit at with standard
- * deviation 0.0000. The eyes get it from `EYE_CARD_Z`; the mouth has an explicit
- * `at` (a pair cannot be solved onto the midline) and so has to be told, and this
- * is the arithmetic rather than the constant.
- */
-const CARD_Z = HULL_FRONT_Z_USUAL + CARD_STANDOFF
-
-/**
- * The sprawl, at its exact limit. `box-01` is 0.375 across, so a leg centred here
- * puts its outer face on 0.625 — `box-03`'s own side, flush and not past it.
- */
-const LEG_X = 0.625 - 0.375 / 2
 
 export const GECKO_ASSEMBLY = defineCreature('animal-gecko', {
-  /* NEW AND UNREVIEWED — see the flag. `home-pets.ts` has never carried colours
-   * for this species, so these four are the first ever proposed for a gecko. */
   palette: {
-    coat: 0xe3b45f,    // UNREVIEWED: the sandy yellow ground colour
-    belly: 0xf7edd9,   // UNREVIEWED: cream — the venter, the toe pads, the tail
-    //                    end and the sclera
-    mark: 0x584022,    // UNREVIEWED: the dark line of the mouth, and nothing else
-    limb: 0xc9993f,    // UNREVIEWED: the limbs above the pads, a shade under the coat
-    pupil: PACK_PUPIL, // measured off 544 real eye texels; see texture.ts
+    coat: 0xe3b45f,
+    belly: 0xf7edd9,
+    mark: 0x584022,
+    limb: 0xc9993f,
+    pupil: PACK_PUPIL,  // the pack's own measured pupil; see texture.ts
+    'plate-03': 0x696969,
+    tubercle: 0x92753f,
   },
 
-  /* No `hull` line: the builder's default IS `box-03`, and `box-03` is the only
-   * shell on which a solved face card lands on the eye plane. See the header. */
-
-  /* A lizard's pale part is its venter only — below the 0.4808-0.5481 zone §7
-   * measured for the pack's mammals, and below the coat cell's own centre row so
-   * the unpatched coat parts still read coat. */
   belly: 0.375,
-
-  /* THE SPRAWL, and JT-044's TWO-TONE LEG doing pale splayed toes. `at: 0.25` is
-   * 4/16 on the pack's grid and paints the bottom 0.076563 of each leg cream.
-   * Nothing else on this animal paints `limb`, which is what keeps the split the
-   * legs' own. */
-  legs: { x: LEG_X, paint: { base: 'limb', patch: { below: 'belly', at: 0.25 } } },
-
-  /* THE BIGGEST CARD IN THE BANK, at the panda's own station on the pack's own
-   * eye plane — nothing else is said, because nothing else is this species'.
-   * Seven tenths of it is band 15, which is a gecko's eye without any help. */
+  legs: { x: 0.4375, paint: { base: 'limb', patch: { below: 'belly', at: 0.25 } } },
   eyes: { part: 'plate-14' },
-
-  /* THE FATTEST TAIL IN THE BANK — 0.744 across its narrowest axis, round in
-   * section, taper 0.961 — carried on the hull's own axis rather than at the
-   * fox's recorded height, which was 0.065 BELOW its own taller hull's centre and
-   * would land 0.0625 above this one's. Band 5 is the fox's own white tip: a pale
-   * tail end for one entry and no geometry at all. */
-  tail: {
-    part: 'box-23',
-    paint: { base: 'coat', byBand: { 5: 'belly' } },
-    at: [0, HULL_MID_Y, -0.625],
+  ridge: {
+    part: 'box-08',
+    name: 'tubercle',
+    count: 3,
+    rows: ['top', 'chamfer'],
+    paint: 'tubercle',
   },
-
-  /* THE TUBERCLES — a leopard gecko's bumpy skin, which is diagnostic of it in a
-   * way its spots are not. `box-08` is `y +1`, so its measured 0.751980 burial
-   * transfers to a radial mount, and 0.081128 of it stands proud. Painted from
-   * the COAT: this is silhouette, not marking. Top and chamfer only — three
-   * facings that round the BACK, where the tubercles are, and no side row, so the
-   * animal stays exactly `box-03` wide and the nine of them cost no keep-out. */
-  ridge: { part: 'box-08', name: 'tubercle', count: 3, rows: ['top', 'chamfer'] },
-
-  /* THE SMILE, and most of what a child would name this animal by. Two of the
-   * pack's own mouth-line cards abutted at the midline read 0.473162 across —
-   * the widest line the bank can draw. Dropped to 10/16 so the cut-outs clear the
-   * panda's eye card, which at both shapes' own recorded heights they do not. */
   extras: [
-    { name: 'mouth', part: 'plate-03', paint: 'mark', kind: 'pair',
-      at: [GAPE_HALF, GAPE_Y, CARD_Z] },
+    {
+      part: 'plate-03',
+      name: 'plate-03',
+      at: [0, 0.625, 0.6625],
+      paint: 'plate-03',
+      stretch: [3.35, 1, 0.25],
+    },
+    {
+      part: 'tube-06',
+      name: 'tube-06',
+      at: [0, 0.575, -0.55],
+      spin: [{ axis: 'x', deg: -180 }],
+      stretch: [1.55, 1, 1.75],
+    },
   ],
-
-  flag: 'THE SPOTS CANNOT BE EXPRESSED, and a LEOPARD gecko is named for them. '
-    + 'Colour here is entirely a texture LOOKUP and the atlas carries no positional '
+  flag: 'THE SPOTS CANNOT BE EXPRESSED, and a LEOPARD gecko is named for them. Colour '
+    + 'here is entirely a texture LOOKUP and the atlas carries no positional '
     + 'information at all (docs/HANDOFF.md section 6), so every route runs out: '
-    + '`Paint.patch` takes ONE number and that number is a HEIGHT — it paints one '
-    + 'level boundary across a whole part and cannot say "a spot goes here", because '
-    + 'it cannot say "here"; `byBand` can only re-colour where Kenney already cut, '
-    + 'and `box-03` is ONE band over all sixty of its triangles, so there is nothing '
-    + 'to cut; and the bank\'s only marking cards are the cow\'s, dog\'s and '
-    + 'giraffe\'s flank blotches, `plate-10` (0.244 x 0.253) and `plate-11` (0.400 x '
-    + '0.433) — 20% and 35% of this hull\'s own side. Four of those is the fire '
-    + 'salamander\'s blotching, which is correct for a salamander and is not a '
-    + 'leopard gecko\'s dozens of small spots, so they are refused rather than '
-    + 'borrowed. NOTHING WAS AUTHORED OR FAKED: this animal is a plain sandy yellow '
-    + 'with a cream belly, and what carries it instead is all SHAPE — the pack\'s '
-    + 'biggest eye card, the widest mouth line the bank can draw (two `plate-03` '
-    + 'abutted, 0.473 across a 1.250 head), the fattest tail in the bank, nine raised '
-    + 'tubercles, and four legs set at 0.4375, which is the exact station where a '
-    + 'leg\'s outer face lands flush on the hull\'s own side. The tail carries ONE '
-    + 'pale band, from Kenney\'s own cut in the fox\'s brush, where a real gecko\'s '
-    + 'tail carries several. ALSO: NEW PALETTE, UNREVIEWED — `home-pets.ts` has never '
-    + 'carried colours for this species, so these four are the first ever proposed '
-    + 'for a gecko and nothing downstream treats them as agreed. Joe should look at '
-    + 'them, and at whether a spotless leopard gecko is worth a bespoke spot card.',
+    + '`Paint.patch` takes ONE number and that number is a HEIGHT — it paints one level '
+    + 'boundary across a whole part and cannot say "a spot goes here", because it '
+    + 'cannot say "here"; `byBand` can only re-colour where Kenney already cut, and '
+    + '`box-03` is ONE band over all sixty of its triangles, so there is nothing to '
+    + 'cut; and the bank\'s only marking cards are the cow\'s, dog\'s and giraffe\'s flank '
+    + 'blotches, `plate-10` (0.244 x 0.253) and `plate-11` (0.400 x 0.433) — 20% and '
+    + '35% of this hull\'s own side. Four of those is the fire salamander\'s blotching, '
+    + 'which is correct for a salamander and is not a leopard gecko\'s dozens of small '
+    + 'spots, so they are refused rather than borrowed. NOTHING WAS AUTHORED OR FAKED: '
+    + 'this animal is a plain sandy yellow with a cream belly, and what carries it '
+    + 'instead is all SHAPE — the pack\'s biggest eye card, the widest mouth line the '
+    + 'bank can draw (two `plate-03` abutted, 0.473 across a 1.250 head), the fattest '
+    + 'tail in the bank, nine raised tubercles, and four legs set at 0.4375, which is '
+    + 'the exact station where a leg\'s outer face lands flush on the hull\'s own side. '
+    + 'The tail carries ONE pale band, from Kenney\'s own cut in the fox\'s brush, where '
+    + 'a real gecko\'s tail carries several. ALSO: NEW PALETTE, UNREVIEWED — '
+    + '`home-pets.ts` has never carried colours for this species, so these four are the '
+    + 'first ever proposed for a gecko and nothing downstream treats them as agreed. '
+    + 'Joe should look at them, and at whether a spotless leopard gecko is worth a '
+    + 'bespoke spot card.',
 })

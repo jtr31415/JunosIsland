@@ -28,7 +28,7 @@
  *      a failure here rather than a blank frame in the album.
  */
 import { describe, it, expect } from 'vitest'
-import { isBuilt, builtIn } from '../../src/island/species/built'
+import { isBuilt, isReleased, builtIn } from '../../src/island/species/built'
 import { BASE_SPECIES, speciesRecord } from '../../src/island/species/registry'
 import { COLLECTIONS, collection } from '../../src/island/species/roster'
 
@@ -127,9 +127,13 @@ describe('builtIn: a collection\'s built members', () => {
     expect(builtIn('')).toEqual([])
   })
 
-  it('agrees with isBuilt member by member', () => {
+  it('agrees with isReleased member by member', () => {
+    /* It agreed with `isBuilt` until 4 August, when Joe asked for the album to
+     * show only what has been pushed. `isBuilt` still answers "is there a picture
+     * to draw"; `isReleased` adds "and can she actually be dealt it". This is the
+     * assertion that keeps `builtIn` from becoming a second opinion on either. */
     for (const c of COLLECTIONS) {
-      expect(builtIn(c.id), c.id).toEqual(members(c.id).filter(isBuilt))
+      expect(builtIn(c.id), c.id).toEqual(members(c.id).filter(isReleased))
     }
   })
 })
@@ -159,15 +163,28 @@ describe('WHAT THE ALBUM SHOWS TODAY, collection by collection', () => {
    * >>> farm goes 0 -> 16, the total goes 68 -> 84, and farm becomes a sixth
    * >>> collection with frames — which makes it a sixth PAGE. Nothing here was
    * >>> loosened; the numbers were wrong because the world moved under them.
+   *
+   * >>> RE-MEASURED AGAIN, 4 August 2026, and this time the RULE changed rather
+   * >>> than the world. Joe: *"i only want to see in the album the silhouette
+   * >>> cards for the animals that have successfully pushed."* `builtIn` filters
+   * >>> on RELEASED now — signed off, or one of the frozen base 24 that
+   * >>> `dealPool` deals regardless — so this column counts what a child can
+   * >>> actually be dealt rather than what somebody has modelled.
+   * >>>
+   * >>> Africa (1), Night Time (13) and Farm (16) go to ZERO and stop being
+   * >>> pages: every animal in them is built and none is pushed. Home Pets is 15
+   * >>> of 16 — `animal-rat` is built and waiting. The total goes 84 -> 53.
+   * >>> Nothing was deleted and nothing regressed; the moment Joe pushes those
+   * >>> collections the numbers come back on their own.
    */
   const PINNED: ReadonlyArray<readonly [string, number, number]> = [
-    // collection            roster  built
+    // collection            roster  released
     ['base', 24, 24],
     ['garden', 14, 14],
-    ['home-pets', 16, 16],
-    ['night-time', 16, 13],
-    ['africa', 16, 1],
-    ['farm', 16, 16],
+    ['home-pets', 16, 15],
+    ['night-time', 16, 0],
+    ['africa', 16, 0],
+    ['farm', 16, 0],
     ['woodland', 16, 0],
     ['birds', 18, 0],
     ['ocean', 16, 0],
@@ -185,10 +202,10 @@ describe('WHAT THE ALBUM SHOWS TODAY, collection by collection', () => {
     ['critically-endangered', 12, 0],
   ]
 
-  for (const [id, rostered, built] of PINNED) {
-    it(`${id}: ${built} frames of ${rostered} rostered`, () => {
+  for (const [id, rostered, released] of PINNED) {
+    it(`${id}: ${released} frames of ${rostered} rostered`, () => {
       expect(members(id), `${id} is not in the roster`).toHaveLength(rostered)
-      expect(builtIn(id)).toHaveLength(built)
+      expect(builtIn(id)).toHaveLength(released)
     })
   }
 
@@ -203,11 +220,13 @@ describe('WHAT THE ALBUM SHOWS TODAY, collection by collection', () => {
     expect(ROSTER.filter(isBuilt)).toHaveLength(84)
   })
 
-  it('has exactly six collections with any frame at all', () => {
-    // The six that can be a PAGE. Everything else is not an album yet.
-    // Farm is the sixth, added by PB-074; the order is COLLECTIONS' own.
+  it('has exactly three collections with any frame at all', () => {
+    /* The three that can be a PAGE. Everything else is not an album SHE CAN PLAY
+     * yet — which since 4 August means pushed rather than merely modelled, so
+     * Africa, Night Time and Farm dropped out together. The order is COLLECTIONS'
+     * own, and this list grows again the moment Joe pushes one of them. */
     expect(COLLECTIONS.map(c => c.id).filter(id => builtIn(id).length > 0))
-      .toEqual(['base', 'garden', 'africa', 'night-time', 'home-pets', 'farm'])
+      .toEqual(['base', 'garden', 'home-pets'])
   })
 })
 

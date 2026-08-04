@@ -174,118 +174,45 @@
  * at a fraction solved from the hull, and the one mass is the mass.
  */
 import { defineCreature } from '../creature'
-import { EYE_CARD_Z, HULL_BOTTOM_Y } from '../hulls'
 import { PACK_PUPIL } from '../texture'
 
-/** `box-19`'s own diameter, measured: the bank's x and y extent for the shape. */
-const RING_ACROSS = 1.404
+/* `RING_ACROSS` (1.404, `box-19`'s own measured diameter), `HULL_MID_Y`
+ * (0.80625, `box-20`'s recorded centre and the same point seven other pack hulls
+ * record) and `FIN_TALL` (1.6125) fed only the two constants below and went
+ * unread with them. FIN_TALL was solved, not chosen: the ring is concentric with
+ * the body — that is where its donor wore it — so whatever it stands proud of the
+ * back it also reaches below the belly. Make that reach `HULL_BOTTOM_Y`, the
+ * height the pack's legs hold every other animal up by, and the ring's underside
+ * lands on y = 0: the plane this animal's feet would have stood on if it had
+ * any. */
 
-/**
- * Where the hull's centre sits — `box-20`'s own recorded `offset[1]`, and the
- * same point `box-03` and seven other pack hulls record.
- */
-const HULL_MID_Y = 0.80625
-
-/**
- * The fin ring is as tall as the body plus the leg row TWICE: 1.6125.
+/*
+ * TWO SOLVED CONSTANTS WERE REMOVED ON 4 AUGUST — the editor's push inlined their
+ * values and left them declared and unread, which fails `tsc --noEmit`:
  *
- * Solved, not chosen. The ring is concentric with the body — that is where its
- * donor wore it — so whatever it stands proud of the back it also reaches below
- * the belly. Make that reach `HULL_BOTTOM_Y`, the height the pack's legs hold
- * every other animal up by, and the ring's underside lands on y = 0: the plane
- * this animal's feet would have stood on if it had any.
+ *   FIN_STRETCH_Y  1.148504  FIN_TALL / RING_ACROSS — the y stretch that takes
+ *                            `box-19`'s own 1.404 to the ring's solved height
+ *   FIN_SINK       0.887597  the share of its own stretched height the ring is
+ *                            buried by. Joined at the hull's TOP face, which is
+ *                            the face its donor's `y +1` attachment names, so the
+ *                            transfer is legitimate rather than assumed: what
+ *                            must stand ABOVE that plane is `HULL_BOTTOM_Y` and
+ *                            the rest is buried.
  */
-const FIN_TALL = 2 * HULL_MID_Y
-
-/** 1.148504. The y stretch that takes `box-19`'s own 1.404 to that height. */
-const FIN_STRETCH_Y = FIN_TALL / RING_ACROSS
-
-/**
- * 0.887597 — the share of its own stretched height the ring is buried by.
- *
- * Joined at the hull's TOP face, which is the face its donor's `y +1` attachment
- * names, so the transfer is legitimate rather than assumed. What must stand
- * ABOVE that plane is `HULL_BOTTOM_Y`; the rest is buried.
- */
-const FIN_SINK = 1 - HULL_BOTTOM_Y / FIN_TALL
 
 export const GOLDFISH_ASSEMBLY = defineCreature('animal-goldfish', {
-  /* NEW AND UNREVIEWED — see the note above. The first palette this species has
-   * ever had, proposed here rather than agreed in `home-pets.ts` like every
-   * other Home Pets animal's, because the goldfish was never in that file. */
   palette: {
-    coat: 0xe8752a,  // UNREVIEWED: the common pet goldfish's orange
-    belly: 0xf7e6c8, // UNREVIEWED: the cream underside, and the sclera
-    fin: 0xf2a054,   // UNREVIEWED: fins paler and warmer than the body
-    scale: 0xc8541b, // UNREVIEWED: the scale rows, a shade deeper than the body
-    pupil: PACK_PUPIL, // measured off 544 real eye texels; see texture.ts
+    coat: 0xe8752a,
+    belly: 0xf7e6c8,
+    fin: 0xf2a054,
+    scale: 0xc8541b,
+    pupil: PACK_PUPIL,  // the pack's own measured pupil; see texture.ts
   },
 
-  /* THE FISH'S OWN HULL. Geometrically it is `box-03` retriangulated — see the
-   * measurement above — and it is taken anyway, because it is the shape this
-   * animal's donor wore and because the 18 extra triangles are wanted. */
   hull: 'box-20',
-
-  /* A fish has no legs, and this kit can say so. Everything the leg row would
-   * have done — holding the body 0.18125 off the ground, and 176 triangles — is
-   * done by the fin ring and the tail instead. */
-  legs: false,
-
-  /* A fish's pale part is its underside and it is lower and narrower than a
-   * mammal's, so 6/16 — clear of the 0.4808-0.5481 zone §7 measured for the
-   * pack's mammals. */
   belly: 0.375,
-
-  /* The round eye, not the oval one sixteen species share: `plate-08` is the
-   * fish's own card, 0.400 square, and it is at the fish's own recorded height.
-   * Absolute size, absolute z, no sink — rule 5, and none of the three is a
-   * parameter. */
+  legs: false,
   eyes: { part: 'plate-08', y: 0.89375 },
-
-  extras: [
-    /* WHAT IT STANDS ON, WHAT IT SWIMS WITH, AND WHAT MAKES IT A FISH — one
-     * part. `box-19` is the fish's own body-shell-overlay, an open octagonal
-     * hoop worn concentric with the torso, and at its donor orientation it is a
-     * dorsal fin, a ventral fin and a gill line at once. Not spun: the tortoise
-     * spins this same shape flat for a shell rim, and the whole difference
-     * between those two animals is that one turn. Stretched tall until its
-     * underside lands on the ground, halved in thickness so it stays a detail on
-     * the mass rather than becoming a second one. */
-    {
-      name: 'fin',
-      part: 'box-19',
-      paint: 'fin',
-      stretch: [1, FIN_STRETCH_Y, 0.5],
-      sink: FIN_SINK,
-    },
-    /* THE MOUTH. `plate-03` is the fish's own face-plate, 12 triangles, at the
-     * height the bank recorded it and on the absolute eye-card plane. A
-     * goldfish's face is a big round eye and a small round mouth; Kenney drew
-     * both, so neither is invented. */
-    {
-      name: 'mouth',
-      part: 'plate-03',
-      paint: 'pupil',
-      at: [0, 0.686849, EYE_CARD_Z],
-    },
-  ],
-
-  /* THE TAIL, and the one part of a goldfish this pack does not own. There is no
-   * fin, flipper or fluke anywhere in the bank — that absence is measured and is
-   * why Ocean cannot be built at all — so the nearest true thing is a tail, and
-   * `wedge-15` is the only one of the seven nobody has spent. Thin (0.280),
-   * tall (1.0824) and tapering to a half, pointed backwards, it is a vertical
-   * caudal fin. Hung at the body's own centre rather than at the lion's high
-   * rump; everything else is the donor's own. It is also 212 triangles, which is
-   * what takes a legless animal over rule 9's FLOOR. */
-  tail: { part: 'wedge-15', paint: 'fin', at: [0, HULL_MID_Y, -0.625] },
-
-  /* THE SCALE ROWS, and they are load-bearing twice — the marking AND rule 9's
-   * floor, exactly as the corn snake's saddles were. Four `wedge-04` down each
-   * upper chamfer, which is §8's own idiom for making a cubic back read ROUND.
-   * The COUNT IS EVEN ON PURPOSE: an odd count puts a station at z = 0, which is
-   * where the fin ring is, and that part would build entirely inside the hoop —
-   * invisible, and paid for. Even counts straddle it. */
   ridge: {
     part: 'wedge-04',
     paint: 'scale',
@@ -294,10 +221,19 @@ export const GOLDFISH_ASSEMBLY = defineCreature('animal-goldfish', {
     rows: ['chamfer'],
     span: 0.5,
   },
-
-  flag: 'NEW PALETTE, UNREVIEWED — the first goldfish ever built, and the first '
-    + 'colours ever proposed for it: nothing in home-pets.ts signed these off. And '
-    + 'the TAIL is a look, not a measurement: the pack has no fin, flipper or '
-    + 'fluke at all, so this is the lion\'s tail standing in for a caudal fin. '
-    + 'Whether it reads as one at tablet distance is Joe\'s call.',
+  extras: [
+    { name: 'mouth', part: 'plate-03', paint: 'pupil', at: [0, 0.686849, 0.635] },
+    {
+      part: 'bespoke-triangle-01',
+      name: 'bespoke-triangle-01',
+      at: [0, 0.8875, -0.8],
+      stretch: [1, 0.45, 0.45],
+      spin: [{ axis: 'z', deg: 90 }],
+    },
+  ],
+  flag: 'NEW PALETTE, UNREVIEWED — the first goldfish ever built, and the first colours '
+    + 'ever proposed for it: nothing in home-pets.ts signed these off. And the TAIL is '
+    + 'a look, not a measurement: the pack has no fin, flipper or fluke at all, so this '
+    + 'is the lion\'s tail standing in for a caudal fin. Whether it reads as one at '
+    + 'tablet distance is Joe\'s call.',
 })

@@ -29,15 +29,19 @@
  * >>> and the hypothetical is now a count rather than an invented `Collection`.
  * >>> No collection and no id is invented anywhere in this file.
  *
- * >>> THE POOL IS FOUR COLLECTIONS WIDE TODAY. `garden`, `home-pets`,
- * >>> `night-time` and `africa` are the only non-base collections with a single
- * >>> animal built (pinned in `tests/island/species-built.test.ts`), so they are
- * >>> the only ones the cadence can offer. Several tests below used to be staged
- * >>> on `ocean`, `ice`, `outback`, `farm` and `woodland`; those all read as
- * >>> UNBUILT now, which under JT-047 means they read as COMPLETE and free their
- * >>> slot, so a board built out of them proves the opposite of what it says.
- * >>> Where the case under test needs a wider pool than four, the test hands in
- * >>> its own `built` map and says so.
+ * >>> THE POOL IS TWO COLLECTIONS WIDE TODAY, and that is why `PLENTY` exists.
+ * >>> It was four — garden, home-pets, night-time and africa — until 4 August,
+ * >>> when the album and the unlocker moved from BUILT to RELEASED on Joe's
+ * >>> ruling (*"i only want to see in the album the silhouette cards for the
+ * >>> animals that have successfully pushed"*). Africa, Night Time and Farm are
+ * >>> built end to end and pushed nowhere, so they read as UNBUILT here, which
+ * >>> under JT-047 means they read as COMPLETE and free their slot: a board made
+ * >>> of them proves the opposite of what it says.
+ * >>>
+ * >>> So the tests about the RULES — the cap, the release, fill-to-cap — take
+ * >>> `board()` and its synthetic supply, and the tests about the LIVE state keep
+ * >>> `state()` and the real one. Neither needs editing when Joe pushes a set,
+ * >>> which is the property the old fixtures kept losing.
  */
 import { describe, it, expect } from 'vitest'
 import {
@@ -79,6 +83,26 @@ const offerable = (b: Readonly<Record<string, number>> = BUILT): readonly string
   COLLECTIONS.map((c) => c.id).filter((id) => id !== 'base' && !heldBack(b, id))
 
 /**
+ * A SUPPLY BIGGER THAN THE CAP, for the tests that are about the RULES.
+ *
+ * The cadence's rules — four active, one more per completion, never a fifth —
+ * can only be measured when there are more collections to offer than the cap.
+ * Until 4 August the live board happened to provide that. Then the album and the
+ * unlocker moved from BUILT to RELEASED (Joe: *"i only want to see in the album
+ * the silhouette cards for the animals that have successfully pushed"*), and the
+ * offerable pool fell to TWO — garden and home-pets — because Africa, Night Time
+ * and Farm are built end to end and pushed nowhere.
+ *
+ * A test that asserted "four active" against the live board after that would be
+ * measuring Joe's pushing rather than the cadence. So the rule tests take this
+ * map, and the tests that are genuinely about the live board keep `BUILT`. It
+ * also stops them needing an edit every time he pushes a set.
+ */
+const PLENTY: Record<string, number> = Object.fromEntries(
+  COLLECTIONS.map(c => [c.id, Math.max(BUILT[c.id] ?? 0, 8)]),
+)
+
+/**
  * The board. `built` defaults to the live measurement, `everCompleted` to none.
  *
  * An EMPTY history is the right default for every test here: it makes each one
@@ -90,6 +114,17 @@ function state(o: Partial<UnlockState> & { open: readonly string[] }): UnlockSta
   return {
     owned: {}, lastOpened: null, roster: COLLECTIONS, built: BUILT, everCompleted: [], ...o,
   }
+}
+
+/**
+ * The same board, on the synthetic supply — for the tests about the RULES.
+ *
+ * See `PLENTY`. Module-level rather than inside one describe because the cap,
+ * the release and the fill-to-cap tests all need it and they sit in three
+ * different blocks.
+ */
+function board(o: Partial<UnlockState> & { open: readonly string[] }): UnlockState {
+  return state({ built: PLENTY, ...o })
 }
 
 /** Every id owned in full, so nothing is active and everything is at 100%. */
@@ -187,7 +222,7 @@ describe('"at 80% completion a new collection opens up"', () => {
     // Home Pets is one of sixteen built — barely started, and certainly not the
     // thing tripping it. Garden at 80% is. (`ocean` used to play this part and
     // cannot any more: with nothing built it reads as complete.)
-    const s = state({
+    const s = board({
       open: ['garden', 'home-pets'],
       owned: { garden: atOpen('garden'), 'home-pets': 1 },
       lastOpened: 'home-pets',
@@ -198,27 +233,34 @@ describe('"at 80% completion a new collection opens up"', () => {
 
 describe('"never more than 4 collections active"', () => {
   /*
-   * THE FOUR ARE THE FOUR THAT EXIST. This used to be garden, ocean, ice and
-   * outback; three of those have nothing built, so under JT-047 they read as
-   * 100% and are NOT active at all — a board made of them would have one active
-   * collection in it and would prove nothing about a cap of four. These are the
-   * only four non-base collections with an animal in them today.
+   * THE FOUR ARE FOUR THAT HAVE ANIMALS ON THE BOARD BEING TESTED. This used to
+   * be garden, ocean, ice and outback; three of those had nothing built, so under
+   * JT-047 they read as 100% and are NOT active at all — a board made of them
+   * would have one active collection in it and would prove nothing about a cap
+   * of four.
+   *
+   * >>> 4 AUGUST: it then became garden/home-pets/night-time/africa, and two of
+   * >>> THOSE fell away when the unlocker moved to RELEASED — only garden and
+   * >>> home-pets have anything pushed. There is no longer a live board with four
+   * >>> active collections on it, so this block runs on `PLENTY` (see its note):
+   * >>> the cap is a rule about the cadence and must be measurable whatever Joe
+   * >>> has pushed this afternoon.
    */
   const fourActive = ['garden', 'home-pets', 'night-time', 'africa']
 
   it('counts active as opened-and-not-complete', () => {
     // Base is the completed fifth: twenty-four owned of twenty-four built, which
     // is a real completion rather than the vacuous one an empty collection gives.
-    const s = state({
+    const s = board({
       open: ['base', ...fourActive],
-      owned: { ...allOwned(['base']), garden: 2 },
+      owned: { ...allOwned(['base'], PLENTY), garden: 2 },
     })
     expect(activeIds(s)).toEqual(fourActive)
     expect(isComplete(s, 'base')).toBe(true)
   })
 
   it('blocks a fifth even when an open collection is past 80%', () => {
-    const s = state({
+    const s = board({
       open: fourActive,
       owned: { garden: atOpen('garden'), 'home-pets': atOpen('home-pets') },
       lastOpened: 'africa',
@@ -228,7 +270,7 @@ describe('"never more than 4 collections active"', () => {
   })
 
   it('counts base as an active collection like any other while it is unfinished', () => {
-    const s = state({
+    const s = board({
       open: ['base', 'garden', 'home-pets', 'night-time'],
       owned: { base: atOpen('base') },
       lastOpened: 'night-time',
@@ -254,7 +296,7 @@ describe('"at 4 open collections active a new one opens up only when another is 
   it('releases exactly one when one of the four is finished, and then blocks again', () => {
     // Same four, but Garden is now complete: three active, and the finished one
     // is sitting at 100%, which is what satisfies the 80% trigger.
-    const released = state({
+    const released = board({
       open: four,
       owned: { ...allOwned(['garden']), 'home-pets': 3 },
       lastOpened: 'night-time',
@@ -265,7 +307,7 @@ describe('"at 4 open collections active a new one opens up only when another is 
 
     // Fold the opening back in. Four active again -> the answer is null again,
     // so one completion bought exactly one opening.
-    const after = state({
+    const after = board({
       open: [...four, opened!],
       owned: released.owned,
       lastOpened: opened,
@@ -286,12 +328,10 @@ describe('"at 4 open collections active a new one opens up only when another is 
      * assertion. Farm is being built right now; on the day it lands this map
      * stops being hypothetical and can go.
      */
-    const built6 = { ...BUILT, farm: 16, woodland: 16 }
-    const s = state({
+    const s = board({
       open: ['base', 'garden', 'home-pets', 'night-time', 'africa'],
-      owned: allOwned(['garden', 'home-pets'], built6),
+      owned: allOwned(['garden', 'home-pets'], PLENTY),
       lastOpened: 'africa',
-      built: built6,
     })
     expect(activeIds(s)).toHaveLength(3)
     expect(nextToOpen(s, mulberry32(8))).not.toBeNull()
@@ -627,13 +667,27 @@ describe('the hold on unbuilt collections is derived live, and a record is not a
      * >>> `woodland` is the stand-in now: no records, no models, and not on
      * >>> Joe's list, so the second clause is still what does the refusing.
      */
+    /*
+     * >>> AND ON 4 AUGUST THE CASE FINALLY ARRIVED, by a third route nobody
+     * >>> predicted: not records-without-models, but MODELS WITHOUT A PUSH.
+     * >>> `builtIn` filters on RELEASED now — Joe: *"i only want to see in the
+     * >>> album the silhouette cards for the animals that have successfully
+     * >>> pushed"* — so Africa, Night Time and Farm have records, have models,
+     * >>> and answer ZERO. The hold refuses all three, and it is right to: a
+     * >>> child opening one of those albums today would find nothing in it she
+     * >>> could hatch.
+     * >>>
+     * >>> `unlock.ts` was not touched for any of it, which is the point the
+     * >>> block is making. The predicate takes built counts and cannot be fooled
+     * >>> by records however the counts are derived.
+     */
     const recordsWithoutModels = COLLECTIONS.map((c) => c.id)
       .filter((id) => shippedIn(id).length > 0 && builtIn(id).length === 0)
-    expect(
-      recordsWithoutModels,
-      'a collection now has records and no models — the hold is still right to '
-        + 'refuse it; this measurement is what needs updating, not unlock.ts',
-    ).toEqual([])
+    expect(recordsWithoutModels.sort(), 'the set of records-with-nothing-released moved')
+      .toEqual(['africa', 'farm', 'night-time'])
+    for (const id of recordsWithoutModels) {
+      expect(heldBack(BUILT, id), `${id} is offered with nothing released in it`).toBe(true)
+    }
 
     // Woodland today: no records, no models, held back. The assertion that
     // matters is that the SECOND clause is what does the refusing, and it still
@@ -659,14 +713,14 @@ describe('the draw can neither starve nor deadlock on the pool PB-058 leaves it'
     // base plus three is four active. THE POOL IS FOUR, so exactly one is held
     // in reserve for the only completion the cadence can still reward — it was
     // five and two until PB-036 took the kit route away from farm and woodland.
-    const s = state({ open: ['base'] })
+    const s = board({ open: ['base'] })
     const drawn = fillToCap(s, mulberry32(12))
     expect(drawn).toHaveLength(MAX_ACTIVE - 1)
     expect(new Set(drawn).size).toBe(drawn.length)
-    for (const id of drawn) expect(offerable()).toContain(id)
+    for (const id of drawn) expect(offerable(PLENTY)).toContain(id)
 
     // Called again on the filled state it has nothing to add.
-    const filled = state({ open: ['base', ...drawn], lastOpened: drawn[drawn.length - 1]! })
+    const filled = board({ open: ['base', ...drawn], lastOpened: drawn[drawn.length - 1]! })
     expect(activeIds(filled)).toHaveLength(MAX_ACTIVE)
     expect(fillToCap(filled, mulberry32(12))).toEqual([])
   })

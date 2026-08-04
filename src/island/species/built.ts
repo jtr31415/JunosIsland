@@ -12,16 +12,39 @@
  * never meant to. Africa showed sixteen frames with one animal behind them.
  * `unlock.ts:133` had already written the symptom down and left it.
  *
- * His two rulings, both given explicitly and both settled:
+ * His rulings:
  *
- *   1. **A slot appears when the species is BUILT**, not when it is signed off.
- *      He was shown the consequence and took it: the album will show animals the
- *      child cannot yet hatch, because the sign-off gate still governs what is
- *      DEALT (`pool.ts`) and nothing is signed off yet. That is deliberate. Do
- *      not "fix" it by reaching for `isSignedOff` here — these are two different
- *      questions with two different answers, and the album is asking the first.
- *   2. **A collection with nothing built does not appear at all.** No page, no
- *      name, no "coming soon". The album grows as he builds.
+ *   1. **A slot appears when the animal is RELEASED** — REVERSED 4 August 2026,
+ *      and the reversal is his: *"i only want to see in the album the silhouette
+ *      cards for the animals that have successfully pushed."*
+ *
+ *      It used to be "when the species is BUILT, not when it is signed off", and
+ *      this comment used to say in as many words: *do not "fix" it by reaching
+ *      for `isSignedOff` here.* That instruction is now void — it was written
+ *      when NOTHING was signed off, so gating on sign-off would have emptied the
+ *      album completely, and the consequence he accepted was the lesser evil of
+ *      the two. On 4 August he signed off Garden and Home Pets, so the gate has
+ *      a meaningful other side for the first time and he has taken it.
+ *
+ *      What that buys: every silhouette in the album is now an animal an egg can
+ *      actually contain. A blank slot is a promise to a five-year-old that this
+ *      one is out there to be found, and until today some of those promises could
+ *      not be kept.
+ *
+ *   2. **A collection with nothing released does not appear at all.** No page, no
+ *      name, no "coming soon". The album grows as he pushes. (Unchanged in
+ *      spirit; it now follows the released set rather than the built set.)
+ *
+ * ## THE BASE 24 ARE RELEASED BY DEFINITION, and that is not a loophole
+ *
+ * `dealPool` (`pool.ts:64`) starts from the twenty-four Kenney basenames and
+ * ADDS the signed-off ids — the base pack is dealt whether or not it was ever
+ * ticked, because it is the game Juno already plays. So gating this file on
+ * `isSignedOff` alone would have deleted the frames of animals SHE ALREADY OWNS,
+ * which is brief §19's one unbreakable rule and the single worst thing this
+ * change could have done. `isReleased` therefore reads "in the deal pool", which
+ * is sign-off OR the frozen pack, and the two stay in step because both are
+ * derived rather than listed.
  *
  * ## Why not `shippedIn`
  *
@@ -87,6 +110,7 @@
 import { collection } from './roster'
 import { speciesRecord } from './registry'
 import { KITS } from './kit'
+import { isSignedOff } from './signed-off'
 
 /**
  * Has anybody actually built this animal?
@@ -106,7 +130,42 @@ export function isBuilt(speciesId: string): boolean {
 }
 
 /**
- * A collection's built members, IN ROSTER ORDER.
+ * Can this animal actually reach her island — and therefore earn a slot?
+ *
+ * THE album's predicate as of 4 August (see ruling 1 in the header). Two clauses
+ * and both are needed:
+ *
+ *   - **Drawable.** `isBuilt`, unchanged. A slot with no picture to put in it is
+ *     the empty-frame bug this module was written to remove.
+ *   - **In the deal pool.** Signed off by Joe, OR one of the frozen base 24,
+ *     which `dealPool` deals regardless. This is the half he asked for: a
+ *     silhouette now means "this one is out there", not "somebody has modelled
+ *     this".
+ *
+ * The pool membership is RE-DERIVED here rather than imported from `pool.ts`,
+ * and that is deliberate: `dealPool` takes the base list as a parameter because
+ * it comes from `pets.ts`, and a `species/` file importing `pets.ts` is the
+ * cycle `pool.ts` exists to avoid. The frozen pack is identifiable from the
+ * record alone — `kit: 'kenney'`, no build, no assembly — so nothing is
+ * duplicated except the idea, and `species-built.test.ts` asserts the two agree
+ * member for member so it cannot rot into a second opinion.
+ */
+export function isReleased(speciesId: string): boolean {
+  if (!isBuilt(speciesId)) return false
+  if (isSignedOff(speciesId)) return true
+  return speciesRecord(speciesId)?.kit === 'kenney'
+}
+
+/**
+ * A collection's RELEASED members, IN ROSTER ORDER.
+ *
+ * The name stayed `builtIn` when the predicate under it became `isReleased` on
+ * 4 August. That is a deliberate trade and worth stating rather than leaving to
+ * be discovered: it has sixty-one call sites across the album, `main.ts`, the
+ * unlocker and their tests, and renaming all of them buys nothing a child can
+ * see. What matters is that there is still exactly ONE of these — the failure
+ * this module was built to end is two functions answering "is it in the album"
+ * differently, not the word on the front of the one that survives.
  *
  * Roster order, not build order and not the order they were found: it is the
  * same on every island, which is what makes the shape of a half-finished album
@@ -129,7 +188,7 @@ export function builtIn(collectionId: string): readonly string[] {
   const held = CACHE.get(collectionId)
   if (held) return held
   const members = collection(collectionId)?.members ?? []
-  const built = Object.freeze(members.filter(isBuilt))
+  const built = Object.freeze(members.filter(isReleased))
   CACHE.set(collectionId, built)
   return built
 }

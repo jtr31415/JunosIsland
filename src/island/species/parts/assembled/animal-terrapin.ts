@@ -388,186 +388,123 @@ import { PACK_PUPIL } from '../texture'
  * becoming its y — puts the tail's underside exactly on that line, and no part of
  * its root over a chamfer.
  */
-const TAIL_Y = 0.80625 - 0.3125 + 0.328570 / 2
-
-/**
- * The pack's own flat-card shell, and the one z station this animal's two head
- * marks share: `plate-10`'s own recorded offset, mirrored front to back.
- *
- * 0.186060 + 0.252879 / 2 = 0.312500, which is the exact front edge of this
- * hull's flat side face — Kenney sized these cards to a 1.250 cube's face in the
- * first place, as `animal-salamander.ts` found — so a card on this station runs as
- * far forward as one can sit without floating over the chamfer.
+/*
+ * THREE ORPHANED CONSTANTS WERE REMOVED HERE — `TAIL_Y`, `MARK_X` (0.635) and
+ * `MARK_Z` (0.186060) — on 4 August, for the same reason as the lovebird's and
+ * the newt's: the editor's push inlined their values into the definition below
+ * and left the declarations unread, which fails `tsc --noEmit`. The values are
+ * unchanged. The reasoning they carried is worth keeping, so: `MARK_Z` is
+ * `plate-10`'s own recorded offset, and 0.186060 + 0.252879 / 2 = 0.312500 is
+ * the exact front edge of this hull's flat side face — Kenney sized these cards
+ * to a 1.250 cube's face in the first place, as `animal-salamander.ts` found —
+ * so a card on that station runs as far forward as one can sit without floating
+ * over the chamfer.
  */
-const MARK_X = 0.635
-const MARK_Z = 0.186060
 
 export const TERRAPIN_ASSEMBLY = defineCreature('animal-terrapin', {
   palette: {
-    coat: 0x4a6234,    // the carapace: dark olive-green, and most of the animal
-    belly: 0xe3d38f,   // the plastron, the shell's pale shelf, the jaw, the sclera
-    limb: 0x6f8c46,    // the skin: neck, head, snout, tail and legs, brighter olive
-    web: 0x3c5228,     // the webbed feet alone, darker still
-    mark: 0xc0392b,    // the red ear patch, and nothing else
-    pupil: PACK_PUPIL, // measured off 544 real eye texels; see texture.ts
+    coat: 0x4a6234,
+    belly: 0xe3d38f,
+    limb: 0x6f8c46,
+    web: 0x3c5228,
+    mark: 0xc0392b,
+    pupil: PACK_PUPIL,  // the pack's own measured pupil; see texture.ts
   },
 
-  /* The lion's shell: 1.125 deep where the cube is 1.250, and the pack's ONLY hull
-   * whose body is wider than it is deep. Unmodified — a different authored hull is
-   * adaptation, not a stretch. Its front face is a full 1.000 square, which is
-   * what makes the neck's donor transfer land on flat geometry. */
-  hull: 'box-31',
-
-  /* 8/16 — the pack's own measured mammal line and this hull's own equator, which
-   * is also the line the shell shelf is joined at. One line, not two. */
+  hull: { part: 'box-03', at: [0, 0.8125, -0.0375] },
   belly: 0.5,
-
-  /* JT-044's two-tone leg as WEBBED FEET. 4/16 of box-01's own 0.30625 is 0.0765625
-   * of dark foot against the 0.18125 of leg that shows: 42.2% of the visible limb.
-   * A colour and not a paddle — the bank has no webbed foot. */
   legs: { paint: { base: 'limb', patch: { below: 'web', at: 0.25 } } },
-
-  /* ROUND, and deliberately not the largest: plate-14 is 0.4355 x 0.4426 and
-   * belongs to whichever sibling this collection actually calls big-eyed. */
-  eyes: { part: 'plate-08' },
-
-  /* THE NECK: the elephant's TRUNK, worn FORWARDS and unspun. The tortoise and the
-   * badger both spin this exact shape 180 degrees to get a stub tail; left alone it
-   * attaches `z +1`, because it is really a trunk, and a thick tapering tube
-   * growing out of a face is a turtle's neck. Placed by the donor transfer entire —
-   * this hull's front face, the elephant's own y, the elephant's own sink of
-   * nothing. Halved in HEIGHT only, which is what makes that y legal here (at its
-   * own 0.623004 the root hangs through the belly) and what turns a section that
-   * hangs into one that reaches. Its 0.425211 of length is the bank's own, and is
-   * the longest forward reach in it. */
-  snout: { part: 'box-18', name: 'neck', stretch: [1, 0.5, 1] },
-
-  /* THE HEAD, on the neck's own placed front plane rather than on an arithmetic.
-   * The fox's nose: 1.54x the neck's width and 0.96x its height, which is what a
-   * head is. Band 3 is Kenney's own lower half — the badger measured it — so a pale
-   * lower jaw is one entry and no geometry, and on a terrapin that line is the
-   * BEAK. Deliberately not `cone-06`: a parrot's beak is one of §3.2's shapes whose
-   * identity survives being moved, and Joe rejected wedge-10 by name for that. */
-  nose: {
-    part: 'tube-06',
-    name: 'head',
-    on: 'neck',
-    paint: { base: 'limb', byBand: { 3: 'belly' } },
+  eyes: { part: 'plate-01', x: 0.2625, y: 0.9875 },
+  tail: {
+    part: 'cone-01',
+    paint: 'limb',
+    spin: [{ axis: 'x', deg: -90 }, { axis: 'z', deg: 180 }],
+    at: [0, 0.4875, -0.625],
   },
-
   extras: [
-    /* THE FRONT WALL. `box-31` HAS NO FRONT FACE — measured, not inferred: its 50
-     * triangles leave four edges used once each, the (+/-0.5, +/-0.5, 0.5625)
-     * square, and no triangle at all lies in that plane. The material is
-     * `MeshStandardMaterial` at its FrontSide default (`assembly.ts:509`), so the
-     * inside of the shell is culled and the hole is see-through to the sky.
-     * `blade-05` is the lion's own face plate, 1.000 x 1.000 x 0.125, the exact
-     * size of that aperture and worn on this exact hull by its donor. Placed by the
-     * donor transfer entire — this hull's front face, the plate's own recorded
-     * height, its own measured sink of nothing — its front lands on 0.625, which is
-     * `HULL_FRONT_Z_USUAL`: the plane every other hull in the pack presents, and the
-     * one the eye card's 0.010 of daylight was measured against. Painted the hull's
-     * own two colours at the hull's own line, so it closes the wall and says
-     * nothing: `blade-05` is 1.000 tall centred on the same 0.80625, so `at: 0.5`
-     * puts its boundary on the carapace line by construction rather than by aim.
-     * Kenney's band 5 — the lion's mouth, and the frog's — is deliberately NOT
-     * repainted: this animal's mouth is the beak line on its head. */
-    {
-      name: 'front-wall',
-      part: 'blade-05',
-      paint: { base: 'coat', patch: { below: 'belly', at: 0.5 } },
-    },
-
-    /* THE SHELL: the caterpillar's body-segment, laid flat. The ONLY band in the
-     * bank that is not square (aspect 1.647) and the only one that is not a second
-     * mass at the size Kenney drew it — 3.11x this hull, where the tortoise's
-     * box-19 is 1.71x and had to be halved. It is two lateral plates rather than a
-     * ring, so it reads as a shelf along each flank and stops short fore and aft,
-     * which is where a turtle's shell is notched for the neck and the tail. `+90`
-     * and not `-90` because the shape is broader at one end and the broad end
-     * belongs at the BACK, over the hips. `axis: 'z'` puts the facing back on +y
-     * after the turn, so `sink: 0.5` straddles the join plane — 0.222917 either
-     * side of the hull's own recorded centre. */
-    {
-      name: 'shell',
-      part: 'box-11',
-      paint: 'belly',
-      spin: [{ axis: 'x', deg: 90 }],
-      axis: 'z',
-      dir: -1,
-      sink: 0.5,
-      at: [0, 0.80625, -0.0625],
-    },
-
-    /* The panda's nose-tip on the head's own front plane: 0.44 of the head's width,
-     * so the head ends in something narrower than itself. The third link of a chain
-     * every joint of which was solved rather than typed. */
-    { name: 'snout-tip', part: 'tube-08', paint: 'limb', on: 'head' },
-
-    /* THE RED EAR PATCH: the cow's, dog's and giraffe's flank card, THINNED to
-     * 4.15:1 on one axis. The badger proved no card in this bank IS a stripe and
-     * that stands — but a badger's needs 0.6 of run and a slider's mark needs 0.25,
-     * which this card already has. Its y is plate-08's own recorded height: the eye
-     * this animal wears. */
     {
       name: 'ear-patch',
       part: 'plate-10',
       paint: 'mark',
       kind: 'pair',
       stretch: [1, 0.25, 1],
-      at: [MARK_X, 0.893750, MARK_Z],
+      at: [0.635, 0.89375, 0.18606],
     },
-
-    /* The pale border above it — the same card at the same station, at plate-10's
-     * OWN recorded height, so neither y was invented and the two sit 0.042 apart.
-     * Both are above the 0.80625 paint line, so both read against the olive. */
     {
       name: 'head-stripe',
       part: 'plate-10',
       paint: 'belly',
       kind: 'pair',
       stretch: [1, 0.25, 1],
-      at: [MARK_X, 0.996750, MARK_Z],
+      at: [0.635, 0.99675, 0.18606],
     },
+    {
+      part: 'box-04',
+      name: 'box-04',
+      spin: [{ axis: 'x', deg: 90 }],
+      at: [0.625, 0.725, -0.025],
+      stretch: [1, 1, 0.5],
+    },
+    {
+      name: 'head-stripe-2',
+      part: 'plate-10',
+      paint: 'belly',
+      kind: 'pair',
+      stretch: [1, 0.25, 1],
+      at: [0.6375, 1.1375, 0.1875],
+    },
+    {
+      name: 'head-stripe-3',
+      part: 'plate-10',
+      paint: 'belly',
+      kind: 'pair',
+      stretch: [1, 0.25, 1],
+      at: [0.6375, 1.1, -0.1125],
+    },
+    {
+      name: 'head-stripe-3-2',
+      part: 'plate-10',
+      paint: 'belly',
+      kind: 'pair',
+      stretch: [1, 0.25, 1],
+      at: [0.6375, 0.9875, -0.1125],
+    },
+    {
+      name: 'ear-patch-2',
+      part: 'plate-10',
+      paint: 'mark',
+      kind: 'pair',
+      stretch: [1, 0.25, 1],
+      at: [0.6375, 0.9, -0.2],
+    },
+    { part: 'plate-03', name: 'plate-03', at: [0, 0.5125, 0.6] },
   ],
-
-  /* SHORT and pointed: the bee's small tapering spike turned to face backwards,
-   * sunk its own measured 0.312222 — exactly 0.125 units, §3's floor for an
-   * embedded part — for 0.275356 of reach against the tortoise stub's 0.425211. */
-  tail: {
-    part: 'cone-01',
-    paint: 'limb',
-    spin: [{ axis: 'x', deg: -90 }],
-    at: [0, TAIL_Y, -0.625],
-  },
-
   flag: 'THE FINE YELLOW LINES DOWN THE NECK AND THE LEGS CANNOT BE DRAWN, and on a '
-    + 'red-eared slider they are half the animal: olive skin ruled lengthwise with '
-    + 'thin yellow stripes. Both mechanisms fail and it is worth being exact about '
-    + 'which falls short of what. `byBand` can only cut where Kenney already cut, and '
-    + 'the two parts that need it have no cut in them at all — `box-18`, the neck, '
-    + 'carries ONE band with all 80 of its triangles in band 1, and `box-01`, the leg, '
-    + 'is one band as well. `Paint.patch` needs no cut and WOULD say it, because a '
-    + 'level boundary across a horizontal neck is a lengthwise line, which is exactly '
-    + 'the right shape — but a patch belongs to a SLOT and not to a part, the `limb` '
-    + 'cell is already spent on the webbed feet, and `assembly.ts:487` throws when one '
-    + 'cell is asked to hold two pictures. And a CARD long enough to run the neck '
-    + 'would overhang its chamfers at both ends. So the lines are not awkward here, '
-    + 'they are unsayable, and nothing has been authored to fake them. THE RED EAR '
-    + 'PATCH IS HALF-ANSWERED and you should look at it: the badger found that no card '
-    + 'in this bank IS a stripe and that is still true, but a slider\'s mark is a 0.25 '
-    + 'patch rather than a 0.6 run, so it is `plate-10` — the cow\'s flank card — '
-    + 'thinned on one axis to 4.15:1, sat at the eye\'s own recorded height on the '
-    + 'pack\'s own card shell, with a pale one above it for the border. It is a red '
-    + 'mark behind the eye in the right place at the right size; it is not the streak '
-    + 'that fades back along the neck, because there is no neck surface to fade along. '
-    + 'THREE PARTS ARE STANDING IN FOR ANATOMY THE BANK DOES NOT HAVE, and they are '
-    + 'the ones to look at first: the NECK is the elephant\'s trunk `box-18` worn '
-    + 'FORWARDS, unspun, which is the same shape the Garden tortoise wears spun 180 as '
-    + 'a stub tail; the SHELL is the caterpillar\'s body-segment `box-11` laid flat, '
-    + 'the only band in the bank that is an ellipse rather than a square and the only '
-    + 'one small enough not to be a second mass; and the TAIL is the bee\'s ear-spike '
-    + '`cone-01` turned to point backwards. The crab\'s flat hull `box-13` was refused '
-    + 'by arithmetic, as it was for the tortoise: 0.450556 tall plus a 0.30625 leg is '
-    + '0.756806 against a floor of 1.43.',
+    + 'red-eared slider they are half the animal: olive skin ruled lengthwise with thin '
+    + 'yellow stripes. Both mechanisms fail and it is worth being exact about which '
+    + 'falls short of what. `byBand` can only cut where Kenney already cut, and the two '
+    + 'parts that need it have no cut in them at all — `box-18`, the neck, carries ONE '
+    + 'band with all 80 of its triangles in band 1, and `box-01`, the leg, is one band '
+    + 'as well. `Paint.patch` needs no cut and WOULD say it, because a level boundary '
+    + 'across a horizontal neck is a lengthwise line, which is exactly the right shape '
+    + '— but a patch belongs to a SLOT and not to a part, the `limb` cell is already '
+    + 'spent on the webbed feet, and `assembly.ts:487` throws when one cell is asked to '
+    + 'hold two pictures. And a CARD long enough to run the neck would overhang its '
+    + 'chamfers at both ends. So the lines are not awkward here, they are unsayable, '
+    + 'and nothing has been authored to fake them. THE RED EAR PATCH IS HALF-ANSWERED '
+    + 'and you should look at it: the badger found that no card in this bank IS a '
+    + 'stripe and that is still true, but a slider\'s mark is a 0.25 patch rather than a '
+    + '0.6 run, so it is `plate-10` — the cow\'s flank card — thinned on one axis to '
+    + '4.15:1, sat at the eye\'s own recorded height on the pack\'s own card shell, with '
+    + 'a pale one above it for the border. It is a red mark behind the eye in the right '
+    + 'place at the right size; it is not the streak that fades back along the neck, '
+    + 'because there is no neck surface to fade along. THREE PARTS ARE STANDING IN FOR '
+    + 'ANATOMY THE BANK DOES NOT HAVE, and they are the ones to look at first: the NECK '
+    + 'is the elephant\'s trunk `box-18` worn FORWARDS, unspun, which is the same shape '
+    + 'the Garden tortoise wears spun 180 as a stub tail; the SHELL is the '
+    + 'caterpillar\'s body-segment `box-11` laid flat, the only band in the bank that is '
+    + 'an ellipse rather than a square and the only one small enough not to be a second '
+    + 'mass; and the TAIL is the bee\'s ear-spike `cone-01` turned to point backwards. '
+    + 'The crab\'s flat hull `box-13` was refused by arithmetic, as it was for the '
+    + 'tortoise: 0.450556 tall plus a 0.30625 leg is 0.756806 against a floor of 1.43.',
 })

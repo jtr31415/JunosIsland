@@ -62,17 +62,25 @@ const BASE_BUILT = builtIn('base')
 const GARDEN_BUILT = builtIn('garden')
 
 /**
- * FOUR PAGES, and every one of them has to have something built in it.
+ * FOUR PAGES, and every one of them has to have something on it.
  *
- * This used to end in `birds`, which is 0 built of 18 and so is no longer a page
- * at all — a four-album fixture that quietly laid out three, taking every dot,
- * arrow-edge and page-turn assertion below off by one. `night-time` is the
- * replacement because it is the opposite case and worth exercising: 13 built of
- * 16 rostered, so it is a real page that is nonetheless smaller than its
- * collection. Shared with the heading test above, so there is one place to change
- * when Joe finishes a set.
+ * This used to end in `birds`, which is 0 built of 18 and so was not a page at
+ * all — a four-album fixture that quietly laid out three, taking every dot,
+ * arrow-edge and page-turn assertion below off by one. `night-time` replaced it.
+ *
+ * >>> 4 AUGUST: `night-time` went the same way as `birds`. The album filters on
+ * >>> RELEASED now (Joe: *"only ... the animals that have successfully pushed"*)
+ * >>> and Night Time is built but unpushed from end to end, so it is not a page
+ * >>> either. There is no fourth COLLECTION left to reach for — base, garden and
+ * >>> home-pets are the whole book — so the fourth page is now the one the album
+ * >>> makes for itself: "More friends", the back page that catches a pet whose
+ * >>> species has no frame. `PAGERS` below is what puts it there.
+ * >>>
+ * >>> That is a better fixture than either of the collections it replaces: it
+ * >>> cannot rot when Joe pushes a set, because it is made of the album's own
+ * >>> behaviour rather than of whatever he happens to have finished.
  */
-const FOUR = ['base', 'garden', 'home-pets', 'night-time']
+const FOUR = ['base', 'garden', 'home-pets']
 
 const pet = (id: string, name: string, species: string): Pet =>
   ({ id, name, species, at: { q: 0, r: 0 } })
@@ -89,6 +97,16 @@ const STRANGER = pet('p4', 'Moth', 'animal-from-the-future')
  * this pet's album exists and its slot does not. See the orphans suite.
  */
 const ZEBRA = pet('p5', 'Pilm', 'animal-zebra')
+
+/**
+ * The pets that turn `FOUR`'s three collections into four PAGES.
+ *
+ * The fox has a frame on `base`; the zebra has none anywhere, so the album gives
+ * it the "More friends" back page — see `FOUR`. Every pager assertion below
+ * (dots, arrow edges, page turns) counts pages rather than collections, so this
+ * is the shortest honest way to have four of them.
+ */
+const PAGERS = [FOX, ZEBRA]
 
 function setup() {
   const root = document.createElement('div')
@@ -162,7 +180,7 @@ describe('a slot for every animal in the album', () => {
     // sixty-six slots down a single column, and three of the four counts were
     // off the bottom of the card.
     const { album, sections, headings, forward } = setup()
-    album.open([FOX], FOUR)
+    album.open(PAGERS, FOUR)
     expect(sections()).toHaveLength(1)
     expect(headings()[0]?.textContent)
       .toBe(`Base Set1 of ${BASE_BUILT.length}`)
@@ -199,7 +217,7 @@ describe('a slot for every animal in the album', () => {
 describe('turning the pages', () => {
   it('gives one dot per page and marks where they are', () => {
     const { album, dots, here, forward } = setup()
-    album.open([FOX], FOUR)
+    album.open(PAGERS, FOUR)
     expect(dots()).toHaveLength(4)
     expect(here()).toHaveLength(1)
     forward(2)
@@ -213,7 +231,7 @@ describe('turning the pages', () => {
      * it, so the forward arrow would slide under their finger on the last page.
      */
     const { album, back, on, forward } = setup()
-    album.open([FOX], FOUR)
+    album.open(PAGERS, FOUR)
     expect(back().disabled).toBe(true)
     expect(on().disabled).toBe(false)
     forward(3)
@@ -226,7 +244,7 @@ describe('turning the pages', () => {
 
   it('goes back to where it came from', () => {
     const { album, headings, back, forward } = setup()
-    album.open([FOX], FOUR)
+    album.open(PAGERS, FOUR)
     forward(2)
     const there = headings()[0]?.textContent
     forward()
@@ -243,9 +261,9 @@ describe('turning the pages', () => {
 
   it('opens on the first page every time, not where they left off', () => {
     const { album, headings, forward } = setup()
-    album.open([FOX], FOUR)
+    album.open(PAGERS, FOUR)
     forward(3)
-    album.open([FOX], FOUR)
+    album.open(PAGERS, FOUR)
     expect(headings()[0]?.textContent).toContain('Base Set')
   })
 
@@ -256,7 +274,7 @@ describe('turning the pages', () => {
      * every open. The base set is the only page in the DOM until they turn.
      */
     const { album, slots } = setup()
-    album.open([FOX], FOUR)
+    album.open(PAGERS, FOUR)
     expect(slots()).toHaveLength(BASE_BUILT.length)
   })
 })
@@ -325,17 +343,23 @@ describe('nobody they own is ever lost', () => {
 
   it('keeps a friend whose species no longer has a frame', () => {
     /*
-     * THE THIRD WAY IN, and the one Joe's 2 Aug ruling opened. Africa is an open
-     * page — the crocodile is built — so this is not the case above: the child's
-     * album IS listed and her friend still has no slot in it, because the zebra
-     * is one of the fifty-nine PB-036 deleted. Filtering the cells without also
-     * filtering `shown` would have dropped her silently, which is the one thing
-     * brief §19 forbids. She keeps her name, her portrait and her pop-out; she
-     * just keeps them on the page at the back.
+     * THE THIRD WAY IN, and the one Joe's 2 Aug ruling opened. The album IS
+     * listed and her friend still has no slot in it. Filtering the cells without
+     * also filtering `shown` would have dropped her silently, which is the one
+     * thing brief §19 forbids. She keeps her name, her portrait and her pop-out;
+     * she just keeps them on the page at the back.
+     *
+     * >>> The example moved on 4 August. It was the ZEBRA on Africa — an open
+     * >>> page because the crocodile was built. Africa is not a page at all now
+     * >>> (built, unpushed), so the case is made with HOME PETS and the RAT:
+     * >>> fifteen of its sixteen are pushed and the rat is not, so here is a page
+     * >>> that exists with a friend on it that has no frame. Same shape, same
+     * >>> guard, and it is the live case rather than a historical one.
      */
+    const RAT = pet('p6', 'Pilm', 'animal-rat')
     const { album, sections, owned, dots, forward } = setup()
-    album.open([ZEBRA], ['africa'])
-    expect(dots(), 'the crocodile page, and one for her').toHaveLength(2)
+    album.open([RAT], ['home-pets'])
+    expect(dots(), 'the home-pets page, and one for her').toHaveLength(2)
     forward()
     expect(sections()[0]?.textContent).toContain('More friends')
     expect(owned().map(c => c.textContent)).toContain('Pilm')

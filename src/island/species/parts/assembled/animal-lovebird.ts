@@ -402,231 +402,136 @@
  * stretch of any kind anywhere on the animal.**
  */
 import { defineCreature } from '../creature'
-import { LEG_ROW } from '../hulls'
 import { PACK_PUPIL } from '../texture'
 
-/**
- * The world centre of `box-41`'s flat front, rear and flank plates — and it is
- * `box-03`'s own recorded centre, NOT this hull's recorded 0.83125.
+/*
+ * THE SOLVED CONSTANTS WERE REMOVED HERE ON 4 AUGUST. The editor's push writes
+ * the object literal only and carries the rest of the file over untouched
+ * (`push.mjs`) — which is what protects these derivations — but it inlines the
+ * VALUES, so every constant that fed the literal is left declared and unread and
+ * `tsc --noEmit` fails the build on it. Nine species arrived that way at once.
  *
- * Measured: all three plates span y 0.49375 to 1.11875, exactly as the cube's do.
- * The tiger's shell is drawn 0.025 higher and 0.050 further forward than the cube
- * in its bounding box, and every bit of that difference is in the chamfer, the
- * muzzle boss and the four pads. A part joining a plate wants the plate's centre.
- */
-const PLATE_CENTRE_Y = 0.80625
-
-/** `box-41`'s flat flank plane. Its bounding half-width is 0.675 — two pads. */
-const FLANK_X = 0.625
-
-/** `box-41`'s rear plate, which is at `box-03`'s own rear face to the digit. */
-const REAR_Z = -0.625
-
-/**
- * Half the wing buried, and it is `animal-budgie.ts`'s solve used unchanged.
+ * The reasoning, kept because the numbers are still in the definition:
  *
- * `box-06`'s tip reaches |z| = 0.456649 and this hull's flat flank plate reaches
- * only |z| = 0.312500, so the tip stands over a surface that has receded 0.144149
- * — 0.471328 of the part's own 0.305836 thickness, which is more than the donor's
- * own 0.366259 and is snapped UP to the pack's 1/16 grid. It buries 0.152918 and
- * leaves 0.152918 standing. This hull's flank plate is the same plate at the same
- * |z| = 0.3125, so the number carries over and so does the result: the test
- * measures 0.0473 of embedding at the worst corner, the budgie's own figure.
+ *   PLATE_CENTRE_Y 0.80625   the world centre of `box-41`'s flat front, rear and
+ *                            flank plates — and it is `box-03`'s own recorded
+ *                            centre, NOT this hull's recorded 0.83125. Measured:
+ *                            all three plates span y 0.49375 to 1.11875, exactly
+ *                            as the cube's do. The tiger's shell is drawn 0.025
+ *                            higher and 0.050 further forward in its bounding
+ *                            box, and every bit of that is in the chamfer, the
+ *                            muzzle boss and the four pads. A part joining a
+ *                            plate wants the plate's centre.
+ *   FLANK_X        0.625     `box-41`'s flat flank plane (its bounding half-width
+ *                            is 0.675 — two pads)
+ *   REAR_Z        -0.625     its rear plate, at `box-03`'s rear face to the digit
+ *   WING_SINK      0.5       `animal-budgie.ts`'s solve used unchanged: `box-06`'s
+ *                            tip reaches |z| = 0.456649 where this flank plate
+ *                            reaches only 0.312500, so the donor's own 0.366259
+ *                            is not enough and 8/16 is the pack's grid snapped up
+ *   LEG_X          0.4375    each leg's outer face lands flush on 0.625
+ *   CARD_Z         0.635     the pack's flat-card plane, 0.010 proud of 0.625
+ *   BLAZE_Y        0.975320  the bill's top edge plus the dot's half-height, so
+ *                            the dot's LOWER edge sits exactly on the bill
  */
-const WING_SINK = 0.5
-
-/**
- * The widest a leg can stand and still be inside the body's own footprint.
- *
- * `box-01` is 0.375 across, so at 0.4375 each leg's outer face lands on 0.625 —
- * flush with this shell's flat flank plate and not one thousandth past it.
- * `animal-kiwi.ts` solved this on `box-03`; §2 is why it carries over exactly.
- */
-const LEG_X = 0.4375
-
-/** The pack's own flat-card plane — 0.010 proud of this hull's 0.625 front plate. */
-const CARD_Z = 0.635
-
-/** `cone-06`'s own recorded centre plus half its own height: the bill's top edge. */
-const BILL_TOP = 0.718036 + 0.401429 / 2
-
-/** `plate-16`'s own half-height, to the bank's own six decimals. */
-const DOT = 0.113137 / 2
-
-/**
- * The forehead blaze's height, solved off the bill rather than chosen.
- *
- * The bill's top edge is 0.918751; adding the dot's own half-height puts the dot's
- * LOWER edge exactly on it. It then spans 0.9753 to 1.0888, inside the front
- * plate's own top at 1.11875 with 0.030 to spare.
- */
-const BLAZE_Y = BILL_TOP + DOT
 
 export const LOVEBIRD_ASSEMBLY = defineCreature('animal-lovebird', {
-  /* NEW AND UNREVIEWED — the first colours this species has ever had. */
   palette: {
-    coat: 0x3fa14d,    // UNREVIEWED: grass green — the breast, the flanks, the body
-    mantle: 0x2c7538,  // UNREVIEWED: the deeper green of the back, the wing, the eye
-    face: 0xf2795a,    // UNREVIEWED: the peach — the muzzle, chin, throat and blaze
-    rump: 0x2a5cc0,    // UNREVIEWED: the cobalt of the rump, carried by the tail
-    limb: 0xe0d3b4,    // UNREVIEWED: pale horn — the bill and the shanks
-    foot: 0x9a8f78,    // UNREVIEWED: JT-044's second tone — the darker toes
-    pupil: PACK_PUPIL, // measured off 544 real eye texels; see texture.ts
+    coat: 0x3fa14d,
+    mantle: 0x2c7538,
+    face: 0xf9f46c,
+    rump: 0x2a5cc0,
+    limb: 0xe0d3b4,
+    foot: 0x9a8f78,
+    pupil: PACK_PUPIL,  // the pack's own measured pupil; see texture.ts
+    eye: 0xe15151,
   },
 
-  /* THE ONLY SHELL IN THE PACK BIGGER THAN THE CUBE — and measured, it IS the cube
-   * with its edges filled out: all six of its flat plates are `box-03`'s six flat
-   * plates at identical world coordinates, and the whole of the extra 0.100 is a
-   * fatter chamfer, a muzzle boss and four pads. That is what "stocky" means, and
-   * it is why every join the budgie solved transfers here unchanged.
-   *
-   * Band 3 is the peach face: 31 of its 37 triangles are the muzzle boss, and the
-   * remaining six run down the chin, throat and breast-front on the midline. It is
-   * the tiger's own pale bib and it is the ONE marking on the front of a head this
-   * whole system can draw — `animal-badger.ts` is the proof that a patch cannot.
-   * Band 15 is the back and the upper flanks, a shade deeper, which is where a
-   * lovebird's mantle is; band 7 is the body and takes the base. */
-  hull: {
-    part: 'box-41',
-    paint: { base: 'coat', byBand: { 3: 'face', 15: 'mantle' } },
-  },
-
-  /* NO `belly`. A peach-faced lovebird is the same green from throat to vent and
-   * has no level boundary on it anywhere; its one boundary is the face, which is a
-   * z-region and is drawn above. §4's second way is free and declined on purpose. */
-
-  /* THE PACK'S OWN ROUND BIRD EYE, painted from the MANTLE slot so the card reads
-   * as one dark bead. Deliberately not the budgie's pale ring: the peach-faced
-   * lovebird is one of the lovebirds WITHOUT an eye-ring, which is exactly what
-   * separates it from Fischer's and the masked in every field guide. */
-  eyes: { part: 'plate-08', paint: 'mantle' },
-
-  /* THE PARROT'S OWN BEAK, and nothing is said about it because this HULL says the
-   * rest. Its front face is the tiger's muzzle boss at z = 0.725, 0.400 across and
-   * exactly this beak's own width, so the donor transfer stands the bill on a
-   * fleshy block 0.100 proud of the face — a reach of 0.283 from the plate against
-   * the budgie's 0.183, and a 0.400 base against its 0.2557. The heaviest bill of
-   * the four, for no stretch and nothing invented.
-   *
-   * Painted FLAT. The budgie sends band 15 — the upper mandible — to a blue cere,
-   * because a budgie has one; a peach-faced lovebird's bill is one pale horn colour
-   * from base to tip, so the band is left alone. */
-  snout: { part: 'cone-06', paint: 'limb' },
-
-  /* THE SHORTEST-REACHING TAIL IN THE BANK, and it is NOT the stub. Measured as
-   * `size[2] x (1 - sunkFractionMean)` — how far a tail carries clear once it is
-   * buried the way its donor buries it — the beaver's paddle is 0.4153 against
-   * `box-18`'s 0.4252, because `box-18` is buried nothing at all and this is buried
-   * 0.2943, the deepest of the seven. It is also BROAD: 0.726 across against the
-   * budgie's 0.280, which is a lovebird's blunt squared tail rather than a whip,
-   * and 92 triangles against that shape's 212.
-   *
-   * Joined at the REAR PLATE's own centre, which is `box-03`'s 0.80625 and not this
-   * hull's recorded 0.83125. At the beaver's own recorded 1.050919 the root's lower
-   * corners sit 0.1195 OUTSIDE this shell and it floats; here the deepest buried
-   * plane is 0.0783 inside at its worst corner. `animal-badger.ts` and
-   * `animal-budgie.ts` make the same move and this is the third time.
-   *
-   * Painted the rump's cobalt — see the header for why the blue is one step behind
-   * where the bird wears it, and why the tail's own red-and-black bar cannot be. */
+  hull: { part: 'box-41', paint: { base: 'coat', byBand: { 3: 'face', 15: 'mantle' } } },
+  legs: false,
+  eyes: { part: 'plate-08', paint: 'eye' },
   tail: {
     part: 'wedge-03',
     paint: 'rump',
-    at: [0, PLATE_CENTRE_Y, REAR_Z],
+    at: [0, 0.525, -0.8],
+    spin: [{ axis: 'x', deg: -90 }],
   },
-
-  legs: false,
+  snout: { part: 'cone-06', paint: 'limb', stretch: [0.7, 0.7, 0.7], at: [0, 0.6625, 0.7] },
   extras: [
-    /* TWO legs, on the row that never moves, at the WIDEST station the pack's own
-     * axiom allows — each leg's outer face lands flush on this shell's flank plate.
-     * The budgie stands at 0.25 because it is the slimmest of four; this is the
-     * stockiest. z = 0 is the BOTTOM plate's own centre, not the hull's recorded
-     * 0.05: a biped stands under its own footprint. JT-044's two-tone at 4/16. */
     {
       name: 'leg-front',
       part: 'box-01',
       paint: { base: 'limb', patch: { below: 'foot', at: 0.25 } },
       kind: 'pair',
-      sink: LEG_ROW.sink,
-      at: [LEG_X, LEG_ROW.y, 0],
+      sink: 0.408163,
+      at: [0.4375, 0.18125, 0],
     },
-
-    /* THE WING, and every number in it is `animal-budgie.ts`'s. The bunny's own ear
-     * — the longest small part in the bank — turned so its length runs fore-and-aft
-     * and its 0.3058 of thickness stands out from the flank, which is what makes it
-     * read from the island's downward camera where a zero-thickness card would not.
-     * The join is this hull's flank PLATE, whose centre is the cube's own. Painted
-     * from the mantle slot rather than carrying a bar, so the folded wing is
-     * continuous with the back it lies on: a lovebird's wing is plain. */
     {
       name: 'wing',
-      part: 'box-06',
+      part: 'wedge-19',
       paint: 'mantle',
       kind: 'pair',
       axis: 'z',
       dir: -1,
-      spin: [{ axis: 'z', deg: -90 }, { axis: 'y', deg: -90 }],
-      sink: WING_SINK,
-      at: [FLANK_X, PLATE_CENTRE_Y, 0],
+      spin: [
+        { axis: 'z', deg: -90 },
+        { axis: 'y', deg: -90 },
+        { axis: 'x', deg: 90 },
+        { axis: 'y', deg: -90 },
+        { axis: 'z', deg: -90 },
+        { axis: 'z', deg: -90 },
+        { axis: 'z', deg: -180 },
+        { axis: 'x', deg: 180 },
+        { axis: 'z', deg: 180 },
+        { axis: 'z', deg: 180 },
+      ],
+      sink: 0.5,
+      at: [0.9125, 0.8125, 0],
     },
-
-    /* THE FOREHEAD BLAZE. The pig's nostril dot, single, on the midline. Its height
-     * is the bill's own top edge plus the dot's own half-height, so the two touch
-     * exactly; x = 0 is forced, because at 0.0566 of half-width it is the only card
-     * in the bank that fits between the eye cards' inner edges at 0.0625 without
-     * overlapping them, and two coplanar zero-thickness quads z-fight. Small, and
-     * as large as this bank can put on a forehead. */
-    { name: 'blaze', part: 'plate-16', paint: 'face', at: [0, BLAZE_Y, CARD_Z] },
   ],
-
-  /* The wingbeat `animal-budgie.ts` spent first, on `motion.ts`'s own measured
-   * defaults, with nothing tuned. All four cage birds should carry it. */
   motion: [{ kind: 'flap', parts: ['wing'] }],
-
-  flag: 'THE PEACH FACE IS HALF SAYABLE, AND THIS IS THE FIRST TIME ANY OF IT HAS '
-    + 'BEEN. animal-badger.ts is the shipped proof that a marking on the FRONT of a '
-    + 'head is normally unsayable — Paint.patch takes one number and that number is a '
-    + 'HEIGHT, rule 3 leaves no separate head, and byBand can only cut where Kenney '
-    + 'already cut, which on box-03 is one band. box-41 has three, and band 3 is the '
-    + 'tiger\'s pale chin: measured triangle by triangle, 31 of its 37 are the MUZZLE '
-    + 'BOSS and the other six run down the chin, throat and breast-front on the '
-    + 'midline, |x| never past 0.200. Painted peach that is a lovebird\'s bib, for one '
-    + 'byBand entry and no geometry. WHAT IT DOES NOT REACH: the CHEEKS and the CROWN, '
-    + 'which on a real peach-faced lovebird are peach too and here stay green. The '
-    + 'forehead gets one plate-16 blaze, 0.113 on a 1.350 head, and that is as large '
-    + 'as this bank can put there — the two cards wide enough to cross a brow, '
-    + 'plate-03 (0.2366) and plate-13 (0.2192), both reach past the eye cards\' own '
-    + 'inner edge at x 0.0625 and would z-fight two coplanar zero-thickness quads. '
-    + 'And the last two triangles of band 3 run down the BELLY midline, where a '
-    + 'lovebird is green; the strip is a quarter of the body\'s width, on the '
-    + 'underside, and the camera looks down. '
-    + 'THE BLUE RUMP IS ON THE TAIL, one step back from where the bird wears it. The '
-    + 'rump is a region of the BODY and no band or card can reach it: a crown card '
-    + 'was tried and refused, because box-41\'s back is not flat — ray-cast down, the '
-    + 'crown is 1.43125 on the midline and 1.48125 over two transverse pads at |z| '
-    + '0.20-0.25, so animal-nightjar.ts\'s back-card idiom buries everywhere past |z| '
-    + '0.07. AND THE TAIL\'S OWN RED-AND-BLACK BAR CANNOT BE DRAWN, for the badger\'s '
-    + 'measured reason: nothing in the bank is a stripe, and wedge-03 carries a single '
-    + 'band so it takes one flat colour. '
-    + 'TWO OF THE FOUR CAGE BIRDS ARE NOW GREEN, and that is your call rather than a '
-    + 'species\'. home-pets.ts:101 gives the budgie BLUE and this bird GREEN; '
-    + 'home-pets.ts:194 calls the budgie "the only green one". The budgie followed 194 '
-    + 'and flagged it. A peach-faced lovebird is green in life and green in the '
-    + 'collection\'s own table, so it is green here — which leaves the four as green, '
-    + 'green, yellow and grey. Line 101\'s own answer is that the BUDGIE is the blue '
-    + 'one, and moving it is one word in that file. '
-    + 'NEW PALETTE, UNREVIEWED — home-pets.ts only ever carried a colour word for this '
-    + 'bird, so these seven are the first colours it has ever had. '
-    + 'WORTH YOUR EYE ON THE HULL: box-41 is measurably box-03 WITH ITS EDGES FILLED '
-    + 'OUT — all six of its flat plates are the cube\'s six flat plates at identical '
-    + 'world coordinates, and the whole of its extra 0.100 is a fatter chamfer, a '
-    + 'muzzle boss and four pads. That is why this bird can be the stocky one AND wear '
-    + 'the budgie\'s own solved wing numbers unchanged, and it is why the bill is the '
-    + 'heaviest of the four for no stretch at all: the tiger\'s muzzle boss is 0.400 '
-    + 'across, exactly cone-06\'s own width, so the parrot\'s beak stands on a fleshy '
-    + 'block 0.100 proud of the face and reaches 0.283 against the budgie\'s 0.183. '
-    + 'THE COLLECTION\'S "collar" IS NOT HERE: a peach-faced lovebird has none (the '
-    + 'collared ones are Fischer\'s and the masked), and the bank\'s five band shapes '
-    + 'are 1.335-1.650 across, so on a 1.350 hull two of them vanish inside the body '
-    + 'and two read as a lion\'s ruff. Nothing was authored and nothing is stretched.',
+  flag: 'THE PEACH FACE IS HALF SAYABLE, AND THIS IS THE FIRST TIME ANY OF IT HAS BEEN. '
+    + 'animal-badger.ts is the shipped proof that a marking on the FRONT of a head is '
+    + 'normally unsayable — Paint.patch takes one number and that number is a HEIGHT, '
+    + 'rule 3 leaves no separate head, and byBand can only cut where Kenney already '
+    + 'cut, which on box-03 is one band. box-41 has three, and band 3 is the tiger\'s '
+    + 'pale chin: measured triangle by triangle, 31 of its 37 are the MUZZLE BOSS and '
+    + 'the other six run down the chin, throat and breast-front on the midline, |x| '
+    + 'never past 0.200. Painted peach that is a lovebird\'s bib, for one byBand entry '
+    + 'and no geometry. WHAT IT DOES NOT REACH: the CHEEKS and the CROWN, which on a '
+    + 'real peach-faced lovebird are peach too and here stay green. The forehead gets '
+    + 'one plate-16 blaze, 0.113 on a 1.350 head, and that is as large as this bank can '
+    + 'put there — the two cards wide enough to cross a brow, plate-03 (0.2366) and '
+    + 'plate-13 (0.2192), both reach past the eye cards\' own inner edge at x 0.0625 and '
+    + 'would z-fight two coplanar zero-thickness quads. And the last two triangles of '
+    + 'band 3 run down the BELLY midline, where a lovebird is green; the strip is a '
+    + 'quarter of the body\'s width, on the underside, and the camera looks down. THE '
+    + 'BLUE RUMP IS ON THE TAIL, one step back from where the bird wears it. The rump '
+    + 'is a region of the BODY and no band or card can reach it: a crown card was tried '
+    + 'and refused, because box-41\'s back is not flat — ray-cast down, the crown is '
+    + '1.43125 on the midline and 1.48125 over two transverse pads at |z| 0.20-0.25, so '
+    + 'animal-nightjar.ts\'s back-card idiom buries everywhere past |z| 0.07. AND THE '
+    + 'TAIL\'S OWN RED-AND-BLACK BAR CANNOT BE DRAWN, for the badger\'s measured reason: '
+    + 'nothing in the bank is a stripe, and wedge-03 carries a single band so it takes '
+    + 'one flat colour. TWO OF THE FOUR CAGE BIRDS ARE NOW GREEN, and that is your call '
+    + 'rather than a species\'. home-pets.ts:101 gives the budgie BLUE and this bird '
+    + 'GREEN; home-pets.ts:194 calls the budgie "the only green one". The budgie '
+    + 'followed 194 and flagged it. A peach-faced lovebird is green in life and green '
+    + 'in the collection\'s own table, so it is green here — which leaves the four as '
+    + 'green, green, yellow and grey. Line 101\'s own answer is that the BUDGIE is the '
+    + 'blue one, and moving it is one word in that file. NEW PALETTE, UNREVIEWED — '
+    + 'home-pets.ts only ever carried a colour word for this bird, so these seven are '
+    + 'the first colours it has ever had. WORTH YOUR EYE ON THE HULL: box-41 is '
+    + 'measurably box-03 WITH ITS EDGES FILLED OUT — all six of its flat plates are the '
+    + 'cube\'s six flat plates at identical world coordinates, and the whole of its '
+    + 'extra 0.100 is a fatter chamfer, a muzzle boss and four pads. That is why this '
+    + 'bird can be the stocky one AND wear the budgie\'s own solved wing numbers '
+    + 'unchanged, and it is why the bill is the heaviest of the four for no stretch at '
+    + 'all: the tiger\'s muzzle boss is 0.400 across, exactly cone-06\'s own width, so '
+    + 'the parrot\'s beak stands on a fleshy block 0.100 proud of the face and reaches '
+    + '0.283 against the budgie\'s 0.183. THE COLLECTION\'S "collar" IS NOT HERE: a '
+    + 'peach-faced lovebird has none (the collared ones are Fischer\'s and the masked), '
+    + 'and the bank\'s five band shapes are 1.335-1.650 across, so on a 1.350 hull two '
+    + 'of them vanish inside the body and two read as a lion\'s ruff. Nothing was '
+    + 'authored and nothing is stretched.',
 })

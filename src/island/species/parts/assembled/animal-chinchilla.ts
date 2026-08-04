@@ -235,49 +235,17 @@ import { PACK_PUPIL } from '../texture'
 
 export const CHINCHILLA_ASSEMBLY = defineCreature('animal-chinchilla', {
   palette: {
-    coat: 0x8d949c,    // UNREVIEWED: standard-chinchilla blue-grey, the plush back
-    belly: 0xf3f1ec,   // UNREVIEWED: the white underside, the muzzle, the eye's glint
-    inner: 0xb28f8f,   // UNREVIEWED: the ear's own inner disc — thin bare skin
-    limb: 0x5b6068,    // UNREVIEWED: legs, the bushy tail and the nose, a shade under
-    pupil: PACK_PUPIL, // measured off 544 real eye texels; see texture.ts
+    coat: 0x8d949c,
+    belly: 0xf3f1ec,
+    inner: 0xb28f8f,
+    limb: 0x5b6068,
+    pupil: PACK_PUPIL,  // the pack's own measured pupil; see texture.ts
   },
 
-  /* The tiger's mammal line made exact: slate above, white below, no geometry. */
   belly: 0.5,
-
-  /* THE ANIMAL, AND THE COLLECTION'S SEPARATION. The koala's dish — the bank's
-   * biggest ear by volume (0.192, 1.43x the bunny's upright) and the only LARGE
-   * round one: radial, taper 1.000, x and y equal to six decimals, 0.594 of this
-   * hull's whole width. One of only two side-mounted ear shapes in the bank, so
-   * the transfer joins at this cube's side face x = 0.625 and recovers the koala's
-   * own recorded 0.600000. NOT stretched and NOT to be trimmed — see the header.
-   * Band 1 is Kenney's own inner disc, two-tone for free. */
-  ears: { part: 'box-25', paint: { base: 'coat', byBand: { 1: 'inner' } } },
-
-  /* The panda's card, the biggest eye in the pack, and its bands are INVERTED
-   * against the default's: band 15, which the builder always paints PACK_PUPIL, is
-   * the 40-triangle region spanning the whole card. So this builds an almost
-   * entirely dark eye with one pale glint — a crepuscular rodent's eye, for no
-   * geometry. The derivation is `animal-fennec-fox.ts`'s. */
   eyes: { part: 'plate-14' },
-
-  /* The beaver's — the pack's one rodent's — and the shortest-reaching of the
-   * three THICK tails: 0.589 against the fox brush's 0.910, 0.368 of volume
-   * against its 0.616. A pure donor transfer on the beaver's own hull, which
-   * recovers z = -0.746061 and brings the beaver's own y = 1.050919 with it: the
-   * crown lands 0.051 above the back, a bushy tail carried UP. `box-23` is refused
-   * in the header — it would out-read the ears, which nothing here may do. */
+  ears: { part: 'box-25', paint: { base: 'coat', byBand: { 1: 'inner' } } },
   tail: { part: 'wedge-03', paint: 'limb' },
-
-  /* The giraffe's, unspent: the broad end of the muzzle family, 0.532 across and
-   * sunk its own 0.375940 so it stands only 0.166 proud — a wide blunt whisker pad
-   * rather than a projecting snout, which is what separates this face from the
-   * beaver's little barrel every other rodent in the game wears. Pale, because a
-   * chinchilla's muzzle and chin are its belly's white. */
   snout: { part: 'tube-07', paint: 'belly' },
-
-  /* The beaver's own nose on the muzzle's own placed front plane. Not `wedge-10`,
-   * which is the better nose tip on every measured axis and reads as a tongue —
-   * Joe rejected that one by name on the hedgehog. */
   nose: { part: 'blade-01', paint: 'limb' },
 })

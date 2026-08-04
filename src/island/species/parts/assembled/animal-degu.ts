@@ -196,69 +196,53 @@ import { PACK_PUPIL } from '../texture'
 
 export const DEGU_ASSEMBLY = defineCreature('animal-degu', {
   palette: {
-    coat: 0x857f70,    // proposed coat: COOL grey-brown — the gerbil owns the warm sandy
-    belly: 0xe3d8bf,   // proposed belly: the cream underside and the pale muzzle
-    ring: 0xf7f2e6,    // proposed detail: the eye's pale field — paler than the belly, on purpose
-    limb: 0x564f44,    // proposed accent: the legs and the lugs' own inner-ear cut
-    brush: 0x27231f,   // proposed accent: the tail brush and the nose button
-    tooth: 0xd6a94e,   // proposed detail: a degu's incisors are orange-yellow, and only its
-    pupil: PACK_PUPIL, // measured off 544 real eye texels; see texture.ts
+    coat: 0x857f70,
+    belly: 0xe3d8bf,
+    ring: 0xf7f2e6,
+    limb: 0xaaa59d,
+    brush: 0x27231f,
+    tooth: 0xd6a94e,
+    pupil: PACK_PUPIL,  // the pack's own measured pupil; see texture.ts
+    hull: 0x4f4a40,
   },
 
-  /* The cow's and the deer's shell — the WIDEST the pack drew, 1.539484, and the
-   * whole of this animal's stockiness. Its extra width is two fused EAR LUGS on a
-   * 1.250 cube torso (the badger measured it), so those lugs ARE the rounded ears
-   * and there is no ear feature. Band 5 is Kenney's own inner-ear cut on them. */
-  hull: { part: 'box-12', paint: { base: 'coat', byBand: { 5: 'limb' } } },
-
-  /* The tiger's mammal belly line, made exact: grey-brown above, cream below. */
+  hull: { part: 'box-03', paint: { base: 'hull', byBand: { 5: 'limb' } }, at: [0, 0.8125, 0] },
   belly: 0.5,
-
-  /* THE ANIMAL, half one. The parrot's tail worn as a BRUSH — one of the bank's
-   * three thick tails (0.6259 thinnest, taper 0.8391) against the gerbil's slim
-   * shaft, and a pure donor transfer: the parrot's own y on a hull whose centre
-   * is the same 0.80625, its own 0.269738 burial, no spin. NOT `wedge-15`, the
-   * lion's tufted whip — that is the gerbil's assigned tail and 212 triangles. */
-  tail: { part: 'box-38', paint: 'brush' },
-
-  /* THE ANIMAL, half two. The pack's one perfectly round card, 0.400 x 0.400,
-   * with its pale field on its OWN near-white slot so it reads as a ring round
-   * the pupil rather than as sclera. The panda's bigger card cannot do this: its
-   * outer 40 triangles are band 15, which the pupil rule paints grey. */
   eyes: { part: 'plate-08', paint: 'ring' },
-
-  /* The beaver's muzzle — the pack's one rodent's — a barrel that does not narrow,
-   * on the beaver's own numbers, painted pale. */
+  tail: { part: 'wedge-15', paint: 'brush' },
   snout: { part: 'tube-01', paint: 'belly' },
-
-  /* The bunny's dark button on the muzzle's own placed front plane. A BUTTON, and
-   * deliberately not `wedge-10`, which reads as a tongue. */
   nose: { part: 'box-09', paint: 'brush' },
-
   extras: [
-    /* The beaver's incisors at the beaver's own placement, in the one colour this
-     * animal owns outright: a degu's teeth are orange. */
     { part: 'wedge-01', name: 'incisor', kind: 'pair', paint: 'tooth' },
+    {
+      part: 'wedge-06',
+      name: 'wedge-06',
+      spin: [{ axis: 'y', deg: 90 }],
+      at: [0.3, 1.4375, 0.2625],
+      stretch: [1.45, 1.45, 1.45],
+      kind: 'pair',
+    },
   ],
-
   flag: 'THE PALE EYE-RING IS ONLY HALF-SAYABLE, and on a degu it is the field mark — a '
     + 'band of pale fur on the COAT around each eye. Colour is a texture lookup with no '
-    + 'positional information: `Paint.patch` takes one number and that number is a HEIGHT, '
-    + 'so it paints a level plane and cannot say "a ring here"; `byBand` can only cut where '
-    + 'Kenney already cut, and measured over the bank NO eye card carries a third band — '
-    + 'every one of the ten is sclera and pupil, and on the cat\'s it is pupil alone. A '
-    + 'backing card was measured and refused too: nothing in the bank is bigger than the '
-    + 'round eye card on both axes except the PANDA\'s card, which is an eye card held to '
-    + 'the same absolute z = 0.6350 (it would be coplanar and z-fight into invisibility) and '
-    + 'whose outer 40 of 57 triangles are band 15, which the pupil rule paints grey — it can '
-    + 'only ever draw a DARK ring. So what is here instead is the pack\'s one perfectly '
-    + 'round card, 0.400 x 0.400, its pale field on its own near-white slot, wrapping the '
-    + 'pupil on three sides: an eye with a pale surround rather than pale fur around the '
-    + 'eye. SECOND, THE TAIL IS DARK ALL THROUGH where a degu\'s brush is only its last '
-    + 'third — `box-38` carries ONE band over all 48 of its triangles, so there is no tip to '
-    + 'cut, and a separate tip part would take the gerbil\'s assigned separation in this same '
-    + 'collection. Worth your eye either way: this animal\'s ears are the HULL\'s own fused '
-    + 'lugs (0.1447 proud, 0.1767 tall), small on purpose, because the chinchilla beside it '
-    + 'wears the bank\'s biggest ear at 0.742676 and two big-eared rodents on one page is a '
-    + 'silhouette twin. Nothing was authored, nothing is stretched, and nothing is over budget.',
+    + 'positional information: `Paint.patch` takes one number and that number is a '
+    + 'HEIGHT, so it paints a level plane and cannot say "a ring here"; `byBand` can '
+    + 'only cut where Kenney already cut, and measured over the bank NO eye card '
+    + 'carries a third band — every one of the ten is sclera and pupil, and on the '
+    + 'cat\'s it is pupil alone. A backing card was measured and refused too: nothing in '
+    + 'the bank is bigger than the round eye card on both axes except the PANDA\'s card, '
+    + 'which is an eye card held to the same absolute z = 0.6350 (it would be coplanar '
+    + 'and z-fight into invisibility) and whose outer 40 of 57 triangles are band 15, '
+    + 'which the pupil rule paints grey — it can only ever draw a DARK ring. So what is '
+    + 'here instead is the pack\'s one perfectly round card, 0.400 x 0.400, its pale '
+    + 'field on its own near-white slot, wrapping the pupil on three sides: an eye with '
+    + 'a pale surround rather than pale fur around the eye. SECOND, THE TAIL IS DARK '
+    + 'ALL THROUGH where a degu\'s brush is only its last third — `box-38` carries ONE '
+    + 'band over all 48 of its triangles, so there is no tip to cut, and a separate tip '
+    + 'part would take the gerbil\'s assigned separation in this same collection. Worth '
+    + 'your eye either way: this animal\'s ears are the HULL\'s own fused lugs (0.1447 '
+    + 'proud, 0.1767 tall), small on purpose, because the chinchilla beside it wears '
+    + 'the bank\'s biggest ear at 0.742676 and two big-eared rodents on one page is a '
+    + 'silhouette twin. Nothing was authored, nothing is stretched, and nothing is over '
+    + 'budget.',
 })

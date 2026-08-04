@@ -50,6 +50,23 @@ for (const c of COLLECTIONS) BUILT[c.id] = builtIn(c.id).length
 const withAnimals = (): readonly string[] =>
   COLLECTIONS.map(c => c.id).filter(id => builtIn(id).length > 0)
 
+/**
+ * HOW MANY ALBUMS A FRESH ISLAND CAN ACTUALLY OPEN — the cap, or all there are.
+ *
+ * Joe, 1 August: *"4 albums always on show ... we need to keep motivation up."*
+ * `MAX_ACTIVE` is that four and it has not moved. What moved is the supply: on
+ * 4 August the album began filtering on RELEASED rather than built — *"i only
+ * want to see in the album the silhouette cards for the animals that have
+ * successfully pushed"* — and only three collections have anything pushed, so
+ * the cadence lays out three.
+ *
+ * Asked which ruling won, he took this one: *show three for now, it fills
+ * itself.* The cap is unchanged and the fourth album appears on its own the day
+ * he pushes a collection, so this is `min(cap, supply)` rather than a new number
+ * — and it needs no edit when he does push, which is the point of deriving it.
+ */
+const SEEDS = (): number => Math.min(MAX_ACTIVE, withAnimals().length)
+
 const pet = (species: string, n = 0): Pet =>
   ({ id: `${species}-${n}`, name: `friend ${n}`, species, at: { q: 0, r: 0 } })
 
@@ -80,9 +97,9 @@ describe('a fresh island', () => {
     // The first half of Joe's sentence. Under the cadence alone they would see
     // one album until they owned twenty of the twenty-four.
     const opened = advance([], NOTHING_OPENED, rng(), BUILT)
-    expect(opened.open).toHaveLength(MAX_ACTIVE)
+    expect(opened.open).toHaveLength(SEEDS())
     expect(opened.open[0]).toBe(BASE_COLLECTION)
-    expect(activeCount([], opened, BUILT)).toBe(MAX_ACTIVE)
+    expect(activeCount([], opened, BUILT)).toBe(SEEDS())
     // Nothing is finished on a fresh island, and the ratchet says so.
     expect(opened.completed).toEqual([])
   })
@@ -98,7 +115,7 @@ describe('a fresh island', () => {
     const known = new Set(COLLECTIONS.map(c => c.id))
     const opened = advance([], NOTHING_OPENED, rng(), BUILT)
     for (const id of opened.open) expect(known.has(id)).toBe(true)
-    expect(albumsToShow(opened)).toHaveLength(MAX_ACTIVE)
+    expect(albumsToShow(opened)).toHaveLength(SEEDS())
   })
 
   it('draws a different four for different children', () => {
@@ -144,17 +161,34 @@ describe('and then nothing, until they finish one', () => {
     const opened = advance([], NOTHING_OPENED, rng(), BUILT)
     const nearly = BASE.slice(0, BASE.length - 1)
     const after = advance(nearly, opened, rng(), BUILT)
-    expect(after.open).toHaveLength(MAX_ACTIVE)
+    expect(after.open).toHaveLength(SEEDS())
   })
 
   it('opens exactly one more when a collection is completed', () => {
-    const opened = advance([], NOTHING_OPENED, rng(), BUILT)
-    const after = advance(allOf(BASE_COLLECTION), opened, rng(), BUILT)
+    /*
+     * AGAINST A SYNTHETIC SUPPLY, and that is the point of the change.
+     *
+     * This used to run on `BUILT`, the live map, and assert `MAX_ACTIVE + 1`.
+     * Since 4 August the live map has only three collections with anything
+     * RELEASED in it, so all three are open from the start and finishing one
+     * cannot open a fourth — there is no fourth. The test would have been
+     * asserting the supply rather than the rule.
+     *
+     * `PLENTY` gives the cadence more collections than the cap so the RULE is
+     * what is measured: finish one, get one. It does not care what Joe has
+     * pushed, which is what makes it stop needing edits.
+     */
+    const PLENTY: Record<string, number> = { ...BUILT }
+    for (const c of COLLECTIONS) if (!PLENTY[c.id]) PLENTY[c.id] = 8
+
+    const opened = advance([], NOTHING_OPENED, rng(), PLENTY)
+    expect(opened.open).toHaveLength(MAX_ACTIVE)
+    const after = advance(allOf(BASE_COLLECTION), opened, rng(), PLENTY)
     expect(after.open).toHaveLength(MAX_ACTIVE + 1)
     // The finished one is still there — see `albumsToShow`. The child keeps
     // their trophy; it simply stops occupying a slot.
     expect(after.open).toContain(BASE_COLLECTION)
-    expect(activeCount(allOf(BASE_COLLECTION), after, BUILT)).toBe(MAX_ACTIVE)
+    expect(activeCount(allOf(BASE_COLLECTION), after, PLENTY)).toBe(MAX_ACTIVE)
     // And it is written into the permanent record on the way past, which is what
     // stops the slot being taken back the day Joe builds a twenty-fifth.
     expect(after.completed).toContain(BASE_COLLECTION)
@@ -226,8 +260,8 @@ describe('the save they are already carrying, with albums that were never worth 
     const after = advance(['animal-fox'], STUCK, rng(), BUILT)
     for (const id of ['ocean', 'ice', 'jungle']) expect(after.open).not.toContain(id)
     expect(after.open).toContain(BASE_COLLECTION)
-    expect(after.open).toHaveLength(MAX_ACTIVE)
-    expect(activeCount(['animal-fox'], after, BUILT)).toBe(MAX_ACTIVE)
+    expect(after.open).toHaveLength(SEEDS())
+    expect(activeCount(['animal-fox'], after, BUILT)).toBe(SEEDS())
     for (const id of after.open) expect(builtIn(id).length).toBeGreaterThan(0)
     /*
      * AND NONE OF THEM IS RECORDED AS FINISHED, which is the `built > 0` guard
@@ -262,15 +296,19 @@ describe('the save they are already carrying, with albums that were never worth 
     const after = advance(['animal-unicorn'], owning, rng(), BUILT)
     expect(after.open).toContain('legendary')
     /*
-     * FIVE ALBUMS, NOT FOUR, AND THAT CHANGED WITH JT-047. Legendary has no
-     * models, so it reads as 100% and does not occupy one of the four slots —
-     * the four live albums are drawn ALONGSIDE her unicorn's page rather than
-     * around it. Under the old roster-denominated maths it sat at 1/12 and ate a
-     * slot, which is exactly the wedge the arithmetic change removed. She keeps
-     * the page and loses nothing for having it.
+     * ONE MORE THAN THE LIVE ALBUMS, AND THAT CHANGED WITH JT-047. Legendary has
+     * no models, so it reads as 100% and does not occupy one of the slots — the
+     * live albums are drawn ALONGSIDE her unicorn's page rather than around it.
+     * Under the old roster-denominated maths it sat at 1/12 and ate a slot,
+     * which is exactly the wedge the arithmetic change removed. She keeps the
+     * page and loses nothing for having it.
+     *
+     * `SEEDS()` rather than `MAX_ACTIVE` since 4 August: the supply of RELEASED
+     * collections is three, below the cap of four, so three live albums are
+     * drawn and her legendary page makes the fourth entry.
      */
-    expect(after.open).toHaveLength(MAX_ACTIVE + 1)
-    expect(activeCount(['animal-unicorn'], after, BUILT)).toBe(MAX_ACTIVE)
+    expect(after.open).toHaveLength(SEEDS() + 1)
+    expect(activeCount(['animal-unicorn'], after, BUILT)).toBe(SEEDS())
     // And an album with nothing in it is never called finished. See the guard in
     // step 0.5: freeing a slot is a reading of the present, but the record is a
     // claim about her past.
@@ -310,7 +348,7 @@ describe('the save they are already carrying, with albums that were never worth 
       opened = advance(['animal-fox'], opened, rng(), BUILT)
       expect(activeCount(['animal-fox'], opened, BUILT)).toBeLessThanOrEqual(MAX_ACTIVE)
     }
-    expect(opened.open).toHaveLength(MAX_ACTIVE)
+    expect(opened.open).toHaveLength(SEEDS())
   })
 })
 
@@ -377,6 +415,6 @@ describe('through the save and back', () => {
     delete save.completedCollections
     const back = fromSave(save as unknown as Parameters<typeof fromSave>[0])
     expect(back.opened).toEqual(NOTHING_OPENED)
-    expect(advance([], back.opened, rng(), BUILT).open).toHaveLength(MAX_ACTIVE)
+    expect(advance([], back.opened, rng(), BUILT).open).toHaveLength(SEEDS())
   })
 })

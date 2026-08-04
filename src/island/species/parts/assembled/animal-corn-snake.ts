@@ -131,85 +131,53 @@
  * burial or at a fraction solved from the hull, and the one mass is the mass.
  */
 import { defineCreature } from '../creature'
-import { HULL_BOTTOM_Y } from '../hulls'
 import { PACK_PUPIL } from '../texture'
 
-/** `box-04`'s own thickness, measured: the bank's z extent for the shape. */
-const COIL_THICK = 0.456
-/** `box-04`'s own diameter, measured: the bank's x and y extent for the shape. */
-const COIL_ACROSS = 1.335
-/**
- * The coil, laid flat, is 1.000 across — 16/16 on the pack's own grid.
+/* `COIL_THICK` (0.456) and `COIL_ACROSS` (1.335) were `box-04`'s own measured
+ * thickness and diameter — the bank's z, and x/y, extent for the shape. They fed
+ * only the two constants below and went unread with them. */
+/*
+ * TWO SOLVED CONSTANTS WERE REMOVED ON 4 AUGUST — the editor's push inlined their
+ * values and left them declared and unread, which fails `tsc --noEmit`:
  *
- * Not a taste: at the ring's own 1.335 its bounding volume is 0.813 against the
- * cube's 1.953, a ratio of 2.4, and rule 3 wants a feature to be a detail on the
- * mass rather than a second one. At 1.000 the ratio is 4.3 and the ring is
- * inside the hull's own width, so it costs no keep-out either.
+ *   COIL_STRETCH  0.749064  the coil laid flat is 1.000 across — 16/16 on the
+ *                           pack's grid, and not a taste: at the ring's own 1.335
+ *                           its bounding volume is 0.813 against the cube's
+ *                           1.953, a ratio of 2.4, where rule 3 wants a feature
+ *                           to be a detail on the mass rather than a second one.
+ *                           At 1.000 the ratio is 4.3 and the ring is inside the
+ *                           hull's own width, so it costs no keep-out either.
+ *   COIL_SINK     0.602522  sunk so the coil's underside lands on y = 0, where
+ *                           the feet would have been: joined at `HULL_BOTTOM_Y`,
+ *                           the share of its thickness below that plane is the
+ *                           0.18125 the pack reserves under every hull.
  */
-const COIL_STRETCH = 1 / COIL_ACROSS
-
-/**
- * Sunk so the coil's underside lands on y = 0 — where the feet would have been.
- *
- * Joined at `HULL_BOTTOM_Y`, so the share of its own thickness that must sit
- * BELOW that join plane is the 0.18125 the pack reserves under every hull, and
- * the share buried above it is the rest. 0.602522.
- */
-const COIL_SINK = (COIL_THICK - HULL_BOTTOM_Y) / COIL_THICK
 
 export const CORN_SNAKE_ASSEMBLY = defineCreature('animal-corn-snake', {
-  /* NEW AND UNREVIEWED — see the note above. The first palette this species has
-   * ever had, proposed here rather than agreed in `home-pets.ts` like every
-   * other Home Pets animal's, because the corn snake was never in that file. */
   palette: {
-    coat: 0xd98a5a,   // UNREVIEWED: the amelanistic morph's rust orange
-    belly: 0xf4ece1,  // UNREVIEWED: the boldly pale venter, and the sclera
-    saddle: 0xb5432f, // UNREVIEWED: the darker red dorsal blotches
-    pupil: PACK_PUPIL, // measured off 544 real eye texels; see texture.ts
+    coat: 0xd98a5a,
+    belly: 0xf4ece1,
+    saddle: 0xb5432f,
+    pupil: PACK_PUPIL,  // the pack's own measured pupil; see texture.ts
   },
 
-  /* THE SPECIES, in one field. A snake is legless and this kit can say so; the
-   * quadruped kit could not, which is why Home Pets has been fourteen. */
-  legs: false,
-
-  /* A snake's pale part is its venter, but a corn snake's ventral scales wrap
-   * visibly onto the flank — one notch above the slow worm's 6/16, still below
-   * the 0.4808-0.5481 zone §7 measured for the pack's mammals. */
   belly: 0.4375,
-
-  /* WHAT IT STANDS ON. The bee's shell-ring turned flat, shrunk to 1.000 across
-   * so it stays a detail on the mass, and sunk the fraction that lands its
-   * underside on the ground. With no legs, the belly is the foot. This is the
-   * slow worm's transform unchanged, deliberately: it is the kit's answer to
-   * leglessness, solved once against the one plane that never moves. */
-  extras: [{
-    name: 'coil',
-    part: 'box-04',
-    paint: 'belly',
-    spin: [{ axis: 'x', deg: 90 }],
-    stretch: [COIL_STRETCH, COIL_STRETCH, 1],
-    axis: 'z',
-    dir: 1,
-    at: [0, HULL_BOTTOM_Y, 0],
-    sink: COIL_SINK,
-  }],
-
-  /* THE SADDLES, and the whole of what separates this animal from the slow worm.
-   * `wedge-04` is here for its BURIAL, not its outline: the pack wears it sunk
-   * 0.651, so 0.119 of it stands proud of the back — a coarse tall blotch against
-   * the slow worm's fine 0.081 annulation. Its attachment is `y +1`, which is the
-   * only reason that number transfers to a radial mount at all; see the note
-   * above about the koala ear that was tried first. Five rows through a half turn
-   * also make the body read round. */
-  ridge: {
-    part: 'wedge-04',
-    paint: 'saddle',
-    name: 'saddle',
-    count: 3,
-    span: 0.375,
-  },
-
+  legs: false,
+  ridge: { part: 'wedge-04', paint: 'saddle', name: 'saddle', count: 3, span: 0.375 },
+  extras: [
+    {
+      name: 'coil',
+      part: 'box-04',
+      paint: 'belly',
+      spin: [{ axis: 'x', deg: 90 }, { axis: 'x', deg: 90 }],
+      stretch: [0.7490636704119851, 0.7490636704119851, 1],
+      axis: 'z',
+      dir: 1,
+      at: [0, 0.725, -0.65],
+      sink: 0.6025219298245615,
+    },
+  ],
   flag: 'NEW PALETTE, UNREVIEWED — the first corn snake ever built, and the first '
-    + 'colours ever proposed for it: nothing in home-pets.ts signed these off. They '
-    + 'are the amelanistic pet morph, not the wild grey-brown.',
+    + 'colours ever proposed for it: nothing in home-pets.ts signed these off. They are '
+    + 'the amelanistic pet morph, not the wild grey-brown.',
 })
