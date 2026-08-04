@@ -594,6 +594,13 @@
       "detail": "The album was fixed to show a frame only for a species somebody has built (species/built.ts, one predicate). Three siblings were deliberately left alone. unlock.ts:292 completion() still divides by the roster, so Night Time is \"13 of 13\" in the album and 81% to the unlocker and the next collection never arrives — that one is a ruling, JT-047. unlock.ts's NOT_BUILT_YET is still a hand-written list where built.ts is now derivable, and it cannot import it because unlock.ts is deliberately three.js-free. Two headers are also stale: collections/africa.ts says \"ships PARTIAL, FOURTEEN of sixteen\" when it is one, and unlock.ts's fillToCap note says the pool is six collections wide when it is four.",
       "state": "done",
       "run": "64ca164"
+    },
+    {
+      "id": "PB-084",
+      "title": "INTRO-TEN's voiced lesson, held back after the big green dot shipped without it",
+      "detail": "The big dot is live: a counting box is floor(n/10) green tens plus the remainder as units, with a per-box key showing one green dot equals ten little ones (b9222ea, 5454a32). The LESSON is deliberately not built — lessons/intro-ten.opus, ~16s of Fred, with the SNAP beats runA.md:1006 specs, autoplaying once at the tens rung's debut and then joining the on-demand library behind save.ts's reserved onceFlags. Joe, 4 Aug: \"we are holding the lesson and just introduce the dot with a hint and key, but follow the lesson when we work on that\" — so the spec at runA.md:1006 is binding on whoever picks this up, and the clip has to be recorded before any of it can be wired.",
+      "state": "open",
+      "run": ""
     }
   ]
 }
