@@ -190,6 +190,7 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-pine-marten': 'land',
   'animal-pony': 'land',
   'animal-porcupine': 'land',
+  'animal-puffin': 'air',
   'animal-robin': 'air',
   'animal-salamander': 'land',
   'animal-seagull': 'air',

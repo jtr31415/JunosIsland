@@ -105,11 +105,11 @@ describe('the species registry', () => {
     // (PB-074) — sixteen of sixteen, every one hand-assembled. It is the first
     // collection to arrive complete in a single run since the kit route was
     // retired, and the second collection the parts route has closed.
-    // 110 SINCE 4 AUG. 100 of it is WOODLAND rebuilt on the parts route —
+    // 111 SINCE 4 AUG. 100 of it is WOODLAND rebuilt on the parts route —
     // the third collection the kit purge emptied and the last one still empty.
     // It arrives a few species at a time rather than whole, so this number and
     // the woodland line below move together and the two are the same fact.
-    expect(REGISTRY.size).toBe(110)
+    expect(REGISTRY.size).toBe(111)
     expect(shippedIn('base')).toHaveLength(24)
     expect(shippedIn('garden')).toHaveLength(14)      // COMPLETE — the slow worm is assembled
     expect(shippedIn('home-pets')).toHaveLength(16)   // COMPLETE — all 16 hand-assembled (PB-073)
@@ -117,7 +117,7 @@ describe('the species registry', () => {
     expect(shippedIn('africa')).toHaveLength(1)       // crocodile; 13 kit-built deleted
     expect(shippedIn('farm')).toHaveLength(16)        // COMPLETE — all 16 hand-assembled (PB-074)
     expect(shippedIn('night-time')).toHaveLength(13)  // 16 rostered; bat, sugar glider, scorpion
-    expect(shippedIn('birds')).toHaveLength(10)       // 18 rostered; see collections/birds.ts
+    expect(shippedIn('birds')).toHaveLength(11)       // 18 rostered; see collections/birds.ts
   })
 
   it('leaves 236 species rostered but unshipped, on purpose', () => {
@@ -159,7 +159,7 @@ describe('the species registry', () => {
     // galliform idiom animal-chicken.ts established out of the pack's own parts.
     const rostered = COLLECTIONS.flatMap(c => c.members)
     expect(rostered).toHaveLength(320)
-    expect(rostered.filter(id => !speciesRecord(id))).toHaveLength(210)
+    expect(rostered.filter(id => !speciesRecord(id))).toHaveLength(209)
   })
 
   it('has FOUR complete collections — garden, and home-pets, farm and woodland rebuilt properly', () => {

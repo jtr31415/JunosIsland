@@ -1061,6 +1061,18 @@
       "verdict": "",
       "replacement": "",
       "note": ""
+    },
+    {
+      "id": "natural/animal-puffin",
+      "setId": "natural",
+      "speciesId": "animal-puffin",
+      "species": "Puffin",
+      "collection": "birds",
+      "band": "short",
+      "name": "Gothlu",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
     }
   ],
   "retiredVerdicts": [

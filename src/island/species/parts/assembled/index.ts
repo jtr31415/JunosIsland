@@ -134,6 +134,7 @@ export { SEAGULL_ASSEMBLY } from './animal-seagull'
 export { WOODPECKER_ASSEMBLY } from './animal-woodpecker'
 export { KINGFISHER_ASSEMBLY } from './animal-kingfisher'
 export { DUCK_ASSEMBLY } from './animal-duck'
+export { PUFFIN_ASSEMBLY } from './animal-puffin'
 /* -- append the next species' line directly above this one -- */
 
 import { assembledBuilds } from './register'

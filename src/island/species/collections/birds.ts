@@ -26,21 +26,49 @@
  *     reaching 0.183 against `tube-02`'s 0.100. The four cage birds wear it. It
  *     is the bill for a bird that takes an insect or a seed.
  *
- * Between them they carry every PASSERINE on the list. What they cannot carry
- * is a spatulate bill (the duck), a spear (the heron, the stork), a pouch (the
- * pelican), a filter (the flamingo) or an outsized coloured hook (the toucan,
- * the puffin). Nothing in the bank is any of those, and §5 of
- * `docs/building-animals-from-parts.md` is explicit that we do not invent the
- * missing parts — a species that needs one goes through the escape clause or
- * waits for Joe to commission a shape.
+ * Between them they carry every PASSERINE on the list, and the puffin, which is
+ * the one bird here whose bill fails on nothing at all — see its own file for
+ * why it was surveyed out and then measured back in.
  *
- * **THE NECK IS THE OTHER WALL, and it is worse than the bill.** Rule 3 is one
- * mass: head and body are a single form and there is no seam at the neck on any
- * of the 24 originals. A swan, a heron, a stork and a flamingo are all NECK —
- * it is the first thing a child names them by — and there is no mechanism in
- * this method that puts one on an animal. A hull is never scaled
- * (`HullDef.stretch` is `never`), so it cannot even be faked by proportion.
- * Those four are the collection's hard core.
+ * **HOW FAR A NOSE STANDS PROUD, measured over the whole bank at each shape's
+ * own donor burial**, because "the bank has no long bill" is a number and not an
+ * opinion:
+ *
+ *       tube-03 / tube-06   0.2314    the deer's and the fox's muzzle
+ *       box-24              0.2000    the hog's nose pad
+ *       cone-06             0.1833    the parrot's point — the longest BILL
+ *       tube-02             0.1000    the chick's and the penguin's bar
+ *
+ * A heron's bill is about as long as its head, which on a 1.250 body is roughly
+ * 0.5, and a toucan's is a third of the whole bird, roughly 0.6. So the gap is
+ * 2.7x and 3.3x respectively, and it is a gap in LENGTH rather than in shape.
+ *
+ * **THE NECK IS NOT A WALL, AND THIS FILE SAID IT WAS.** The claim here used to
+ * be that rule 3 makes a neck unbuildable — head and body are one mass, no seam
+ * at the neck on any of the 24 — and that is true of the HULL and false of the
+ * animal. `animal-goose.ts` built a neck on the assembly route one collection
+ * ago and every number in it is derived:
+ *
+ *   - **`box-18`, the elephant's trunk, STOOD ON END** — `axis: 'y', dir: 1`
+ *     overriding its own `z +1` — stretched `[1, 1.75, 1]`, sunk 6/16 and joined
+ *     at the hull's own flat crown at z = 3/16.
+ *   - **The HEAD hangs off it** with `on: 'neck'` (`tube-06`), and **the BILL
+ *     off the head** with `on: 'head'` (`tube-02`). The builder's anchor solves
+ *     each join off the previous part's built vertices.
+ *
+ * So the correction matters more than the four birds it is about: a long neck is
+ * a PLACEMENT this project already owns, and any survey that calls it impossible
+ * is reading rule 3 as being about the animal when it is about the shell.
+ *
+ * **WHAT ACTUALLY STOPS THE FOUR IS THE HEIGHT CEILING, and the goose measured
+ * it exactly.** `PACK_HEIGHT_MAX` is 2.02. At that neck's length the goose comes
+ * out **upright 2.2627, at 15 degrees 2.2394, at 30 degrees 2.1713, at 45
+ * degrees 2.0634 — every one of them over the ceiling — and at 60 degrees
+ * 1.9560**, which is what it ships at. Its own file says it plainly: *"A goose
+ * that stands its neck up cannot be built in this pack."* A swan, a heron, a
+ * stork and a flamingo are all TALLER and LONGER-NECKED than a goose, and there
+ * is **0.064 of headroom left in the whole pack**. That is the wall, it is a
+ * measurement, and it is a different wall from the one this file first named.
  *
  * **THE WINGS ARE FINE**, and this is the half that is better than the old
  * paragraph says. The bank holds six wing shapes across three families —
@@ -110,6 +138,78 @@
  * costs about sixty vertices a bird. If the counts matter more than the
  * provenance, the swap is one line per species.
  *
+ * ===========================================================================
+ * ## THE SEVEN THAT ARE NOT BUILT — what is missing, how near the bank gets,
+ * ##    and what the honest alternative is. THIS IS A SURVEY, NOT A VERDICT.
+ * ===========================================================================
+ *
+ * Each of these is a measurement and a question for Joe, in the same shape as
+ * `animal-duck.ts`'s green head, where "build the female instead" is a call and
+ * not a fix. None of them is refused; all of them are priced.
+ *
+ * **SWAN.** *Missing:* nothing in mechanism — the goose's neck idiom is exactly
+ * this bird — and two things in fact. The CEILING: the goose already leans its
+ * neck 60 degrees to fit 1.9560 under 2.02, and a swan is taller and
+ * longer-necked than a goose, so there is no length left to give it. And the
+ * S-CURVE: rule 4 as amended bakes a ROTATION into a copy's vertices, which
+ * turns a part and cannot bend one, and there is no curved shape in the bank.
+ * *Nearest:* `box-18` stretched, at the goose's own four numbers, which is to
+ * say the goose. *Honest alternative:* build it as a white bird on that idiom
+ * and accept that it IS `animal-goose` in another palette — that bird is
+ * already warm white (0xf2efe4) — which roster §4 calls a duplicate. The call is
+ * whether the swan takes the goose's place as the big white long-necked one and
+ * the goose becomes the smaller grey one, or whether the swan waits.
+ *
+ * **HERON.** *Missing:* a spear. `cone-06` reaches 0.1833 against roughly 0.5
+ * for a heron's bill on this scale. The neck is available. *Nearest, and it is
+ * closer than it looks:* the bank's long tapering blades — `wedge-18` and
+ * `wedge-07`, both 1.0466 x 0.200 x 0.555 at taper 0.52 — stood on end exactly
+ * as `animal-goose.ts` stands the elephant's trunk. A long thin tapering blade
+ * IS a heron's bill. *What stops it:* §3.2 names a BEAK as one of the few shapes
+ * whose read survives being moved, so a tiger's tail on a bird's face is the
+ * class of reuse that "stops paying and starts costing" — and neck plus bill
+ * together would clear 2.02 anyway. *Honest alternative:* commission a spear, or
+ * accept a short-billed heron, which is a grey bird with a long neck.
+ *
+ * **STORK.** *Missing:* the same spear, and the tail-on-end candidate suits this
+ * bird BETTER than the heron — a stork's bill is straight, thick and blunt where
+ * a heron's is a fine dagger, and `wedge-18` at 0.200 across is thick rather
+ * than fine. Same ceiling. *Honest alternative:* if one long-billed wader is
+ * ever built out of a stood-on-end blade, this is the one to try it on.
+ *
+ * **FLAMINGO.** *Missing:* a DOWNCURVED bill, and there is no curve of any kind
+ * in the bank — every one of the 129 shapes is straight or tapered along a
+ * single axis, and rule 4 turns a part rather than bending it. Also the raised
+ * leg: rule 6 makes a pair ONE mesh mirrored, so there is no way to place one
+ * leg differently from the other, and the standing-on-one-leg pose is as
+ * unsayable as the bill. *Nearest:* nothing. *Honest alternative:* none that is
+ * a flamingo. This is the clearest commission on the list.
+ *
+ * **PELICAN.** *Missing:* a pouch. Nothing in the bank is a bag, a sac or a
+ * hollow — every shape is solid and convex. *Nearest:* `box-24` (0.400 x 0.400
+ * x 0.200), which is a nose PAD and reads as one. *Honest alternative:* none.
+ * Commission, or leave the collection at seventeen.
+ *
+ * **TOUCAN.** *Missing:* LENGTH and nothing else — the shape family is right and
+ * `cone-06` is already the deep triangular bill this bird wants, at roughly a
+ * third of the size. *Nearest:* `cone-06` STRETCHED. `PartDef.stretch` is legal
+ * on a nose and §3 measured the pack's own snouts varying 2.90x naturally, so a
+ * 3x here is inside what Kenney himself drew rather than outside it. *What stops
+ * it:* Joe flagged stretched parts on three animals on 2 August, so this is his
+ * to allow rather than ours to take. **It is the cheapest of the seven and the
+ * only one that needs a ruling rather than a shape.**
+ *
+ * **PEACOCK.** *Missing:* the TRAIN, and only that — the crest is `cone-01`, the
+ * blue is a palette, and everything else is the galliform idiom this project has
+ * built five times. *Nearest:* `box-38`, the parrot's fan, stood upright at
+ * `animal-turkey.ts`'s two derived numbers (+30 on x, 8/16 burial), where it
+ * spans y 0.6498 to 1.5877 and clears the crown by 0.1064. **A second copy is
+ * geometrically impossible**: the part is 0.625879 across and the flat rear
+ * plate is 0.625000, so there is no x at which a second fan has any plate under
+ * it. *Honest alternative:* build it with the single upright fan and accept that
+ * it reads as a blue turkey — which is a real option, because the crest and the
+ * colour do a lot — or wait for a train.
+ *
  * ## WHY THERE ARE NO `threat` RECORDS
  *
  * Roster §5 wants statuses "true, checkable", and `Threat.checkedDate` exists so
@@ -128,9 +228,10 @@ import '../parts/assembled'
 import type { Species } from '../types'
 
 /**
- * TEN OF EIGHTEEN, and the thirteen missing are a queue rather than a hole
- * somebody forgot. The survey above says which of them are waiting on effort
- * and which are waiting on a shape the pack does not contain.
+ * ELEVEN OF EIGHTEEN, and the seven missing are surveyed above one at a time —
+ * what is missing, how near the bank gets, and what the honest alternative is.
+ * Every one of them is a question for Joe rather than a refusal, and one of the
+ * seven (the toucan) needs a ruling rather than a shape.
  *
  * IN ROSTER ORDER, which is the order `roster.ts:108-114` lists them and the
  * order the album shows them. A member arriving later is INSERTED at its
@@ -158,6 +259,10 @@ export const BIRDS_SPECIES: readonly Species[] = [
   /* The one bird here whose EYES are the animal — the pack's biggest card, on
    * the only tufted crown in the collection. */
   defineSpecies('animal-owlet', 'bespoke'),
+
+  /* Surveyed OUT and put back by measurement: a puffin's bill is DEEP rather
+   * than long, and cone-06 is the one nose in the bank as tall as it is wide. */
+  defineSpecies('animal-puffin', 'bespoke'),
 
   /* The only bird here that is NOT the passerine idiom: big, on the tiger's
    * shell, with its grey mantle painted straight out of a hull band. */

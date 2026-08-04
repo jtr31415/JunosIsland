@@ -1453,6 +1453,19 @@
       "verdict": "",
       "replacement": "",
       "note": ""
+    },
+    {
+      "speciesId": "animal-puffin",
+      "species": "Puffin",
+      "collection": "birds",
+      "fact": "A puffin carries several small fish crosswise in its beak at once.",
+      "check": "flagged",
+      "source": "",
+      "sourceNote": "DRAFTED, NOT CHECKED. Written by the builder as the animal was assembled, off general knowledge, and nothing has independently verified it. Flagged rather than left out so it reaches the bench as a sentence somebody can check — the same discipline Threat.checkedDate keeps for a Red List status, which is that a claim nobody dated is a memory and not a check.",
+      "proposedRewrite": "",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
     }
   ]
 }
