@@ -213,7 +213,7 @@ describe('WHAT THE ALBUM SHOWS TODAY, collection by collection', () => {
     expect(PINNED.map(p => p[0]).sort()).toEqual(COLLECTIONS.map(c => c.id).sort())
   })
 
-  it('is 87 modelled in total across the whole roster of 320', () => {
+  it('is 100 modelled in total across the whole roster of 320', () => {
     // The one number to quote. Everything else on this page is an outline of
     // something nobody has drawn yet, and none of it is shown any more.
     //
@@ -224,7 +224,7 @@ describe('WHAT THE ALBUM SHOWS TODAY, collection by collection', () => {
     // >>> move at all until Joe pushes them. 84 -> 87 with the three drafts a
     // >>> previous session left on disk.
     expect(ROSTER).toHaveLength(320)
-    expect(ROSTER.filter(isBuilt)).toHaveLength(87)
+    expect(ROSTER.filter(isBuilt)).toHaveLength(100)
   })
 
   it('has exactly three collections with any frame at all', () => {
@@ -251,7 +251,7 @@ describe('the tripwire: isBuilt cannot drift from the ability to draw', () => {
      * declaring a kit without writing it fails here instead of shipping.
      */
     const built = ROSTER.filter(isBuilt)
-    expect(built).toHaveLength(87)   // moves with Woodland; see the block above
+    expect(built).toHaveLength(100)   // moves with Woodland; see the block above
 
     for (const id of built) {
       const record = speciesRecord(id)

@@ -22,6 +22,17 @@
 import { defineCreature } from '../creature'
 import { PACK_PUPIL } from '../texture'
 
+/**
+ * Every one of the pack's ten hulls presents the SAME flat rear plate — world
+ * z = -0.625, x +/-0.3125, y 0.49375 to 1.11875 — and this is its centre.
+ *
+ * `box-18`'s own recorded y is 0.482248, which is 0.0115 BELOW that plate, so a
+ * stub taken by pure donor transfer meets a chamfer that has already fallen away
+ * and stands clear of the body. `animal-badger.ts` measured that and solved it
+ * with this number; every stub in Woodland takes the same solve.
+ */
+const REAR_PLATE_Y = 0.80625
+
 export const HARE_ASSEMBLY = defineCreature('animal-hare', {
   palette: {
     coat: 0xa8895f,
@@ -37,7 +48,7 @@ export const HARE_ASSEMBLY = defineCreature('animal-hare', {
   // is no cut to paint into and a `byBand` here would be a silent no-op. `inner`
   // is spent on the nose instead.
   ears: { part: 'box-06', paint: 'coat' },
-  tail: { part: 'box-18', paint: 'belly', spin: [{ axis: 'y', deg: 180 }] },
+  tail: { part: 'box-18', paint: 'belly', spin: [{ axis: 'y', deg: 180 }], at: [0, REAR_PLATE_Y, -0.625] },
   snout: 'tube-01',
   nose: { part: 'box-09', paint: 'inner' },
 })

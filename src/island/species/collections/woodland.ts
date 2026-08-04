@@ -103,15 +103,68 @@ import type { Species } from '../types'
  */
 export const WOODLAND_SPECIES: readonly Species[] = [
 
+  /* The biggest, on the pack's only shell that is bigger on all three axes.
+   * Held apart from the FROZEN `animal-polar` and `animal-panda` by wearing
+   * the panda's ear on a brown body with a silvered back. */
+  defineSpecies('animal-bear', 'bespoke'),
+
+  /* First of the three the header names against `animal-beaver`, which is
+   * frozen: no paddle tail, no round `box-02` ear, no barrel muzzle. */
+  defineSpecies('animal-otter', 'bespoke'),
+
   /* The small squirrel that has to not BE `animal-squirrel`: a whip tail
    * against that animal's plume, and small round ears against its tufts. */
   defineSpecies('animal-chipmunk', 'bespoke'),
+
+  /* The tallest, and the collection's one antlered animal — which the bank has
+   * no shape for, so the rack is two pairs of one tusk at two angles. */
+  defineSpecies('animal-elk', 'bespoke'),
+
+  /* The only mustelid here with a bib, and it is a hull BAND rather than a
+   * marking anybody drew — the one forward-facing band in the pack. */
+  defineSpecies('animal-pine-marten', 'bespoke'),
 
   /* The black tail tip is the one fact a child is told about a stoat, and it
    * is Kenney's own end-band on the tiger's whip — paint, not a second part. */
   defineSpecies('animal-stoat', 'bespoke'),
 
+  /* The tufted cat. Ear tufts and a black stub tail against the wildcat's
+   * plain ear and long club, which is how the two cats here stay apart. */
+  defineSpecies('animal-lynx', 'bespoke'),
+
+  /* The one animal in the project that runs the mammal belly line BACKWARDS:
+   * white above, black below. The dorsal stripes are still unsayable. */
+  defineSpecies('animal-skunk', 'bespoke'),
+
+  /* Shares its spine shape with `animal-hedgehog`, because the bank has one
+   * point in it. Separated by placement — quilled on top, bare on the flanks. */
+  defineSpecies('animal-porcupine', 'bespoke'),
+
+  /* The heavy one, and its blond flank stripe is `box-41`'s own band 7 — the
+   * inverse of the bear, which wears the same shell with a pale back. */
+  defineSpecies('animal-wolverine', 'bespoke'),
+
   /* Held apart from the FROZEN `animal-bunny` by the bank's biggest ear paired
    * with its smallest tail. A hare that reads as a big rabbit has failed. */
   defineSpecies('animal-hare', 'bespoke'),
+
+  /* Against the FROZEN `animal-cat`, and the separation is the tail: 0.280
+   * across and black-clubbed where a domestic cat's is a 0.200 rope. */
+  defineSpecies('animal-wildcat', 'bespoke'),
+
+  /* The first of the two game birds, built on the galliform idiom
+   * `animal-chicken.ts` established rather than pressed into a quadruped. */
+  defineSpecies('animal-pheasant', 'bespoke'),
+
+  /* The second, and the display fan is the whole animal — the same two forced
+   * numbers `animal-turkey.ts` derived, on a near-black bird. */
+  defineSpecies('animal-capercaillie', 'bespoke'),
+
+  /* Shares its ear and its tail shape with the stoat ON PURPOSE: in life those
+   * two differ by colour, and inventing a shape difference would be a lie. */
+  defineSpecies('animal-mink', 'bespoke'),
+
+  /* The third against the beaver, and the one that separates on TEETH — a flat
+   * orange plate on the muzzle, which is a repurposed nose-tip. */
+  defineSpecies('animal-coypu', 'bespoke'),
 ]

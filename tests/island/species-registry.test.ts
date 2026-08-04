@@ -105,15 +105,15 @@ describe('the species registry', () => {
     // (PB-074) — sixteen of sixteen, every one hand-assembled. It is the first
     // collection to arrive complete in a single run since the kit route was
     // retired, and the second collection the parts route has closed.
-    // 87 SINCE 4 AUG, and it is WOODLAND being rebuilt on the parts route —
+    // 100 SINCE 4 AUG, and it is WOODLAND being rebuilt on the parts route —
     // the third collection the kit purge emptied and the last one still empty.
     // It arrives a few species at a time rather than whole, so this number and
     // the woodland line below move together and the two are the same fact.
-    expect(REGISTRY.size).toBe(87)
+    expect(REGISTRY.size).toBe(100)
     expect(shippedIn('base')).toHaveLength(24)
     expect(shippedIn('garden')).toHaveLength(14)      // COMPLETE — the slow worm is assembled
     expect(shippedIn('home-pets')).toHaveLength(16)   // COMPLETE — all 16 hand-assembled (PB-073)
-    expect(shippedIn('woodland')).toHaveLength(3)     // rebuilding: 16 rostered
+    expect(shippedIn('woodland')).toHaveLength(16)    // COMPLETE — all 16 hand-assembled
     expect(shippedIn('africa')).toHaveLength(1)       // crocodile; 13 kit-built deleted
     expect(shippedIn('farm')).toHaveLength(16)        // COMPLETE — all 16 hand-assembled (PB-074)
     expect(shippedIn('night-time')).toHaveLength(13)  // 16 rostered; bat, sugar glider, scorpion
@@ -152,15 +152,16 @@ describe('the species registry', () => {
     // thirteen or fourteen, because Farm had no member the bank could not
     // express. So the schedule above now has a rate to read off it, and the
     // remaining 236 are about fifteen runs rather than an unknown quantity.
-    // 233 since 4 Aug, and the −3 is the first of WOODLAND. This one is being
-    // built a few species at a time rather than in one measured sweep, so it is
-    // the first collection to move this number more than once.
+    // 220 since 4 Aug, and the −16 is WOODLAND, the last collection the kit purge
+    // emptied. It is also the first to arrive with a GAME BIRD in it that is not
+    // a quadruped in disguise: the pheasant and the capercaillie are built on the
+    // galliform idiom animal-chicken.ts established out of the pack's own parts.
     const rostered = COLLECTIONS.flatMap(c => c.members)
     expect(rostered).toHaveLength(320)
-    expect(rostered.filter(id => !speciesRecord(id))).toHaveLength(233)
+    expect(rostered.filter(id => !speciesRecord(id))).toHaveLength(220)
   })
 
-  it('has THREE complete collections — garden, and home-pets and farm rebuilt properly', () => {
+  it('has FOUR complete collections — garden, and home-pets, farm and woodland rebuilt properly', () => {
     // This test used to assert ZERO, and said in its own comment: "if this test
     // ever goes red, a second kit landed and that question became live." That
     // is exactly what happened, so it is inverted rather than deleted — the
@@ -238,7 +239,18 @@ describe('the species registry', () => {
       .filter(c => c.id !== 'base')
       .filter(c => c.members.every(id => speciesRecord(id)))
       .map(c => c.id)
-    expect([...complete].sort()).toEqual(['farm', 'garden', 'home-pets'])
+    //
+    // AND NOW THERE ARE FOUR. WOODLAND, on 4 August, and it is the first
+    // collection whose completeness required a BIRD that is not a quadruped in
+    // disguise. The kit era left animal-pheasant and animal-capercaillie out by
+    // name — 'they are game birds, the songbird kit did not exist, and a bird
+    // pressed into the quadruped kit is a four-legged pheasant' — and on the
+    // parts route they are built on the galliform idiom animal-chicken.ts
+    // established out of the pack's own shapes: two legs on LEG_ROW, box-06 as a
+    // folded flank wing, tube-02 as the bill, plate-08 as the round eye. So the
+    // last hole the kit era left in this collection closed without a kit.
+    // Woodland is UNSIGNED, like Home Pets and Farm.
+    expect([...complete].sort()).toEqual(['farm', 'garden', 'home-pets', 'woodland'])
   })
 
   it('names the seven base animals roster §5 gives a threat badge', () => {

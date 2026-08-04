@@ -31,11 +31,22 @@
  * one. One choice from a short list is the control that matches the decision.
  *
  * `amphibian` is in the union from the start rather than added later, because a
- * crocodile is already built and a crocodile is honestly both. Nothing is
- * *assigned* `amphibian` here — that is Joe's call to make in the editor, not
- * mine to make on his behalf — but the word is available the moment he wants it,
- * so the truth about the crocodile never has to be authored as a lie first and
- * unwound afterwards.
+ * crocodile is already built and a crocodile is honestly both. The word was
+ * available before anything wore it, so the truth about the crocodile never had
+ * to be authored as a lie first and unwound afterwards.
+ *
+ * >>> IT HAS THREE WEARERS NOW, AND THEY ARE THE ONE PLACE THIS FILE GUESSES.
+ * >>> This block used to say that nothing is *assigned* `amphibian` here because
+ * >>> that is Joe's call. Woodland arrived on 4 August with an otter, a mink and
+ * >>> a coypu in it, and every one of the sixteen was given an entry rather than
+ * >>> left absent. Thirteen of them say `land`, which is `DEFAULT_LOCOMOTION` and
+ * >>> therefore changes nothing whichever way it is read. **The other three are a
+ * >>> judgement and they are Joe's to overrule in the editor**: `land` for an
+ * >>> otter would have been a false entry rather than a neutral one, and only
+ * >>> `air` has teeth today, so neither reading alters a single frame until
+ * >>> PB-069 lands. The two GAME BIRDS were deliberately NOT marked `air` — a
+ * >>> pheasant flies in bursts and lives on the ground, and `air` means hovering
+ * >>> at `TREE_HEIGHT`.
  *
  * ## Why a lookup table and not a field on the collection record
  *
@@ -139,15 +150,19 @@ export const DEFAULT_LOCOMOTION: Locomotion = 'land'
  * gate once already. */
 export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-badger': 'land',
+  'animal-bear': 'land',
   'animal-bee': 'air',
   'animal-budgie': 'air',
   'animal-canary': 'air',
+  'animal-capercaillie': 'land',
   'animal-chinchilla': 'land',
   'animal-chipmunk': 'land',
   'animal-cockatiel': 'air',
   'animal-corn-snake': 'land',
+  'animal-coypu': 'amphibian',
   'animal-degu': 'land',
   'animal-dormouse': 'land',
+  'animal-elk': 'land',
   'animal-ferret': 'land',
   'animal-frog': 'amphibian',
   'animal-gecko': 'land',
@@ -158,19 +173,28 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-hare': 'land',
   'animal-hedgehog': 'land',
   'animal-lovebird': 'air',
+  'animal-lynx': 'land',
+  'animal-mink': 'amphibian',
   'animal-mole': 'land',
   'animal-mouse': 'land',
   'animal-newt': 'amphibian',
+  'animal-otter': 'amphibian',
   'animal-parrot': 'air',
+  'animal-pheasant': 'land',
+  'animal-pine-marten': 'land',
   'animal-pony': 'land',
+  'animal-porcupine': 'land',
   'animal-salamander': 'land',
   'animal-shrew': 'land',
+  'animal-skunk': 'land',
   'animal-slow-worm': 'land',
   'animal-squirrel': 'land',
   'animal-stoat': 'land',
   'animal-terrapin': 'land',
   'animal-toad': 'amphibian',
   'animal-tortoise': 'land',
+  'animal-wildcat': 'land',
+  'animal-wolverine': 'land',
 }
 /* <<< WORKBENCH-OWNED TABLE */
 
