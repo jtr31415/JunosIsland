@@ -1,4 +1,30 @@
 {
   "schemaVersion": 1,
-  "pins": {}
+  "about": "Frozen given names. A pin outranks the draw, so a name here can never move again — not when the syllable bands change, not when a species is added, not when the roster reorders. Joe, 2 Aug 2026, after the unseeded draw handed a six-year-old a rabbit called Defuck: \"no dont change the generator, we hard fix the first 24 animals instead\". These are that hard fix, approved by him on 4 Aug 2026. Every value is the name the allocator already produced, so pinning them renamed nothing: checked over all 320 species, zero moved.",
+  "pins": {
+    "natural/animal-beaver": "Wickpi",
+    "natural/animal-bee": "Messpo",
+    "natural/animal-bunny": "Chudup",
+    "natural/animal-cat": "Zirep",
+    "natural/animal-caterpillar": "Beezit",
+    "natural/animal-chick": "Helip",
+    "natural/animal-cow": "Zickza",
+    "natural/animal-crab": "Zulick",
+    "natural/animal-deer": "Veeleb",
+    "natural/animal-dog": "Pogill",
+    "natural/animal-elephant": "Liffsa",
+    "natural/animal-fish": "Rebga",
+    "natural/animal-fox": "Zapvo",
+    "natural/animal-giraffe": "Gonep",
+    "natural/animal-hog": "Mezesh",
+    "natural/animal-koala": "Rejam",
+    "natural/animal-lion": "Pulung",
+    "natural/animal-monkey": "Fongro",
+    "natural/animal-panda": "Botab",
+    "natural/animal-parrot": "Tunud",
+    "natural/animal-penguin": "Bilin",
+    "natural/animal-pig": "Heerom",
+    "natural/animal-polar": "Fothod",
+    "natural/animal-tiger": "Vizorm"
+  }
 }

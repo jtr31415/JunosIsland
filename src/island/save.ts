@@ -17,6 +17,9 @@ import type { SaveStore } from '../platform/storage'
 import { createAttainment, readAttainment } from './harness'
 import type { Attainment } from './harness'
 import { NOTHING_OPENED } from './species/opened'
+/* The frozen given names. `naming.ts` is three-free, so this costs the save
+ * path nothing — see `renamedToPins`. */
+import { givenName } from './species/naming'
 import type { Opened } from './species/opened'
 
 /** The serialised shape. Plain JSON — no Maps, no class instances. */
@@ -311,6 +314,58 @@ export interface Loaded {
   opened: Opened
 }
 
+/**
+ * THE ONE RENAME. Every pet in an old save takes its species' frozen name.
+ *
+ * ## Why this exists, and why it is the exception to the rule above it
+ *
+ * `naming.ts` is built around never renaming a creature a child already has,
+ * and says so twice. This breaks that once, deliberately, and only once.
+ *
+ * Until 2 August 2026 the hatch drew a name from an UNSEEDED generator, per pet,
+ * with nothing screening the result. On that day it handed a six-year-old a
+ * rabbit called **Defuck**. Joe's ruling then was *"no dont change the generator,
+ * we hard fix the first 24 animals instead"*, and the hatch was rewired to
+ * `givenName` the same day — so nothing born since can be anything but a name he
+ * has approved.
+ *
+ * **But a save keeps the name a pet was born with.** `fromSave` read `pets` back
+ * verbatim, which is exactly what `naming.ts` wanted for every other purpose, so
+ * the rabbit is still called Defuck on Juno's tablet two days later. Joe, 4
+ * August, asked for the other half and set the terms: *"ideally update the ones
+ * that kids already have because some of those names may not be kid
+ * appropriate"*, and then — asked how far it should reach — *"we rename once,
+ * kids will live through it."*
+ *
+ * ## What it does, and what it deliberately does not
+ *
+ * Every pet takes `givenName(species)`. Not a blocklist of bad words: a screen
+ * would have to guess at every way the old generator could embarrass a child,
+ * and the whole point of the frozen names is that they are a list Joe has read.
+ * Anything not on that list is unvetted by definition, so the honest migration
+ * is "become the approved name" rather than "become the approved name IF I can
+ * think of what is wrong with you".
+ *
+ * A pet of a species this build has never heard of still gets a name —
+ * `givenName` draws one off its own seed rather than returning blank — so a save
+ * from a newer build cannot come back with a nameless friend.
+ *
+ * **`id` is untouched.** It is `pet<N>-<name>` off the name it was born with, and
+ * it is a key rather than a label: nothing shows it to a child, and rewriting it
+ * would break every reference held against it. A stale name inside an id is
+ * invisible; a broken id is not.
+ *
+ * ONE NAME PER SPECIES is the shipped design (JT-029), so a child holding two
+ * bunnies now has two friends called Chudup. That is already true of everything
+ * hatched since 2 August and is not new here.
+ */
+function renamedToPins(pets: readonly Pet[]): Pet[] {
+  return pets.map(p => {
+    const want = givenName(p.species)
+    return p.name === want ? p : { ...p, name: want }
+  })
+}
+
 export function fromSave(save: IslandSave | null): Loaded {
   const fresh = createFlow()
   if (!save || !Array.isArray(save.tiles) || save.tiles.length === 0) {
@@ -336,7 +391,7 @@ export function fromSave(save: IslandSave | null): Loaded {
     flow: {
       ...fresh,
       island,
-      pets: Array.isArray(save.pets) ? save.pets : [],
+      pets: renamedToPins(Array.isArray(save.pets) ? save.pets : []),
       bankedTiles: typeof save.bankedTiles === 'number' ? save.bankedTiles : 0,
       readProgress: inUnits(save.readProgress),
       /*

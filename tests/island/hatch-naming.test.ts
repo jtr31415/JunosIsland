@@ -242,29 +242,41 @@ describe('a species has one name, forever', () => {
   })
 })
 
-/* ------------------------------------------ §4 brief §19: nobody is renamed --- */
+/* ------------------------- §4 brief §19: nobody is LOST, and one rename --- */
 
-describe('brief §19: a pet a child already owns keeps its name', () => {
-  it('round-trips a pet whose stored name disagrees with givenName, verbatim', () => {
-    /*
-     * THE HONEST LIMIT OF THE FIX, stated as an assertion rather than a caveat.
-     *
-     * The fix is forward-only. Any rabbit hatched before 2 August 2026 is still
-     * called whatever the coin toss called it, and this test proves the code does
-     * not go back and tidy that up — because tidying it up is exactly what brief
-     * §19 forbids. A friend whose name changed is a friend lost, even though the
-     * record survived. `Pet.id` embeds the name (`flow.ts:329`), so a "correction"
-     * would break the id that addresses the pet as well.
-     *
-     * `Defuck` itself is the fixture, deliberately: the single worst name in the
-     * game is the one this asserts must survive untouched, because the child who
-     * has it did not ask to lose her rabbit.
-     */
+/*
+ * THIS SECTION WAS INVERTED ON 4 AUGUST 2026, by the person it was protecting.
+ *
+ * It used to assert the honest limit of the 2 August fix: that it was
+ * FORWARD-ONLY, that a rabbit hatched before it is still called whatever the
+ * coin toss called it, and that the code must never go back and tidy that up —
+ * with `Defuck` as the deliberate fixture, on the reasoning that "a friend whose
+ * name changed is a friend lost, even though the record survived."
+ *
+ * That reasoning was sound and Joe decided the other way, knowing the case
+ * exactly, because it was his daughter holding the rabbit:
+ *
+ *   *"Juno has a bunny called Defuck, thats a no go."*
+ *   *"we rename once, kids will live through it."*
+ *
+ * WHAT §19 ACTUALLY FORBIDS is losing a friend, and the migration loses none:
+ * `save.ts:renamedToPins` keeps every pet, its id, its species and its tile, and
+ * changes only the string over its head. Weigh what is on each side of that and
+ * the old ruling inverts on its own — one side is a name a child learned; the
+ * other is an obscenity on a six-year-old's screen, put there by a generator
+ * nobody approved, that she cannot get rid of by playing.
+ *
+ * The forward fix in §1-§3 above is UNCHANGED and still the important half:
+ * nothing hatched since 2 August can be anything but a frozen, screened name.
+ * This section is only about the saves that predate it.
+ */
+describe('brief §19: the one rename keeps every friend', () => {
+  it('renames the rabbit, and loses nothing else about her', () => {
     const pet: Pet = {
       id: 'pet1-Defuck', name: 'Defuck', species: 'animal-bunny', at: { q: 0, r: 0 },
     }
-    // The premise: the generator disagrees with this stored name, so a rename
-    // would be visible if one happened.
+    // The premise: this stored name is one the screen rejects and the generator
+    // would never produce, so a rename is both needed and visible.
     expect(givenName('animal-bunny')).not.toBe(pet.name)
     expect(screenName(pet.name)).not.toBeNull()
 
@@ -276,18 +288,36 @@ describe('brief §19: a pet a child already owns keeps its name', () => {
     const kept = back.pets[0] as Pet
     expect(
       kept.name,
-      'the save path renamed a pet a child already owns. The screen is an '
-      + 'ASSERTION GATE on future names, never a filter over stored ones — brief '
-      + '§19: a child\'s friend may never be lost, and a renamed friend is lost.',
-    ).toBe('Defuck')
-    expect(
-      kept.id,
-      'the pet\'s id changed. Pet.id embeds the name, so rewriting one breaks the '
-      + 'other and the pet stops being addressable.',
-    ).toBe('pet1-Defuck')
+      'the rabbit is still called Defuck. `renamedToPins` in save.ts is what '
+      + 'takes it off her screen; if this is red that migration has been removed '
+      + 'or has stopped reaching the pets on load.',
+    ).toBe(givenName('animal-bunny'))
+    expect(screenName(kept.name), 'renamed to something the screen still rejects').toBeNull()
+
+    /*
+     * AND NOTHING ELSE MOVED. `Pet.id` deliberately keeps the birth name inside
+     * it: it is a key, not a label — nothing shows it to a child — and rewriting
+     * it would break every reference held against it. A stale name inside an id
+     * is invisible; a broken id is a friend who stops being addressable.
+     */
+    expect(kept.id, 'the id changed, and the pet stops being addressable').toBe('pet1-Defuck')
     expect(kept.species).toBe('animal-bunny')
-    expect(kept).toEqual(pet)
+    expect(kept.at).toEqual(pet.at)
     // Genuinely round-tripped rather than the same object handed straight back.
     expect(kept).not.toBe(pet)
+  })
+
+  it('loses no pet at all, whatever it renames', () => {
+    /* §19 as the property rather than the case: the count and the ids are what
+     * "nobody is lost" means, and they survive the rename by construction. */
+    const pets: Pet[] = [
+      { id: 'p1', name: 'Defuck', species: 'animal-bunny', at: { q: 0, r: 0 } },
+      { id: 'p2', name: 'Chudup', species: 'animal-bunny', at: { q: 1, r: 0 } },
+      { id: 'p3', name: 'Wickpi', species: 'animal-beaver', at: { q: 2, r: 0 } },
+    ]
+    const back = fromSave(JSON.parse(JSON.stringify(toSave({ ...createFlow(), pets }, true)))).flow
+    expect(back.pets).toHaveLength(3)
+    expect(back.pets.map(p => p.id)).toEqual(['p1', 'p2', 'p3'])
+    for (const p of back.pets) expect(screenName(p.name), p.id).toBeNull()
   })
 })

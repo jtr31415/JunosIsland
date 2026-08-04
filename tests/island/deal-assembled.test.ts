@@ -83,6 +83,7 @@ import { place } from '../../src/island/world/grid'
 import { createLocalStore } from '../../src/platform/storage'
 import { saveIsland, loadIsland } from '../../src/island/save'
 import { createLighting } from '../../src/island/lighting'
+import { givenName } from '../../src/island/species/naming'
 import { mulberry32 } from '../../src/core/rng'
 import meadowDay from '../../src/island/lighting/presets/meadow-day.json'
 import type { Flow, Pet } from '../../src/island/flow'
@@ -431,8 +432,13 @@ describe('deal -> hatch -> render -> walk -> save -> reload', () => {
       back.species,
       'the save layer rejected or rewrote a species that is not one of the 24',
     ).toBe(BUILT)
-    // Whole record intact, not merely the species field.
-    expect(back).toEqual(before)
+    /* Whole record intact, not merely the species field — EXCEPT the name, which
+     * the save layer re-syncs to the species' frozen one since 4 August
+     * (`save.ts:renamedToPins`, Joe: "we rename once, kids will live through
+     * it"). This fixture is hatched with a hand-written name, so it is renamed
+     * on the way back; everything that identifies the pet is unchanged. */
+    expect({ ...back, name: '' }).toEqual({ ...before, name: '' })
+    expect(back.name).toBe(givenName(BUILT))
     // And genuinely round-tripped rather than the same object handed back.
     expect(back).not.toBe(before)
     // The island came back too, so the reload below stands on the same ground.

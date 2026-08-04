@@ -32,7 +32,7 @@ import {
   collection, collectionOf, COLLECTIONS, SPECIES_NAMES,
 } from '../../src/island/species/roster'
 import { NAME_BANDS } from '../../src/island/species/types'
-import { SHIPPED_SPECIES } from '../../src/island/species/registry'
+import { SHIPPED_SPECIES, BASE_SPECIES } from '../../src/island/species/registry'
 import { SETS } from '../../src/island/variants/sets'
 import { petName, _rejected } from '../../src/core/names'
 import { mulberry32 } from '../../src/core/rng'
@@ -411,25 +411,63 @@ describe('pins', () => {
   })
 
   /*
-   * A DELIBERATE TRIPWIRE, not a bug.
+   * THE TRIPWIRE FIRED, 4 August 2026, and this is its inversion.
    *
-   * `name-pins.json` is empty on purpose. Joe, 29 July: *"i will give you
+   * It used to assert the table was EMPTY. Joe, 29 July: *"i will give you
    * juno's already achieved animal's names as her latest save game later, you
-   * can swap the first hard code out after."* Until that save arrives, nothing
-   * may be guessed into the table — an invented pin invents a memory Juno does
-   * not have.
+   * can swap the first hard code out after."* Nothing could be guessed in
+   * before then, because an invented pin invents a memory Juno does not have.
    *
-   * The day that save lands, this assertion is expected to be DELETED or
-   * inverted (assert the pins that arrived, by name). Whoever does that: that
-   * edit, plus the JSON, is the WHOLE change. No migration, no save rewrite.
+   * What arrived was not a save file but the thing the save file was for: her
+   * bunny is called **Defuck**, from the unseeded per-pet generator that named
+   * pets until 2 August. Joe, 4 August, having read the twenty-four: *"the
+   * suggestions above for the base ones are fine ... Juno has a bunny called
+   * Defuck, thats a no go."*
+   *
+   * So the base twenty-four are pinned, and they are pinned to THE NAMES THE
+   * ALLOCATOR ALREADY PRODUCED — nothing was invented and nothing moved.
+   * Checked over all 320 species before writing the file: zero renames.
+   *
+   * The old note said this edit plus the JSON was the whole change, *"no
+   * migration, no save rewrite"*. That was true of the pins and false of the
+   * problem: a save keeps the name its pet was born with, so pinning alone
+   * leaves the rabbit called Defuck. The rewrite is `renamedToPins` in
+   * `save.ts`, on Joe's ruling *"we rename once, kids will live through it."*
+   *
+   * The collections Joe has NOT deployed are deliberately unpinned — *"all the
+   * ones not yet deployed i will vet anyway and change as needed then."*
    */
-  it('is EMPTY until Juno\'s save arrives', () => {
-    expect(Object.keys(NAME_PINS)).toHaveLength(0)
+  it('pins the base twenty-four, and nothing that is not yet deployed', () => {
     const raw = JSON.parse(readFileSync(
       resolve(root, 'src/island/species/name-pins.json'), 'utf8')) as
       { schemaVersion: number; pins: Record<string, string> }
     expect(raw.schemaVersion).toBe(1)
-    expect(Object.keys(raw.pins)).toHaveLength(0)
+    expect(Object.keys(raw.pins)).toHaveLength(24)
+    expect(Object.keys(NAME_PINS)).toHaveLength(24)
+
+    // Every pin is a base species, keyed under the natural set, and non-empty.
+    const base = new Set(BASE_SPECIES.map(s => s.id))
+    for (const [key, name] of Object.entries(raw.pins)) {
+      expect(key.startsWith('natural/'), key).toBe(true)
+      expect(base.has(key.slice('natural/'.length)), `${key} is not a base species`).toBe(true)
+      expect(name.length, key).toBeGreaterThan(0)
+    }
+    expect(new Set(Object.values(raw.pins)).size, 'two species share a pinned name').toBe(24)
+
+    // The three Joe read out loud, so a silent re-pin is a red line with a name.
+    expect(raw.pins['natural/animal-bunny']).toBe('Chudup')
+    expect(raw.pins['natural/animal-fox']).toBe('Zapvo')
+    expect(raw.pins['natural/animal-tiger']).toBe('Vizorm')
+  })
+
+  it('pins no name the old unseeded generator could embarrass a child with', () => {
+    /* The reason the pins exist at all. Not a general profanity filter — it is
+     * the specific check that the twenty-four names now frozen into the game
+     * carry none of the fragments that made `Defuck` reach a six-year-old. */
+    const nope = /(fuck|fuk|shit|piss|cunt|arse|\bass|tit|cock|dick|wank|slut|slag|rape|nazi|vag)/i
+    for (const [key, name] of Object.entries(NAME_PINS)) {
+      expect(nope.test(name), `${key} is pinned to "${name}"`).toBe(false)
+    }
   })
 })
 
@@ -543,26 +581,41 @@ describe('joe/names-audit.json', () => {
 })
 
 /*
- * BRIEF §19 — a child's friend may never be lost.
+ * THE ONE RENAME — 4 August 2026, and it is the exception that proves the rule.
  *
- * `Pet.id` EMBEDS the name (`flow.ts:327`: `` `pet${n}-${hatch.name}` ``), so a
- * module that "corrected" a stored name would silently break the id that
- * addresses the pet as well. Which is why `naming.ts` never reads, rewrites or
- * regenerates a stored name — it only answers questions about a species.
+ * This block used to assert the opposite: that a pet already in a save is
+ * NEVER touched, because `naming.ts` has no code path from a stored `Pet` back
+ * to a regenerated name. That was true and it was right, and it is why the
+ * rabbit was still called **Defuck** two days after the generator that named
+ * her was replaced.
  *
- * The test hatches a pet under the OLD, pre-naming.ts scheme (a random draw)
- * and round-trips it through the real save. Both fields must come back
- * byte-identical with `naming.ts` imported and in play.
+ * The unseeded per-pet draw named pets until 2 August, when it handed a
+ * six-year-old that name and was rewired to `givenName`. Nothing born since can
+ * be anything but a name Joe has approved — but a save keeps the name its pet
+ * was born with, so the fix never reached the child who needed it.
+ *
+ * Joe, 4 August: *"ideally update the ones that kids already have because some
+ * of those names may not be kid appropriate"*, and then, on how far it should
+ * reach: *"we rename once, kids will live through it."*
+ *
+ * So `save.ts:renamedToPins` re-syncs every pet on load. §19 is NOT weakened by
+ * it and the distinction is the whole point: §19 forbids LOSING a friend. Every
+ * pet still comes back — same id, same species, same tile — and answers to a
+ * name Joe has read. What it loses is a string the old generator picked at
+ * random and nobody ever approved.
+ *
+ * `id` is deliberately left alone. It embeds the birth name (`flow.ts:327`,
+ * `` `pet${n}-${hatch.name}` ``) and is a KEY rather than a label — nothing shows
+ * it to a child, and rewriting it would break every reference held against it.
  */
-describe('brief §19: a pet already in a save is untouched', () => {
-  it('round-trips an old-scheme pet with its name AND id intact', () => {
+describe('the one rename: an old save comes back with approved names', () => {
+  it('renames a pet the old generator named, and keeps its id and species', () => {
     const legacyName = petName(mulberry32(1))
-    // Under the new scheme this species would be called something else.
+    // The case that matters: a stored name the new scheme would never produce.
     expect(legacyName).not.toBe(givenName('animal-hedgehog'))
 
     const f = { ...createFlow(), phase: 'challenge' as const, challenge: 'read' as const, readProgress: 999 }
     const hatched = challengePassed(f, { name: legacyName, species: 'animal-hedgehog' })
-    expect(hatched.pets).toHaveLength(1)
     const before = hatched.pets[0] as Pet
     expect(before.name).toBe(legacyName)
     expect(before.id).toBe(`pet1-${legacyName}`)
@@ -571,20 +624,47 @@ describe('brief §19: a pet already in a save is untouched', () => {
     const after = fromSave(JSON.parse(JSON.stringify(toSave(hatched, true, 'Juno')))).flow
     expect(after.pets).toHaveLength(1)
     const back = after.pets[0] as Pet
-    expect(back.name).toBe(legacyName)
+
+    expect(back.name, 'the friend kept an unapproved name').toBe(givenName('animal-hedgehog'))
+    // NOTHING ELSE MOVED — §19. Same friend, same place, same key.
     expect(back.id).toBe(before.id)
     expect(back.species).toBe(before.species)
-    expect(back).toEqual(before)
+    expect(back.at).toEqual(before.at)
   })
 
-  it('never renames a pet whose stored name disagrees with the generator', () => {
-    // The whole surface area: naming.ts exports three functions, all of which
-    // take ids and return strings. There is no code path from a stored Pet to
-    // a regenerated name, and this asserts the absence stays absent.
-    const pet: Pet = { id: 'pet1-Bimo', name: 'Bimo', species: 'animal-hedgehog', at: { q: 0, r: 0 } }
+  it('leaves a pet already carrying its frozen name completely alone', () => {
+    /* The common case once the rename has run once: idempotent, so a child who
+     * loads twice is not renamed twice, and nothing churns in the save. */
+    const name = givenName('animal-hedgehog')
+    const pet: Pet = { id: 'pet1-Bimo', name, species: 'animal-hedgehog', at: { q: 0, r: 0 } }
     const f = { ...createFlow(), pets: [pet] }
     const back = fromSave(JSON.parse(JSON.stringify(toSave(f, true)))).flow
     expect(back.pets[0]).toEqual(pet)
-    expect(givenName('animal-hedgehog')).not.toBe('Bimo')
+  })
+
+  it('rescues the rabbit by name — the case this was written for', () => {
+    const rabbit: Pet = {
+      id: 'pet1-Defuck', name: 'Defuck', species: 'animal-bunny', at: { q: 1, r: -1 },
+    }
+    const f = { ...createFlow(), pets: [rabbit] }
+    const back = fromSave(JSON.parse(JSON.stringify(toSave(f, true)))).flow
+    const out = back.pets[0] as Pet
+    expect(out.name).toBe('Chudup')
+    expect(out.species).toBe('animal-bunny')
+    expect(out.at).toEqual(rabbit.at)
+  })
+
+  it('never loses a pet, however many it renames — §19 as a property', () => {
+    const pets: Pet[] = [
+      { id: 'p1', name: 'Defuck', species: 'animal-bunny', at: { q: 0, r: 0 } },
+      { id: 'p2', name: 'Bimo', species: 'animal-hedgehog', at: { q: 1, r: 0 } },
+      { id: 'p3', name: 'Zapvo', species: 'animal-fox', at: { q: 2, r: 0 } },
+      { id: 'p4', name: 'Whatever', species: 'animal-from-the-future', at: { q: 3, r: 0 } },
+    ]
+    const back = fromSave(JSON.parse(JSON.stringify(toSave({ ...createFlow(), pets }, true)))).flow
+    expect(back.pets).toHaveLength(pets.length)
+    expect(back.pets.map(p => p.id)).toEqual(pets.map(p => p.id))
+    // Every one has a name, including the species this build has never heard of.
+    for (const p of back.pets) expect(p.name.length, p.id).toBeGreaterThan(0)
   })
 })

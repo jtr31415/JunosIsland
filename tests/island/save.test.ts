@@ -9,6 +9,7 @@ import {
 import type { Flow } from '../../src/island/flow'
 import { count, tileAt } from '../../src/island/world/grid'
 import { createLocalStore } from '../../src/platform/storage'
+import { givenName } from '../../src/island/species/naming'
 import {
   createAttainment, createHarness, LIVE_PATHS, STAGES,
 } from '../../src/island/harness'
@@ -57,7 +58,11 @@ describe('island save', () => {
     const { flow: after, openingSeen } = await loadIsland(store, 'p1')
     expect(count(after.island)).toBe(count(before.island))
     expect(tileAt(after.island, { q: 1, r: 0 })).toBe('water')
-    expect(after.pets.map(p => p.name)).toEqual(['Bimo'])
+    /* The fixture pet is stored as 'Bimo' and comes back as the fox's frozen
+     * name: `save.ts:renamedToPins` re-syncs every pet on load, on Joe's ruling
+     * of 4 August ("we rename once, kids will live through it"). The pet itself
+     * round-trips untouched — species below, id and tile in `naming.test.ts`. */
+    expect(after.pets.map(p => p.name)).toEqual([givenName('animal-fox')])
     expect(after.pets[0]!.species).toBe('animal-fox')
     expect(openingSeen).toBe(true)
   })
