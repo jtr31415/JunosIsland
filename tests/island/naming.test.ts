@@ -558,7 +558,7 @@ describe('joe/names-audit.json', () => {
     // route a few species at a time. Same shape as every growth above it: the
     // rows are born with Joe's three fields empty, so the bench grew and the
     // review did not happen, and this file keeps those two facts separate.
-    expect(audit.names).toHaveLength(76)
+    expect(audit.names).toHaveLength(81)
   })
 
   it('gives every creature its own name, so the playground question works', () => {

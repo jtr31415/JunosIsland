@@ -29,6 +29,7 @@ import { WOODLAND_SPECIES } from './collections/woodland'
 import { AFRICA_SPECIES } from './collections/africa'
 import { FARM_SPECIES } from './collections/farm'
 import { NIGHT_TIME_SPECIES } from './collections/night-time'
+import { BIRDS_SPECIES } from './collections/birds'
 import type { Species } from './types'
 
 /**
@@ -140,9 +141,29 @@ export const PHASE3_SPECIES: readonly Species[] = [...FARM_SPECIES]
  */
 export const NIGHT_TIME_COLLECTION: readonly Species[] = [...NIGHT_TIME_SPECIES]
 
+/**
+ * BIRDS — the first collection to arrive with NO kit era behind it at all.
+ *
+ * Every other constant above this line names a collection the kit route built
+ * once and Joe then had deleted, so each of them is a REBUILD and its file
+ * carries a header written for a mechanism that no longer exists. There has
+ * never been a `collections/birds.ts`; this one was written on the assembly
+ * route from the first line.
+ *
+ * FIVE OF EIGHTEEN, and the shortfall is measured rather than pending. The five
+ * are passerines and they are one shape in five palettes, which is what those
+ * birds are. The thirteen missing split two ways and `collections/birds.ts`
+ * surveys both: some want a bill the pack does not contain — a spatulate, a
+ * spear, a pouch, a filter, an outsized hook — and four of them (swan, heron,
+ * stork, flamingo) want a NECK, which rule 3 forbids outright, because head and
+ * body are one mass and there is no seam at the neck on any of the 24.
+ */
+export const BIRDS_COLLECTION: readonly Species[] = [...BIRDS_SPECIES]
+
 /** Everything that has actually shipped: the frozen 24 plus the built collections. */
 export const SHIPPED_SPECIES: readonly Species[] = [
   ...BASE_SPECIES, ...PHASE2_SPECIES, ...PHASE3_SPECIES, ...NIGHT_TIME_COLLECTION,
+  ...BIRDS_COLLECTION,
 ]
 
 /** Every species that has actually shipped, by id. */

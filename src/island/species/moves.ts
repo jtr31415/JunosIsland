@@ -152,6 +152,8 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-badger': 'land',
   'animal-bear': 'land',
   'animal-bee': 'air',
+  'animal-blackbird': 'air',
+  'animal-blue-tit': 'air',
   'animal-budgie': 'air',
   'animal-canary': 'air',
   'animal-capercaillie': 'land',
@@ -174,6 +176,7 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-hedgehog': 'land',
   'animal-lovebird': 'air',
   'animal-lynx': 'land',
+  'animal-magpie': 'air',
   'animal-mink': 'amphibian',
   'animal-mole': 'land',
   'animal-mouse': 'land',
@@ -184,6 +187,7 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-pine-marten': 'land',
   'animal-pony': 'land',
   'animal-porcupine': 'land',
+  'animal-robin': 'air',
   'animal-salamander': 'land',
   'animal-shrew': 'land',
   'animal-skunk': 'land',
@@ -195,6 +199,7 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-tortoise': 'land',
   'animal-wildcat': 'land',
   'animal-wolverine': 'land',
+  'animal-wren': 'air',
 }
 /* <<< WORKBENCH-OWNED TABLE */
 
