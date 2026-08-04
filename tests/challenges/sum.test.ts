@@ -344,30 +344,23 @@ describe('mountSum: answers past twenty', () => {
     expect(d.onHelp).toHaveBeenCalledWith('peek')
   })
 
-  it('the mash rescue locks and toasts but does not wall them in with dots', () => {
+  it('the mash rescue opens BOTH boxes however big the sum is', () => {
     /*
-     * The rescue opens one dot per unit of a and b. At 30 + 40 that is seventy
-     * dots, which is not a hint, it is a wall — so a dot-box bigger than twenty
-     * stays shut while the lock, the sound and the toast all still happen.
+     * This once refused above twenty dots, because seventy of them was a wall
+     * rather than a hint. The big dot is the real fix and supersedes that:
+     * seventy is seven green dots, so the rescue helps on the very rungs where
+     * the child most needs it.
      */
     const { d } = makeDeps(el)
     mountSum({ a: 30, b: 40, op: 'add' }, d)   // answer 70
     tap(dig(el, 1)); tap(dig(el, 2)); tap(dig(el, 3))
-    expect(el.querySelectorAll('.dotbox')).toHaveLength(0)
-    expect(d.sfx.play).toHaveBeenCalledWith('down')
-    expect(d.toast).toHaveBeenCalled()
-    expect(d.holds.inputLock()).toBeGreaterThan(Date.now())
-  })
-
-  it('still opens the small side of a lopsided sum', () => {
-    // 34 + 5: thirty-four dots is a wall, five is a hint. Show the five.
-    const { d } = makeDeps(el)
-    mountSum({ a: 34, b: 5, op: 'add' }, d)
-    tap(dig(el, 1)); tap(dig(el, 2)); tap(dig(el, 8))
     const boxes = [...el.querySelectorAll('.dotbox')]
-    expect(boxes).toHaveLength(1)
-    expect(boxes[0]!.querySelectorAll('.dot')).toHaveLength(5)
+    expect(boxes).toHaveLength(2)
+    expect(boxes[0]!.querySelectorAll('.tens .bigdot')).toHaveLength(3)
+    expect(boxes[1]!.querySelectorAll('.tens .bigdot')).toHaveLength(4)
+    expect(d.sfx.play).toHaveBeenCalledWith('down')
     expect(d.toast).toHaveBeenCalledWith(expect.stringContaining('Count the dots'))
+    expect(d.holds.inputLock()).toBeGreaterThan(Date.now())
   })
 
   it('teardown cancels the advance from a completed big answer', () => {
@@ -377,5 +370,87 @@ describe('mountSum: answers past twenty', () => {
     h.teardown()
     vi.advanceTimersByTime(10_000)
     expect(d.onAdvance).not.toHaveBeenCalled()
+  })
+})
+
+/**
+ * THE BIG DOT — one green dot is ten little ones (runA.md:1006, INTRO-TEN).
+ *
+ * A count stops being one dot per unit and becomes place value: floor(n/10)
+ * green tens, then n%10 units. That is what makes the counting hint survive
+ * past twenty, and it is the idea rung 5 exists to teach in the first place.
+ *
+ * Only the STATIC dot is built here. INTRO-TEN's voiced Fred lesson and its
+ * SNAP animation are Run C and need a baked clip that does not exist.
+ */
+describe('mountSum: the ten-dot', () => {
+  /** Open both dot boxes by hand, and hand them back in a/b order. */
+  const openBoxes = (root: HTMLElement): HTMLElement[] => {
+    for (const h of root.querySelectorAll<HTMLElement>('.helper')) tap(h)
+    return [...root.querySelectorAll<HTMLElement>('.dotbox')]
+  }
+  /** The counted big dots, excluding the one drawn inside the key. */
+  const bigs = (box: HTMLElement): number => box.querySelectorAll('.tens .bigdot').length
+  const units = (box: HTMLElement): number => box.querySelectorAll('.units .dot').length
+
+  it('splits a count into green tens and little units', () => {
+    mountSum({ a: 34, b: 5, op: 'add' }, makeDeps(el).d)
+    const [ba, bb] = openBoxes(el)
+    expect(bigs(ba!)).toBe(3)
+    expect(units(ba!)).toBe(4)
+    expect(bigs(bb!)).toBe(0)
+    expect(units(bb!)).toBe(5)
+  })
+
+  it('draws a whole ten as green dots and nothing else', () => {
+    mountSum({ a: 90, b: 10, op: 'add' }, makeDeps(el).d)
+    const [ba] = openBoxes(el)
+    expect(bigs(ba!)).toBe(9)
+    expect(units(ba!)).toBe(0)
+    expect(ba!.querySelectorAll('.units')).toHaveLength(0)
+  })
+
+  it('leaves a small count exactly as it was, with no green dot at all', () => {
+    // 7 + 5 is the round this file has always tested: it must not change.
+    mountSum(ADD, makeDeps(el).d)
+    const [ba, bb] = openBoxes(el)
+    expect(ba!.querySelectorAll('.bigdot')).toHaveLength(0)
+    expect(bb!.querySelectorAll('.bigdot')).toHaveLength(0)
+    expect(units(ba!)).toBe(7)
+    expect(units(bb!)).toBe(5)
+  })
+
+  it('keeps the fives colour-blocking on the remainder units', () => {
+    // 38: three green, then eight units — five orange and three blue.
+    mountSum({ a: 38, b: 4, op: 'add' }, makeDeps(el).d)
+    const [ba] = openBoxes(el)
+    expect(ba!.querySelectorAll('.units .dot.o')).toHaveLength(5)
+    expect(ba!.querySelectorAll('.units .dot.b')).toHaveLength(3)
+  })
+
+  it('shows the key — one green = ten little — only where a green dot is', () => {
+    const { d } = makeDeps(el)
+    mountSum({ a: 34, b: 5, op: 'add' }, d)
+    const [ba, bb] = openBoxes(el)
+    const key = ba!.querySelector('.tenkey')!
+    expect(key).not.toBeNull()
+    expect(key.querySelectorAll('.bigdot')).toHaveLength(1)
+    expect(key.querySelector('.keyeq')!.textContent).toBe('=')
+    expect(key.querySelectorAll('.keydot')).toHaveLength(10)
+    // the five side has no green dot, so it gets no key to explain one
+    expect(bb!.querySelectorAll('.tenkey')).toHaveLength(0)
+  })
+
+  it('never lets the key be mistaken for part of the count', () => {
+    /* The key's ten are .keydot, not .dot: a .dot is a unit being counted, and
+       counting the key's would make 34 read as forty-four. */
+    mountSum({ a: 34, b: 5, op: 'add' }, makeDeps(el).d)
+    const [ba] = openBoxes(el)
+    expect(ba!.querySelectorAll('.dot')).toHaveLength(4)
+  })
+
+  it('a small round still shows no key', () => {
+    mountSum(ADD, makeDeps(el).d)
+    expect(openBoxes(el).every(b => b.querySelectorAll('.tenkey').length === 0)).toBe(true)
   })
 })

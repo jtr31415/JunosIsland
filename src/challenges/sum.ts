@@ -20,6 +20,11 @@
  * bent `.tgrid`; both keep `.nchip`, which is the shell's dead-zone contract
  * (deadzone.ts) and not a look.
  *
+ * The COUNTING DOTS grew a place value at the same time, and for the same
+ * reason: past twenty, one dot per unit is not a hint. A count is now big green
+ * tens and little units — runA.md:1006's INTRO-TEN — with a picture key inside
+ * any box that shows one. See `helper()`.
+ *
  * The switch is decided on the ANSWER and never on a level. This module is
  * handed a, b and op and knows nothing about ladders, which is exactly the
  * property that lets the generators move rungs around without touching it.
@@ -91,8 +96,7 @@ export function mountSum(
   box.append(A, sign, B, op('='), ANS)
 
   let solved = false, wrongs = 0
-  /* Each returns whether it actually opened a box — see the mash rescue. */
-  const dotOpeners: Array<() => boolean> = []
+  const dotOpeners: Array<() => void> = []
   const pad = document.createElement('div')
 
   const helper = (n: number, col: string): HTMLElement => {
@@ -111,10 +115,77 @@ export function mountSum(
       h.innerHTML = ''
       const d = document.createElement('div')
       d.className = 'dotbox'
-      for (let i = 0; i < n; i++) {
-        const dt = document.createElement('span')
-        dt.className = 'dot ' + (Math.floor(i / 5) % 2 === 0 ? 'o' : 'b')
-        d.appendChild(dt)
+      /*
+       * THE BIG DOT: one green dot is ten little ones (runA.md:1006, INTRO-TEN,
+       * *"One big dot is worth ten little ones. So when you see a big dot — you
+       * say TEN!"*).
+       *
+       * A count is `floor(n / 10)` big dots and `n % 10` little ones, so 34 is
+       * three big and four little and 90 is nine big and nothing else. Before
+       * this a count was one dot per unit, which is a rescue at seven and a
+       * WALL at ninety — ninety dots is more counting than the sum was, arriving
+       * at the moment the child is already floundering. Place value is the way
+       * out of that, and it is the thing rung 5 exists to teach: the ladder note
+       * above the lesson (runA.md:995) puts the ten-dot's debut on the tens rung
+       * for exactly this reason.
+       *
+       * The fives colour-blocking survives on the REMAINDER only — at most nine
+       * units now, so at most two blocks. It means "these are countable in
+       * fives", which is still true of the units and was never true of a ten.
+       */
+      const tens = Math.floor(n / 10), units = n % 10
+      if (tens > 0) {
+        const t = document.createElement('div')
+        t.className = 'tens'
+        for (let i = 0; i < tens; i++) {
+          const bd = document.createElement('span')
+          bd.className = 'bigdot'
+          t.appendChild(bd)
+        }
+        d.appendChild(t)
+      }
+      if (units > 0) {
+        const u = document.createElement('div')
+        u.className = 'units'
+        for (let i = 0; i < units; i++) {
+          const dt = document.createElement('span')
+          dt.className = 'dot ' + (Math.floor(i / 5) % 2 === 0 ? 'o' : 'b')
+          u.appendChild(dt)
+        }
+        d.appendChild(u)
+      }
+      /*
+       * THE KEY, and only when there is a big dot in this box to explain.
+       *
+       * It is a picture, not a sentence: one big dot, `=`, ten little ones laid
+       * out five and five so they echo the counting blocks directly above. A
+       * five-year-old reads nothing. It is per-box rather than per-round on
+       * purpose — each box then explains itself whatever the other one is
+       * doing, and no box can be opened showing a green dot with the key
+       * somewhere the child is not looking.
+       *
+       * Its dots are `.keydot`, NOT `.dot`. A `.dot` is one unit BEING COUNTED
+       * and the box's count is read off them; the key's ten are an illustration
+       * of what the green one is worth, and folding them into the same class
+       * would make every count in this file a lie by ten.
+       */
+      if (tens > 0) {
+        const key = document.createElement('div')
+        key.className = 'tenkey'
+        const big = document.createElement('span')
+        big.className = 'bigdot'
+        const eq = document.createElement('span')
+        eq.className = 'keyeq'
+        eq.textContent = '='
+        const ten = document.createElement('span')
+        ten.className = 'keyten'
+        for (let i = 0; i < 10; i++) {
+          const kd = document.createElement('span')
+          kd.className = 'keydot'
+          ten.appendChild(kd)
+        }
+        key.append(big, eq, ten)
+        d.appendChild(key)
       }
       h.appendChild(d)
     }
@@ -127,21 +198,13 @@ export function mountSum(
       if (shown) { shown = false; chip() } else open()
     })
     /*
-     * The MASH RESCUE may open this box, but only if it would be a hint.
-     *
-     * One dot per unit is a rescue at 7 + 5 and a wall at 20 + 30: fifty dots
-     * is more counting than the sum was, and it arrives at the moment the child
-     * is already floundering. So above DOT_WALL the rescue leaves the box shut
-     * — the child may still tap it open themselves, which is a choice rather
-     * than something dumped on them, and a lopsided sum still gets its small
-     * side opened (34 + 5 shows the five).
+     * The MASH RESCUE opens this box at ANY size. It once refused above twenty
+     * dots because ninety of them was a wall rather than a hint; the big dot
+     * above is the real answer to that and supersedes the refusal. Ninety is
+     * nine dots now, and a rescue that declined to help on precisely the rungs
+     * where the child is most likely to need it was the wrong shape of fix.
      */
-    const DOT_WALL = 20
-    dotOpeners.push(() => {
-      if (shown || n > DOT_WALL) return false
-      open()
-      return true
-    })
+    dotOpeners.push(() => { if (!shown) open() })
     chip()
     return h
   }
@@ -213,10 +276,8 @@ export function mountSum(
       /* button-mashing detected: pause the pad and open the counting dots */
       wrongs = 0
       deps.holds.lockInput(Date.now() + 2000)
-      const opened = dotOpeners.map(f => f()).some(Boolean)
-      /* The toast has to match what actually appeared: pointing at dots that
-         are not there is worse than not pointing at all. */
-      deps.toast(opened ? 'Count the dots! \u{1F440}' : 'Have another think! \u{1F914}')
+      dotOpeners.forEach(f => f())
+      deps.toast('Count the dots! \u{1F440}')
       deps.sfx.play('down')
     }
   }
