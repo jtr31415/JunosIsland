@@ -16,11 +16,14 @@
  *      real, and read the definition back off `CREATURE_DEFS` — the same route
  *      the editor itself uses. The recovered definition must deep-equal the one
  *      that went in.
- *   2. **BYTE FIDELITY**, which is a MEASUREMENT and not a requirement: does the
+ *   2. **PALETTE ORDER**, which `toEqual` cannot see. Insertion order IS the
+ *      texture layout, so a definition that comes back with its slots shuffled
+ *      is a different animal wearing the same numbers.
+ *   3. **BYTE FIDELITY**, which is a MEASUREMENT and not a requirement: does the
  *      emitted text equal the file on disk? `defToModuleSource`'s own doc says
  *      the prose is not reproduced, so this is expected to fail and is recorded
  *      skipped, with what differs written down beside it.
- *   3. **NO FIELD IS DROPPED.** The emitter walks a hardcoded key list. A field
+ *   4. **NO FIELD IS DROPPED.** The emitter walks a hardcoded key list. A field
  *      added to `CreatureDef` and forgotten there vanishes on save.
  *
  * **Nothing here asserts what any species IS.** No species name and no part id,
@@ -28,6 +31,46 @@
  * animals are Joe's to change from the editor, and a test that pinned one to its
  * current geometry would lock him out of his own tool. Every claim is of the
  * form "what went in came out", which stays true whatever he draws.
+ *
+ * ===========================================================================
+ * ## WHY THIS IS ONE CASE PER SPECIES — PB-082, and it is packaging, not scope
+ * ===========================================================================
+ *
+ * Claims 1 and 2 used to be two `it`s, each looping over the whole register.
+ * That shape cost the same per species and spent it in two places, and by 86
+ * species it no longer fitted vitest's 5 s default UNDER FULL-SUITE LOAD while
+ * still passing alone — which made `npm test` red and blocked every deploy, not
+ * only the animals. PB-082 was raised for exactly that and deliberately did NOT
+ * raise the timeout: the standing rule here is that moving a constant to make a
+ * gate green buries real faults. It asked for a measurement and a decision.
+ *
+ * **The measurement, taken at 86 species on 4 August 2026:**
+ *
+ *       whole file, alone                2438 ms   (29 ms per species)
+ *       whole file, under full load     ~9900 ms  (116 ms per species)
+ *
+ * Contention is the multiplier, not the species count — the same work is ~4x
+ * dearer when vitest is running 133 files across its workers. And the second
+ * failure was DOWNSTREAM of the first: alone, claim 2 costs 299 ms because
+ * claim 1 has already cached every dynamic import; under load claim 1 was
+ * aborted part-way, so nothing was cached and claim 2 paid for it all again.
+ *
+ * **So the fix is the packaging.** One `it` per species, each doing the
+ * emit-write-import ONCE and answering both claims off it:
+ *
+ *   - **No constant moved and no assertion relaxed.** All 86 still round-trip
+ *     and all 86 still keep their palette order. Coverage is identical.
+ *   - **116 ms against a 5 s budget is a 43x margin**, and it holds at the full
+ *     roster of 320 — where the old shape would have wanted ~37 s.
+ *   - **The report gets better.** "2 of 86 failed" becomes the names of the two.
+ *   - **It is 86 cases and not 172**, because merging the two loops into one is
+ *     the free half of this: the trip was being made twice per species to answer
+ *     two questions about the same journey.
+ *
+ * **The count guard below is load-bearing and is new.** A parameterised suite
+ * over an empty map generates no cases and reports green, which is the one way
+ * this shape can fail silently where the old one could not. `assembly-engine`
+ * carries the same guard for the same reason.
  */
 import { describe, it, expect, afterAll } from 'vitest'
 import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs'
@@ -39,8 +82,19 @@ import { loadBuiltDefs } from '../../tools/workbench/public/editor/capture'
 import { CREATURE_DEFS } from '../../src/island/species/parts/creature'
 import type { CreatureDef } from '../../src/island/species/parts'
 
-/** Read once. Later `-roundtrip` registrations must not appear in the subject list. */
-const DEFS = loadBuiltDefs()
+/**
+ * Read once, at module scope, because the case list is derived from it.
+ *
+ * The await is here and not inside a case so that `describe` can name one `it`
+ * per species. It hides no cost: all this does is import the species barrel,
+ * which vitest already reports under `import` and which the old shape paid for
+ * too. Every emit, write and dynamic import — the work PB-082 is about — still
+ * happens inside a case, inside the 5 s default, and is not moved anywhere.
+ *
+ * Later `-roundtrip` registrations must not appear in the subject list, which is
+ * why this is a copy taken before any of them exist.
+ */
+const DEFS = await loadBuiltDefs()
 
 const ASSEMBLED = resolve(__dirname, '../../src/island/species/parts/assembled')
 const CREATURE_MODULE = resolve(__dirname, '../../src/island/species/parts/creature.ts')
@@ -65,6 +119,9 @@ afterAll(() => {
  *     one id twice with two different builds and the original is already on the
  *     register. The id is not part of the definition, so this changes nothing
  *     that is compared.
+ *
+ * **This is the expensive call and it is made ONCE per species**, which is the
+ * whole of PB-082's fix. Two claims are read off the one result.
  */
 const recover = async (speciesId: string, source: string): Promise<CreatureDef | undefined> => {
   const roundTripId = `${speciesId}-roundtrip`
@@ -98,39 +155,41 @@ const emittedKeys = (source: string): string[] =>
     .filter((k): k is string => k !== undefined)
 
 describe('a definition survives the trip out of the editor and back', () => {
-  it('recovers every registered species from its own emitted module', async () => {
-    const defs = await DEFS
-    expect(defs.size).toBeGreaterThan(0)
-    const lost: string[] = []
-    for (const [id, def] of defs) {
-      const back = await recover(id, defToModuleSource(id, def))
-      /* `toEqual` and not a string compare: top-level key order is the emitter's
-       * own (`DEF_KEYS`) and is not data. Palette order IS data, and `toEqual`
-       * on the palette object would miss a reorder — so it is checked separately
-       * below, by key sequence. */
-      try {
-        expect(back).toEqual(def)
-      } catch {
-        lost.push(`${id}\n${fieldDiffs(def, back).join('\n')}`)
-      }
-    }
-    expect(lost, `${lost.length} of ${defs.size} species do not survive the round trip`)
-      .toEqual([])
+  /*
+   * THE GUARD ON THE SHAPE ITSELF. Every case below is generated from `DEFS`, so
+   * an empty map is zero cases and a green run — the one failure mode a
+   * parameterised suite has that a loop inside one case does not. Asserted
+   * rather than assumed, and deliberately not folded into a species case, where
+   * it would only run if there were already a species to run it.
+   */
+  it('finds species to sweep, so a silent zero cannot pass as green', () => {
+    expect(DEFS.size).toBeGreaterThan(50)
   })
 
-  it('keeps the palette in its own order, which is the texture layout', async () => {
-    const defs = await DEFS
-    const reordered: string[] = []
-    for (const [id, def] of defs) {
+  /*
+   * ONE CASE PER SPECIES, ONE TRIP EACH, TWO CLAIMS OFF IT. See the header for
+   * why the shape is this and what it is not: no timeout moved, no assertion
+   * relaxed, every species still checked for both things.
+   */
+  for (const [id, def] of DEFS) {
+    it(`${id}: recovers from its own emitted module, palette order and all`, async () => {
       const back = await recover(id, defToModuleSource(id, def))
+
+      /* CLAIM 1. `toEqual` and not a string compare: top-level key order is the
+       * emitter's own (`DEF_KEYS`) and is not data. */
+      expect(back, `${id} does not survive the round trip:\n${fieldDiffs(def, back).join('\n')}`)
+        .toEqual(def)
+
+      /* CLAIM 2, and it is not implied by claim 1: `toEqual` compares an
+       * object's entries and ignores their ORDER, while palette order is the
+       * texture layout and therefore data. Checked as a key sequence, which is
+       * the only way to see it. */
       const before = Object.keys(def.palette)
       const after = Object.keys(back?.palette ?? {})
-      if (before.join(',') !== after.join(',')) {
-        reordered.push(`${id}: in [${before.join(', ')}] -> out [${after.join(', ')}]`)
-      }
-    }
-    expect(reordered).toEqual([])
-  })
+      expect(after, `${id}: the palette came back in a different order — `
+        + `in [${before.join(', ')}] -> out [${after.join(', ')}]`).toEqual(before)
+    })
+  }
 
   /**
    * MEASURED 2 Aug 2026, AND IT FAILS: 0 of 30 species emit byte-identical to the
@@ -160,11 +219,14 @@ describe('a definition survives the trip out of the editor and back', () => {
    *
    * Strip every comment and blank line and the DATA lines still differ in all 30,
    * on the `PACK_PUPIL` line alone in the mildest cases.
+   *
+   * LEFT AS ONE LOOPING CASE by PB-082 rather than split per species, because it
+   * is skipped and costs nothing, and because the day it is unskipped the thing
+   * worth reading is the COUNT — how many of them reproduce — rather than which.
    */
-  it.skip('emits the file it was loaded from, byte for byte', async () => {
-    const defs = await DEFS
+  it.skip('emits the file it was loaded from, byte for byte', () => {
     const differ: string[] = []
-    for (const [id, def] of defs) {
+    for (const [id, def] of DEFS) {
       const disk = readFileSync(join(ASSEMBLED, `${id}.ts`), 'utf8')
       if (defToModuleSource(id, def) !== disk) differ.push(id)
     }
@@ -196,10 +258,15 @@ describe('the emitter can say everything a definition can', () => {
     expect(missing, 'fields dropped on the way out of the editor').toEqual([])
   })
 
-  it('writes down every field the shipped species between them use', async () => {
-    const defs = await DEFS
+  /*
+   * ONE CASE AND NOT ONE PER SPECIES, on purpose: this is `defToModuleSource`
+   * alone with no write and no import, it measured 11-22 ms over the whole
+   * register, and PB-082 is about the trip rather than about the emitter. Split
+   * only what is expensive.
+   */
+  it('writes down every field the shipped species between them use', () => {
     const missing: string[] = []
-    for (const [id, def] of defs) {
+    for (const [id, def] of DEFS) {
       const written = emittedKeys(defToModuleSource(id, def))
       for (const k of Object.keys(def)) if (!written.includes(k)) missing.push(`${id}.${k}`)
     }
