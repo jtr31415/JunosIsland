@@ -69,24 +69,37 @@ const vertsOf = (g: THREE.Object3D): number => {
 }
 
 describe('animal-firefly: the wing the bank does not have', () => {
-  it('measures the absence, so the day somebody bakes one this goes red', () => {
-    // `wing` is DECLARED in the PartRole union and occurs zero times in the data,
-    // alongside `horn` and `claw`. That is the fact the bat and the sugar glider
-    // are blocked on and the fact this species had to justify itself around, so
-    // it is measured here rather than quoted from a comment. A `wing` record
-    // arriving is a good thing — it unblocks three species — and it should arrive
-    // as a red test rather than as a silently stale argument.
-    expect(PARTS_BANK).toHaveLength(94)
-    expect(PARTS_BANK.filter(p => p.roles.includes('wing'))).toEqual([])
-    for (const absent of ['wing', 'horn', 'claw'] as const) {
+  it('THE WING ARRIVED — 4 August — and horn and claw are still missing', () => {
+    /*
+     * This test used to assert the opposite, and it was written to go red on
+     * exactly this day: *"A `wing` record arriving is a good thing — it unblocks
+     * three species — and it should arrive as a red test rather than as a
+     * silently stale argument."* It did. This is that argument, updated.
+     *
+     * Joe, 4 August: *"i need the wings from the parrot and the bee in as
+     * primitives with the wing flap motion automatically applied."* `wing` was
+     * declared in the role union, censused at 10 instances across 5 species, and
+     * deliberately left out of `BAKED_ROLES`. It is baked now, and the ten
+     * instances cluster into six shapes:
+     *
+     *     blade-06 / blade-07   the BEE's wings   (the penguin's are identical)
+     *     wedge-19 / wedge-20   the CHICK's       (the PARROT's are identical)
+     *     box-42   / box-43     the fish's
+     *
+     * `horn` and `claw` are still declared-and-absent, so the bat, the sugar
+     * glider and the scorpion are still blocked — on those two, no longer on
+     * this one.
+     */
+    const wings = PARTS_BANK.filter(p => p.roles.includes('wing'))
+    expect(wings.map(p => p.id).sort())
+      .toEqual(['blade-06', 'blade-07', 'box-42', 'box-43', 'wedge-19', 'wedge-20'])
+    for (const absent of ['horn', 'claw'] as const) {
       expect(PARTS_BANK.filter(p => p.roles.includes(absent)), absent).toHaveLength(0)
     }
-    // And the pack's own three birds donated none either — parrot, chick and
-    // penguin are each a fused hull plus a beak, legs and eye cards.
-    const birds = new Set(['parrot', 'chick', 'penguin'])
-    for (const p of PARTS_BANK) {
-      if (p.provenance.some(q => birds.has(q.species))) expect(p.roles).not.toContain('wing')
-    }
+    // And the pack's own birds DID donate, which is where the parrot's went.
+    const donors = new Set(wings.flatMap(p => p.provenance.map(q => q.species)))
+    expect(donors).toContain('parrot')
+    expect(donors).toContain('bee')
   })
 
   it('does not need one: nothing on this animal stands in for a wing', () => {

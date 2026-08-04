@@ -79,10 +79,12 @@ describe('animal-sheep: the bank has no fleece, so the palette carries it', () =
       }
     }
     expect(hits, 'the bank grew a fleece; the palette may no longer have to carry it').toEqual([])
-    // And no role for one. These ten are the whole vocabulary the bank speaks.
+    /* And no role for one. `wing` joined the vocabulary on 4 August when Joe had
+     * the parrot's and the bee's baked in — listed rather than filtered out, so
+     * this stays an equality and would still notice a FLEECE role arriving. */
     const roles = [...new Set(PARTS_BANK.flatMap(p => p.roles))].sort()
     expect(roles).toEqual([
-      'band', 'card', 'ear', 'eye', 'hull', 'leg', 'nose', 'oddment', 'tail', 'tooth',
+      'band', 'card', 'ear', 'eye', 'hull', 'leg', 'nose', 'oddment', 'tail', 'tooth', 'wing',
     ])
     // Nothing on this animal is authored either — not even one of JT-041's three
     // sanctioned base shapes, which is how a builder would fake a tuft.

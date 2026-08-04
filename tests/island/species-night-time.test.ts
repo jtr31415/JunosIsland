@@ -125,24 +125,40 @@ describe('the Night Time collection is exactly the roster, minus the three the P
     expect(NIGHT_TIME_SPECIES).toHaveLength(16 - NOT_BUILT.length)
   })
 
-  it('is short three because the bank has NO WING, HORN or CLAW — measured, not asserted', () => {
+  it('THE WING ARRIVED — the bat and the sugar glider are unblocked, and unbuilt', () => {
     /*
-     * The reason, turned into a measurement. `wing`, `horn` and `claw` are
-     * declared members of the `PartRole` union — the annotation below is the
-     * compile-time half of that proof, which no runtime check can make — and all
-     * three occur ZERO times in the baked data. So rule 1's "adapt before
-     * authoring" has nothing at all to work on for these three species.
+     * THIS TEST DID ITS JOB ON 4 AUGUST. It said one banked wing shape reopens
+     * five species, not three, and that both this file and
+     * `species-africa.test.ts` should go red together the day it changed. Joe
+     * had the parrot's and the bee's wings baked into the bank that day, so
+     * `wing` is six shapes where it was zero.
      *
-     * `species-africa.test.ts` asserts the same absence for the ostrich and the
-     * vulture. Both files go red together the day it changes, which is correct:
-     * one banked wing shape reopens five species, not three.
+     * WHAT THAT MEANS, AND WHAT IT DOES NOT. The bat and the sugar glider were
+     * held out of this collection for ONE reason — rule 1's "adapt before
+     * authoring" had nothing to work on, because there was no wing to adapt.
+     * That reason is gone. They are not built yet, and building them is Joe's
+     * call rather than a consequence of this commit: a bat's membrane is not a
+     * bird's wing, and whether `blade-06` can honestly stand in for one is a
+     * question about the animal, not about the bank.
+     *
+     * The SCORPION is untouched by any of it. It needs a `claw`, which is still
+     * declared-and-absent, so it stays out for exactly the reason it always did.
      */
-    const declared: readonly PartRole[] = ['wing', 'horn', 'claw']
-    for (const role of declared) {
+    const wings = PARTS_BANK.filter(p => p.roles.includes('wing')).map(p => p.id)
+    expect(wings.length, 'the wing has gone again').toBeGreaterThan(0)
+
+    // Still nothing to adapt for the scorpion.
+    const stillMissing: readonly PartRole[] = ['horn', 'claw']
+    for (const role of stillMissing) {
       const have = PARTS_BANK.filter(p => p.roles.includes(role)).map(p => p.id)
       expect(have, `the bank now has a "${role}" shape: ${have.join(', ')} — reopen the ruling`)
         .toHaveLength(0)
     }
+
+    /* And the three are still OUT of the collection, which is the state this
+     * commit leaves them in deliberately. When Joe builds the bat and the sugar
+     * glider, `NOT_BUILT` shrinks and the test above is what says so. */
+    for (const [id] of NOT_BUILT) expect(byId.has(id), `${id} is built now`).toBe(false)
   })
 })
 

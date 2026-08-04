@@ -511,6 +511,48 @@ export function ridgeSpan(bound: number, count: number): number {
  * the ones that are supposed to throw — without putting an invented species on
  * the bench that `assembledSpecies()` would then have to answer for.
  */
+/**
+ * A WING FLAPS UNLESS THE SPECIES SAYS OTHERWISE.
+ *
+ * Joe, 4 August: *"i need the wings from the parrot and the bee in as primitives
+ * with the wing flap motion automatically applied."* The wings arrived in the
+ * bank the same day (`parts-bank.ts`, `BAKED_ROLES`), and this is the second
+ * half of that sentence: drop one on a draft and it moves, with no `motion:`
+ * line to remember.
+ *
+ * WHY THE TRIGGER IS THE PART'S ROLE AND NOT THE FEATURE'S NAME. The editor's
+ * push names an extra after the part it wears — that is how the dormouse's tail
+ * came to be a feature called `wedge-07`. A name-based trigger would therefore
+ * miss every wing Joe places in the editor, which is all of them, and it would
+ * miss them SILENTLY: the symptom of a flap that never attaches is a bird
+ * standing still, which looks exactly like a bird nobody animated. The bank
+ * knows what a wing is (`roles: ["wing"]`, measured off the pack), so it is
+ * asked instead.
+ *
+ * WHAT IT WILL NOT DO. It never overrides the species. A feature already named
+ * by a declared motion is left entirely alone — including one deliberately
+ * given `wag` or `twitch` instead — so the existing birds that spell out
+ * `motion: [{ kind: 'flap', parts: ['wing'] }]` are unaffected, and there is no
+ * second flap fighting the first for the same channel (`resolveMotion` would
+ * fail the build for that, loudly, which is the safety net under this).
+ *
+ * TO OPT OUT: name the wing in a motion of its own. There is deliberately no
+ * `flap: false` — a bird whose wings are meant to be still is a bird wearing a
+ * folded wing, and that is a modelling decision rather than a flag.
+ */
+function withDefaultFlap(
+  defs: readonly MotionDef[] | undefined, features: readonly Feature[],
+): readonly MotionDef[] | undefined {
+  const spokenFor = new Set((defs ?? []).flatMap(d => d.parts ?? []))
+  const wings = [...new Set(
+    features
+      .filter(f => (partById(f.part)?.roles.includes('wing') ?? false) && !spokenFor.has(f.name))
+      .map(f => f.name),
+  )]
+  if (wings.length === 0) return defs
+  return [...(defs ?? []), { kind: 'flap', parts: wings }]
+}
+
 export function creatureSpec(id: string, def: CreatureDef): AssemblyBuild {
   /* ---- the palette, and the pupil Joe corrected once for every animal ---- */
   const givenPupil = def.eyes === false ? undefined : def.eyes?.pupil ?? 'pupil'
@@ -907,7 +949,7 @@ export function creatureSpec(id: string, def: CreatureDef): AssemblyBuild {
    * part that is not there — is the one whose symptom is nothing moving, which
    * is indistinguishable on a screen from a species with no motion at all. */
   const motion = resolveMotion(
-    id, def.motion, new Set(['hull', ...features.map(f => f.name)]),
+    id, withDefaultFlap(def.motion, features), new Set(['hull', ...features.map(f => f.name)]),
   )
 
   return {

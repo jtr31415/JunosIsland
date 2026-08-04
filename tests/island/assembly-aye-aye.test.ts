@@ -42,7 +42,10 @@ describe('animal-aye-aye: the finger, which is not here', () => {
   it('has nothing in the bank that could be one, and the flag names it', () => {
     // Measured, not assumed. This is the claim the flag makes to Joe and it has
     // to be true of the data, not of somebody's memory of it.
-    for (const role of ['claw', 'wing', 'horn'] as const) {
+    // `wing` left this list on 4 August, when Joe had the parrot's and the bee's
+    // baked into the bank. It never had anything to do with the aye-aye's
+    // finger; `claw` and `horn` are the two that do, and both are still absent.
+    for (const role of ['claw', 'horn'] as const) {
       expect(PARTS_BANK.filter(p => p.roles.includes(role)), `${role} exists after all`)
         .toHaveLength(0)
     }

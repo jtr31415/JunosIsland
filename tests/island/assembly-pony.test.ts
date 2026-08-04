@@ -98,10 +98,13 @@ describe('animal-pony: JT-044, and there is no hoof in the bank to author instea
       }
     }
     expect(hits, 'the bank grew a hoof; JT-044 may no longer be the answer').toEqual([])
-    // And no role for one either. These ten are the whole vocabulary.
+    /* And no role for one either. `wing` joined this vocabulary on 4 August when
+     * Joe had the parrot's and the bee's baked in — it is listed so the set stays
+     * an equality rather than becoming a subset check, which would stop noticing
+     * a HOOF role arriving, and that is the thing this test is actually for. */
     const roles = [...new Set(PARTS_BANK.flatMap(p => p.roles))].sort()
     expect(roles).toEqual([
-      'band', 'card', 'ear', 'eye', 'hull', 'leg', 'nose', 'oddment', 'tail', 'tooth',
+      'band', 'card', 'ear', 'eye', 'hull', 'leg', 'nose', 'oddment', 'tail', 'tooth', 'wing',
     ])
     // Nothing on this animal is authored except the two base shapes, so nobody
     // slipped a hoof in through `authored.ts` either.

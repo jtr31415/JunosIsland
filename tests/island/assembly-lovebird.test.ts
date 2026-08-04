@@ -745,7 +745,7 @@ describe('animal-lovebird: the stance, the eye, and what it is separated on', ()
     // and pinned this so the day somebody bakes the role, four birds' shared
     // idiom is reconsidered rather than quietly inherited. This is the fourth
     // bird and the last, so it is pinned here too.
-    const declared: PartRole[] = ['wing', 'horn', 'claw']
+    const declared: PartRole[] = ['horn', 'claw']  // 'wing' was baked 4 Aug — see note above
     for (const role of declared) {
       const have = PARTS_BANK.filter(p => p.roles.includes(role)).map(p => p.id)
       expect(have, `the bank now has a "${role}" shape: ${have.join(', ')} — reopen the wing`)

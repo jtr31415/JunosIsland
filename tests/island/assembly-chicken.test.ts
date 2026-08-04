@@ -107,12 +107,16 @@ const coneHalfDepth = (h: number): number =>
 
 describe('animal-chicken: the comb is three points, and both its numbers are solved', () => {
   it('reaches for `cone-01` because the bank has no comb and only two true points', () => {
-    // There is no comb, wattle, horn or wing ROLE in the bank at all — anything
-    // whose only job was one of those was discarded at generation time — so a
-    // comb is a repurposed shape or it is nothing. `taper` is 0 on exactly two
-    // of the 94 records and the other is a parrot's beak; the day a third is
-    // banked, this goes red and the choice is worth re-taking.
-    for (const role of ['wing', 'horn', 'claw']) {
+    /* There is no comb, wattle, horn or claw ROLE in the bank at all — anything
+     * whose only job was one of those was discarded at generation time — so a
+     * comb is a repurposed shape or it is nothing. `taper` is 0 on exactly two
+     * records and the other is a parrot's beak; the day a third is banked, this
+     * goes red and the choice is worth re-taking.
+     *
+     * `wing` came OFF this list on 4 August: Joe had the parrot's and the bee's
+     * baked in. Six wing shapes exist now and none of them is a point, so the
+     * comb's reasoning below is untouched by it. */
+    for (const role of ['horn', 'claw']) {
       expect(PARTS_BANK.filter(p => (p.roles as readonly string[]).includes(role)),
         `the bank now has a ${role} role`).toHaveLength(0)
     }

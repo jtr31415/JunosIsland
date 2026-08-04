@@ -197,17 +197,36 @@ describe('animal-hamster: box-41 is refused, and the reason is an octagon', () =
   })
 })
 
-describe('animal-hamster: the cheek pouches, and why there are none', () => {
-  it('has no shape on its sides, because everything that mounts there is an EAR', () => {
-    // Six shapes in the whole bank attach on x. Three are ears, one is the bee's
-    // torso ring, and two are zero-thickness marking cards. There is no bulge in
-    // the bank that goes on the side of a head and is not an ear.
+describe('animal-hamster: the cheek pouches, and where they came from', () => {
+  it('had no side shape in the bank that was not an EAR — until the wing', () => {
+    /*
+     * WHAT THIS BLOCK WAS FOR, and why its title changed on 4 August.
+     *
+     * It argued that the hamster could not HAVE cheek pouches: six shapes in the
+     * whole bank attached on x, three were ears, one was the bee's torso ring and
+     * two were zero-thickness marking cards, so there was no bulge that goes on
+     * the side of a head and is not an ear. Joe has since given the animal two —
+     * a `box-34` pair, stretched 1.75 and spun onto the flank, which is a
+     * top-face stub turned sideways rather than a side-mounted shape. The
+     * argument was about the BANK and he answered it with a spin.
+     *
+     * The census below now also catches the wings baked that day, which really
+     * are side-mounted solids and really are not ears — so the claim is stated as
+     * it was always meant: every side-mounting SOLID is an ear or a wing, and
+     * neither is a cheek pouch.
+     */
     const sideways = PARTS_BANK.filter(p => p.attachment?.axis === 'x')
-    expect(sideways.map(p => p.id).sort())
-      .toEqual(['box-04', 'box-25', 'plate-10', 'plate-11', 'tube-04', 'tube-05'])
     const solids = sideways.filter(p => Math.min(...p.size) > 1e-6 && !p.roles.includes('band'))
-    expect(solids.map(p => p.id).sort()).toEqual(['box-25', 'tube-04', 'tube-05'])
-    for (const p of solids) expect(p.roles, `${p.id} is not an ear`).toContain('ear')
+    expect(solids.length, 'nothing mounts on x any more').toBeGreaterThan(0)
+    for (const p of solids) {
+      expect(
+        p.roles.includes('ear') || p.roles.includes('wing'),
+        `${p.id} mounts on the flank and is neither an ear nor a wing`,
+      ).toBe(true)
+    }
+    // The three ears the original argument turned on are still exactly those.
+    expect(solids.filter(p => p.roles.includes('ear')).map(p => p.id).sort())
+      .toEqual(['box-25', 'tube-04', 'tube-05'])
     // And they are the BIGGEST things that could go there — a hamster whose
     // separation is small ears would grow a second, larger pair.
     expect(partById('box-25')!.shape.longest).toBeGreaterThan(

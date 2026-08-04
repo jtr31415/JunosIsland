@@ -59,7 +59,7 @@ describe('animal-nightjar: the bank has no wing, and this bird needs none', () =
      * line that goes red the day somebody banks a wing shape, at which point the
      * ruling is reopened rather than quietly still true.
      */
-    const declared: PartRole[] = ['wing', 'horn', 'claw']
+    const declared: PartRole[] = ['horn', 'claw']  // 'wing' was baked 4 Aug — see note above
     for (const role of declared) {
       const have = PARTS_BANK.filter(p => p.roles.includes(role)).map(p => p.id)
       expect(have, `the bank now has a "${role}" shape: ${have.join(', ')} — reopen the ruling`)
@@ -74,7 +74,13 @@ describe('animal-nightjar: the bank has no wing, and this bird needs none', () =
     for (const bird of ['parrot', 'chick', 'penguin']) {
       const roles = roleOf(bird)
       expect(roles, `${bird} is not in the bank at all`).not.toHaveLength(0)
-      expect(roles, `${bird} donated a wing`).not.toContain('wing')
+      /* They DO donate a wing now — the parrot's is `wedge-19`/`wedge-20`, baked
+       * on 4 August. What is still true, and is what this species relies on, is
+       * that a bird is buildable without one: a fused hull, a beak, two legs and
+       * eye cards, every one of them in the bank. */
+      for (const need of ['hull', 'leg', 'eye']) {
+        expect(roles, `${bird} donated no ${need}`).toContain(need)
+      }
     }
     // Nothing on this animal claims to be one, and nothing was authored to fake
     // one either — the harness pins the authored set to empty for this species.

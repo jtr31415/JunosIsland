@@ -67,12 +67,16 @@ const segments = (g: THREE.Group): THREE.Mesh[] => {
 }
 
 describe('animal-glow-worm: the wing that is not missing', () => {
-  it('measures the absence, so the day somebody bakes one this goes red', () => {
-    // The same measurement the firefly's test makes, and it is repeated rather
-    // than shared on purpose: it is the fact three species in this collection are
-    // blocked on, and it should go red in every file that reasons from it.
-    expect(PARTS_BANK).toHaveLength(94)
-    expect(PARTS_BANK.filter(p => p.roles.includes('wing'))).toEqual([])
+  it('THE WING ARRIVED, and this species still does not want one', () => {
+    /* The same measurement the firefly's test makes, repeated rather than shared
+     * on purpose: it should go red in every file that reasons from it, and on
+     * 4 August it did. Joe had the parrot's and the bee's wings baked into the
+     * bank, so `wing` is six shapes now where it was zero.
+     *
+     * Nothing about THIS animal changes, which is the point of keeping the
+     * assertion here rather than deleting it — see the test below. */
+    expect(PARTS_BANK.filter(p => p.roles.includes('wing')).length).toBeGreaterThan(0)
+    expect(GLOW_WORM_ASSEMBLY.features.some(f => f.name.startsWith('wing'))).toBe(false)
   })
 
   it('does not need one, and says so where Joe reads it', () => {

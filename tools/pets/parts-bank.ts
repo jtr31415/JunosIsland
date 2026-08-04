@@ -701,6 +701,37 @@ export function clusters(instances: readonly Instance[]): Instance[][] {
  * — are censused only.
  */
 export const BAKED_ROLES: ReadonlySet<Role> =
+  new Set<Role>(['hull', 'leg', 'ear', 'tail', 'eye', 'nose', 'band', 'card', 'tooth', 'wing'])
+
+/**
+ * THE ROLES THAT FIX THE NUMBERING, and why this is not the same list.
+ *
+ * A part's id is `<form>-<NN>` where NN is a running counter per form, handed
+ * out in group order to the groups that get baked. That makes the id a function
+ * of WHICH ROLES ARE BAKED — and adding a role to `BAKED_ROLES` therefore
+ * renumbers everything after the first newly-eligible group in each form.
+ *
+ * That is not a hypothetical. Adding `wing` on 4 August and regenerating moved:
+ *
+ *     box-31    the LION'S HULL          -> the lion's mane band
+ *     blade-03  the DOG'S NOSE           -> the BEE'S WING
+ *     box-23    the FOX'S BRUSH          -> the fox's hull
+ *
+ * Every species file names these ids as strings. Nothing would have failed to
+ * compile and nothing would have failed to build — the newt's five crest blades
+ * would simply have become bee wings, and the first anyone would know is Joe
+ * looking at his daughter's island. The count of ids does not catch it either:
+ * all 94 ids still existed afterwards, they just meant different shapes.
+ *
+ * So the ORDER ids are handed out in is frozen to the nine roles that were baked
+ * when the current ids were minted. A role added later cannot disturb them: its
+ * groups are numbered in a second pass and land after the highest number already
+ * used for their form. `tests/island/parts-bank-ids.test.ts` holds the anchors.
+ *
+ * To deliberately renumber the whole bank — which means rewriting every species
+ * file that names a part — add the role here as well as to `BAKED_ROLES`.
+ */
+const NUMBERING_FROZEN_BY: ReadonlySet<Role> =
   new Set<Role>(['hull', 'leg', 'ear', 'tail', 'eye', 'nose', 'band', 'card', 'tooth'])
 
 /**
@@ -764,8 +795,19 @@ export function bake(groups: readonly Instance[][], instances: readonly Instance
 
   const seen = new Map<string, number>()
   const out: Baked[] = []
-  for (const group of groups) {
-    if (!group.some(i => BAKED_ROLES.has(i.role))) continue
+
+  /*
+   * TWO PASSES, and the order between them is the whole point — see
+   * `NUMBERING_FROZEN_BY`. The groups that were eligible when today's ids were
+   * minted are numbered first, in their original order, so every existing id
+   * keeps its shape. Groups that qualify only because a role was added later are
+   * numbered afterwards and can only ever APPEND.
+   */
+  const frozen = groups.filter(g => g.some(i => NUMBERING_FROZEN_BY.has(i.role)))
+  const added = groups.filter(g =>
+    !g.some(i => NUMBERING_FROZEN_BY.has(i.role)) && g.some(i => BAKED_ROLES.has(i.role)))
+
+  for (const group of [...frozen, ...added]) {
     const first = group[0]!
     const shape = shapeFacts(first.size, first.positions)
     const n = (seen.get(shape.form) ?? 0) + 1
