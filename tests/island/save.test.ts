@@ -456,7 +456,10 @@ describe('fixtures both directions (A5)', () => {
             sessions: [{ date: '2026-09-01', correct: 3, total: 4 }], rescues: [],
             fluency: 'gold',
           },
-          7: { ticked: true, attempts: 99 },
+          /* AN ID WITH NOTHING BEHIND IT. Was 7 until 4 August, when 7 became a
+           * real rung (two-digit, bridging) and this fixture quietly stopped
+           * standing for anything. 99 is far past what the ladder could grow into. */
+          99: { ticked: true, attempts: 99 },
         },
       },
       algebra: { mode: 'auto', stages: { 1: { ticked: true, attempts: 40 } } },
@@ -530,7 +533,7 @@ describe('fixtures both directions (A5)', () => {
      * generator that cannot render it.
      */
     const { attainment } = fromSave(futureIsland() as never)
-    expect(attainment.sums.stages[7]).toBeUndefined()
+    expect(attainment.sums.stages[99]).toBeUndefined()
     expect(Object.prototype.hasOwnProperty.call(attainment, 'algebra')).toBe(false)
     expect(Object.prototype.hasOwnProperty.call(
       attainment.sums.stages[1] ?? {}, 'fluency')).toBe(false)

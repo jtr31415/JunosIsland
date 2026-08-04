@@ -534,6 +534,8 @@ describe('the struggler — a bad fortnight, and the ratchet holds', () => {
 
     let mercies = 0
     let inspected = false
+    /** Stage-1 attempts when the FIRST mercy armed. See the end of the walk. */
+    let mercyLow = Infinity
     let watching: { shape: string; attempts: number; left: number } | null = null
 
     march(w, {
@@ -566,8 +568,22 @@ describe('the struggler — a bad fortnight, and the ratchet holds', () => {
              */
             expect(shapeOf(w.a), 'a mercy run changed what they are allowed')
               .toBe(watching.shape)
-            expect(w.a.sums.stages[1]!.attempts, 'a mercy run stopped counting')
-              .toBeGreaterThan(watching.attempts)
+            /*
+             * NOT GREATER, GREATER-OR-EQUAL, and the strong form of this claim
+             * moved to the end of the walk ("the record kept counting").
+             *
+             * The assertion fires at DEAL time of the last mercy item, so at
+             * most `MERCY_RUN - 1` answers have been banked by then — and when
+             * the ladder grew from three rungs to seven on 4 August the walk's
+             * trajectory shifted and it began landing on a mercy where none had
+             * been. That is a fact about where a seeded month-long walk happens
+             * to be, not about whether the record counts, so the trajectory-
+             * dependent half of it is gone and the durable half is asserted
+             * once, below, where it cannot move.
+             */
+            expect(w.a.sums.stages[1]!.attempts, 'a mercy run LOST attempts')
+              .toBeGreaterThanOrEqual(watching.attempts)
+            mercyLow = Math.min(mercyLow, watching.attempts)
             watching = null
           }
         }
@@ -601,6 +617,15 @@ describe('the struggler — a bad fortnight, and the ratchet holds', () => {
     })
 
     /* Again: a walk that armed nothing would prove nothing. */
+    /* THE RECORD KEPT COUNTING THROUGH THE MERCIES. The durable half of the
+     * in-flight assertion above: whatever the walk's trajectory, stage 1 has
+     * more attempts on it at the end of the month than it had when the first
+     * mercy armed. A mercy is ten minutes of gentler questions, not ten minutes
+     * the island forgets. */
+    expect(mercyLow, 'no mercy ever armed, so nothing was measured').toBeLessThan(Infinity)
+    expect(w.a.sums.stages[1]!.attempts, 'the record stopped counting')
+      .toBeGreaterThan(mercyLow)
+
     expect(mercies).toBeGreaterThanOrEqual(5)
     expect(inspected, 'no mercy run ever armed on the path with two rungs').toBe(true)
 
@@ -688,7 +713,17 @@ describe('the improver — settled rungs whisper, and wake without falling', () 
      * state the whole retirement rule is about.
      */
     expect(accepted).toBeGreaterThanOrEqual(2)
-    expect(w.h.levelFor('sums')).toEqual([1, 3, 2])
+    /*
+     * THEY CLIMBED, AND IN LADDER ORDER — stated as the property rather than as
+     * the exact set. The ladder grew from three rungs to seven on 4 August, so a
+     * good month now carries a child further than [1, 3, 2] and a literal here
+     * would need editing every time Joe adds a level. What must hold is that
+     * they hold the first three in order and that whatever else they earned came
+     * off the ladder in its own order.
+     */
+    const climbed = w.h.levelFor('sums')
+    expect(climbed.slice(0, 3)).toEqual([1, 3, 2])
+    expect(climbed).toEqual(STAGES.sums.filter(s => climbed.includes(s)))
     expect(w.h.levelFor('takingAway')).toContain(1)
     expect(whispers, 'a retired rung was never visited again').toBeGreaterThan(0)
 
@@ -709,7 +744,23 @@ describe('the improver — settled rungs whisper, and wake without falling', () 
     w.h.dealt('sums', 1)
     w.h.dealt('sums', 1)
     const asleep = deals(w.h)
-    expect(asleep['sums:1'] ?? 0).toBeLessThan((asleep['sums:2'] ?? 0) / 2)
+    /*
+     * AGAINST THE OTHER RUNGS AS A GROUP, not against rung 2 alone.
+     *
+     * The claim is that a retired rung whispers — it is dealt far less than the
+     * rungs still in rotation. Comparing it with ONE named sibling was a fair
+     * proxy while the ladder was three rungs and the sweep gave each of them a
+     * third of the sums weight; with seven rungs (4 August) the same sweep
+     * spreads thinner and which particular sibling this deterministic walk lands
+     * on is an accident of the weights. The group is what the rule is about.
+     */
+    const elsewhere = Object.entries(asleep)
+      .filter(([k]) => k.startsWith('sums:') && k !== 'sums:1')
+      .reduce((n, [, v]) => n + v, 0)
+    expect(elsewhere, 'no other sums rung was dealt, so nothing was measured')
+      .toBeGreaterThan(0)
+    expect(asleep['sums:1'] ?? 0, 'a retired rung was still in full rotation')
+      .toBeLessThan(elsewhere / 2)
 
     /*
      * AND NOW THE WAKE, which is the assertion this describe exists for.
@@ -735,13 +786,30 @@ describe('the improver — settled rungs whisper, and wake without falling', () 
     expect(shapeOf(w.a), 'waking changed what they are allowed').toBe(shape)
     expect(w.a.sums.stages[1]!.attempts).toBe(banked + 2)
     assertNoDemotion(census, censusOf(w.a), 'the wake')
-    expect(w.h.levelFor('sums')).toEqual([1, 3, 2])
+    expect(w.h.levelFor('sums')).toEqual(climbed)
 
-    // Back in full rotation: within the path the two rungs now weigh the same.
+    /*
+     * BACK IN FULL ROTATION, stated against its FAIR SHARE of the path.
+     *
+     * It used to read "the two rungs now weigh the same" and compared rung 1
+     * with rung 2 to within 3 deals. That was true while sums had three rungs
+     * and the sweep split the path evenly between the ticked ones; with seven
+     * (4 August) the rungs no longer carry equal weight and pinning two of them
+     * to each other measures the weighting rather than the wake.
+     *
+     * What waking means is that the rung is dealt like a rung again — so it is
+     * compared with what an even split of the path would give it. Half of fair
+     * share is a wide floor on purpose: the point is that it is no longer a
+     * whisper, not that the weights are flat.
+     */
     const awake = deals(w.h)
     expect(awake['sums:1'] ?? 0).toBeGreaterThan(asleep['sums:1'] ?? 0)
-    expect(Math.abs((awake['sums:1'] ?? 0) - (awake['sums:2'] ?? 0)))
-      .toBeLessThanOrEqual(3)
+    const sumsDeals = Object.entries(awake)
+      .filter(([k]) => k.startsWith('sums:'))
+      .reduce((n, [, v]) => n + v, 0)
+    const rungs = climbed.length
+    expect(awake['sums:1'] ?? 0, 'the woken rung is still being whispered')
+      .toBeGreaterThan(sumsDeals / rungs / 2)
   })
 })
 

@@ -39,7 +39,11 @@ describe('the stages that exist', () => {
     // the newer, easier rung and sits between them. Renumbering it to [1,2,3]
     // would change what the second rung generates and redden the frozen
     // golden.
-    expect(STAGES.sums).toEqual([1, 3, 2])
+    /* SEVEN RUNGS since 4 August — Joe: "add some more summation levels."
+     * The original four are untouched and in the same relative order; ids 4, 5,
+     * 6 and 7 are new. See STAGES in harness.ts for the ladder and why the ids
+     * are not in numeric order. */
+    expect(STAGES.sums).toEqual([4, 1, 3, 2, 5, 6, 7])
     expect(STAGES.takingAway).toEqual([1, 2, 3])
     expect(STAGES.reading).toEqual([1])
     expect(STAGES.building).toEqual([1])
@@ -138,9 +142,14 @@ describe('levelFor — which stages the child may be dealt', () => {
 
   it('never returns a stage that has no generator behind it', () => {
     const a = createAttainment()
-    // A hand-edited save, a rolled-back build, a future stage id: all the same
-    // kind of untrusted input, and none of them may reach a generator.
-    a.sums.stages[7] = { ...a.sums.stages[1]!, ticked: true }
+    /* A hand-edited save, a rolled-back build, a future stage id: all the same
+     * kind of untrusted input, and none of them may reach a generator.
+     *
+     * THE FIXTURE WAS `7` UNTIL 4 AUGUST, when 7 became a real rung
+     * (two-digit, bridging) and this test quietly started asserting that a
+     * legitimate stage was refused. 99 is chosen to be far past anything the
+     * ladder could plausibly grow into. */
+    a.sums.stages[99] = { ...a.sums.stages[1]!, ticked: true }
     const h = createHarness(a)
     expect(h.levelFor('sums')).toEqual([1])
   })
@@ -1882,8 +1891,14 @@ describe('the sums ladder is array order, not numeric order', () => {
     expect(rungAbove(ladder([1, 3]))).toBe(2)
   })
 
-  it('offers nothing above rung two, the last position in the array', () => {
-    expect(rungAbove(ladder([1, 3, 2]))).toBeNull()
+  it('offers 5 above bridging, which is no longer the top of the ladder', () => {
+    /* Bridging WAS the last position; on 4 August three rungs were added above
+     * it, so a child who has earned it now has somewhere to go. */
+    expect(rungAbove(ladder([1, 3, 2]))).toBe(5)
+  })
+
+  it('offers nothing above the last rung in the array', () => {
+    expect(rungAbove(ladder([...STAGES.sums]))).toBeNull()
   })
 
   it('reads the ticked rungs back in ladder order, never sorted', () => {

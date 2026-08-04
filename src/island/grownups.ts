@@ -435,10 +435,19 @@ export const WORD_COLOUR_CHOICES: readonly Choice[] = [
  * to it.
  */
 export const STAGE_LABELS: Record<Path, Record<number, string>> = {
+  /*
+   * IN LADDER ORDER, not id order — the object is written the way the rungs
+   * climb so a parent reading the source sees the progression. `STAGES.sums` is
+   * the authority on the order; this is the wording beside each rung.
+   */
   sums: {
+    4: 'within five',
     1: 'to ten',
     3: 'teens plus units',
     2: 'bridging ten (to twenty)',
+    5: 'whole tens (to a hundred)',
+    6: 'two-digit plus units',
+    7: 'two-digit, bridging ten',
   },
   takingAway: { 1: 'to ten', 2: 'teens minus units', 3: 'anything to twenty' },
   reading: { 1: 'reading words' },

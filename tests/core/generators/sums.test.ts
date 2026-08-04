@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { generateAdd, generateSub } from '../../../src/core/generators/sums'
 import type { SumState } from '../../../src/core/generators/sums'
 import { mulberry32 } from '../../../src/core/rng'
+import { STAGES } from '../../../src/island/harness'
 
 const fresh = (): SumState => ({ history: [], idx: -1 })
 
@@ -68,13 +69,94 @@ describe('generateAdd', () => {
      * side of it, or a stream that happens to pass through it would shift
      * every number after it.
      */
-    for (const level of [1, 2, 3]) {
+    for (const level of [1, 2, 3, 4, 5, 6, 7]) {
       const rng = mulberry32(13)
       let draws = 0
       const counted = () => { draws++; return rng() }
       generateAdd(fresh(), counted, level)
-      expect(draws).toBe(2)
+      expect(draws, `level ${level}`).toBe(2)
     }
+  })
+
+  /* ------------------------------------- the four rungs added on 4 August --- */
+
+  /*
+   * Joe: *"add some more summation levels."* Three rungs became seven; see
+   * `STAGES.sums` in `harness.ts` for the ladder and why the ids are not in
+   * numeric order. Levels 1, 2 and 3 above are untouched, which is what keeps
+   * `golden.json` anchored — it pins ids 1 and 2 and may never be re-blessed.
+   */
+  it('level 4 stays within five — the gentlest rung, below where anyone starts', () => {
+    const s = fresh(), rng = mulberry32(4)
+    for (let i = 0; i < 500; i++) generateAdd(s, rng, 4)
+    for (const p of s.history) {
+      expect(p.a).toBeGreaterThanOrEqual(1)
+      expect(p.b).toBeGreaterThanOrEqual(1)
+      expect(p.a + p.b).toBeLessThanOrEqual(5)
+    }
+    // And it really does use the room it has, rather than sitting on 1 + 1.
+    expect(Math.max(...s.history.map(p => p.a + p.b))).toBe(5)
+  })
+
+  it('level 5 adds whole tens and never leaves a units digit', () => {
+    const s = fresh(), rng = mulberry32(5)
+    for (let i = 0; i < 500; i++) generateAdd(s, rng, 5)
+    for (const p of s.history) {
+      expect(p.a % 10, `a=${p.a}`).toBe(0)
+      expect(p.b % 10, `b=${p.b}`).toBe(0)
+      expect(p.a).toBeGreaterThanOrEqual(10)
+      expect(p.b).toBeGreaterThanOrEqual(10)
+      expect(p.a + p.b, `${p.a}+${p.b}`).toBeLessThanOrEqual(100)
+    }
+  })
+
+  it('level 6 adds units to a two-digit number and NEVER carries', () => {
+    const s = fresh(), rng = mulberry32(6)
+    for (let i = 0; i < 500; i++) generateAdd(s, rng, 6)
+    for (const p of s.history) {
+      expect(p.a).toBeGreaterThanOrEqual(20)
+      expect(p.b).toBeGreaterThanOrEqual(1)
+      expect(p.b).toBeLessThanOrEqual(9)
+      // THE GUARANTEE: the units never reach ten, so the tens digit sits still.
+      expect((p.a % 10) + p.b, `${p.a}+${p.b} carries`).toBeLessThanOrEqual(9)
+      expect(Math.floor((p.a + p.b) / 10), `${p.a}+${p.b} moved the tens`)
+        .toBe(Math.floor(p.a / 10))
+      expect(p.a + p.b).toBeLessThan(100)
+    }
+  })
+
+  it('level 7 adds units to a two-digit number and ALWAYS carries', () => {
+    const s = fresh(), rng = mulberry32(7)
+    for (let i = 0; i < 500; i++) generateAdd(s, rng, 7)
+    for (const p of s.history) {
+      expect(p.a).toBeGreaterThanOrEqual(11)
+      expect(p.b).toBeGreaterThanOrEqual(1)
+      expect(p.b).toBeLessThanOrEqual(9)
+      // The mirror of level 6, and of level 2 at a bigger size: the ten always
+      // has to be broken open.
+      expect((p.a % 10) + p.b, `${p.a}+${p.b} does not bridge`).toBeGreaterThanOrEqual(10)
+      expect(p.a + p.b).toBeLessThan(100)
+    }
+  })
+
+  it('gives every rung on the ladder a generator that answers', () => {
+    /*
+     * The tripwire the ladder needs: `STAGES.sums` is the list of rungs a child
+     * can be dealt, and a rung whose id falls through to the `else` branch would
+     * silently deal bridging-ten sums under another name. Asked over the real
+     * ladder, so adding a rung without a branch is a red test here rather than a
+     * wrong sum in front of a child.
+     */
+    const seen = new Map<number, string>()
+    for (const level of STAGES.sums) {
+      const s = fresh(), rng = mulberry32(99)
+      for (let i = 0; i < 200; i++) generateAdd(s, rng, level)
+      seen.set(level, s.history.map(p => `${p.a}+${p.b}`).join(' '))
+    }
+    // Every rung generates a DIFFERENT stream from every other: two rungs that
+    // agree are two rungs where one has no branch of its own.
+    const streams = [...seen.values()]
+    expect(new Set(streams).size, 'two rungs generate identical sums').toBe(streams.length)
   })
 
   it('rarely repeats the immediately previous sum', () => {

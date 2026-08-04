@@ -78,12 +78,54 @@ The tiers behind `level`, all golden-pinned:
 
 | generator | level 1 | level 2 | level 3 |
 |---|---|---|---|
-| `generateAdd` | within ten, `a+b ≤ 10` | **bridges ten**, `a+b ≥ 11` | — |
+| `generateAdd` | within ten, `a+b ≤ 10` | **bridges ten**, `a+b ≥ 11` | teens plus units, no regrouping |
 | `generateSub` | within ten | teens minus units, `a = 11..20` | anything to 20 |
 | `generateBuild` | real words from the deck | **alien / pseudo-words** (`alienWord`) | — |
 | `generateRead` | full path, up to 12 words | shorter path, capped at 8 | — |
 
 `src/core/generators/sums.ts`, `build.ts:25`, `read.ts:29`.
+
+### The addition ladder — seven rungs since 4 August 2026
+
+Joe: *"add some more summation levels."* Four were added; the three that existed
+are untouched, same ids and same relative order, so no child moves rung and
+`golden.json` still anchors.
+
+**THE ID IS NOT THE RUNG.** The number is a generator id and the position in
+`STAGES.sums` is the rung. They are out of numeric order because the golden is
+frozen against ids 1 and 2 and renumbering would change what a rung generates.
+
+| rung | id | what it teaches | example |
+|---|---|---|---|
+| 1 | 4 | within five | `3 + 2` |
+| 2 | 1 | to ten | `6 + 3` |
+| 3 | 3 | teens plus units, no regrouping | `14 + 3` |
+| 4 | 2 | bridging ten | `8 + 7` |
+| 5 | 5 | whole tens to a hundred | `20 + 30` |
+| 6 | 6 | two-digit plus units, no regrouping | `34 + 5` |
+| 7 | 7 | two-digit plus units, bridging | `37 + 5` |
+
+Read down it and the shape is: count within a hand, then within two; meet a ten
+that sits still; break a ten open; discover that tens count like units; then do
+rungs 3 and 4 again at a size too big for fingers.
+
+- **Rung 1 sits BELOW where anyone starts.** `STARTS_TICKED` ticks sums 1, so the
+  cadence never walks down to it and no child is moved onto it. It is there for a
+  grown-up who needs to go gentler than ten — the one direction the ladder could
+  not go before.
+- **Rung 5 adds no new arithmetic**, deliberately. A child who can do `2 + 3` can
+  do `20 + 30` the moment they see that tens count like units, and that idea is
+  what rungs 6 and 7 are built on.
+- **Every branch costs exactly two rng draws.** Levels share one stream, so a
+  branch costing three would shift every deal after it whenever a child happened
+  to be dealt that rung. Pinned in `tests/core/generators/sums.test.ts`.
+- The parent-facing wording for each rung is `STAGE_LABELS.sums`
+  (`src/island/grownups.ts`), written in ladder order.
+
+**Not built: S4 missing-number** (`4 + ? = 9`), which
+`docs/pet-island-difficulty.md` §2 lists as the stratum above bridging. It is not
+a generator change — `mountSum` computes `a + b` and expects that answer, so a
+blank in the middle is a renderer change first. Left out rather than half-built.
 
 ---
 

@@ -60,18 +60,36 @@ export type ReservedPath = typeof RESERVED_PATHS[number]
  */
 export const STAGES: Record<Path, readonly number[]> = {
   /*
-   * DO NOT "TIDY" THIS INTO [1, 2, 3]. The NUMBER is a generator id; the ARRAY
-   * POSITION is the ladder rung. `generateAdd` reads the number — 2 is the
-   * bridging generator and 3 is teens-plus-units — and `tools/golden/golden.json`
-   * is FROZEN against those numbers. Renumbering so the middle rung reads "2"
-   * would change what the second rung generates and redden the golden.
+   * DO NOT "TIDY" THIS INTO [1, 2, 3, ...]. The NUMBER is a generator id; the
+   * ARRAY POSITION is the ladder rung. `generateAdd` reads the number, and
+   * `tools/golden/golden.json` is FROZEN against ids 1 and 2. Renumbering so the
+   * rungs read in order would change what each rung generates and redden the
+   * golden — which may never be re-blessed to make a test pass.
    *
-   * So the ladder is: 1 (to ten), then 3 (teens plus units, no regrouping),
-   * then 2 (bridging ten). Everything that walks the ladder — `tickedStages`,
-   * `topTicked`, `nextStage`, `settledOn` — walks THIS ORDER and never the
-   * numeric one.
+   * THE LADDER, in rung order, with the id in brackets:
+   *
+   *   1. within five            (4)  NEW, 4 Aug. Below where anyone starts.
+   *   2. to ten                 (1)  where every island begins
+   *   3. teens plus units       (3)  no regrouping
+   *   4. bridging ten           (2)  the ten has to be broken open
+   *   5. whole tens to a hundred(5)  NEW. 20 + 30 — place value, no new sum
+   *   6. two-digit plus units   (6)  NEW. 34 + 5 — rung 3, past twenty
+   *   7. two-digit, bridging    (7)  NEW. 37 + 5 — rung 4, past twenty
+   *
+   * Joe, 4 August 2026: *"add some more summation levels."* Three became seven.
+   * The four that were there are UNTOUCHED — same ids, same generators, same
+   * order relative to each other — so no child moves rung and the golden still
+   * anchors. `docs/PHASE4.1-EDUCATIONAL-HARNESS.md` §3 is the table of record.
+   *
+   * WITHIN FIVE SITS BELOW THE START ON PURPOSE. `STARTS_TICKED` ticks sums 1,
+   * so the cadence never walks down to rung 1 and no child is moved onto it.
+   * It exists for a grown-up who needs to go gentler than ten, which is the one
+   * direction this ladder could not go before.
+   *
+   * Everything that walks the ladder — `tickedStages`, `topTicked`,
+   * `nextStage`, `settledOn` — walks THIS ORDER and never the numeric one.
    */
-  sums: [1, 3, 2],
+  sums: [4, 1, 3, 2, 5, 6, 7],
   takingAway: [1, 2, 3],
   reading: [1],
   building: [1],
