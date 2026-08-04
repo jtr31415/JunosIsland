@@ -1,5 +1,106 @@
 # Manager handoff
 
+> ## ⚠⚠ NEXT SESSION'S JOB — DRAFT MORE ANIMALS. 4 Aug 2026
+>
+> *Joe, at the end of a long day: **"get ready for context clear, then you draft
+> some more animals."** The build-optimisation job below this block is DONE and
+> shipped; this replaces it.*
+>
+> ### Draft WOODLAND. Sixteen members, zero built.
+>
+> `PIPELINE_ORDER` (`unlock.ts`) is the album cadence now and it runs
+> `base, garden, home-pets, woodland, farm, birds, ocean, night-time, africa, …`
+> The first three are released; **woodland is the next collection a child will be
+> offered and it has nothing in it.** Farm (16), Night Time (13) and Africa (1)
+> are already BUILT and merely unpushed — Joe can release those whenever he likes
+> without anyone building anything.
+>
+> ### How to build one, in 2026 terms
+>
+> An animal is ONE file — `src/island/species/parts/assembled/animal-<id>.ts` —
+> plus a line in `parts/assembled/index.ts`, a record in
+> `collections/woodland.ts`, and a `MOVES` entry. `docs/how-the-animals-are-made.md`
+> and `building-animals-from-parts.md` are the method.
+>
+> **DO NOT WRITE A TEST FOR AN ANIMAL.** Joe, 4 Aug: *"we do not need to test the
+> animals. if they look good in the editor, they go. its costing a shit ton of
+> time for needless tests."* Sixty per-animal test files — 24,324 lines — were
+> deleted that day. `tests/island/assembly-engine.test.ts` sweeps the BUILDER's
+> invariants over every species automatically, so a new animal is covered the
+> moment its file exists and needs nothing written for it. Adding a per-animal
+> test file is undoing a ruling.
+>
+> **Prose in a species file is now ~15 lines, not ~220** (3 Aug ruling). Say what
+> the animal is and why any strained rule was strained. Nothing else.
+>
+> ### What Joe does next, not you
+>
+> He opens the workbench (`npm run workbench`), looks at each animal, edits it,
+> and presses push. **His eyes are the gate** — `signed-off.json` is where that is
+> recorded and `pool.ts` enforces it. Nothing you build reaches Juno until he
+> pushes it, and nothing you think about how it looks outranks him.
+
+---
+
+## 4 August 2026 — what shipped, and the rulings behind it
+
+Seven deploys, all green, all live. `git log 8ad1e21..` is the record; this is
+what a reader needs that the diffs do not say.
+
+### Joe's rulings that day, in the order he gave them
+
+1. **"i have completed the garden collection"** — Garden 14/14, then Home Pets
+   15/16 (`animal-rat` still to come). 29 species signed off.
+2. **"i only want to see in the album the silhouette cards for the animals that
+   have successfully pushed."** REVERSES his 2 Aug ruling that a slot appears
+   when a species is BUILT. `built.ts:isReleased` is the predicate now.
+3. **"we do not need to test the animals ... they should turn from the editor
+   into code pretty much the instant i press the button."**
+4. **"we rename once, kids will live through it"** — the one save migration.
+5. **"i need the 20 word limit in the editor gone ... let me worry about length."**
+6. **"keep them the same size"** (album pages) and **"have 3 albums on the go"**
+   with a set order, 50/35/15.
+7. **"add some more summation levels"**, then **"switch rung 4 and 5."**
+
+### Landmines found and closed — read these before touching the same ground
+
+- **Baking a parts-bank role RENUMBERS THE BANK.** Ids are `<form>-<NN>` from a
+  running counter over the groups that bake, so adding `wing` moved `box-31` from
+  the lion's hull to its mane band and `blade-03` from the dog's nose to the
+  bee's wing. Nothing fails to compile; the newt's crest silently becomes bee
+  wings. `NUMBERING_FROZEN_BY` in `parts-bank.ts` now pins the order and new
+  roles can only append. `parts-bank-wing.test.ts` holds the three anchors.
+- **The push tool orphaned constants on every push.** It replaces the object
+  literal and carries the rest of the file over — correct — but inlines the
+  values, leaving `const`s unread and `tsc --noEmit` red, which gates the deploy.
+  Thirteen pushes left 39 of them. `withoutStaleBindings` cuts them now, keeping
+  each comment with the old value written in.
+- **`golden.json` may never be re-blessed.** It pins generator streams. Two
+  changes that day had to route around it: new sum levels got NEW ids (1 and 2
+  untouched), and the find-page cap is applied to the dealt page in `deal.ts`
+  rather than to `generateRead`'s `n`, which would move every number in the
+  pinned stream.
+- **`pages.wordsPerFindPage` was dead config** — declared, typed, read by
+  nothing. Replaced by `maxFindWords`, which is wired.
+- **`core/names.ts`'s forbidden list still lacks `fuck`, `cunt` and `vag`.** That
+  gap is how a six-year-old got a rabbit called *Defuck* (one accepted draw in
+  678). The base 24 and every deployed name are now PINNED in `name-pins.json`,
+  so they cannot drift — but the 266 unpushed species still draw through that
+  gap. Joe knows and is vetting them himself.
+
+### Open, and all Joe's
+
+- `animal-rat` (Home Pets 16th), and the two names he has not looked at:
+  everything outside base/garden/home-pets is unpinned by his choice.
+- Farm, Night Time, Africa: built, unpushed. One push each makes them albums.
+- The bat, sugar glider, ostrich and vulture are UNBLOCKED by the wing but
+  unbuilt — a bat's membrane is not a bird's wing and that is his call.
+- S4 missing-number (`4 + ? = 9`) is specced and not built: `mountSum` computes
+  `a + b`, so it is a renderer change before it is a generator one.
+
+
+---
+
 > ## ⚠⚠ NEXT SESSION'S JOB — OPTIMISE THE BUILD. Build no animals. 3 Aug 2026
 >
 > *Joe's instruction: the next session **focuses on optimising our build, not
