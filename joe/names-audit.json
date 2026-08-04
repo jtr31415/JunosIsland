@@ -1001,6 +1001,66 @@
       "verdict": "",
       "replacement": "",
       "note": ""
+    },
+    {
+      "id": "natural/animal-owlet",
+      "setId": "natural",
+      "speciesId": "animal-owlet",
+      "species": "Owlet",
+      "collection": "birds",
+      "band": "short",
+      "name": "Nefack",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
+    },
+    {
+      "id": "natural/animal-seagull",
+      "setId": "natural",
+      "speciesId": "animal-seagull",
+      "species": "Seagull",
+      "collection": "birds",
+      "band": "short",
+      "name": "Totri",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
+    },
+    {
+      "id": "natural/animal-woodpecker",
+      "setId": "natural",
+      "speciesId": "animal-woodpecker",
+      "species": "Woodpecker",
+      "collection": "birds",
+      "band": "short",
+      "name": "Dackhu",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
+    },
+    {
+      "id": "natural/animal-kingfisher",
+      "setId": "natural",
+      "speciesId": "animal-kingfisher",
+      "species": "Kingfisher",
+      "collection": "birds",
+      "band": "short",
+      "name": "Teveff",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
+    },
+    {
+      "id": "natural/animal-duck",
+      "setId": "natural",
+      "speciesId": "animal-duck",
+      "species": "Duck",
+      "collection": "birds",
+      "band": "short",
+      "name": "Sibza",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
     }
   ],
   "retiredVerdicts": [

@@ -1388,6 +1388,71 @@
       "verdict": "",
       "replacement": "",
       "note": ""
+    },
+    {
+      "speciesId": "animal-owlet",
+      "species": "Owlet",
+      "collection": "birds",
+      "fact": "An owl can turn its head much further round than we can.",
+      "check": "flagged",
+      "source": "",
+      "sourceNote": "DRAFTED, NOT CHECKED. Written by the builder as the animal was assembled, off general knowledge, and nothing has independently verified it. Flagged rather than left out so it reaches the bench as a sentence somebody can check — the same discipline Threat.checkedDate keeps for a Red List status, which is that a claim nobody dated is a memory and not a check.",
+      "proposedRewrite": "",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
+    },
+    {
+      "speciesId": "animal-seagull",
+      "species": "Seagull",
+      "collection": "birds",
+      "fact": "A seagull can drink sea water, which most other birds cannot.",
+      "check": "flagged",
+      "source": "",
+      "sourceNote": "DRAFTED, NOT CHECKED. Written by the builder as the animal was assembled, off general knowledge, and nothing has independently verified it. Flagged rather than left out so it reaches the bench as a sentence somebody can check — the same discipline Threat.checkedDate keeps for a Red List status, which is that a claim nobody dated is a memory and not a check.",
+      "proposedRewrite": "",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
+    },
+    {
+      "speciesId": "animal-woodpecker",
+      "species": "Woodpecker",
+      "collection": "birds",
+      "fact": "A woodpecker props itself on its stiff tail while it hammers at a tree.",
+      "check": "flagged",
+      "source": "",
+      "sourceNote": "DRAFTED, NOT CHECKED. Written by the builder as the animal was assembled, off general knowledge, and nothing has independently verified it. Flagged rather than left out so it reaches the bench as a sentence somebody can check — the same discipline Threat.checkedDate keeps for a Red List status, which is that a claim nobody dated is a memory and not a check.",
+      "proposedRewrite": "",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
+    },
+    {
+      "speciesId": "animal-kingfisher",
+      "species": "Kingfisher",
+      "collection": "birds",
+      "fact": "A kingfisher sits still above the water and then dives straight in for a fish.",
+      "check": "flagged",
+      "source": "",
+      "sourceNote": "DRAFTED, NOT CHECKED. Written by the builder as the animal was assembled, off general knowledge, and nothing has independently verified it. Flagged rather than left out so it reaches the bench as a sentence somebody can check — the same discipline Threat.checkedDate keeps for a Red List status, which is that a claim nobody dated is a memory and not a check.",
+      "proposedRewrite": "",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
+    },
+    {
+      "speciesId": "animal-duck",
+      "species": "Duck",
+      "collection": "birds",
+      "fact": "A duck keeps its feathers oiled so the water runs straight off them.",
+      "check": "flagged",
+      "source": "",
+      "sourceNote": "DRAFTED, NOT CHECKED. Written by the builder as the animal was assembled, off general knowledge, and nothing has independently verified it. Flagged rather than left out so it reaches the bench as a sentence somebody can check — the same discipline Threat.checkedDate keeps for a Red List status, which is that a claim nobody dated is a memory and not a check.",
+      "proposedRewrite": "",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
     }
   ]
 }

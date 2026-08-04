@@ -128,7 +128,7 @@ import '../parts/assembled'
 import type { Species } from '../types'
 
 /**
- * FIVE OF EIGHTEEN, and the thirteen missing are a queue rather than a hole
+ * TEN OF EIGHTEEN, and the thirteen missing are a queue rather than a hole
  * somebody forgot. The survey above says which of them are waiting on effort
  * and which are waiting on a shape the pack does not contain.
  *
@@ -154,6 +154,26 @@ export const BIRDS_SPECIES: readonly Species[] = [
 
   /* The pied one, and the only passerine here with a long tail. */
   defineSpecies('animal-magpie', 'bespoke'),
+
+  /* The one bird here whose EYES are the animal — the pack's biggest card, on
+   * the only tufted crown in the collection. */
+  defineSpecies('animal-owlet', 'bespoke'),
+
+  /* The only bird here that is NOT the passerine idiom: big, on the tiger's
+   * shell, with its grey mantle painted straight out of a hull band. */
+  defineSpecies('animal-seagull', 'bespoke'),
+
+  /* The chisel and the prop — the one species in Birds that needs a part the
+   * bank has for the reason the bank has it. */
+  defineSpecies('animal-woodpecker', 'bespoke'),
+
+  /* The brightest, and the one whose bill the bank cannot make long enough.
+   * Kenney's own upper/lower cut gives it two tones instead. */
+  defineSpecies('animal-kingfisher', 'bespoke'),
+
+  /* The room animal-goose left it on purpose: the goose is big and long-necked
+   * so that this bird can be small. The green head is unsayable and flagged. */
+  defineSpecies('animal-duck', 'bespoke'),
 
   /* The roundest and plainest — the forward band deliberately UNSPENT, which is
    * what a wren is — and the only cocked tail in the project. */

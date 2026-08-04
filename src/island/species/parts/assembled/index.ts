@@ -129,6 +129,11 @@ export { BLUE_TIT_ASSEMBLY } from './animal-blue-tit'
 export { MAGPIE_ASSEMBLY } from './animal-magpie'
 export { WREN_ASSEMBLY } from './animal-wren'
 export { BLACKBIRD_ASSEMBLY } from './animal-blackbird'
+export { OWLET_ASSEMBLY } from './animal-owlet'
+export { SEAGULL_ASSEMBLY } from './animal-seagull'
+export { WOODPECKER_ASSEMBLY } from './animal-woodpecker'
+export { KINGFISHER_ASSEMBLY } from './animal-kingfisher'
+export { DUCK_ASSEMBLY } from './animal-duck'
 /* -- append the next species' line directly above this one -- */
 
 import { assembledBuilds } from './register'
