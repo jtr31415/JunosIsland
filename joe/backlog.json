@@ -650,6 +650,20 @@
       "detail": "generateRead's rung branch draws until it has n distinct words or hits a guard of n*40, so three approved words at n=12 burns ~480 draws and ~160 reshuffles for a three-word page. The short page is correct; the grind is not. An attempted fix on 5 Aug tracked exhaustion per call and silently dropped an approved word on 61% of pages, because main.ts keeps ONE deck per rung for the session and an early break leaves it mid-pass — so any fix must track exhaustion over the DECK's lifetime, not the call's. Reverted, and a persistent-deck test now pins the property it broke.",
       "state": "open",
       "run": ""
+    },
+    {
+      "id": "PB-092",
+      "title": "No sound in Chrome on Joe's laptop — the game is exonerated, the browser is not",
+      "detail": "5 Aug: audio silent on the island. THE GAME IS NOT AT FAULT — it works on the phone and works in Edge on the same laptop. Measured in the failing Chrome: the page RENDERED audio and nobody heard it (a media element's clock advanced 1.18s of a 2s clip, unmuted, volume 1, readyState 4), and both a Web Audio tone and a media-element tone were inaudible while Netflix had sound. Two candidates left, both Chrome-side: a per-site sound block on jtr31415.github.io (chrome://settings/content/sound, or the tab's \"Unmute site\"), or Chrome bound to a communications-mode output device — a fresh AudioContext with no game code near it reported a sampleRate of 16000, where laptop speakers are 44100 or 48000. Joe's call to park it; no code change is wanted.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-093",
+      "title": "The voice unlock burns its one-shot listener before the context exists, and the game never says it is muted",
+      "detail": "voice.ts:143 registers the autoplay unlock as { capture: true, once: true }, but the handler is `if (ctx && ctx.state === 'suspended') ctx.resume()` and `ctx` is null until the manifest load creates it. So a first tap that lands before the context exists — a slow connection, a cold cache — fires the listener against null, removes it forever, and Fred is silent for the rest of the session. The file's own comment says the unlock exists because \"the gesture cannot be assumed\"; this is the case it misses. Found while chasing PB-092, which turned out to be unrelated. Second half, and the reason that hunt took an hour: nothing warns when a sound is requested against a suspended context. One console line would have said it in ten seconds.",
+      "state": "open",
+      "run": ""
     }
   ]
 }
