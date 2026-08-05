@@ -31,6 +31,10 @@ import { FARM_SPECIES } from './collections/farm'
 import { NIGHT_TIME_SPECIES } from './collections/night-time'
 import { BIRDS_SPECIES } from './collections/birds'
 import { OCEAN_SPECIES } from './collections/ocean'
+import { JUNGLE_SPECIES } from './collections/jungle'
+import { OUTBACK_SPECIES } from './collections/outback'
+import { CRITTERS_SPECIES } from './collections/critters'
+import { ICE_SPECIES } from './collections/ice'
 import type { Species } from './types'
 
 /**
@@ -183,10 +187,129 @@ export const BIRDS_COLLECTION: readonly Species[] = [...BIRDS_SPECIES]
  */
 export const OCEAN_COLLECTION: readonly Species[] = [...OCEAN_SPECIES]
 
+/**
+ * JUNGLE — roster row 12, and the collection that collides with more built
+ * animals than any other.
+ *
+ * It is the primate-and-big-cat row: three primates against the FROZEN
+ * `animal-monkey`, Africa's `animal-gorilla` and `animal-baboon`, and Night
+ * Time's four small ones; two spotted cats against the frozen lion and tiger,
+ * Africa's cheetah and Woodland's lynx and wildcat; an anteater against Africa's
+ * aardvark, a capybara against Woodland's coypu, a coati against Night Time's
+ * raccoon, and a snake against two other legless animals plus Ocean's eel.
+ * `collections/jungle.ts` carries the measured separation for every one of them,
+ * hull by hull and card by card, and the two internal pairs (jaguar/ocelot,
+ * chameleon/iguana) are measured there too.
+ *
+ * SIXTEEN OF SIXTEEN HAVE AN ENTRY AND FIFTEEN ARE REAL ANIMALS. The one
+ * placeholder is `animal-tarantula`, and it is held up by three things: the bank
+ * holds ONE leg shape and a spider's bends twice; a spider is two masses joined
+ * at a waist, which is rule 3's exact fault; and eight eyes against rule 6's
+ * mirrored pair. Only the segmented leg is a commission. The collection also
+ * hits the project's oldest wall five times over — a PATTERN cannot be painted,
+ * because colour is a lookup with no positional information — which costs the
+ * jaguar's rosettes, the ocelot's chains, the lemur's and the coati's tail rings
+ * and the snake's net. Every one of those five files says so in its own flag.
+ */
+export const JUNGLE_COLLECTION: readonly Species[] = [...JUNGLE_SPECIES]
+
+/**
+ * OUTBACK — roster row 11, and the second collection to retire a sentence in
+ * `docs/how-the-animals-are-made.md` §14 by measuring it.
+ *
+ * That section has said since 29 July that *"Legendary (12) and Outback (16) are
+ * near-total failures"*, grouped with the four collections it called impossible.
+ * `collections/outback.ts` re-censuses the bank against these sixteen and finds
+ * the sentence wrong in the same way Ocean's was: it counts a part by the name
+ * Kenney gave it rather than by its shape. The platypus's bill is the LION's
+ * flat muzzle plate and its tail is the BEAVER's own paddle; the echidna and the
+ * thorny devil are the hedgehog's repeat-and-sink; the emu is the goose's neck
+ * idiom; and the four birds are the galliform and kingfisher idioms already
+ * built. **A claim about what the bank cannot do expires the moment an idiom
+ * lands — date it, or it outlives its own truth.**
+ *
+ * SIXTEEN OF SIXTEEN HAVE AN ENTRY AND THIRTEEN ARE REAL ANIMALS. The three
+ * placeholders are `animal-kangaroo`, `animal-frilled-lizard` and
+ * `animal-lyrebird`, and between them they wait on four things: a LONG HIND LEG
+ * (one shape at one absolute height — one commission that would also improve the
+ * quokka, the emu and the ostrich); a HULL THAT CAN BE STOOD UP, which is a
+ * builder-side gap rather than a missing shape; a DISC, where the authored
+ * `bespoke-circle-01` was considered and refused because JT-041 names a FRILL by
+ * name as a thing the three base shapes are not for; and a CURVE, which this is
+ * now the THIRD collection to price after Ocean's seahorse and Birds' flamingo.
+ * Every one of the three says so in its own header and its own `flag`.
+ */
+export const OUTBACK_COLLECTION: readonly Species[] = [...OUTBACK_SPECIES]
+
+/**
+ * CRITTERS — roster row 6, and the THIRD collection to retire a sentence in
+ * `docs/how-the-animals-are-made.md` §14 by measuring it rather than reading it.
+ *
+ * That section has said since 29 July that Critters *"cannot be built from these
+ * parts at all — no membranous insect wing, no segmented leg"*, and half of that
+ * is false for exactly the reason Ocean's was. `blade-06`/`blade-07` sit in
+ * `PARTS_BANK` with `roles: ["wing"]` and **`bee:wing-left` as the FIRST
+ * provenance entry**, which the bank's own header says is the donor that gave
+ * the geometry — so those vertices came out of the pack's bee and a bee's wing
+ * is a membranous insect wing. They were baked on 4 August for the budgie, and
+ * §3.1 had already recorded on 29 July that the bee's *"are true insect wings"*.
+ * The three species that wear the shape today all call it the penguin's flipper,
+ * because the two donors are bit-identical and Ocean got there first; seven
+ * species here wear it as a wing.
+ *
+ * The OTHER half is true and is not what stops anything: the bank holds one leg
+ * shape, `box-01`, a 0.375 taper-1.000 stub, and Kenney gave his own two insects
+ * four of them each.
+ *
+ * SIXTEEN OF SIXTEEN HAVE AN ENTRY AND FOURTEEN ARE REAL ANIMALS. The two
+ * placeholders are `animal-snail`, which wants a CURVE — the fourth collection
+ * to price it after Ocean's seahorse, Birds' flamingo and Outback's — and
+ * `animal-stick-insect`, which wants an ELONGATED HULL and is a RULING rather
+ * than a commission, `HullDef.stretch` being `never` by Joe's own instruction.
+ * `collections/critters.ts` also prices a HINGED LIMB, which no placeholder
+ * waits on but three BUILT species do (spider, grasshopper, mantis) — the same
+ * shape Jungle's `animal-tarantula` and Outback's `animal-kangaroo` each name.
+ */
+export const CRITTERS_COLLECTION: readonly Species[] = [...CRITTERS_SPECIES]
+
+/**
+ * ICE — roster row 3, and the collection where EVERY member has a twin and
+ * almost every member is white.
+ *
+ * Earlier collections had one of those problems. Woodland had to tell three
+ * mustelids and two cats apart from each other; Ocean had a whale, a shark and a
+ * dolphin that are all grey legless things on a cube. Ice has both at once, and
+ * on top of them **eight of its sixteen are white or near-white animals**, so
+ * palette carries almost none of the separation and it has to be made in shape.
+ * `collections/ice.ts` counts the collisions — sixteen of sixteen, against the
+ * frozen fox, bunny, deer and cat, against Woodland's stoat, mink, hare and elk,
+ * against Ocean's whale, dolphin and shark, against Africa's buffalo, Farm's ox,
+ * sheep, goat and five galliforms, and against Birds' owlet, seagull and puffin
+ * — and every separation is written at the species it belongs to.
+ *
+ * FIFTEEN OF THE SIXTEEN ARE REAL ANIMALS. The one placeholder is
+ * `animal-dall-sheep`, and what it waits on is a CURVE: all 100 baked shapes are
+ * straight or tapered along a single axis, rule 4 bakes a rotation into a copy
+ * and cannot bend one, and a Dall ram's spiral horn IS the animal. Ocean priced
+ * that same gap for the seahorse and Birds for the flamingo's bill. Ice asks for
+ * it three times over — the ram's spiral, a musk ox's hooked horn and a
+ * narwhal's helical tusk — and only the ram is held up by it, because the other
+ * two read straight at tablet distance.
+ *
+ * TWO THINGS THIS COLLECTION ADDS TO THE VOCABULARY, both argued in `ice.ts`:
+ * `box-06`, the bunny's ear, LEFT UNSPUN AS A DORSAL FIN on the orca — 0.913 of
+ * reach against the `wedge-19` every other cetacean stands on its crown — and
+ * `box-29`, the lion's mane, worn as a musk ox's SKIRT reaching the ground,
+ * which is the vulture's ruff moved down the body and cut on DEPTH ONLY, because
+ * `assembly-assert.ts`'s one-mass ratio is what pays for the reach.
+ */
+export const ICE_COLLECTION: readonly Species[] = [...ICE_SPECIES]
+
 /** Everything that has actually shipped: the frozen 24 plus the built collections. */
 export const SHIPPED_SPECIES: readonly Species[] = [
   ...BASE_SPECIES, ...PHASE2_SPECIES, ...PHASE3_SPECIES, ...NIGHT_TIME_COLLECTION,
-  ...BIRDS_COLLECTION, ...OCEAN_COLLECTION,
+  ...BIRDS_COLLECTION, ...OCEAN_COLLECTION, ...JUNGLE_COLLECTION, ...OUTBACK_COLLECTION,
+  ...CRITTERS_COLLECTION, ...ICE_COLLECTION,
 ]
 
 /** Every species that has actually shipped, by id. */

@@ -57,6 +57,45 @@
  * >>> `TREE_HEIGHT` is the exact failure that list was written to prevent — and
  * >>> the VULTURE is the only `air` in the collection. All sixteen are his to
  * >>> overrule in the editor and none of them changes a frame until PB-069.
+ * >>>
+ * >>> JUNGLE'S SIXTEEN WENT IN ON 5 AUGUST and three of them are judgements
+ * >>> rather than the neutral default. The HUMMINGBIRD is the only `air`, and it
+ * >>> is the one entry here with teeth — `air` hovers a pet at `TREE_HEIGHT`,
+ * >>> which is the nearest this game has to a hover and is why the word is worth
+ * >>> spending on it. The CAPYBARA and the TAPIR say `amphibian` on the same
+ * >>> reading the otter and the hippo already have: both genuinely feed and rest
+ * >>> in water, `land` would be a false entry rather than a neutral one, and
+ * >>> `amphibian` deliberately does NOT confine them. The TREE FROG joins the
+ * >>> frog, the toad and the newt. The other twelve say `land`, which is
+ * >>> `DEFAULT_LOCOMOTION` and therefore changes nothing whichever way it is
+ * >>> read — including the TARANTULA and the SNAKE, neither of which the union
+ * >>> has a better word for.
+ * >>>
+ * >>> OUTBACK'S SIXTEEN WENT IN ON 5 AUGUST and only three are judgements. The
+ * >>> COCKATOO and the KOOKABURRA are `air`, which is the entry with teeth, and
+ * >>> both are real flyers. The PLATYPUS is `amphibian` on the otter's and the
+ * >>> hippo's reading: it feeds entirely in water and rests entirely out of it,
+ * >>> `land` would be a false entry rather than a neutral one, and `amphibian`
+ * >>> deliberately does not confine it. The EMU and the LYREBIRD are `land` and
+ * >>> NOT `air` — the ostrich's and the game birds' reading, since a flightless
+ * >>> bird hovering at `TREE_HEIGHT` is the exact failure this list exists to
+ * >>> prevent — and so is the FRILLED LIZARD, which the union has no better word
+ * >>> for. The other eleven say `land`, which is `DEFAULT_LOCOMOTION`.
+ * >>>
+ * >>> ICE'S SIXTEEN WENT IN ON 5 AUGUST and it is the collection with the most
+ * >>> non-default entries so far: seven of the sixteen. Three are `water` and
+ * >>> are not judgements at all — the ORCA, the BELUGA and the NARWHAL are
+ * >>> whales and a whale that walks is a bug. Two are `amphibian` on the otter's
+ * >>> and the platypus's reading, and they are the judgements: a SEAL and a
+ * >>> WALRUS feed entirely in water and haul out onto ice to rest, so `water`
+ * >>> would confine an animal that is famously seen lying about on a floe and
+ * >>> `land` would be false; `amphibian` deliberately confines neither. Two are
+ * >>> `air` and both are real flyers — the SNOWY OWL and the SNOW PETREL, the
+ * >>> latter a bird that spends most of its life on the wing over open sea. The
+ * >>> PTARMIGAN is `land` and NOT `air`, which is the game birds' and the
+ * >>> ostrich's reading taken a fourth time: it flies in bursts and lives on the
+ * >>> ground, and `air` means hovering at `TREE_HEIGHT`. The other nine say
+ * >>> `land`, which is `DEFAULT_LOCOMOTION` and changes nothing either way.
  *
  * ## Why a lookup table and not a field on the collection record
  *
@@ -161,58 +200,99 @@ export const DEFAULT_LOCOMOTION: Locomotion = 'land'
 export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-aardvark': 'land',
   'animal-anglerfish': 'water',
+  'animal-ant': 'land',
+  'animal-anteater': 'land',
   'animal-antelope': 'land',
+  'animal-arctic-fox': 'land',
+  'animal-arctic-hare': 'land',
   'animal-baboon': 'land',
   'animal-badger': 'land',
+  'animal-bandicoot': 'land',
   'animal-bear': 'land',
   'animal-bee': 'air',
+  'animal-beetle': 'land',
+  'animal-beluga': 'water',
+  'animal-bilby': 'land',
   'animal-blackbird': 'air',
   'animal-blue-tit': 'air',
   'animal-budgie': 'air',
   'animal-buffalo': 'land',
+  'animal-butterfly': 'air',
   'animal-canary': 'air',
   'animal-capercaillie': 'land',
+  'animal-capybara': 'amphibian',
+  'animal-centipede': 'land',
+  'animal-chameleon': 'land',
   'animal-cheetah': 'land',
   'animal-chinchilla': 'land',
   'animal-chipmunk': 'land',
   'animal-clownfish': 'water',
+  'animal-coati': 'land',
   'animal-cockatiel': 'air',
+  'animal-cockatoo': 'air',
   'animal-corn-snake': 'land',
   'animal-coypu': 'amphibian',
   'animal-crocodile': 'amphibian',
+  'animal-dall-sheep': 'land',
   'animal-degu': 'land',
+  'animal-dingo': 'land',
   'animal-dolphin': 'water',
   'animal-dormouse': 'land',
+  'animal-dragonfly': 'air',
   'animal-duck': 'amphibian',
+  'animal-echidna': 'land',
   'animal-eel': 'water',
   'animal-elk': 'land',
+  'animal-emu': 'land',
+  'animal-ermine': 'land',
   'animal-ferret': 'land',
   'animal-flamingo': 'amphibian',
+  'animal-frilled-lizard': 'land',
   'animal-frog': 'amphibian',
   'animal-gecko': 'land',
   'animal-gerbil': 'land',
+  'animal-gibbon': 'land',
   'animal-goldfish': 'water',
   'animal-gorilla': 'land',
+  'animal-grasshopper': 'land',
   'animal-guinea-pig': 'land',
   'animal-hamster': 'land',
   'animal-hare': 'land',
   'animal-hedgehog': 'land',
   'animal-heron': 'land',
   'animal-hippo': 'amphibian',
+  'animal-howler-monkey': 'land',
+  'animal-hummingbird': 'air',
+  'animal-husky': 'land',
   'animal-hyena': 'land',
+  'animal-iguana': 'land',
+  'animal-jaguar': 'land',
   'animal-jellyfish': 'water',
+  'animal-kangaroo': 'land',
   'animal-kingfisher': 'air',
+  'animal-kookaburra': 'air',
+  'animal-ladybird': 'land',
+  'animal-lemming': 'land',
+  'animal-lemur': 'land',
   'animal-lobster': 'water',
   'animal-lovebird': 'air',
+  'animal-lyrebird': 'land',
   'animal-lynx': 'land',
   'animal-magpie': 'air',
+  'animal-mantis': 'land',
   'animal-meerkat': 'land',
   'animal-mink': 'amphibian',
   'animal-mole': 'land',
   'animal-mongoose': 'land',
+  'animal-moth': 'air',
   'animal-mouse': 'land',
+  'animal-musk-ox': 'land',
+  'animal-narwhal': 'water',
   'animal-newt': 'amphibian',
+  'animal-numbat': 'land',
+  'animal-ocelot': 'land',
   'animal-octopus': 'water',
+  'animal-orca': 'water',
   'animal-ostrich': 'land',
   'animal-otter': 'amphibian',
   'animal-owlet': 'air',
@@ -221,38 +301,61 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-pelican': 'amphibian',
   'animal-pheasant': 'land',
   'animal-pine-marten': 'land',
+  'animal-platypus': 'amphibian',
   'animal-pony': 'land',
   'animal-porcupine': 'land',
+  'animal-ptarmigan': 'land',
   'animal-pufferfish': 'water',
   'animal-puffin': 'air',
+  'animal-quokka': 'land',
   'animal-ray': 'water',
+  'animal-reindeer': 'land',
   'animal-robin': 'air',
   'animal-salamander': 'land',
   'animal-sea-urchin': 'water',
   'animal-seagull': 'air',
   'animal-seahorse': 'water',
+  'animal-seal': 'amphibian',
   'animal-shark': 'water',
   'animal-shrew': 'land',
   'animal-skunk': 'land',
+  'animal-sloth': 'land',
   'animal-slow-worm': 'land',
+  'animal-slug': 'land',
+  'animal-snail': 'land',
+  'animal-snake': 'land',
+  'animal-snow-petrel': 'air',
+  'animal-snowy-owl': 'air',
+  'animal-spider': 'land',
   'animal-squid': 'water',
   'animal-squirrel': 'land',
   'animal-starfish': 'water',
+  'animal-stick-insect': 'land',
   'animal-stoat': 'land',
   'animal-stork': 'land',
   'animal-swan': 'amphibian',
+  'animal-tapir': 'amphibian',
+  'animal-tarantula': 'land',
+  'animal-tassie-devil': 'land',
   'animal-terrapin': 'land',
+  'animal-thorny-devil': 'land',
   'animal-toad': 'amphibian',
   'animal-tortoise': 'land',
   'animal-toucan': 'air',
+  'animal-tree-frog': 'amphibian',
   'animal-turtle': 'water',
   'animal-vulture': 'air',
+  'animal-walrus': 'amphibian',
   'animal-warthog': 'land',
+  'animal-wasp': 'air',
   'animal-whale': 'water',
   'animal-wildcat': 'land',
   'animal-wildebeest': 'land',
   'animal-wolverine': 'land',
+  'animal-wombat': 'land',
+  'animal-woodlouse': 'land',
   'animal-woodpecker': 'air',
+  'animal-worm': 'land',
   'animal-wren': 'air',
   'animal-zebra': 'land',
 }
