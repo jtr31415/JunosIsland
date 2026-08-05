@@ -608,6 +608,13 @@
       "detail": "assembly-assert.ts traces a mesh by un-spinning it and sorting both point sets on coordinates snapped to 1/1000. At some angles a point sits exactly on a snap boundary, the two sorts disagree, and a mesh that IS a copy of its bank part reports as not one. Measured on Africa's warthog: wedge-11 at 22, 25 and 28 degrees gives a max deviation of 0.1585 against a 0.002 tolerance, while 20 and 30 are clean — and Ocean's animal-octopus arms failed the same way. The cost is silent and lands on the animal: the warthog's tusk splay is 20 degrees rather than animal-goat.ts's 25 because 25 could not be traced, which is a number chosen by the harness and not by the animal. Wants a tie-break that does not depend on the snap (sort on the unsnapped value, or match by nearest neighbour), NOT a wider tolerance — the invariant is real and caught the cream-eared stoat the same day.",
       "state": "open",
       "run": ""
+    },
+    {
+      "id": "PB-086",
+      "title": "A ticked rung is active forever, so every ladder clogs with work she has outgrown",
+      "detail": "dealMaths draws uniformly over EVERY ticked stage (JT-010(1)), and reading is about to do the same. Nothing ever retires a rung, so the pool only grows: by the top of the seven-rung sums ladder one page in seven is still 'within five', and the ten-rung reading ladder will be worse. Joe, 5 Aug: \"we need to find a way to drop off early rungs after some time because it will cause clogging of a challenge eventually. maybe something like no more than 3-5 rungs active at a time. no point having her read easy words if she competently reads more complex ones. same with maths.\" So it is a sliding WINDOW over the ticked ladder rather than the whole of it, on every path. Wants the window size chosen against real attainment data, and a decision on what retires a rung — position alone, or sustained accuracy on the rungs above it. Note the harness already has the signal (StageStats.ewma) and that a rung dropping out must never strand the stage a held card was dealt at.",
+      "state": "open",
+      "run": ""
     }
   ]
 }
