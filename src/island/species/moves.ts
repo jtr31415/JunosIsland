@@ -47,6 +47,16 @@
  * >>> PB-069 lands. The two GAME BIRDS were deliberately NOT marked `air` — a
  * >>> pheasant flies in bursts and lives on the ground, and `air` means hovering
  * >>> at `TREE_HEIGHT`.
+ * >>>
+ * >>> AFRICA'S SIXTEEN WENT IN THE SAME WAY ON 5 AUGUST, and two of them settle
+ * >>> a sentence further down this file that says the CROCODILE is Joe's to rule
+ * >>> on and is therefore absent. It is not absent any more: it and the hippo
+ * >>> say `amphibian`, which is the word this file's own header says was put in
+ * >>> the union *because* a crocodile is honestly both. The OSTRICH is `land`
+ * >>> and not `air`, the game birds' reading — a flightless bird hovering at
+ * >>> `TREE_HEIGHT` is the exact failure that list was written to prevent — and
+ * >>> the VULTURE is the only `air` in the collection. All sixteen are his to
+ * >>> overrule in the editor and none of them changes a frame until PB-069.
  *
  * ## Why a lookup table and not a field on the collection record
  *
@@ -149,63 +159,102 @@ export const DEFAULT_LOCOMOTION: Locomotion = 'land'
  * rule is that shipped code cannot so much as name it. This comment tripped that
  * gate once already. */
 export const MOVES: Readonly<Record<string, Locomotion>> = {
+  'animal-aardvark': 'land',
+  'animal-anglerfish': 'water',
+  'animal-antelope': 'land',
+  'animal-baboon': 'land',
   'animal-badger': 'land',
   'animal-bear': 'land',
   'animal-bee': 'air',
   'animal-blackbird': 'air',
   'animal-blue-tit': 'air',
   'animal-budgie': 'air',
+  'animal-buffalo': 'land',
   'animal-canary': 'air',
   'animal-capercaillie': 'land',
+  'animal-cheetah': 'land',
   'animal-chinchilla': 'land',
   'animal-chipmunk': 'land',
+  'animal-clownfish': 'water',
   'animal-cockatiel': 'air',
   'animal-corn-snake': 'land',
   'animal-coypu': 'amphibian',
+  'animal-crocodile': 'amphibian',
   'animal-degu': 'land',
+  'animal-dolphin': 'water',
   'animal-dormouse': 'land',
   'animal-duck': 'amphibian',
+  'animal-eel': 'water',
   'animal-elk': 'land',
   'animal-ferret': 'land',
+  'animal-flamingo': 'amphibian',
   'animal-frog': 'amphibian',
   'animal-gecko': 'land',
   'animal-gerbil': 'land',
   'animal-goldfish': 'water',
+  'animal-gorilla': 'land',
   'animal-guinea-pig': 'land',
   'animal-hamster': 'land',
   'animal-hare': 'land',
   'animal-hedgehog': 'land',
+  'animal-heron': 'land',
+  'animal-hippo': 'amphibian',
+  'animal-hyena': 'land',
+  'animal-jellyfish': 'water',
   'animal-kingfisher': 'air',
+  'animal-lobster': 'water',
   'animal-lovebird': 'air',
   'animal-lynx': 'land',
   'animal-magpie': 'air',
+  'animal-meerkat': 'land',
   'animal-mink': 'amphibian',
   'animal-mole': 'land',
+  'animal-mongoose': 'land',
   'animal-mouse': 'land',
   'animal-newt': 'amphibian',
+  'animal-octopus': 'water',
+  'animal-ostrich': 'land',
   'animal-otter': 'amphibian',
   'animal-owlet': 'air',
   'animal-parrot': 'air',
+  'animal-peacock': 'land',
+  'animal-pelican': 'amphibian',
   'animal-pheasant': 'land',
   'animal-pine-marten': 'land',
   'animal-pony': 'land',
   'animal-porcupine': 'land',
+  'animal-pufferfish': 'water',
   'animal-puffin': 'air',
+  'animal-ray': 'water',
   'animal-robin': 'air',
   'animal-salamander': 'land',
+  'animal-sea-urchin': 'water',
   'animal-seagull': 'air',
+  'animal-seahorse': 'water',
+  'animal-shark': 'water',
   'animal-shrew': 'land',
   'animal-skunk': 'land',
   'animal-slow-worm': 'land',
+  'animal-squid': 'water',
   'animal-squirrel': 'land',
+  'animal-starfish': 'water',
   'animal-stoat': 'land',
+  'animal-stork': 'land',
+  'animal-swan': 'amphibian',
   'animal-terrapin': 'land',
   'animal-toad': 'amphibian',
   'animal-tortoise': 'land',
+  'animal-toucan': 'air',
+  'animal-turtle': 'water',
+  'animal-vulture': 'air',
+  'animal-warthog': 'land',
+  'animal-whale': 'water',
   'animal-wildcat': 'land',
+  'animal-wildebeest': 'land',
   'animal-wolverine': 'land',
   'animal-woodpecker': 'air',
   'animal-wren': 'air',
+  'animal-zebra': 'land',
 }
 /* <<< WORKBENCH-OWNED TABLE */
 
