@@ -213,7 +213,7 @@ describe('WHAT THE ALBUM SHOWS TODAY, collection by collection', () => {
     expect(PINNED.map(p => p[0]).sort()).toEqual(COLLECTIONS.map(c => c.id).sort())
   })
 
-  it('is 213 modelled in total across the whole roster of 320', () => {
+  it('is 277 modelled in total across the whole roster of 320', () => {
     // The one number to quote. Everything else on this page is an outline of
     // something nobody has drawn yet, and none of it is shown any more.
     //
@@ -228,8 +228,13 @@ describe('WHAT THE ALBUM SHOWS TODAY, collection by collection', () => {
     // >>> separation work. `isBuilt` still counts what somebody has MODELLED, so
     // >>> the released column above does not move for any of them until Joe
     // >>> pushes. This number moves with whichever sibling lands last.
+    // >>> 277 SINCE 5 AUGUST, and the +64 is five more collections assembled in
+    // >>> parallel in the same tree: near threatened, raptors, vulnerable,
+    // >>> critically endangered and endangered. Same reading as above — modelled
+    // >>> is not released, so nothing on the table above moves until Joe pushes,
+    // >>> and this number is whatever the tree held when the last sibling ran.
     expect(ROSTER).toHaveLength(320)
-    expect(ROSTER.filter(isBuilt)).toHaveLength(213)
+    expect(ROSTER.filter(isBuilt)).toHaveLength(277)
   })
 
   it('has exactly three collections with any frame at all', () => {
@@ -256,7 +261,7 @@ describe('the tripwire: isBuilt cannot drift from the ability to draw', () => {
      * declaring a kit without writing it fails here instead of shipping.
      */
     const built = ROSTER.filter(isBuilt)
-    expect(built).toHaveLength(213)   // moves with the parallel collections; see above
+    expect(built).toHaveLength(277)   // moves with the parallel collections; see above
 
     for (const id of built) {
       const record = speciesRecord(id)

@@ -776,10 +776,21 @@ describe('the hold on unbuilt collections is derived live, and a record is not a
      * >>> for any of the four either, which is now ten collections' worth of
      * >>> evidence for the same one sentence.
      */
+    /*
+     * >>> AND FIVE MORE ON 5 AUGUST — near threatened, raptors, vulnerable,
+     * >>> critically endangered and endangered, built in parallel in the same
+     * >>> tree. Same reading again: records and models, nothing pushed, so every
+     * >>> one reads records > 0 and released = 0 and `heldBack` refuses it.
+     * >>> `unlock.ts` was not touched for any of the five either, which is now
+     * >>> fifteen collections' worth of evidence for one sentence. This list is
+     * >>> a shared fixture that every concurrent collection moves, so it is what
+     * >>> the tree actually held rather than any one agent's arithmetic.
+     */
     expect(recordsWithoutModels.sort(), 'the set of records-with-nothing-released moved')
       .toEqual([
-        'africa', 'birds', 'critters', 'farm', 'ice', 'jungle', 'night-time',
-        'ocean', 'outback', 'woodland',
+        'africa', 'birds', 'critically-endangered', 'critters', 'endangered',
+        'farm', 'ice', 'jungle', 'near-threatened', 'night-time', 'ocean',
+        'outback', 'raptors', 'vulnerable', 'woodland',
       ])
     for (const id of recordsWithoutModels) {
       expect(heldBack(BUILT, id), `${id} is offered with nothing released in it`).toBe(true)

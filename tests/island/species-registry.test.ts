@@ -114,7 +114,13 @@ describe('the species registry', () => {
     // in one tree on the same day. Jungle is the primate-and-big-cat row and is
     // the collection that collides with the most already-built animals —
     // `collections/jungle.ts` measures every separation, hull by hull.
-    expect(REGISTRY.size).toBe(213)
+    // 277 SINCE 5 AUG, and the +64 is FOUR MORE COLLECTIONS assembled in
+    // parallel in one tree on the same day: NEAR THREATENED (12), RAPTORS (16),
+    // VULNERABLE (12), CRITICALLY ENDANGERED (12) and ENDANGERED (12). This
+    // number is a shared fixture that every concurrent collection moves, so it
+    // is set to what the tree ACTUALLY held when the last of them ran the suite
+    // rather than to any one agent's arithmetic.
+    expect(REGISTRY.size).toBe(277)
     expect(shippedIn('base')).toHaveLength(24)
     expect(shippedIn('garden')).toHaveLength(14)      // COMPLETE — the slow worm is assembled
     expect(shippedIn('home-pets')).toHaveLength(16)   // COMPLETE — all 16 hand-assembled (PB-073)
@@ -170,7 +176,11 @@ describe('the species registry', () => {
     // in parallel in one tree. Jungle's sixteen close the primate-and-big-cat row
     // with one placeholder in it (`animal-tarantula`, which wants a segmented leg
     // the bank has never held), so the drop is real rather than a count of stubs.
-    expect(rostered.filter(id => !speciesRecord(id))).toHaveLength(107)
+    // 43 since 5 Aug, and the −64 is the five threat-category and raptor rows
+    // landing together: near-threatened, raptors, vulnerable, critically
+    // endangered and endangered. The same shared-fixture caveat as `REGISTRY.size`
+    // above applies — this is 320 minus what the tree actually held.
+    expect(rostered.filter(id => !speciesRecord(id))).toHaveLength(43)
   })
 
   it('has SEVEN complete collections, and birds is complete WITH PLACEHOLDERS in it', () => {
@@ -289,10 +299,20 @@ describe('the species registry', () => {
     // eyes against rule 6's mirrored pair. All four are UNSIGNED, like every
     // collection on this list except Garden — Joe signs off in the editor and
     // that gate is his alone.
+    //
+    // AND NOW THERE ARE SIXTEEN. Five more landed in parallel in one tree on 5
+    // August — NEAR THREATENED, RAPTORS, VULNERABLE, CRITICALLY ENDANGERED and
+    // ENDANGERED — each complete on the Birds terms above, and four of the five
+    // named for an IUCN category. **Not one record in any of those four carries
+    // a `threat`**: the status is the collection's PREMISE and no dated Red List
+    // reading has been taken, which is the line `registry.ts:67-88` holds for
+    // the base 24's seven badges. This list is a shared fixture that every
+    // concurrent collection moves, so it is what the tree actually held.
     expect([...complete].sort())
       .toEqual([
-        'africa', 'birds', 'critters', 'farm', 'garden', 'home-pets', 'ice',
-        'jungle', 'ocean', 'outback', 'woodland',
+        'africa', 'birds', 'critically-endangered', 'critters', 'endangered',
+        'farm', 'garden', 'home-pets', 'ice', 'jungle', 'near-threatened',
+        'ocean', 'outback', 'raptors', 'vulnerable', 'woodland',
       ])
   })
 
