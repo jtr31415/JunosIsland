@@ -23,6 +23,7 @@ import { createPlotHost } from './plot'
 import { createAlbum } from './album'
 import { hatchProgress, landProgress, sumsForTile, pagesForEgg } from './flow'
 import { balance, applyDevBalance, pagesRead } from './balance'
+import type { PageKind } from './balance'
 import { landPaused, eggsPaused, governorLine, restoreCount } from './governors'
 import type { Nudge } from './governors'
 import { OPENING, HATCH_LINES, TILE_QUESTION, fill } from './script'
@@ -1181,19 +1182,25 @@ async function boot(): Promise<void> {
      * the four-long mix at every other slot and doubled the find pages —
      * one in two where Joe's ruling and the data both say one in four.
      */
-    const kind = harness.dealReading(pagesRead(state.readProgress))
-    // Nothing in reading is ticked. Can only be reached by a hand-edited save:
-    // the panel refuses the last untick (JT-010(3)).
-    if (kind === null) return
     if (!state.readHeld || dealtRead === null) {
-      dealtRead = { path: kind === 'build' ? 'building' : 'reading', stage: 1 }
+      const dealt = harness.dealReading(pagesRead(state.readProgress), defaultRng)
+      // Nothing in reading is ticked. Can only be reached by a hand-edited
+      // save: the panel refuses the last untick (JT-010(3)).
+      if (dealt === null) return
+      dealtRead = { path: dealt.kind === 'build' ? 'building' : 'reading', stage: dealt.stage }
     }
+    // A held card is ATTRIBUTED to the stage it was originally dealt at, not
+    // to whatever a fresh draw would pick now — so `dealReading` above runs
+    // only on a fresh deal, never on a held re-render. Calling it every time
+    // would also spend a roll of the shared rng on every re-open of the same
+    // held page, which is a `roll()` nobody asked for.
     harness.dealt(dealtRead.path, dealtRead.stage)
 
     overlay.clearSay()
     // Put the egg on the turntable first, then mount the round WITH the
     // layout — one call, so the mount's own teardown cannot drop it.
     const staged = stageFor('read', state)
+    const kind: PageKind = dealtRead.path === 'building' ? 'build' : 'find'
     const card = dealReading(
       { read: readStore, build: buildStore },
       {

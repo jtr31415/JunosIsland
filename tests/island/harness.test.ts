@@ -1162,7 +1162,7 @@ describe('a reading page — JT-010(2), three builds to one find', () => {
    */
   const kinds = (a: ReturnType<typeof createAttainment>, n: number): string[] => {
     const h = createHarness(a)
-    return Array.from({ length: n }, (_, page) => h.dealReading(page) ?? 'none')
+    return Array.from({ length: n }, (_, page) => h.dealReading(page, () => 0)?.kind ?? 'none')
   }
 
   it('gives one find page in four', () => {
@@ -1188,7 +1188,7 @@ describe('a reading page — JT-010(2), three builds to one find', () => {
     const a = createAttainment()
     a.reading.stages[1]!.ticked = false
     a.building.stages[1]!.ticked = false
-    expect(createHarness(a).dealReading(0)).toBeNull()
+    expect(createHarness(a).dealReading(0, () => 0)).toBeNull()
   })
 })
 
@@ -1281,7 +1281,7 @@ describe('a save can never strand the child in a round that cannot be dealt', ()
       reading: { mode: 'manual', stages: { 1: { ticked: false } } },
       building: { mode: 'manual', stages: { 1: { ticked: false } } },
     })
-    expect(createHarness(a).dealReading(0)).not.toBeNull()
+    expect(createHarness(a).dealReading(0, () => 0)).not.toBeNull()
   })
 
   it('leaves a moment alone when one of its paths is still ticked', () => {
@@ -1291,7 +1291,7 @@ describe('a save can never strand the child in a round that cannot be dealt', ()
       building: { mode: 'manual', stages: { 1: { ticked: true } } },
     })
     expect(a.reading.stages[1]?.ticked).toBe(false)
-    expect(createHarness(a).dealReading(0)).toBe('build')
+    expect(createHarness(a).dealReading(0, () => 0)?.kind).toBe('build')
   })
 
   it('keeps the stats it repaired the ticks on', () => {

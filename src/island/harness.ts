@@ -543,6 +543,16 @@ type Roll = () => number
  */
 export interface MathsDeal { path: Path; stage: number; probe: boolean }
 
+/**
+ * What a reading page turned out to be.
+ *
+ * `kind` is `dealReading`'s original job — the page index against the mix,
+ * gated by the tickboxes — and `stage` is the rung drawn uniformly from
+ * whichever ladder `kind` points at (JT-010(1), mirrored from `dealMaths`
+ * on Joe's 5 Aug ruling: *"mirror maths for now"*).
+ */
+export interface ReadingDeal { kind: PageKind; stage: number }
+
 /** An offer waiting to be put to the child, and which of B's two it is. */
 export interface Offer { path: Path; stage: number; kind: 'trickier' | 'takingAway' }
 
@@ -562,13 +572,21 @@ export interface Harness {
    */
   dealMaths(roll: Roll): MathsDeal | null
   /**
-   * Which kind of reading page belongs at this page index, or null when
-   * neither reading path is ticked.
+   * Which kind of reading page belongs at this page index, and which rung of
+   * it — or null when neither reading path is ticked.
    *
    * Joe, JT-010(2): *"reading mix should be 3 build, 1 find. period."* — so
-   * the mix in `balance.json` decides, and the tickboxes only gate it.
+   * the mix in `balance.json` decides the KIND, and the tickboxes only gate
+   * it. That part is unchanged from A3.
+   *
+   * The STAGE is new (5 Aug, "mirror maths for now"): once the kind is
+   * known, its rung is drawn uniformly over the ticked stages of the ladder
+   * that kind points at — `STAGES.reading` for a find page, `STAGES.building`
+   * for a build page — the same JT-010(1) rule `dealMaths` already runs, just
+   * over one path's pool instead of two paths' combined one, because kind
+   * (and therefore which pool) is decided first and separately.
    */
-  dealReading(pageIndex: number): PageKind | null
+  dealReading(pageIndex: number, roll: Roll): ReadingDeal | null
   /** May this tick come off? JT-010(3). */
   canUntick(path: Path, stage: number): boolean
   /** Set it, if allowed. Returns whether it took. */
@@ -1026,7 +1044,7 @@ export function createHarness(
       return { path: drawn.path, stage: drawn.stage, probe: false }
     },
 
-    dealReading(pageIndex) {
+    dealReading(pageIndex, roll) {
       const wanted = pageKind(pageIndex)
       /*
        * THE TICKBOX IS A CAPABILITY, THE MIX IS A PREFERENCE. Where they
@@ -1034,9 +1052,21 @@ export function createHarness(
        * the other way round would let a data file overrule a parent's
        * statement that their child cannot do a thing yet.
        */
-      if (this.levelFor(READING_PATH_OF[wanted]).length) return wanted
-      const other: PageKind = wanted === 'find' ? 'build' : 'find'
-      return this.levelFor(READING_PATH_OF[other]).length ? other : null
+      let kind: PageKind | null = null
+      if (this.levelFor(READING_PATH_OF[wanted]).length) {
+        kind = wanted
+      } else {
+        const other: PageKind = wanted === 'find' ? 'build' : 'find'
+        kind = this.levelFor(READING_PATH_OF[other]).length ? other : null
+      }
+      if (kind === null) return null
+      /*
+       * THE STAGE, drawn uniformly over the ticked stages of the ladder KIND
+       * just chose — `pick` is exactly the JT-010(1) draw `dealMaths` runs,
+       * narrowed to the one path `kind` points at rather than a pool of two.
+       */
+      const stage = this.pick(READING_PATH_OF[kind], roll)
+      return stage === null ? null : { kind, stage }
     },
 
     canUntick(path, stage) {
