@@ -34,6 +34,14 @@ import type { AttemptEvent } from './attempts'
 import { pageKind } from './balance'
 import type { PageKind } from './balance'
 import { dayKey } from '../platform/clock'
+/*
+ * `buildStageFor` lives in `deal.ts`, which imports `STAGES` from THIS file —
+ * a real cycle, taken deliberately rather than duplicating the one-rung-behind
+ * rule in two places to dodge it. Safe because both uses are inside function
+ * bodies (`dealReading` below, `buildStageFor` itself), never at module-eval
+ * time, so it does not matter which of the two finishes loading first.
+ */
+import { buildStageFor } from './deal'
 
 /** The paths a child can actually be dealt today. */
 export const LIVE_PATHS = ['sums', 'takingAway', 'reading', 'building'] as const
@@ -581,10 +589,20 @@ export interface Harness {
    *
    * The STAGE is new (5 Aug, "mirror maths for now"): once the kind is
    * known, its rung is drawn uniformly over the ticked stages of the ladder
-   * that kind points at — `STAGES.reading` for a find page, `STAGES.building`
-   * for a build page — the same JT-010(1) rule `dealMaths` already runs, just
-   * over one path's pool instead of two paths' combined one, because kind
-   * (and therefore which pool) is decided first and separately.
+   * that kind points at — the same JT-010(1) rule `dealMaths` already runs,
+   * just over one path's pool instead of two paths' combined one, because
+   * kind (and therefore which pool) is decided first and separately.
+   *
+   * A BUILD PAGE'S STAGE IS NOT DRAWN FROM `STAGES.building` (5 Aug, task 5
+   * integration ruling). `STAGES.building` is `[1]` — a single on/off switch,
+   * not a ladder — so drawing from it would always hand `buildStageFor` the
+   * number 1 and it would never be consulted. Instead a build page draws a
+   * READING rung exactly as a find page does, and `buildStageFor` maps that
+   * rung one rung down: spelling lags reading in every reader, and one behind
+   * means she spells what she read last week rather than what she is reading
+   * today. `STAGES.building`'s tickbox keeps its own job unchanged — it still
+   * gates whether `kind` may be `'build'` at all, above, so a parent can say
+   * their child cannot build words yet. See `buildStageFor` in `deal.ts`.
    */
   dealReading(pageIndex: number, roll: Roll): ReadingDeal | null
   /** May this tick come off? JT-010(3). */
@@ -1064,8 +1082,31 @@ export function createHarness(
        * THE STAGE, drawn uniformly over the ticked stages of the ladder KIND
        * just chose — `pick` is exactly the JT-010(1) draw `dealMaths` runs,
        * narrowed to the one path `kind` points at rather than a pool of two.
+       *
+       * EXCEPT FOR BUILD (5 Aug, task 5 integration ruling). `STAGES.building`
+       * is `[1]` — the tickbox above already used it as the on/off gate for
+       * `kind`, and it has nothing else to offer a draw. So a build page draws
+       * a READING rung instead, exactly as a find page does, and `buildStageFor`
+       * (deal.ts) maps it one rung down: she spells one rung behind what she
+       * reads. `STAGES.building` is deliberately left untouched by this — its
+       * only remaining job is the tickbox `kind` already read above.
+       *
+       * THE FALLBACK: if reading has nothing ticked at all — a coherent state,
+       * see JT-010(3)'s "reading off, building on" — there is no reading rung
+       * to map down from, so a build page falls back to `building`'s own
+       * ladder instead of dealing nothing. That fallback can never itself come
+       * back empty: `kind` is only ever `'build'` because the tickbox check
+       * above already found `building` non-empty. `pick` does not spend a
+       * roll when a pool is empty, so the fallback costs nothing extra on the
+       * common path where reading IS ticked.
        */
-      const stage = this.pick(READING_PATH_OF[kind], roll)
+      let stage: number | null
+      if (kind === 'build') {
+        const readingRung = this.pick('reading', roll)
+        stage = readingRung !== null ? buildStageFor(readingRung) : this.pick('building', roll)
+      } else {
+        stage = this.pick(READING_PATH_OF[kind], roll)
+      }
       return stage === null ? null : { kind, stage }
     },
 

@@ -9,6 +9,13 @@
  * `dealMaths` draws one — uniformly over the ticked stages of the ladder the
  * chosen page KIND points at (JT-010(1)) — and `main.ts` uses what comes
  * back instead of the literal `1`.
+ *
+ * UPDATED, task 5 integration ruling (5 Aug): "the ladder the chosen page
+ * KIND points at" is no longer literally true for a build page. `STAGES.
+ * building` is `[1]`, a single on/off switch rather than a ladder, so a build
+ * page's rung is drawn from the ticked READING stages instead and then mapped
+ * one rung down by `buildStageFor` (`deal.ts`) — she spells what she read a
+ * rung ago. See `harness.ts`'s `dealReading` for the reasoning in full.
  */
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
@@ -32,16 +39,21 @@ describe('dealReading also chooses a stage (5 Aug, "mirror maths for now")', () 
     expect(h.levelFor('reading')).toContain(deal?.stage)
   })
 
-  it('gives a build page a ticked building stage, not a reading one', () => {
+  it('gives a build page a reading stage mapped one rung down, not a raw building stage (task 5 integration ruling)', () => {
+    // `STAGES.building` is `[1]` — a single on/off switch, not a ladder — so a
+    // build page's STAGE is drawn from the ticked READING stages instead and
+    // then mapped one rung down by `buildStageFor`. With a fresh island only
+    // reading id 1 is ticked, so the draw always lands on it: STAGES.reading =
+    // [3, 4, 1, 5, ...], id 1 sits at index 2, and the rung below it is id 4.
     const a = createAttainment()
     const h = createHarness(a)
     const deal = h.dealReading(1, rolls(0.5)) // page 1 is a build page (JT-010(2))
     expect(deal?.kind).toBe('build')
     expect(deal?.stage).not.toBeNull()
-    expect(STAGES.building).toContain(deal?.stage)
-    // The building ladder is [1] today, so this also pins that a build page
-    // never reaches into STAGES.reading for its rung.
-    expect(deal?.stage).toBe(1)
+    expect(deal?.stage).toBe(4)
+    // `STAGES.building` still gates whether a build page is dealt AT ALL (the
+    // tickbox), but no longer supplies the rung itself.
+    expect(STAGES.building).not.toContain(deal?.stage)
   })
 
   it('draws more than one distinct stage once several rungs are ticked', () => {
@@ -69,14 +81,17 @@ describe('dealReading also chooses a stage (5 Aug, "mirror maths for now")', () 
   /*
    * THE LIVE CHILD IS ON READING ID 1. `STARTS_TICKED` ticks exactly that, so
    * with a fresh island (one rung ticked) the uniform draw must return id 1
-   * every time, whatever the roll says — she must not move.
+   * every time, whatever the roll says — she must not move. Her build page
+   * follows: reading id 1 mapped one rung down by `buildStageFor` is id 4
+   * (task 5 integration ruling), and with only one reading rung ticked that
+   * mapping is deterministic too, whatever the roll says.
    */
-  it('keeps a fresh island on reading id 1 and building id 1, whatever the roll draws', () => {
+  it('keeps a fresh island reading id 1 and building id 4, whatever the roll draws', () => {
     const a = createAttainment() // default: reading 1, building 1, nothing else
     const h = createHarness(a)
     for (const r of [0, 0.01, 0.25, 0.5, 0.75, 0.99]) {
       expect(h.dealReading(0, rolls(r))).toEqual({ kind: 'find', stage: 1 })
-      expect(h.dealReading(1, rolls(r))).toEqual({ kind: 'build', stage: 1 })
+      expect(h.dealReading(1, rolls(r))).toEqual({ kind: 'build', stage: 4 })
     }
   })
 })

@@ -29,6 +29,25 @@ import { generateAdd, generateSub } from '../core/generators/sums'
 import type { SumItem, SumState } from '../core/generators/sums'
 import type { Rng } from '../core/rng'
 import type { PageKind } from './balance'
+import { STAGES } from './harness'
+
+/**
+ * The build rung for a given reading rung: ONE BEHIND, and clamped at the floor.
+ *
+ * Spelling lags reading in every reader — she will read `night` months before
+ * she can spell it. Level-pegged, the day she climbs to split digraphs she is
+ * asked to SPELL `bike`, and the build page becomes the thing that stops her.
+ * One behind means she spells what she read last week.
+ *
+ * A stage that is not on the ladder is returned untouched rather than clamped to
+ * the bottom: an unknown stage is a caller bug, and silently dealing rung 1 for
+ * it would hide that bug behind an easy page.
+ */
+export function buildStageFor(readingStage: number): number {
+  const i = STAGES.reading.indexOf(readingStage)
+  if (i < 0) return readingStage
+  return STAGES.reading[Math.max(0, i - 1)] as number
+}
 
 /** The shape every generator state shares: a history, and a finger in it. */
 interface Dealt<T> { history: T[]; idx: number }
