@@ -558,8 +558,37 @@ export interface MathsDeal { path: Path; stage: number; probe: boolean }
  * gated by the tickboxes — and `stage` is the rung drawn uniformly from
  * whichever ladder `kind` points at (JT-010(1), mirrored from `dealMaths`
  * on Joe's 5 Aug ruling: *"mirror maths for now"*).
+ *
+ * `stage` VS `recordStage` (5 Aug, task 5 fix round 1 — Joe's ruling on the
+ * task 5 integration fallout). They are the SAME NUMBER for a find page and
+ * DIFFERENT for a build one, and the split is deliberate:
+ *
+ *   - `stage` is what the GENERATOR is asked for. For a build page this is
+ *     `buildStageFor`'s mapped-down reading rung — the whole point of task 5,
+ *     and what decides which words she is actually asked to spell.
+ *   - `recordStage` is what ATTAINMENT MEASURES AGAINST — the value
+ *     `harness.dealt`/`recordAttempt` must be called with. For a build page
+ *     this stays on `building`'s OWN ladder (today, its only rung, `1`),
+ *     never the mapped `stage` above.
+ *
+ * Before this split existed, callers used one field for both, and once a
+ * build page's `stage` became a reading-space id, attributing an attempt to
+ * it broke SILENTLY: `Attainment.building.stages` only has keys for
+ * `STAGES.building`'s own ids (`[1]`), so `statsFor('building', <mapped id>)`
+ * returned null, `dealt()` set `current` to null, and `recordAttempt`
+ * quietly did nothing — no error, no failing test, just a grown-up's
+ * building stats going stale from that point on.
+ *
+ * `STAGES.building` staying `[1]` — and `recordStage` therefore staying on
+ * it — is deliberate and permanent under the spec: it is the on/off switch a
+ * grown-up uses to say "she cannot build words yet", not a second ladder for
+ * them to manage. A path whose ladder has exactly one rung has exactly one
+ * rung to record against, so attributing every build attempt to stage `1` is
+ * not a workaround for that shape — it IS what the building ladder means,
+ * and it is precisely today's behaviour, so nothing that was measured before
+ * this task is lost.
  */
-export interface ReadingDeal { kind: PageKind; stage: number }
+export interface ReadingDeal { kind: PageKind; stage: number; recordStage: number }
 
 /** An offer waiting to be put to the child, and which of B's two it is. */
 export interface Offer { path: Path; stage: number; kind: 'trickier' | 'takingAway' }
@@ -1099,15 +1128,35 @@ export function createHarness(
        * above already found `building` non-empty. `pick` does not spend a
        * roll when a pool is empty, so the fallback costs nothing extra on the
        * common path where reading IS ticked.
+       *
+       * `stage` VS `recordStage` (5 Aug, fix round 1 — see the doc on
+       * `ReadingDeal`). `stage` is the mapped, reading-space value the
+       * GENERATOR gets asked for. `recordStage` is what ATTAINMENT records
+       * against, and for a build page it stays on `building`'s own ladder —
+       * read directly with `levelFor`, not drawn with `pick`, because
+       * `kind === 'build'` already proves it non-empty and `STAGES.building`
+       * has only ever had the one entry, so there is exactly one value to
+       * find and no roll worth spending on it.
        */
       let stage: number | null
+      let recordStage: number | null
       if (kind === 'build') {
         const readingRung = this.pick('reading', roll)
-        stage = readingRung !== null ? buildStageFor(readingRung) : this.pick('building', roll)
+        if (readingRung !== null) {
+          stage = buildStageFor(readingRung)
+          recordStage = this.levelFor('building')[0] as number
+        } else {
+          // No reading rung to map down from: generator and record fall back
+          // to the same value, building's own ladder — nothing to be one
+          // rung behind of.
+          stage = this.pick('building', roll)
+          recordStage = stage
+        }
       } else {
         stage = this.pick(READING_PATH_OF[kind], roll)
+        recordStage = stage
       }
-      return stage === null ? null : { kind, stage }
+      return stage === null || recordStage === null ? null : { kind, stage, recordStage }
     },
 
     canUntick(path, stage) {

@@ -1170,8 +1170,15 @@ async function boot(): Promise<void> {
    * one `current`, because the rounds interleave: they can leave a sum, read a
    * page, and come back to the sum, and a single slot would by then be holding
    * the reading page.
+   *
+   * `stage` VS `recordStage` (5 Aug, task 5 fix round 1). `stage` goes to the
+   * GENERATOR below (`level`/`rungIndex`) — for a build page, the mapped
+   * reading rung `buildStageFor` produced. `recordStage` goes to
+   * `harness.dealt` — for a build page, `building`'s own ladder stage
+   * instead, because `Attainment.building.stages` has no key for a mapped
+   * reading-space id. See `ReadingDeal` in harness.ts for the full reasoning.
    */
-  let dealtRead: { path: Path; stage: number } | null = null
+  let dealtRead: { path: Path; stage: number; recordStage: number } | null = null
   let dealtSum: { path: Path; stage: number; probe: boolean } | null = null
 
   function openRead(state: Flow = flow): void {
@@ -1187,14 +1194,23 @@ async function boot(): Promise<void> {
       // Nothing in reading is ticked. Can only be reached by a hand-edited
       // save: the panel refuses the last untick (JT-010(3)).
       if (dealt === null) return
-      dealtRead = { path: dealt.kind === 'build' ? 'building' : 'reading', stage: dealt.stage }
+      dealtRead = {
+        path: dealt.kind === 'build' ? 'building' : 'reading',
+        stage: dealt.stage,
+        recordStage: dealt.recordStage,
+      }
     }
     // A held card is ATTRIBUTED to the stage it was originally dealt at, not
     // to whatever a fresh draw would pick now — so `dealReading` above runs
     // only on a fresh deal, never on a held re-render. Calling it every time
     // would also spend a roll of the shared rng on every re-open of the same
     // held page, which is a `roll()` nobody asked for.
-    harness.dealt(dealtRead.path, dealtRead.stage)
+    //
+    // recordStage, NOT stage: calling this with the mapped generator stage is
+    // the exact bug fix round 1 corrects — `harness.dealt('building', <a
+    // reading-space id>)` finds no matching stats, and `recordAttempt`
+    // silently no-ops from then on with nothing failing loudly.
+    harness.dealt(dealtRead.path, dealtRead.recordStage)
 
     overlay.clearSay()
     // Put the egg on the turntable first, then mount the round WITH the

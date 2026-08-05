@@ -35,6 +35,16 @@ describe('the build tray', () => {
     })
     expect(s.history[0]!.segs).toEqual(['f', 'i', 's', 'h'])
     expect(s.history[0]!.tray).not.toContain('sh')
+    /*
+     * ADDED beyond the brief: `not.toContain('sh')` only proves the decoy
+     * pool didn't happen to draw THAT one digraph for THIS seed — a mutation
+     * check on the pool filter (removing it entirely) still passed this
+     * assertion, because mulberry32(1) never drew a multi-char decoy for
+     * 'fish' either way. The actual claim the filter line makes is seed
+     * independent: with `granularity: 'letters'`, NO tray entry may be
+     * longer than one character, ever. This is that claim, stated directly.
+     */
+    for (const tk of s.history[0]!.tray) expect(tk.length).toBe(1)
   })
 
   it('puts a finger space between the words of a phrase', () => {

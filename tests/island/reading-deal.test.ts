@@ -90,9 +90,62 @@ describe('dealReading also chooses a stage (5 Aug, "mirror maths for now")', () 
     const a = createAttainment() // default: reading 1, building 1, nothing else
     const h = createHarness(a)
     for (const r of [0, 0.01, 0.25, 0.5, 0.75, 0.99]) {
-      expect(h.dealReading(0, rolls(r))).toEqual({ kind: 'find', stage: 1 })
-      expect(h.dealReading(1, rolls(r))).toEqual({ kind: 'build', stage: 4 })
+      // recordStage equals stage on a find page (nothing to split there) and
+      // stays on building's own ladder — stage 1 — for a build page, even
+      // though the generator-facing stage above it is the mapped id 4.
+      expect(h.dealReading(0, rolls(r))).toEqual({ kind: 'find', stage: 1, recordStage: 1 })
+      expect(h.dealReading(1, rolls(r))).toEqual({ kind: 'build', stage: 4, recordStage: 1 })
     }
+  })
+})
+
+/*
+ * FIX ROUND 1 (5 Aug): a build attempt must actually be RECORDED, not
+ * silently dropped. Before this fix, `main.ts` attributed a build page's
+ * attempt to `harness.dealt('building', dealt.stage)` — and once `stage`
+ * became a reading-space id (task 5's whole point), `Attainment.building.
+ * stages` had no matching key, `dealt()` set `current` to null, and
+ * `recordAttempt` quietly did nothing. No test caught it because nothing
+ * exercised the full path — deal, attribute, record — end to end for a
+ * build page. This does.
+ */
+describe('a build page attempt is actually recorded (fix round 1)', () => {
+  it('lands on building\'s own stage 1, not the mapped generator stage', () => {
+    const a = createAttainment()
+    const h = createHarness(a)
+    const deal = h.dealReading(1, rolls(0.5)) // page 1 is a build page (JT-010(2))
+    expect(deal?.kind).toBe('build')
+    // The generator-facing stage is mapped, reading-space, and off building's
+    // own ladder entirely — exactly the value that must NOT be used to
+    // attribute the attempt.
+    expect(deal?.stage).toBe(4)
+    expect(deal?.recordStage).toBe(1)
+
+    // This is what main.ts now does: attribute by recordStage, generate by
+    // stage. Recording against recordStage must actually move the stats.
+    h.dealt('building', deal!.recordStage)
+    h.recordAttempt({
+      kind: 'build', index: 0, correct: true, latencyMs: 900,
+      helped: false, rescued: false, at: 0,
+    })
+    expect(a.building.stages[1]?.attempts).toBe(1)
+    expect(a.building.stages[1]?.ewma).toBe(1)
+  })
+
+  it('would have been silently dropped by recording against the mapped stage instead', () => {
+    // The regression this test exists to catch, demonstrated directly:
+    // `Attainment.building.stages` has no key for `4` (STAGES.building is
+    // `[1]`), so attributing there is not merely wrong, it is a no-op.
+    const a = createAttainment()
+    const h = createHarness(a)
+    const deal = h.dealReading(1, rolls(0.5))
+    expect(deal?.stage).toBe(4)
+    h.dealt('building', deal!.stage) // the bug: recordStage, not stage
+    h.recordAttempt({
+      kind: 'build', index: 0, correct: true, latencyMs: 900,
+      helped: false, rescued: false, at: 0,
+    })
+    expect(a.building.stages[1]?.attempts).toBe(0)
   })
 })
 
@@ -126,11 +179,20 @@ describe('main.ts only draws a fresh reading stage on a fresh deal', () => {
     )
   })
 
-  it('remembers dealtRead\'s path and stage rather than the harness deal object', () => {
+  it('remembers dealtRead\'s path, stage AND recordStage rather than the harness deal object', () => {
     // The guard's body must assign INTO `dealtRead` from what came back, so
-    // the stage that survives a held re-render is the one on `dealtRead`
-    // and not a fresh return value nobody kept.
-    expect(code).toMatch(/dealtRead = \{ path: [\s\S]{0,80}, stage: [\s\S]{0,20}\}/)
-    expect(code).toMatch(/harness\.dealt\(dealtRead\.path, dealtRead\.stage\)/)
+    // the values that survive a held re-render are the ones on `dealtRead`
+    // and not a fresh return value nobody kept. Both `stage` (generator) and
+    // `recordStage` (attribution) must be carried — dropping either silently
+    // reintroduces one of the two bugs fix round 1 closed.
+    expect(code).toMatch(
+      /dealtRead = \{[\s\S]{0,20}path: [\s\S]{0,120}stage: [\s\S]{0,40}recordStage: [\s\S]{0,60}\}/,
+    )
+    // ATTRIBUTED BY recordStage, NOT stage — this is fix round 1 itself.
+    // Attributing by `stage` is the exact regression that silently dropped
+    // every build attempt once a child was past reading id 1 (see the
+    // "attempt is actually recorded" describe block above).
+    expect(code).toMatch(/harness\.dealt\(dealtRead\.path, dealtRead\.recordStage\)/)
+    expect(code).not.toMatch(/harness\.dealt\(dealtRead\.path, dealtRead\.stage\)/)
   })
 })
