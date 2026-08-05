@@ -67,32 +67,52 @@ describe('a rung page', () => {
   })
 
   /*
-   * Fix 5: a thin rung must not grind. With three approved words and n = 12
-   * (MIN + 9 rounds of history), the old loop burned ~480 deck draws and ~160
-   * reshuffles to arrive at the very same three-word page. `makeDeck` never
-   * repeats within one pass through its source list — it only reshuffles a
-   * fresh pass once that list is exhausted — so the FIRST raw repeat is proof
-   * the rung has nothing left to offer, and the fix stops there instead of
-   * grinding to the guard. The resulting page must be unchanged: exactly the
-   * three approved words, no more, no fewer.
+   * A "stop once the rung repeats" optimisation was tried here and reverted
+   * the same day: it broke the very thing this test pins.
+   *
+   * `main.ts:190, 194-195` keeps ONE deck per rung for the WHOLE SESSION —
+   * "created once and kept" — because `makeDeck`'s no-repeat promise only
+   * means anything if the deck outlives a single deal. A "first raw repeat
+   * this call means the rung is exhausted" check is only true if a deal
+   * STARTS on a fresh pass boundary. A deal that then stops early leaves the
+   * deck mid-pass, having popped and discarded one item of the NEXT pass just
+   * to detect the repeat — so the following deal starts already missing that
+   * word from ITS OWN fresh per-call bookkeeping, hits a repeat early, and
+   * breaks before ever drawing it. Measured against a persistent 3-word deck
+   * at n=12: 1224 of 2000 consecutive deals (61%) silently dropped one of the
+   * rung's three approved words. Joe is about to hand-approve words a few at
+   * a time, so a thin rung is not an edge case — it is the normal state for
+   * weeks.
+   *
+   * This deals against ONE deck, created once, across several consecutive
+   * rounds — main.ts's own pattern — and pins that every round still
+   * surfaces every approved word. The old grind-to-guard loop this reverts to
+   * always does, because guard (`n * 40`) draws far more than one pass no
+   * matter where the deck happens to sit.
    */
-  it('stops drawing once a thin rung is exhausted, rather than grinding to the guard (5 Aug fix)', () => {
-    const s: ReadState = { history: Array.from({ length: 9 }, () => []), idx: 8 } // n = min(12, 3+9) = 12
-    const rng = mulberry32(7)
+  it('surfaces every approved word on every deal against a PERSISTENT deck, not just the first', () => {
+    const rng = mulberry32(11)
     const words = ['frog', 'nest', 'sock']
-    const deck = makeDeck(rng, words)
-    let calls = 0
-    generateRead(s, {
+    const deck = makeDeck(rng, words) // ONE deck, made once — main.ts's own pattern.
+    const s: ReadState = { history: [], idx: -1 }
+    const baseDeps = {
       rng,
       drawGreen: () => 'cat',
       drawRed: () => '[I]',
       neigh: buildNeighbours(buildPool()),
       level: 5,
-      drawRung: l => l === 5 ? () => { calls++; return deck() } : null,
-    })
-    const page = s.history[9]!.map(p => p.w)
-    expect([...page].sort()).toEqual(['frog', 'nest', 'sock'])
-    /* Old behaviour allowed up to n * 40 = 480 draws to reach this same page. */
-    expect(calls).toBeLessThan(10)
+      drawRung: (l: number) => (l === 5 ? deck : null),
+    }
+    // Grow history so n sits at MAX (12) for every round below — the exact
+    // shape the guard exists to survive: a twelve-word page from a
+    // three-word rung, deal after deal, forever.
+    for (let i = 0; i < 9; i++) s.history.push([])
+    s.idx = s.history.length - 1
+
+    for (let round = 0; round < 25; round++) {
+      generateRead(s, baseDeps)
+      const page = s.history[s.idx]!.map(p => p.w)
+      expect([...page].sort(), `round ${round}`).toEqual(['frog', 'nest', 'sock'])
+    }
   })
 })

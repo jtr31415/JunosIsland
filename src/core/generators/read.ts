@@ -108,24 +108,11 @@ export function generateRead(s: ReadState, d: ReadDeps): void {
      * perfectly well contain both `to` and `too`. A listening game with both
      * on screen is a trap, not a test (wordlists.ts). */
     const usedGroups = new Set<number>()
-    /*
-     * Every distinct word `rungDraw()` has actually handed back, whether or
-     * not it was usable. `makeDeck` (decks.ts) never repeats within one pass
-     * through the rung's approved list — it only reshuffles a FRESH pass once
-     * that list is exhausted — so the first raw repeat is proof, not a guess,
-     * that every word the rung can offer has now been seen once. A three-word
-     * rung asked for a twelve-word page stops here after one extra pass
-     * instead of grinding to the guard below (~480 draws, ~160 reshuffles for
-     * n=12) to produce the same three-word page it was always going to deal.
-     */
-    const everSeen = new Set<string>()
     const picks: ReadPick[] = []
     let guard = 0
     while (picks.length < n && guard++ < n * 40) {
       const w = rungDraw()
       const pw = plainWord(w)
-      if (everSeen.has(pw)) break
-      everSeen.add(pw)
       if (used.has(pw) || (groupOf[pw] !== undefined && usedGroups.has(groupOf[pw] as number))) continue
       used.add(pw)
       if (groupOf[pw] !== undefined) usedGroups.add(groupOf[pw] as number)
