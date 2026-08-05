@@ -30,6 +30,7 @@ import { AFRICA_SPECIES } from './collections/africa'
 import { FARM_SPECIES } from './collections/farm'
 import { NIGHT_TIME_SPECIES } from './collections/night-time'
 import { BIRDS_SPECIES } from './collections/birds'
+import { OCEAN_SPECIES } from './collections/ocean'
 import type { Species } from './types'
 
 /**
@@ -160,10 +161,32 @@ export const NIGHT_TIME_COLLECTION: readonly Species[] = [...NIGHT_TIME_SPECIES]
  */
 export const BIRDS_COLLECTION: readonly Species[] = [...BIRDS_SPECIES]
 
+/**
+ * OCEAN — roster row 4, and the first collection here that is COMPLETE at
+ * sixteen of sixteen while being honest that four of them are not finished.
+ *
+ * `collections/ocean.ts` carries the survey and it corrects a claim this repo
+ * has repeated since 29 July: `docs/how-the-animals-are-made.md` §14 says the
+ * pack has "no fin, flipper or fluke" and counts Ocean among the 64 impossible.
+ * The `wing` role baked on 4 August put `box-42`/`box-43` — provenance
+ * `fish:wing`, a handed mirrored pair — into `PARTS_BANK`. Those are the fish's
+ * own fins, and a penguin's `blade-06` is a flipper needing no reinterpretation
+ * at all. The collection was never blocked on a fin.
+ *
+ * FOUR ARE PLACEHOLDERS and are marked as such in their own files rather than
+ * quietly counted as built: the jellyfish and the sea turtle want a DOME, the
+ * seahorse wants a CURVE the bank does not contain in any of its 100 shapes,
+ * and the lobster wants a CLAW — which the pack HAS and the generator has
+ * simply never baked. All three are commissions for Joe; the last one is one
+ * line in `tools/pets/parts-bank.ts` and is left alone because baking a role
+ * renumbers the whole bank silently.
+ */
+export const OCEAN_COLLECTION: readonly Species[] = [...OCEAN_SPECIES]
+
 /** Everything that has actually shipped: the frozen 24 plus the built collections. */
 export const SHIPPED_SPECIES: readonly Species[] = [
   ...BASE_SPECIES, ...PHASE2_SPECIES, ...PHASE3_SPECIES, ...NIGHT_TIME_COLLECTION,
-  ...BIRDS_COLLECTION,
+  ...BIRDS_COLLECTION, ...OCEAN_COLLECTION,
 ]
 
 /** Every species that has actually shipped, by id. */

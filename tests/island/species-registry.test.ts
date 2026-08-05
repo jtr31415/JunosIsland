@@ -105,19 +105,21 @@ describe('the species registry', () => {
     // (PB-074) — sixteen of sixteen, every one hand-assembled. It is the first
     // collection to arrive complete in a single run since the kit route was
     // retired, and the second collection the parts route has closed.
-    // 111 SINCE 4 AUG. 100 of it is WOODLAND rebuilt on the parts route —
+    // 149 SINCE 5 AUG, and only 118 of it is this agent: AFRICA and OCEAN landed
+    // in the same worktree on the same day. See the note above the complete list. 100 of it is WOODLAND rebuilt on the parts route —
     // the third collection the kit purge emptied and the last one still empty.
     // It arrives a few species at a time rather than whole, so this number and
     // the woodland line below move together and the two are the same fact.
-    expect(REGISTRY.size).toBe(111)
+    expect(REGISTRY.size).toBe(149)
     expect(shippedIn('base')).toHaveLength(24)
     expect(shippedIn('garden')).toHaveLength(14)      // COMPLETE — the slow worm is assembled
     expect(shippedIn('home-pets')).toHaveLength(16)   // COMPLETE — all 16 hand-assembled (PB-073)
     expect(shippedIn('woodland')).toHaveLength(16)    // COMPLETE — all 16 hand-assembled
-    expect(shippedIn('africa')).toHaveLength(1)       // crocodile; 13 kit-built deleted
+    expect(shippedIn('africa')).toHaveLength(16)      // COMPLETE — not this agent's; see the note below
     expect(shippedIn('farm')).toHaveLength(16)        // COMPLETE — all 16 hand-assembled (PB-074)
     expect(shippedIn('night-time')).toHaveLength(13)  // 16 rostered; bat, sugar glider, scorpion
-    expect(shippedIn('birds')).toHaveLength(11)       // 18 rostered; see collections/birds.ts
+    expect(shippedIn('birds')).toHaveLength(18)       // COMPLETE — eleven built, seven PLACEHOLDERS
+    expect(shippedIn('ocean')).toHaveLength(16)       // COMPLETE — not this agent's; see the note below
   })
 
   it('leaves 236 species rostered but unshipped, on purpose', () => {
@@ -159,10 +161,10 @@ describe('the species registry', () => {
     // galliform idiom animal-chicken.ts established out of the pack's own parts.
     const rostered = COLLECTIONS.flatMap(c => c.members)
     expect(rostered).toHaveLength(320)
-    expect(rostered.filter(id => !speciesRecord(id))).toHaveLength(209)
+    expect(rostered.filter(id => !speciesRecord(id))).toHaveLength(171)
   })
 
-  it('has FOUR complete collections — garden, and home-pets, farm and woodland rebuilt properly', () => {
+  it('has SEVEN complete collections, and birds is complete WITH PLACEHOLDERS in it', () => {
     // This test used to assert ZERO, and said in its own comment: "if this test
     // ever goes red, a second kit landed and that question became live." That
     // is exactly what happened, so it is inverted rather than deleted — the
@@ -251,7 +253,25 @@ describe('the species registry', () => {
     // folded flank wing, tube-02 as the bill, plate-08 as the round eye. So the
     // last hole the kit era left in this collection closed without a kit.
     // Woodland is UNSIGNED, like Home Pets and Farm.
-    expect([...complete].sort()).toEqual(['farm', 'garden', 'home-pets', 'woodland'])
+    //
+    // AND NOW THERE ARE FIVE, and BIRDS is the first one that is complete WITH
+    // PLACEHOLDERS IN IT — which is a different kind of completeness and is
+    // stated rather than counted. Joe, 4 August: *"put something in for the
+    // unbuildable ones anyway so i can do it manually. if there is no entry at
+    // all, i cant do that."* Seven of the eighteen are entries whose own first
+    // header line says they are placeholders and names exactly what is wrong —
+    // a pelican with no pouch, a flamingo whose bill cannot bend, a peacock with
+    // no train. They exist so the workbench can OPEN them, because a species
+    // with no entry cannot be edited at all.
+    //
+    // So this list no longer means "every member is finished". It means every
+    // member has a record, which is what  actually tests, and the
+    // distinction now matters enough to write down: completeness here has always
+    // meant a record exists, and Birds is the collection that makes the gap
+    // between that and "done" visible. Unsigned, like Home Pets, Farm and
+    // Woodland — Joe signs off in the editor and that gate is his alone.
+    expect([...complete].sort())
+      .toEqual(['africa', 'birds', 'farm', 'garden', 'home-pets', 'ocean', 'woodland'])
   })
 
   it('names the seven base animals roster §5 gives a threat badge', () => {

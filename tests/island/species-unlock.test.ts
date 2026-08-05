@@ -769,7 +769,7 @@ describe('the hold on unbuilt collections is derived live, and a record is not a
     const recordsWithoutModels = COLLECTIONS.map((c) => c.id)
       .filter((id) => shippedIn(id).length > 0 && builtIn(id).length === 0)
     expect(recordsWithoutModels.sort(), 'the set of records-with-nothing-released moved')
-      .toEqual(['africa', 'birds', 'farm', 'night-time', 'woodland'])
+      .toEqual(['africa', 'birds', 'farm', 'night-time', 'ocean', 'woodland'])
     for (const id of recordsWithoutModels) {
       expect(heldBack(BUILT, id), `${id} is offered with nothing released in it`).toBe(true)
     }
