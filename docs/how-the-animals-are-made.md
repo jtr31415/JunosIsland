@@ -405,10 +405,18 @@ Two collections are recorded here as unbuildable. Both claims are now UNVERIFIED
   shipped fourteen built and two priced placeholders.
 - **Dinosaurs (16)** — no frill, no plate, no spine. **UNVERIFIED since the
   `wing` role was baked. Measure before believing.**
-- **Raptors (16)** — no hooked beak, no talon, no spread wing. **UNVERIFIED, and
-  already dented:** `animal-vulture.ts` (Africa, 5 Aug) makes a hooked beak's
-  nearest approximation from `cone-06`'s band 15 standing 0.041900 proud of band
-  13, painted dark.
+- ~~**Raptors (16)** — no hooked beak, no talon, no spread wing.~~ **TESTED AND
+  MOSTLY FALSE, 6 August 2026 — the third time this section has been wrong.**
+  *No spread wing* is FALSE and was false before anyone asked: `wedge-19` attaches
+  `x +1` at a sink of 0.175 and stands 0.4727 clear of a 1.250 flank, giving a
+  bird 2.1960 across at a keep-out of 1.0980, inside the fox's own 1.15 —
+  `animal-vulture.ts` had already shipped exactly that. *No talon* is FALSE in
+  Ocean's exact way: §7 censuses ten distinct claw shapes (crab, lion, tiger,
+  polar) and `claw` occurs ZERO times in the baked bank — the shape is in a `.glb`
+  in this repo and simply not in the module. *No hooked beak* HALF-HOLDS: there is
+  no curve anywhere, but a hook is a tip that turns down, and two straight parts
+  say it (`cone-06` forward plus `box-24` at 55°, joined `on: 'snout'`). Raptors
+  shipped fifteen built and one priced placeholder.
 
 **Birds (18)** is partial: there are two beak designs in the whole pack, against a
 list that wants a swan, a heron, a flamingo, a pelican and a toucan. **Legendary

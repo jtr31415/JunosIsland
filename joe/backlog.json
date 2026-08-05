@@ -678,6 +678,20 @@
       "detail": "The guard asserts inside a loop over every registered species, so it reports one name and stops. On 5-6 Aug it named animal-bald-eagle, then after that fix animal-snow-leopard, then presumably the next — each discovery costing a full suite run of roughly two minutes, serially, across four agents who each thought they were seeing their own bug and mostly were not. Collect every offender and fail once with the list. Same shape as PB-082's fix: the coverage does not change, only the packaging, and the report goes from one name to all of them.",
       "state": "open",
       "run": ""
+    },
+    {
+      "id": "PB-096",
+      "title": "Bake the claw role — nineteen species wear a tusk because ten real claws sit unbaked in the repo",
+      "detail": "§7 censuses ten distinct claw shapes from the pack (crab, lion, tiger, polar) and `claw` occurs ZERO times in PARTS_BANK: the geometry is in .glb files in this checkout and was never emitted. The cost is now counted: all SIXTEEN raptors wear a hog's or elephant's tusk at the foot, plus Ocean's lobster and Jungle's sloth and anteater — nineteen species across four collections. It is one line in tools/pets/parts-bank.ts and it is JOE'S line, not an agent's, because baking a role RENUMBERS THE WHOLE BANK (adding `wing` once moved box-31 off the lion's hull and turned the newt's crest into bee wings, and nothing failed to compile). NUMBERING_FROZEN_BY pins the order so a new role can only append, which is what makes this safe to do deliberately and fatal to do casually.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-097",
+      "title": "The hinge already exists — a commission three built species were waiting on may not be needed",
+      "detail": "Critters priced a HINGED LIMB as its strongest commission for three species it had already BUILT (spider's knee, grasshopper's tibia, mantis's forearm), plus Jungle's tarantula and Outback's kangaroo. Raptors then demonstrated the mechanism is already in the builder: `on: 'wing'` anchors a second wedge-19 to the first's built tip, measured at 3.0956 across. So a joint is expressible today by chaining parts through `on:` — the same trick Ice used for the Dall ram's horn and animal-lynx.ts uses for tufts. Before commissioning a new shape, someone should try the chain on the spider's knee: it may cost nothing but keep-out, and pets.ts:652 charges keep-out for pathing, which is the real limit (Raptors measured 1.5478 against the fox's 1.15).",
+      "state": "open",
+      "run": ""
     }
   ]
 }
