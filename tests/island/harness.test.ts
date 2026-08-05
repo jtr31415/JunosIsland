@@ -481,8 +481,33 @@ describe('Run B — probes, the taste of the next rung', () => {
 
   it('wants none where there is no rung above — reading ends at two-syllable', () => {
     const it = island()
+    // Tick all reading stages INCLUDING id 11, so that id 11 becomes the
+    // topTicked stage. topTicked returns the LAST stage in LADDER ORDER that
+    // has .ticked = true, so we must tick stage 11 itself (position 9) to make
+    // it topTicked. This exercises the invariant that when topTicked is at the
+    // top rung, nextStage is null and probeWanted returns false via the guard
+    // 'if (top === null || nextStage(path) === null) return false'.
+    const ladder = STAGES.reading as readonly number[]
+    const targetIndex = ladder.indexOf(11)
+    const stages = it.a.reading.stages as Record<number, any>
+    // Tick from position 0 through position of id 11 (inclusive)
+    for (let i = 0; i <= targetIndex; i++) {
+      const stageId = ladder[i]
+      if (stageId === undefined) continue
+      if (!stages[stageId]) {
+        stages[stageId] = {}
+      }
+      stages[stageId].ticked = true
+    }
+    // Now id 11 is the topTicked stage (last rung). Deal it and record
+    // many correct attempts to build up its ewma.
     it.h.dealt('reading', 11)
     for (let i = 0; i < 20; i++) it.h.recordAttempt(attempt({ kind: 'find' }))
+    // Since there is no rung above id 11, nextStage('reading') is null,
+    // so probeWanted must return false via the early-return guard:
+    // 'if (top === null || nextStage(path) === null) return false'.
+    // Without this guard, the code would check ewma on stage 11, which after 20
+    // correct attempts should be high enough to return true, breaking the invariant.
     expect(it.h.probeWanted('reading')).toBe(false)
   })
 
