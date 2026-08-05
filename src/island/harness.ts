@@ -103,7 +103,28 @@ export const STAGES: Record<Path, readonly number[]> = {
    */
   sums: [4, 1, 3, 5, 2, 6, 7],
   takingAway: [1, 2, 3],
-  reading: [1],
+  /*
+   * THE READING LADDER, in rung order, with the generator id in brackets:
+   *
+   *   1. single sounds            (3)  NEW. Below where anyone starts.
+   *   2. + taught digraphs        (4)  NEW. Also below the start.
+   *   3. today's mixed page       (1)  where every island begins — UNCHANGED
+   *   4. three- and four-letter nouns (5)  NEW
+   *   5. two-word phrases         (6)  NEW
+   *   6. five-letter words        (7)  NEW. Adjacent consonants, no new code.
+   *   7. five-letter nouns and phrases (8) NEW
+   *   8. split digraphs           (9)  NEW
+   *   9. alternative spellings    (10) NEW
+   *  10. two-syllable             (11) NEW
+   *
+   * ID 2 IS ABSENT ON PURPOSE. It is the alien-word generator, written and
+   * unreachable; exposing it is a separate decision Joe has not taken.
+   *
+   * RUNGS 1 AND 2 SIT BELOW THE START, exactly as `within five` does on sums.
+   * `STARTS_TICKED` is untouched, so the cadence never walks a child down onto
+   * them — they exist for a grown-up who needs to go gentler than today's page.
+   */
+  reading: [3, 4, 1, 5, 6, 7, 8, 9, 10, 11],
   building: [1],
 }
 

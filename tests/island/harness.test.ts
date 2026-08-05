@@ -45,19 +45,19 @@ describe('the stages that exist', () => {
      * are not in numeric order. */
     expect(STAGES.sums).toEqual([4, 1, 3, 5, 2, 6, 7])
     expect(STAGES.takingAway).toEqual([1, 2, 3])
-    expect(STAGES.reading).toEqual([1])
+    expect(STAGES.reading).toEqual([3, 4, 1, 5, 6, 7, 8, 9, 10, 11])
     expect(STAGES.building).toEqual([1])
   })
 
-  it('gives reading and building exactly one stage, because level 2 is the alien', () => {
+  it('gives building exactly one stage, because level 2 is the alien', () => {
     /*
-     * Not an oversight and not a placeholder. `generateRead` level 2 is the
-     * ALIEN generator (read.ts:29) and `generateBuild` level 2 likewise
-     * (build.ts:25), and the no-aliens ruling retires both. So the tickbox on
-     * these two paths is a capability switch with no ladder behind it, and a
-     * future rung means a new generator rather than a new number here.
+     * Not an oversight and not a placeholder. `generateBuild` level 2 is the
+     * ALIEN generator (build.ts:25), and the no-aliens ruling retires it. So
+     * the tickbox on this path is a capability switch with no ladder behind it,
+     * and a future rung means a new generator rather than a new number here.
+     * Reading, by contrast, has acquired new generators (3–11) and a full ladder.
      */
-    expect(STAGES.reading).toHaveLength(1)
+    expect(STAGES.reading).toHaveLength(10)
     expect(STAGES.building).toHaveLength(1)
   })
 
@@ -479,9 +479,9 @@ describe('Run B — probes, the taste of the next rung', () => {
     expect(it.h.probeWanted('sums')).toBe(false)
   })
 
-  it('wants none where there is no rung above — reading has exactly one', () => {
+  it('wants none where there is no rung above — reading ends at two-syllable', () => {
     const it = island()
-    it.h.dealt('reading', 1)
+    it.h.dealt('reading', 11)
     for (let i = 0; i < 20; i++) it.h.recordAttempt(attempt({ kind: 'find' }))
     expect(it.h.probeWanted('reading')).toBe(false)
   })

@@ -450,7 +450,19 @@ export const STAGE_LABELS: Record<Path, Record<number, string>> = {
     7: 'two-digit, bridging ten',
   },
   takingAway: { 1: 'to ten', 2: 'teens minus units', 3: 'anything to twenty' },
-  reading: { 1: 'reading words' },
+  /* IN LADDER ORDER, like `sums` above it. Id 1 keeps its old wording. */
+  reading: {
+    3: 'single sounds',
+    4: 'sounds and digraphs',
+    1: 'reading words',
+    5: 'short nouns',
+    6: 'two-word phrases',
+    7: 'five-letter words',
+    8: 'five-letter nouns and phrases',
+    9: 'split digraphs',
+    10: 'other spellings',
+    11: 'two-syllable words',
+  },
   building: { 1: 'building words' },
 }
 
