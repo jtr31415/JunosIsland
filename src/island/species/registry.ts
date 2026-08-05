@@ -35,7 +35,11 @@ import { JUNGLE_SPECIES } from './collections/jungle'
 import { OUTBACK_SPECIES } from './collections/outback'
 import { CRITTERS_SPECIES } from './collections/critters'
 import { ICE_SPECIES } from './collections/ice'
+import { NEAR_THREATENED_SPECIES } from './collections/near-threatened'
 import { RAPTORS_SPECIES } from './collections/raptors'
+import { VULNERABLE_SPECIES } from './collections/vulnerable'
+import { CRITICALLY_ENDANGERED_SPECIES } from './collections/critically-endangered'
+import { ENDANGERED_SPECIES } from './collections/endangered'
 import type { Species } from './types'
 
 /**
@@ -307,6 +311,35 @@ export const CRITTERS_COLLECTION: readonly Species[] = [...CRITTERS_SPECIES]
 export const ICE_COLLECTION: readonly Species[] = [...ICE_SPECIES]
 
 /**
+ * NEAR THREATENED — roster row 16, and the only collection in the roster NAMED
+ * for an IUCN category.
+ *
+ * That makes the standing rule about `threat` records sharper rather than
+ * softer, and `collections/near-threatened.ts` says it at length: the status is
+ * the collection's PREMISE and **no dated reading of the Red List was taken**,
+ * so not one of the twelve carries a `threat` record. Writing categories from
+ * recall would produce records that LOOK checked, which is the exact line this
+ * file holds for the base 24's seven badges at :67-88. The collection's name is
+ * what a builder was given; the collection's data claims nothing.
+ *
+ * TWELVE OF TWELVE HAVE AN ENTRY AND NINE ARE REAL ANIMALS. Held together by a
+ * category rather than a place, these twelve collide with nothing internally and
+ * with almost everything externally — five bovids, eight cats, five cetaceans,
+ * three camelids, two hyenas and a FROZEN penguin are all already built — and
+ * every one of the twelve separations is written at the species.
+ *
+ * The three placeholders are `animal-maned-wolf`, `animal-jerboa` and
+ * `animal-markhor`, and between them they want two things. The markhor wants a
+ * HELIX, which is a CURVE at one more dimension and the sixth time a collection
+ * has priced that absence after Ocean, Birds, Outback, Critters and Ice. The
+ * other two want a LONG LEG — the same shape `animal-kangaroo.ts` and
+ * `animal-ostrich.ts` priced as a long hind leg, and counted across the whole
+ * register today one leg would finish EIGHT animals, which is the highest-value
+ * single commission on the board.
+ */
+export const NEAR_THREATENED_COLLECTION: readonly Species[] = [...NEAR_THREATENED_SPECIES]
+
+/**
  * RAPTORS — the collection `docs/how-the-animals-are-made.md` §14 declared
  * impossible in three words, all three of which were measured before a line was
  * written, because that paragraph has already been wrong once.
@@ -339,11 +372,139 @@ export const ICE_COLLECTION: readonly Species[] = [...ICE_SPECIES]
  */
 export const RAPTORS_COLLECTION: readonly Species[] = [...RAPTORS_SPECIES]
 
+/**
+ * VULNERABLE — roster row 17, and the collection whose NAME makes a claim this
+ * file refuses to let it make.
+ *
+ * It is named for an IUCN Red List category and **not one of its twelve records
+ * carries a `threat`**. That is the same line the block at the top of this file
+ * holds for the base 24 and it matters more here than anywhere: roster §5 wants
+ * statuses *"true, checkable"*, `Threat.checkedDate` exists so a status is a
+ * dated reading rather than a memory, and writing twelve categories from recall
+ * would produce twelve records that LOOK checked — with the collection's own
+ * name standing in for the corroboration. Absent means "not recorded yet".
+ * `collections/vulnerable.ts` opens on that and says what would unblock it.
+ *
+ * TWELVE OF TWELVE HAVE AN ENTRY AND ALL TWELVE ARE REAL ANIMALS — no member is
+ * held up by a shape the bank does not contain, which is the first collection
+ * since Woodland to be able to say so. Five carry a flag naming what they
+ * strained; the macaw's is this project's SIXTH pricing of the CURVE, after
+ * Ocean's seahorse, Birds' flamingo, Outback's frilled lizard, Critters' snail
+ * and Ice's Dall ram, and it is the hooked beak `docs/how-the-animals-are-made.md`
+ * §14 still correctly names as absent.
+ *
+ * ITS MEMBERS COME FROM EVERY HABITAT IN THE ROSTER, so unlike Ice or Jungle it
+ * has no shared palette and no collection-level idiom, and it had to separate
+ * INWARDS four times as well as outwards: three black bears, two sirenians and
+ * two bovids. Each was solved by finding one measured fact and spending it — the
+ * pack's ONE forward-facing hull band (`box-39`'s band 3) went to the moon bear
+ * and the other two bears wear a marking card TURNED TO FACE FORWARD, which is a
+ * placement no card in this project had before; the dugong takes a fluke and the
+ * manatee the BEAVER'S OWN PADDLE, which is genuinely the whole difference
+ * between the two families; and the takin and the gaur refused to argue about
+ * horn angles, one being built around a muzzle stretched on its own HEIGHT and
+ * the other around a dorsal ridge made from the hog's nose pad.
+ *
+ * IT IS ALSO THE FIRST COLLECTION WITH NO BURIED EYES. `box-41`'s front face
+ * stands at z = 0.725 and `EYE_CARD_Z` is an absolute 0.6350, so an eye card on
+ * the tiger's shell sits 0.09 inside the head — ten built species carry that and
+ * only `animal-whale.ts` names it. No member here is on `box-41`, which was one
+ * decision taken once instead of twelve arguments.
+ */
+export const VULNERABLE_COLLECTION: readonly Species[] = [...VULNERABLE_SPECIES]
+
+/**
+ * CRITICALLY ENDANGERED — roster row 19, and the collection NAMED for a status
+ * that it deliberately does not record.
+ *
+ * `collections/critically-endangered.ts` opens on that, because it is the thing
+ * a reader will otherwise assume the other way round. Roster §5 wants a threat
+ * status "true, checkable" and `Threat.checkedDate` exists so a status is a
+ * DATED reading of the Red List rather than a memory. Twelve categories written
+ * from recall would be twelve records that LOOK checked, with the collection's
+ * own name doing the vouching — which is worse than none. So **not one of the
+ * twelve carries a `threat`**, the status is the collection's PREMISE, and the
+ * absence means "not recorded yet", exactly as it does for the seven badged
+ * base-24 species sixty lines above this one.
+ *
+ * TWELVE OF TWELVE HAVE AN ENTRY AND ELEVEN ARE REAL ANIMALS. The one
+ * placeholder is `animal-axolotl`, and what it waits on is a shape nobody has
+ * asked for before: a BRANCHED FROND. All 100 baked shapes are single solid
+ * masses, straight or tapered along one axis, and not one of them forks — rule 4
+ * as amended bakes a rotation into a copy's vertices and cannot fork one. Six
+ * `cone-01` on the chamfer row stand in and read as a crown of spikes.
+ *
+ * ITS MEMBERS COME FROM TWELVE DIFFERENT HABITATS, which is the design problem:
+ * nothing holds the collection together and every separation is made against a
+ * different already-built animal — three rhinos in the tree at once, a seventh
+ * spotted cat, a sixth parrot, an eighth primate, a second crocodilian and a
+ * porpoise among six cetaceans.
+ *
+ * THREE THINGS IT ADDS TO THE VOCABULARY, all argued in the collection file:
+ * `blade-05` as a FACIAL DISC, which only works on `box-31` — the lion's shallow
+ * shell puts the plate's front at 0.6250 so the eye cards float the pack's own
+ * 0.010 proud of it, where on any usual hull the disc would bury the eyes;
+ * §8's repeat-and-sink run over a CROWN rather than a spine, which on a one-mass
+ * animal is a crest; and `box-25`, the koala's ear, left on its own `x +1`
+ * attachment as an orangutan's cheek FLANGE.
+ */
+export const CRITICALLY_ENDANGERED_COLLECTION: readonly Species[] =
+  [...CRITICALLY_ENDANGERED_SPECIES]
+
+/**
+ * ENDANGERED — roster row 18, and the third collection in a row whose NAME makes
+ * a claim its data deliberately does not.
+ *
+ * **Not one of its twelve records carries a `threat`**, for the reason the block
+ * at :67-88 gives for the base 24's seven badges and `NEAR_THREATENED_COLLECTION`
+ * and `VULNERABLE_COLLECTION` each give for theirs: roster §5 wants statuses
+ * *"true, checkable"*, `Threat.checkedDate` exists so a status is a DATED reading
+ * of the Red List rather than a memory, and twelve categories written from recall
+ * would produce twelve records that LOOK checked — with the row's own name
+ * standing in for the corroboration. `collections/endangered.ts` opens on that
+ * and says what would unblock it: somebody with a browser, twelve Red List
+ * entries and a real date.
+ *
+ * TWELVE OF TWELVE HAVE AN ENTRY AND ELEVEN ARE REAL ANIMALS. Its members come
+ * from every habitat in the roster, so like Vulnerable it has no shared palette
+ * and no collection-level idiom — and because the register now holds 200+
+ * species, **all twelve collide outwards**: six primates, four canids, six
+ * cetaceans, five procyonids, three lizards and three long-necked birds are
+ * already built. Every separation is written at the species.
+ *
+ * The one placeholder is `animal-blue-whale`, and what it waits on is an
+ * ELONGATED HULL, which is a RULING and not a commission: `HullDef.stretch` is
+ * `never` on Joe's own instruction of 2 August, all ten shells the pack drew are
+ * within 25% of a cube, and the biggest is `box-41` at 1.350 x 1.300 x 1.350
+ * against a real blue whale's 4.5:1 — so the longest animal that has ever lived
+ * is a box. `collections/critters.ts` records the identical wall for
+ * `animal-stick-insect`.
+ *
+ * NOTHING HERE WANTS THE CURVE, THE DOME OR THE LONG HIND LEG, which is worth
+ * saying because those three are the standing commissions and this is the first
+ * collection to check all twelve of its members against them and add none.
+ * `animal-tree-kangaroo` goes further and SUBTRACTS from the last of them: a
+ * tree kangaroo walks on four limbs of nearly equal length, so the long hind leg
+ * that would finish the kangaroo, the quokka, the emu and the ostrich buys it
+ * nothing at all.
+ *
+ * FIVE THINGS IT ADDS TO THE VOCABULARY, all argued in the collection file: the
+ * first PRIMATE WITH EARS in a project that has built six without one; the first
+ * FORKED TONGUE, out of the caterpillar's 16-triangle tooth; `animal-raccoon.ts`'s
+ * mask card moved ONE NUMBER so the mirrored pair stops short of the midline
+ * instead of meeting on it; a FLUKE AS TWO LOBES where `animal-whale.ts` spins
+ * one flat blade; and `box-42`/`box-43`, the FISH's own pectoral fins, which no
+ * one of the 190 species built before this collection had ever reached for.
+ */
+export const ENDANGERED_COLLECTION: readonly Species[] = [...ENDANGERED_SPECIES]
+
 /** Everything that has actually shipped: the frozen 24 plus the built collections. */
 export const SHIPPED_SPECIES: readonly Species[] = [
   ...BASE_SPECIES, ...PHASE2_SPECIES, ...PHASE3_SPECIES, ...NIGHT_TIME_COLLECTION,
   ...BIRDS_COLLECTION, ...OCEAN_COLLECTION, ...JUNGLE_COLLECTION, ...OUTBACK_COLLECTION,
-  ...CRITTERS_COLLECTION, ...ICE_COLLECTION, ...RAPTORS_COLLECTION,
+  ...CRITTERS_COLLECTION, ...ICE_COLLECTION, ...NEAR_THREATENED_COLLECTION,
+  ...RAPTORS_COLLECTION, ...VULNERABLE_COLLECTION, ...CRITICALLY_ENDANGERED_COLLECTION,
+  ...ENDANGERED_COLLECTION,
 ]
 
 /** Every species that has actually shipped, by id. */

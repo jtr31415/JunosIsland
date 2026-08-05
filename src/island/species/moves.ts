@@ -108,6 +108,70 @@
  * >>> times and the fix is sixteen lines. The kestrel is the one that would most
  * >>> like a fifth word — it HOVERS, which is what a child knows about it — and
  * >>> `air` is the nearest the union has.
+ * >>>
+ * >>> ENDANGERED'S TWELVE WENT IN ON 5 AUGUST and only three are judgements.
+ * >>> The BLUE WHALE is `water` and is not one at all — a whale that walks is a
+ * >>> bug. The GIANT OTTER and the GALÁPAGOS PENGUIN are `amphibian` on the
+ * >>> otter's, the platypus's and the seal's reading: both feed entirely in
+ * >>> water and rest entirely out of it, so `water` would confine an animal
+ * >>> famously seen standing on a rock and `land` would be false. **The
+ * >>> WHOOPING CRANE is `land` and NOT `air`, and that is the one worth
+ * >>> arguing**: it is a genuine long-distance migrant, so `air` looks right on
+ * >>> the fact — but `air` means hovering at `TREE_HEIGHT`, a crane feeds
+ * >>> standing in a marsh, and `animal-heron` and `animal-stork` are already
+ * >>> `land` for exactly that reason. Following them keeps the three
+ * >>> long-necked waders reading as one group. The other nine say `land`,
+ * >>> which is `DEFAULT_LOCOMOTION` and changes nothing either way — including
+ * >>> the KOMODO DRAGON, which does swim and which the union has no better word
+ * >>> for than the one it shares with the crocodile's `amphibian`; `land` was
+ * >>> taken because a monitor lizard lives on land and hunts on it, where a
+ * >>> crocodile does neither.
+ * >>>
+ * >>> CRITICALLY ENDANGERED'S TWELVE WENT IN ON 5 AUGUST and four are not the
+ * >>> default. The VAQUITA is `water` and is not a judgement — it is a porpoise
+ * >>> and a whale that walks is a bug. The AXOLOTL is `water` and it IS a
+ * >>> judgement, taken deliberately against the frog, the toad, the newt and the
+ * >>> tree frog, all of which are `amphibian`: an axolotl is the amphibian that
+ * >>> famously never leaves the water and never turns into the land form, so
+ * >>> `amphibian` would be false about the one thing that is interesting about
+ * >>> it. The GHARIAL is `amphibian` on the crocodile's and the hippo's reading.
+ * >>> The PHILIPPINE EAGLE and SPIX'S MACAW are `air` and both are real flyers.
+ * >>> **The KAKAPO is `land` and NOT `air`**, which is the ostrich's, the emu's,
+ * >>> the lyrebird's and the game birds' reading taken a sixth time and is the
+ * >>> easiest one here to get wrong: it is a parrot, and it is the only parrot in
+ * >>> the world that cannot fly. `air` means hovering at `TREE_HEIGHT`, which is
+ * >>> the exact failure this list exists to prevent. The other seven say `land`,
+ * >>> which is `DEFAULT_LOCOMOTION` and changes nothing either way — including
+ * >>> the PANGOLIN, which the header of this file uses as its own example of a
+ * >>> nonsense flag combination and which the union has no better word for.
+ * >>>
+ * >>> VULNERABLE'S TWELVE WENT IN ON 5 AUGUST and only three are not the
+ * >>> default. The DUGONG and the MANATEE are `water` and neither is a
+ * >>> judgement: a sirenian has no hind limbs at all and cannot come ashore,
+ * >>> which is a stronger case for `water` than the whales have — and it is
+ * >>> deliberately NOT the seal's and the walrus's `amphibian`, because those
+ * >>> two haul out and these two never do. The HYACINTH MACAW is `air` and is a
+ * >>> real flyer. **The CASSOWARY is `land` and NOT `air`**, which is the
+ * >>> ostrich's, the emu's, the lyrebird's, the kakapo's and the game birds'
+ * >>> reading taken a seventh time; it is also the least likely of them to be
+ * >>> got wrong, since nobody thinks a cassowary flies. The other nine say
+ * >>> `land`, which is `DEFAULT_LOCOMOTION` and changes nothing either way —
+ * >>> including the three BEARS and the SNOW LEOPARD, all of which climb, and
+ * >>> which the union has no word for and should not grow one for.
+ * >>>
+ * >>> NEAR THREATENED'S TWELVE WENT IN ON 5 AUGUST and only two are not the
+ * >>> default. The HARBOUR PORPOISE is `water` and is not a judgement — it is a
+ * >>> cetacean, and it joins the vaquita, the blue whale, the orca, the beluga,
+ * >>> the narwhal, the whale and the dolphin. The EMPEROR PENGUIN is
+ * >>> `amphibian`, on the seal's, the walrus's and the Galápagos penguin's
+ * >>> reading: it feeds entirely at sea and breeds entirely on the ice, so
+ * >>> `water` would confine the one bird every child pictures standing in a
+ * >>> huddle and `land` would be false about where it spends most of the year.
+ * >>> That entry also throws a question at a FROZEN animal rather than settling
+ * >>> it: `animal-penguin` has no row in this table at all and therefore reads
+ * >>> as `land` by default, which is Joe's to change and not this file's. The
+ * >>> other ten say `land`, which is `DEFAULT_LOCOMOTION` and changes nothing
+ * >>> either way.
  *
  * ## Why a lookup table and not a field on the collection record
  *
@@ -211,12 +275,16 @@ export const DEFAULT_LOCOMOTION: Locomotion = 'land'
  * gate once already. */
 export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-aardvark': 'land',
+  'animal-african-wild-dog': 'land',
+  'animal-agouti': 'land',
+  'animal-amur-leopard': 'land',
   'animal-anglerfish': 'water',
   'animal-ant': 'land',
   'animal-anteater': 'land',
   'animal-antelope': 'land',
   'animal-arctic-fox': 'land',
   'animal-arctic-hare': 'land',
+  'animal-axolotl': 'water',
   'animal-baboon': 'land',
   'animal-badger': 'land',
   'animal-bald-eagle': 'air',
@@ -227,8 +295,11 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-beetle': 'land',
   'animal-beluga': 'water',
   'animal-bilby': 'land',
+  'animal-black-rhino': 'land',
   'animal-blackbird': 'air',
   'animal-blue-tit': 'air',
+  'animal-blue-whale': 'water',
+  'animal-bonobo': 'land',
   'animal-budgie': 'air',
   'animal-buffalo': 'land',
   'animal-butterfly': 'air',
@@ -236,9 +307,11 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-canary': 'air',
   'animal-capercaillie': 'land',
   'animal-capybara': 'amphibian',
+  'animal-cassowary': 'land',
   'animal-centipede': 'land',
   'animal-chameleon': 'land',
   'animal-cheetah': 'land',
+  'animal-chimpanzee': 'land',
   'animal-chinchilla': 'land',
   'animal-chipmunk': 'land',
   'animal-clownfish': 'water',
@@ -255,26 +328,36 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-dormouse': 'land',
   'animal-dragonfly': 'air',
   'animal-duck': 'amphibian',
+  'animal-dugong': 'water',
   'animal-eagle-owl': 'air',
   'animal-echidna': 'land',
   'animal-eel': 'water',
   'animal-elk': 'land',
+  'animal-emperor-penguin': 'amphibian',
   'animal-emu': 'land',
   'animal-ermine': 'land',
+  'animal-european-bison': 'land',
   'animal-ferret': 'land',
   'animal-flamingo': 'amphibian',
+  'animal-fossa': 'land',
   'animal-frilled-lizard': 'land',
   'animal-frog': 'amphibian',
+  'animal-galapagos-penguin': 'amphibian',
+  'animal-gaur': 'land',
   'animal-gecko': 'land',
   'animal-gerbil': 'land',
+  'animal-gharial': 'amphibian',
+  'animal-giant-otter': 'amphibian',
   'animal-gibbon': 'land',
   'animal-golden-eagle': 'air',
   'animal-goldfish': 'water',
   'animal-gorilla': 'land',
   'animal-goshawk': 'air',
   'animal-grasshopper': 'land',
+  'animal-guanaco': 'land',
   'animal-guinea-pig': 'land',
   'animal-hamster': 'land',
+  'animal-harbour-porpoise': 'water',
   'animal-hare': 'land',
   'animal-harpy-eagle': 'air',
   'animal-harrier': 'air',
@@ -285,13 +368,18 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-howler-monkey': 'land',
   'animal-hummingbird': 'air',
   'animal-husky': 'land',
+  'animal-hyacinth-macaw': 'air',
   'animal-hyena': 'land',
   'animal-iguana': 'land',
   'animal-jaguar': 'land',
+  'animal-jaguarundi': 'land',
+  'animal-jerboa': 'land',
   'animal-jellyfish': 'water',
+  'animal-kakapo': 'land',
   'animal-kangaroo': 'land',
   'animal-kestrel': 'air',
   'animal-kingfisher': 'air',
+  'animal-komodo-dragon': 'land',
   'animal-kookaburra': 'air',
   'animal-ladybird': 'land',
   'animal-lemming': 'land',
@@ -301,12 +389,17 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-lyrebird': 'land',
   'animal-lynx': 'land',
   'animal-magpie': 'air',
+  'animal-manatee': 'water',
+  'animal-mandrill': 'land',
+  'animal-maned-wolf': 'land',
   'animal-mantis': 'land',
+  'animal-markhor': 'land',
   'animal-meerkat': 'land',
   'animal-merlin': 'air',
   'animal-mink': 'amphibian',
   'animal-mole': 'land',
   'animal-mongoose': 'land',
+  'animal-moon-bear': 'land',
   'animal-moth': 'air',
   'animal-mouse': 'land',
   'animal-musk-ox': 'land',
@@ -315,16 +408,19 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-numbat': 'land',
   'animal-ocelot': 'land',
   'animal-octopus': 'water',
+  'animal-okapi': 'land',
   'animal-orca': 'water',
   'animal-osprey': 'air',
   'animal-ostrich': 'land',
   'animal-otter': 'amphibian',
   'animal-owlet': 'air',
+  'animal-pangolin': 'land',
   'animal-parrot': 'air',
   'animal-peacock': 'land',
   'animal-pelican': 'amphibian',
   'animal-peregrine-falcon': 'air',
   'animal-pheasant': 'land',
+  'animal-philippine-eagle': 'air',
   'animal-pine-marten': 'land',
   'animal-platypus': 'amphibian',
   'animal-pony': 'land',
@@ -335,9 +431,12 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-quokka': 'land',
   'animal-ray': 'water',
   'animal-red-kite': 'air',
+  'animal-red-panda': 'land',
+  'animal-red-wolf': 'land',
   'animal-reindeer': 'land',
   'animal-robin': 'air',
   'animal-salamander': 'land',
+  'animal-saola': 'land',
   'animal-sea-urchin': 'water',
   'animal-seagull': 'air',
   'animal-seahorse': 'water',
@@ -346,21 +445,29 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-shrew': 'land',
   'animal-skunk': 'land',
   'animal-sloth': 'land',
+  'animal-sloth-bear': 'land',
   'animal-slow-worm': 'land',
   'animal-slug': 'land',
   'animal-snail': 'land',
   'animal-snake': 'land',
+  'animal-snow-leopard': 'land',
   'animal-snow-petrel': 'air',
   'animal-snowy-owl': 'air',
   'animal-sparrowhawk': 'air',
   'animal-spider': 'land',
+  'animal-spixs-macaw': 'air',
   'animal-squid': 'water',
   'animal-squirrel': 'land',
   'animal-starfish': 'water',
   'animal-stick-insect': 'land',
   'animal-stoat': 'land',
   'animal-stork': 'land',
+  'animal-striped-hyena': 'land',
+  'animal-sun-bear': 'land',
+  'animal-sumatran-orangutan': 'land',
+  'animal-sumatran-rhino': 'land',
   'animal-swan': 'amphibian',
+  'animal-takin': 'land',
   'animal-tapir': 'amphibian',
   'animal-tarantula': 'land',
   'animal-tawny-owl': 'air',
@@ -371,12 +478,16 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-tortoise': 'land',
   'animal-toucan': 'air',
   'animal-tree-frog': 'amphibian',
+  'animal-tree-kangaroo': 'land',
   'animal-turtle': 'water',
+  'animal-vaquita': 'water',
   'animal-vulture': 'air',
   'animal-walrus': 'amphibian',
   'animal-warthog': 'land',
   'animal-wasp': 'air',
   'animal-whale': 'water',
+  'animal-white-rhino': 'land',
+  'animal-whooping-crane': 'land',
   'animal-wildcat': 'land',
   'animal-wildebeest': 'land',
   'animal-wolverine': 'land',
@@ -385,6 +496,7 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-woodpecker': 'air',
   'animal-worm': 'land',
   'animal-wren': 'air',
+  'animal-yak': 'land',
   'animal-zebra': 'land',
 }
 /* <<< WORKBENCH-OWNED TABLE */
