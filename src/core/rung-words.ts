@@ -5,5 +5,13 @@
  * rung whose list is half-approved deals only the approved half.
  */
 export const RUNG_WORDS: Record<number, readonly string[]> = {
-
+  3: [],
+  4: [],
+  5: [],
+  6: [],
+  7: [],
+  8: [],
+  9: [],
+  10: [],
+  11: [],
 }
