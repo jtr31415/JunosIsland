@@ -110,7 +110,11 @@ describe('the species registry', () => {
     // the third collection the kit purge emptied and the last one still empty.
     // It arrives a few species at a time rather than whole, so this number and
     // the woodland line below move together and the two are the same fact.
-    expect(REGISTRY.size).toBe(149)
+    // 213 SINCE 5 AUG, and the +64 is CRITTERS, ICE, JUNGLE and OUTBACK, assembled in parallel
+    // in one tree on the same day. Jungle is the primate-and-big-cat row and is
+    // the collection that collides with the most already-built animals —
+    // `collections/jungle.ts` measures every separation, hull by hull.
+    expect(REGISTRY.size).toBe(213)
     expect(shippedIn('base')).toHaveLength(24)
     expect(shippedIn('garden')).toHaveLength(14)      // COMPLETE — the slow worm is assembled
     expect(shippedIn('home-pets')).toHaveLength(16)   // COMPLETE — all 16 hand-assembled (PB-073)
@@ -120,6 +124,7 @@ describe('the species registry', () => {
     expect(shippedIn('night-time')).toHaveLength(13)  // 16 rostered; bat, sugar glider, scorpion
     expect(shippedIn('birds')).toHaveLength(18)       // COMPLETE — eleven built, seven PLACEHOLDERS
     expect(shippedIn('ocean')).toHaveLength(16)       // COMPLETE — not this agent's; see the note below
+    expect(shippedIn('jungle')).toHaveLength(16)      // COMPLETE — 15 built, animal-tarantula a PLACEHOLDER
   })
 
   it('leaves 236 species rostered but unshipped, on purpose', () => {
@@ -161,7 +166,11 @@ describe('the species registry', () => {
     // galliform idiom animal-chicken.ts established out of the pack's own parts.
     const rostered = COLLECTIONS.flatMap(c => c.members)
     expect(rostered).toHaveLength(320)
-    expect(rostered.filter(id => !speciesRecord(id))).toHaveLength(171)
+    // 139 since 5 Aug, and the −32 is JUNGLE and OUTBACK, measured and dispatched
+    // in parallel in one tree. Jungle's sixteen close the primate-and-big-cat row
+    // with one placeholder in it (`animal-tarantula`, which wants a segmented leg
+    // the bank has never held), so the drop is real rather than a count of stubs.
+    expect(rostered.filter(id => !speciesRecord(id))).toHaveLength(107)
   })
 
   it('has SEVEN complete collections, and birds is complete WITH PLACEHOLDERS in it', () => {
@@ -270,8 +279,21 @@ describe('the species registry', () => {
     // meant a record exists, and Birds is the collection that makes the gap
     // between that and "done" visible. Unsigned, like Home Pets, Farm and
     // Woodland — Joe signs off in the editor and that gate is his alone.
+    //
+    // AND NOW THERE ARE ELEVEN. CRITTERS, ICE, JUNGLE and OUTBACK were assembled
+    // in parallel in one tree on 5 August, each complete at sixteen of sixteen
+    // and each WITH PLACEHOLDERS in it, on the Birds terms above. Jungle's one
+    // is `animal-tarantula`, and it is held up by three separate things rather
+    // than by effort: the bank holds ONE leg shape and a spider's bends twice; a
+    // spider is two masses at a waist, which is rule 3's exact fault; and eight
+    // eyes against rule 6's mirrored pair. All four are UNSIGNED, like every
+    // collection on this list except Garden — Joe signs off in the editor and
+    // that gate is his alone.
     expect([...complete].sort())
-      .toEqual(['africa', 'birds', 'farm', 'garden', 'home-pets', 'ocean', 'woodland'])
+      .toEqual([
+        'africa', 'birds', 'critters', 'farm', 'garden', 'home-pets', 'ice',
+        'jungle', 'ocean', 'outback', 'woodland',
+      ])
   })
 
   it('names the seven base animals roster §5 gives a threat badge', () => {

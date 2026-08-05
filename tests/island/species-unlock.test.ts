@@ -768,8 +768,19 @@ describe('the hold on unbuilt collections is derived live, and a record is not a
      */
     const recordsWithoutModels = COLLECTIONS.map((c) => c.id)
       .filter((id) => shippedIn(id).length > 0 && builtIn(id).length === 0)
+    /*
+     * >>> AND FOUR MORE ON 5 AUGUST — critters, ice, jungle and outback, built
+     * >>> in parallel in one tree. Same reading as the six above them: records
+     * >>> and models, nothing pushed, so every one of them reads records > 0 and
+     * >>> released = 0 and `heldBack` refuses it. `unlock.ts` was not touched
+     * >>> for any of the four either, which is now ten collections' worth of
+     * >>> evidence for the same one sentence.
+     */
     expect(recordsWithoutModels.sort(), 'the set of records-with-nothing-released moved')
-      .toEqual(['africa', 'birds', 'farm', 'night-time', 'ocean', 'woodland'])
+      .toEqual([
+        'africa', 'birds', 'critters', 'farm', 'ice', 'jungle', 'night-time',
+        'ocean', 'outback', 'woodland',
+      ])
     for (const id of recordsWithoutModels) {
       expect(heldBack(BUILT, id), `${id} is offered with nothing released in it`).toBe(true)
     }

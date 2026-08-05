@@ -558,7 +558,15 @@ describe('joe/names-audit.json', () => {
     // route a few species at a time. Same shape as every growth above it: the
     // rows are born with Joe's three fields empty, so the bench grew and the
     // review did not happen, and this file keeps those two facts separate.
-    expect(audit.names).toHaveLength(125)
+    // 189 SINCE 5 AUG, and 16 of the +64 is JUNGLE, assembled in one run alongside
+    // three sibling collections in the same tree. Same shape as every growth
+    // above it: the rows are born with Joe's three fields empty, so the bench
+    // grew and the review did not happen. THIS NUMBER MOVES WITH WHICHEVER
+    // SIBLING LANDS LAST — the assertion above it is the one that matters, and
+    // it says the bench covers exactly the BUILT species, so a collection whose
+    // records are registered but whose rows are not yet written shows up here as
+    // a length mismatch rather than as a silent gap. That is the test working.
+    expect(audit.names).toHaveLength(189)
   })
 
   it('gives every creature its own name, so the playground question works', () => {

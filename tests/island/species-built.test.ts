@@ -213,7 +213,7 @@ describe('WHAT THE ALBUM SHOWS TODAY, collection by collection', () => {
     expect(PINNED.map(p => p[0]).sort()).toEqual(COLLECTIONS.map(c => c.id).sort())
   })
 
-  it('is 149 modelled in total across the whole roster of 320', () => {
+  it('is 213 modelled in total across the whole roster of 320', () => {
     // The one number to quote. Everything else on this page is an outline of
     // something nobody has drawn yet, and none of it is shown any more.
     //
@@ -223,8 +223,13 @@ describe('WHAT THE ALBUM SHOWS TODAY, collection by collection', () => {
     // >>> number climbs once per Woodland species and the table above does not
     // >>> move at all until Joe pushes them. 84 -> 87 with the three drafts a
     // >>> previous session left on disk.
+    // >>> 213 SINCE 5 AUGUST. Four collections were assembled in parallel in one
+    // >>> tree that day; JUNGLE is sixteen of them and its own header carries the
+    // >>> separation work. `isBuilt` still counts what somebody has MODELLED, so
+    // >>> the released column above does not move for any of them until Joe
+    // >>> pushes. This number moves with whichever sibling lands last.
     expect(ROSTER).toHaveLength(320)
-    expect(ROSTER.filter(isBuilt)).toHaveLength(149)
+    expect(ROSTER.filter(isBuilt)).toHaveLength(213)
   })
 
   it('has exactly three collections with any frame at all', () => {
@@ -251,7 +256,7 @@ describe('the tripwire: isBuilt cannot drift from the ability to draw', () => {
      * declaring a kit without writing it fails here instead of shipping.
      */
     const built = ROSTER.filter(isBuilt)
-    expect(built).toHaveLength(149)   // moves with Woodland; see the block above
+    expect(built).toHaveLength(213)   // moves with the parallel collections; see above
 
     for (const id of built) {
       const record = speciesRecord(id)
