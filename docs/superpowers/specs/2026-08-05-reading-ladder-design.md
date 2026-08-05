@@ -156,15 +156,35 @@ it off — `deal.ts` records that a parent who says their child cannot build wor
 yet outranks the data file, and a tick that collapsed into a switch would lose
 that.
 
-## Where the words come from
+## Where the words come from, and how Joe approves them
 
-Five new lists, roughly 150–200 words, drafted by agents and **vetted by Joe**
-before any of them reaches Juno.
+Five new lists, roughly 150–200 words, drafted by agents and **approved by Joe in
+the workbench**, one word at a time, before any of them reaches Juno.
 
-The mechanism already exists and works: a ledger file, one row per word, with the
-human verdict field left empty — the shape `joe/names-audit.json` uses for the
-266 pet names. Agents own the draft; Joe owns the verdict; nothing is dealt from
-an unvetted row. The parallel is exact and the tooling is already written.
+Joe, 5 August: *"provide the lists in the workbench for me to approve."*
+
+This is not a new mechanism — it is the one the workbench already runs for names.
+`tools/workbench/public/approver.ts` is a bench of one row per assembled creature
+joined to its fact and its name, and `joe/names-audit.json` is in the server's
+`WRITABLE` map so the page can write a verdict straight back to disk. The word
+lists get exactly that shape:
+
+- **`joe/words-audit.json`**, WRITABLE under a `words` key, one row per drafted
+  word: the word, the rung it is proposed for, its grapheme split, and the
+  human fields — `verdict`, `replacement`, `note` — left EMPTY by the drafter.
+- **A words bench in the workbench**, sibling to the animal approver, showing the
+  proposed rung's words together, because a word is approved against its
+  *neighbours* on the page and not on its own. `sat` and `sit` are both fine and
+  both on one page is the point; `to`, `too` and `two` on one page is a trap.
+- **Approve, reject, or replace per row**, with the same merge discipline the
+  other benches use: two writers, appended rather than whole-file replaced.
+
+**The gate: a word with no verdict is never dealt.** Not "defaults to allowed
+pending review" — unvetted means invisible, the way an unsigned species is
+invisible to `pool.ts`. That is what makes it safe for agents to draft in bulk.
+
+The rungs ship as their lists are approved. A rung whose list is half-approved
+deals only the approved half, and the ladder is an array — a short one is valid.
 
 ## What this does not change
 
@@ -182,9 +202,11 @@ a small instrument on a mechanism this spec is otherwise tuning blind.
 
 ## Risks
 
-- **Vetting is the critical path, not code.** Five lists is more of Joe's time
-  than of anyone's compute. If it stalls, ship the rungs whose lists are done —
-  the ladder is an array and a short one is valid.
+- **Approval is the critical path, not code.** Five lists is more of Joe's time
+  than of anyone's compute, and the unvetted-is-invisible gate means an
+  unapproved rung is an empty rung. Mitigated by the bench showing a whole rung's
+  page at once rather than a word at a time, and by rungs shipping independently
+  — but if approval stalls, the ladder stops, by design.
 - **One ladder, split later.** Joe chose this knowingly. The mitigation is the id
   scheme above: because position is the rung and the number is a generator, an
   axis can be lifted into its own path later without renumbering anything a save
