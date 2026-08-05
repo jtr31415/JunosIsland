@@ -28,6 +28,11 @@ export const OSPREY_ASSEMBLY = defineCreature('animal-osprey', {
   palette: {
     coat: 0x54432f,    // UNREVIEWED: dark brown back and wings
     belly: 0xf7f4ee,   // UNREVIEWED: the white head and underside, up to 11/16
+    /* The coat's own colour under a second name, and it exists because
+     * `belly` splits the CELL of the slot the HULL is painted from — so a
+     * part that also said `coat` was reading the wrong half of it. See
+     * `animal-stoat.ts`'s header and the note in `collections/raptors.ts`. */
+    flight: 0x54432f,  // UNREVIEWED: wings and tail — the coat's brown, under its own name
     mark: 0x3a2d1e,    // UNREVIEWED: the eye-stripe
     limb: 0xd6d0c2,    // UNREVIEWED: pale grey-blue foot, which this bird has
     bill: 0x24211c,    // UNREVIEWED: black
@@ -43,7 +48,7 @@ export const OSPREY_ASSEMBLY = defineCreature('animal-osprey', {
 
   eyes: { part: 'plate-08', paint: 'eye' },
   snout: { part: 'cone-06', paint: 'bill' },
-  tail: { part: 'box-38', paint: 'coat' },
+  tail: { part: 'box-38', paint: 'flight' },
 
   legs: false,
   extras: [
@@ -51,7 +56,7 @@ export const OSPREY_ASSEMBLY = defineCreature('animal-osprey', {
     { name: 'hook', part: 'box-24', paint: 'hook', on: 'snout', spin: [{ axis: 'x' as const, deg: 55 }] },
     /* The big talon: an osprey's feet are the most specialised of any raptor. */
     { name: 'talon', part: 'wedge-11', paint: 'limb', kind: 'pair' as const, at: [0.25, TALON_Y, TALON_Z], axis: 'z' as const, dir: 1 },
-    { name: 'wing', part: 'wedge-19', paint: 'coat', kind: 'pair' as const },
+    { name: 'wing', part: 'wedge-19', paint: 'flight', kind: 'pair' as const },
     /* THE EYE-STRIPE. See the header. */
     { name: 'stripe', part: 'plate-10', paint: 'mark', kind: 'pair' as const, at: [0.24, 0.9, FACE_Z], spin: [{ axis: 'y' as const, deg: -90 }] },
   ],

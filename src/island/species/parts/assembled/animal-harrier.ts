@@ -30,6 +30,11 @@ export const HARRIER_ASSEMBLY = defineCreature('animal-harrier', {
   palette: {
     coat: 0x9aa3ad,    // UNREVIEWED: pale grey — the male hen harrier
     belly: 0xf6f6f4,   // UNREVIEWED: white below
+    /* The coat's own colour under a second name, and it exists because
+     * `belly` splits the CELL of the slot the HULL is painted from — so a
+     * part that also said `coat` was reading the wrong half of it. See
+     * `animal-stoat.ts`'s header and the note in `collections/raptors.ts`. */
+    flight: 0x9aa3ad,  // UNREVIEWED: wings and tail — the coat's grey, under its own name
     mark: 0xffffff,    // UNREVIEWED: the rump patch, whiter than the belly on purpose
     limb: 0xe0b83c,    // UNREVIEWED: long yellow legs, which this bird has
     bill: 0x2b2f36,    // UNREVIEWED: small and dark
@@ -43,14 +48,14 @@ export const HARRIER_ASSEMBLY = defineCreature('animal-harrier', {
 
   eyes: { part: 'plate-08', paint: 'eye' },
   snout: { part: 'cone-06', paint: 'bill' },
-  tail: { part: 'wedge-18', paint: 'coat', spin: [{ axis: 'x' as const, deg: 90 }], at: [0, 0.80625, -0.625] },
+  tail: { part: 'wedge-18', paint: 'flight', spin: [{ axis: 'x' as const, deg: 90 }], at: [0, 0.80625, -0.625] },
 
   legs: false,
   extras: [
     { name: 'leg', part: 'box-01', paint: 'limb', kind: 'pair' as const, sink: LEG_ROW.sink, at: [0.25, LEG_ROW.y, 0] },
     { name: 'hook', part: 'blade-02', paint: 'hook', on: 'snout', spin: [{ axis: 'x' as const, deg: 70 }] },
     { name: 'talon', part: 'wedge-13', paint: 'limb', kind: 'pair' as const, at: [0.25, TALON_Y, TALON_Z], axis: 'z' as const, dir: 1 },
-    { name: 'wing', part: 'wedge-19', paint: 'coat', kind: 'pair' as const },
+    { name: 'wing', part: 'wedge-19', paint: 'flight', kind: 'pair' as const },
     /* THE WHITE RUMP — a card facing BACKWARDS. See the header. */
     { name: 'rump', part: 'plate-10', paint: 'mark', at: [0, 1.09, RUMP_Z], spin: [{ axis: 'y' as const, deg: 90 }] },
   ],

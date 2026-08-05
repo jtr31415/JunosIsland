@@ -32,6 +32,11 @@ export const EAGLE_OWL_ASSEMBLY = defineCreature('animal-eagle-owl', {
   palette: {
     coat: 0x8a6634,    // UNREVIEWED: orange-brown
     belly: 0xd8bf90,   // UNREVIEWED: paler below
+    /* The coat's own colour under a second name, and it exists because
+     * `belly` splits the CELL of the slot the HULL is painted from — so a
+     * part that also said `coat` was reading the wrong half of it. See
+     * `animal-stoat.ts`'s header and the note in `collections/raptors.ts`. */
+    flight: 0x8a6634,  // UNREVIEWED: wings and tail — the coat's orange-brown, under its own name
     bar: 0x4a341c,     // UNREVIEWED: the dark bars and the tufts
     limb: 0xc0a274,    // UNREVIEWED: feathered legs
     bill: 0x2e2a24,    // UNREVIEWED: black
@@ -46,14 +51,14 @@ export const EAGLE_OWL_ASSEMBLY = defineCreature('animal-eagle-owl', {
 
   eyes: { part: 'plate-14', paint: 'eye' },
   snout: { part: 'cone-06', paint: 'bill' },
-  tail: { part: 'box-18', paint: 'coat', spin: [{ axis: 'y' as const, deg: 180 }], at: [0, 0.93375, -0.625] },
+  tail: { part: 'box-18', paint: 'flight', spin: [{ axis: 'y' as const, deg: 180 }], at: [0, 0.93375, -0.625] },
 
   legs: false,
   extras: [
     { name: 'leg', part: 'box-01', paint: 'limb', kind: 'pair' as const, sink: LEG_ROW.sink, at: [0.25, LEG_ROW.y, 0] },
     { name: 'hook', part: 'blade-02', paint: 'hook', on: 'snout', spin: [{ axis: 'x' as const, deg: 70 }] },
     { name: 'talon', part: 'wedge-13', paint: 'limb', kind: 'pair' as const, at: [0.25, TALON_Y, TALON_Z], axis: 'z' as const, dir: 1 },
-    { name: 'wing', part: 'wedge-19', paint: 'coat', kind: 'pair' as const },
+    { name: 'wing', part: 'wedge-19', paint: 'flight', kind: 'pair' as const },
     /* Unspun on the tall shell's own crown — `animal-owlet.ts`'s placement. */
     { name: 'tuft', part: 'cone-01', paint: 'bar', kind: 'pair' as const, at: [TUFT_X, CROWN_Y, 0] },
     /* The barring, by pure donor transfer — `animal-snowy-owl.ts`'s idiom. */

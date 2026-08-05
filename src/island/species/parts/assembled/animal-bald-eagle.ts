@@ -31,6 +31,11 @@ export const BALD_EAGLE_ASSEMBLY = defineCreature('animal-bald-eagle', {
   palette: {
     coat: 0xf6f4ef,    // UNREVIEWED: the white head and tail — the TOP of the patch
     belly: 0x3b2c1c,   // UNREVIEWED: the dark brown body, under the 13/16 line
+    /* The coat's own colour under a second name, and it exists because
+     * `belly` splits the CELL of the slot the HULL is painted from — so a
+     * part that also said `coat` was reading the wrong half of it. See
+     * `animal-stoat.ts`'s header and the note in `collections/raptors.ts`. */
+    fan: 0xf6f4ef,     // UNREVIEWED: the white tail — the coat's white, under its own name
     flight: 0x33261a,  // UNREVIEWED: the wings, darker again
     limb: 0xf0c22e,    // UNREVIEWED: the yellow foot
     bill: 0xf0c22e,    // UNREVIEWED: the same yellow — this bird's bill is its foot's colour
@@ -47,8 +52,10 @@ export const BALD_EAGLE_ASSEMBLY = defineCreature('animal-bald-eagle', {
   eyes: { part: 'plate-08', paint: 'eye' },
   snout: { part: 'cone-06', paint: 'bill' },
 
-  /* Painted from `coat`, so the tail goes white with the head. */
-  tail: { part: 'box-38', paint: 'coat' },
+  /* The same white as the head, from a slot of its own rather than from `coat`
+   * — `coat` is the slot the patch splits, so a tail painted from it would read
+   * whichever half of the cell it happened to sample. See the palette. */
+  tail: { part: 'box-38', paint: 'fan' },
 
   legs: false,
   extras: [

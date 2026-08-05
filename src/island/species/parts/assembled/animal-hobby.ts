@@ -31,6 +31,11 @@ export const HOBBY_ASSEMBLY = defineCreature('animal-hobby', {
   palette: {
     coat: 0x3e434e,    // UNREVIEWED: dark slate, nearly black, above
     belly: 0xefe7d8,   // UNREVIEWED: cream below
+    /* The coat's own colour under a second name, and it exists because
+     * `belly` splits the CELL of the slot the HULL is painted from — so a
+     * part that also said `coat` was reading the wrong half of it. See
+     * `animal-stoat.ts`'s header and the note in `collections/raptors.ts`. */
+    flight: 0x3e434e,  // UNREVIEWED: wings and tail — the coat's slate, under its own name
     mark: 0x22262e,    // UNREVIEWED: the heavy moustache
     limb: 0xb8562e,    // UNREVIEWED: the RUFOUS thighs — see the header
     bill: 0x22262e,    // UNREVIEWED: dark
@@ -45,7 +50,7 @@ export const HOBBY_ASSEMBLY = defineCreature('animal-hobby', {
 
   eyes: { part: 'plate-08', paint: 'eye' },
   snout: { part: 'cone-06', paint: 'bill' },
-  tail: { part: 'box-18', paint: 'coat', spin: [{ axis: 'y' as const, deg: 180 }], at: REAR },
+  tail: { part: 'box-18', paint: 'flight', spin: [{ axis: 'y' as const, deg: 180 }], at: REAR },
 
   legs: false,
   extras: [
@@ -53,7 +58,7 @@ export const HOBBY_ASSEMBLY = defineCreature('animal-hobby', {
     { name: 'hook', part: 'blade-02', paint: 'hook', on: 'snout', spin: [{ axis: 'x' as const, deg: 70 }] },
     { name: 'talon', part: 'wedge-13', paint: 'limb', kind: 'pair' as const, at: [0.25, TALON_Y, TALON_Z], axis: 'z' as const, dir: 1 },
     /* The long wing, OUT from the flank — the one falcon here that has it. */
-    { name: 'wing', part: 'wedge-19', paint: 'coat', kind: 'pair' as const },
+    { name: 'wing', part: 'wedge-19', paint: 'flight', kind: 'pair' as const },
     { name: 'moustache', part: 'plate-13', paint: 'mark', kind: 'pair' as const, at: [0.24, 0.64, FACE_Z] },
   ],
 

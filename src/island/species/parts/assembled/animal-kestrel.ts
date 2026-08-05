@@ -28,6 +28,11 @@ export const KESTREL_ASSEMBLY = defineCreature('animal-kestrel', {
   palette: {
     coat: 0x8d95a4,    // UNREVIEWED: the blue-grey head — the TOP of the inverted patch
     belly: 0xb0623a,   // UNREVIEWED: the chestnut back and body, below 12/16
+    /* The coat's own colour under a second name, and it exists because
+     * `belly` splits the CELL of the slot the HULL is painted from — so a
+     * part that also said `coat` was reading the wrong half of it. See
+     * `animal-stoat.ts`'s header and the note in `collections/raptors.ts`. */
+    fan: 0x8d95a4,     // UNREVIEWED: the long tail — the grey of the head, under its own name
     flight: 0x6e4128,  // UNREVIEWED: the wings, a deeper chestnut
     limb: 0xe8c02e,    // UNREVIEWED: yellow foot
     bill: 0x2c3038,    // UNREVIEWED: small and dark
@@ -44,7 +49,7 @@ export const KESTREL_ASSEMBLY = defineCreature('animal-kestrel', {
   snout: { part: 'cone-06', paint: 'bill' },
 
   /* Laid flat and trailing: the long tail is half of what a kestrel is. */
-  tail: { part: 'wedge-18', paint: 'coat', spin: [{ axis: 'x' as const, deg: 90 }], at: [0, 0.80625, -0.625] },
+  tail: { part: 'wedge-18', paint: 'fan', spin: [{ axis: 'x' as const, deg: 90 }], at: [0, 0.80625, -0.625] },
 
   legs: false,
   extras: [

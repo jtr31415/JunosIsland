@@ -37,6 +37,11 @@ export const SPARROWHAWK_ASSEMBLY = defineCreature('animal-sparrowhawk', {
   palette: {
     coat: 0x5a6472,    // UNREVIEWED: slate blue-grey above
     belly: 0xf0e6da,   // UNREVIEWED: cream below
+    /* The coat's own colour under a second name, and it exists because
+     * `belly` splits the CELL of the slot the HULL is painted from — so a
+     * part that also said `coat` was reading the wrong half of it. See
+     * `animal-stoat.ts`'s header and the note in `collections/raptors.ts`. */
+    flight: 0x5a6472,  // UNREVIEWED: wings and tail — the coat's slate, under its own name
     bar: 0xa8613c,     // UNREVIEWED: the rufous barring cards
     limb: 0xe0b83c,    // UNREVIEWED: long yellow legs, which this bird has
     bill: 0x2c2f34,    // UNREVIEWED: small and dark
@@ -55,7 +60,7 @@ export const SPARROWHAWK_ASSEMBLY = defineCreature('animal-sparrowhawk', {
   snout: { part: 'cone-06', paint: 'bill' },
 
   /* Laid flat by {x,90} at this shell's own rear face — a long trailing tail. */
-  tail: { part: 'wedge-18', paint: 'coat', spin: [{ axis: 'x' as const, deg: 90 }], at: [0, 0.80625, REAR_Z] },
+  tail: { part: 'wedge-18', paint: 'flight', spin: [{ axis: 'x' as const, deg: 90 }], at: [0, 0.80625, REAR_Z] },
 
   legs: false,
   extras: [
@@ -64,7 +69,7 @@ export const SPARROWHAWK_ASSEMBLY = defineCreature('animal-sparrowhawk', {
     { name: 'talon', part: 'wedge-13', paint: 'limb', kind: 'pair' as const, at: [0.25, TALON_Y, TALON_Z], axis: 'z' as const, dir: 1 },
     /* The pack's own FISH FIN as a short round wing — 0.3624 against wedge-19's
      * 0.5730. It carries the `wing` role, so the wingbeat attaches by itself. */
-    { name: 'wing', part: 'box-43', paint: 'coat', kind: 'pair' as const },
+    { name: 'wing', part: 'box-43', paint: 'flight', kind: 'pair' as const },
     /* The barring, by pure donor transfer at the cow's and giraffe's own flank
      * station — `animal-snowy-owl.ts`'s idiom, used here for a barred bird. */
     { name: 'bar', part: 'plate-11', paint: 'bar', kind: 'pair' as const },

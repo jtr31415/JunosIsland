@@ -35,6 +35,11 @@ export const GOSHAWK_ASSEMBLY = defineCreature('animal-goshawk', {
   palette: {
     coat: 0x6e7480,    // UNREVIEWED: pale slate above
     belly: 0xf4f0e8,   // UNREVIEWED: white below
+    /* The coat's own colour under a second name, and it exists because
+     * `belly` splits the CELL of the slot the HULL is painted from — so a
+     * part that also said `coat` was reading the wrong half of it. See
+     * `animal-stoat.ts`'s header and the note in `collections/raptors.ts`. */
+    flight: 0x6e7480,  // UNREVIEWED: wings and tail — the coat's slate, under its own name
     mark: 0xffffff,    // UNREVIEWED: the brow card, whiter than the belly on purpose
     limb: 0xe0b83c,    // UNREVIEWED: heavy yellow legs
     bill: 0x2c2f34,    // UNREVIEWED: dark
@@ -49,14 +54,14 @@ export const GOSHAWK_ASSEMBLY = defineCreature('animal-goshawk', {
 
   eyes: { part: 'plate-08', paint: 'eye' },
   snout: { part: 'cone-06', paint: 'bill' },
-  tail: { part: 'wedge-18', paint: 'coat', spin: [{ axis: 'x' as const, deg: 90 }], at: [0, 0.80625, -0.625] },
+  tail: { part: 'wedge-18', paint: 'flight', spin: [{ axis: 'x' as const, deg: 90 }], at: [0, 0.80625, -0.625] },
 
   legs: false,
   extras: [
     { name: 'leg', part: 'box-01', paint: 'limb', kind: 'pair' as const, sink: LEG_ROW.sink, at: [LEG_X, LEG_ROW.y, 0] },
     { name: 'hook', part: 'box-24', paint: 'hook', on: 'snout', spin: [{ axis: 'x' as const, deg: 55 }] },
     { name: 'talon', part: 'wedge-13', paint: 'limb', kind: 'pair' as const, at: [LEG_X, TALON_Y, TALON_Z], axis: 'z' as const, dir: 1 },
-    { name: 'wing', part: 'box-43', paint: 'coat', kind: 'pair' as const },
+    { name: 'wing', part: 'box-43', paint: 'flight', kind: 'pair' as const },
     /* THE WHITE BROW — see the header for where the card lands against the eye. */
     { name: 'brow', part: 'plate-10', paint: 'mark', kind: 'pair' as const, at: [0.24, 1.09, FACE_Z], spin: [{ axis: 'y' as const, deg: -90 }] },
   ],

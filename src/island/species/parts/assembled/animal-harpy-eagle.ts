@@ -40,6 +40,11 @@ export const HARPY_EAGLE_ASSEMBLY = defineCreature('animal-harpy-eagle', {
   palette: {
     coat: 0x6d7076,    // UNREVIEWED: slate grey — the back and the crest
     belly: 0xece9e2,   // UNREVIEWED: the white underside, up to 10/16
+    /* The coat's own colour under a second name, and it exists because
+     * `belly` splits the CELL of the slot the HULL is painted from — so a
+     * part that also said `coat` was reading the wrong half of it. See
+     * `animal-stoat.ts`'s header and the note in `collections/raptors.ts`. */
+    plume: 0x6d7076,   // UNREVIEWED: the crest — the coat's slate, under its own name
     flight: 0x3d4147,  // UNREVIEWED: near-black wings and tail
     limb: 0xd9d3c4,    // UNREVIEWED: the pale grey foot and the enormous talon
     bill: 0x2f3237,    // UNREVIEWED: black
@@ -70,7 +75,7 @@ export const HARPY_EAGLE_ASSEMBLY = defineCreature('animal-harpy-eagle', {
      * wing and the bird still measures 2.2270 across, the widest here. */
     { name: 'wing', part: 'wedge-19', paint: 'flight', kind: 'pair' as const, sink: 0.4 },
     /* THE STAND-IN CREST. One fan, not two. See the header. */
-    { name: 'crest', part: 'box-38', paint: 'coat', spin: [{ axis: 'x' as const, deg: 30 }], at: [0, CROWN_Y, CREST_Z] },
+    { name: 'crest', part: 'box-38', paint: 'plume', spin: [{ axis: 'x' as const, deg: 30 }], at: [0, CROWN_Y, CREST_Z] },
   ],
 
   flag: 'PLACEHOLDER — THE SPLIT CREST AND THE SIZE. A harpy raises a DOUBLE fan with a '

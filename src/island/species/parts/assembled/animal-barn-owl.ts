@@ -36,6 +36,11 @@ export const BARN_OWL_ASSEMBLY = defineCreature('animal-barn-owl', {
   palette: {
     coat: 0xc79a4e,    // UNREVIEWED: the golden-buff back, which is the half nobody draws
     belly: 0xfdfbf6,   // UNREVIEWED: white underside, from 12/16 down
+    /* The coat's own colour under a second name, and it exists because
+     * `belly` splits the CELL of the slot the HULL is painted from — so a
+     * part that also said `coat` was reading the wrong half of it. See
+     * `animal-stoat.ts`'s header and the note in `collections/raptors.ts`. */
+    flight: 0xc79a4e,  // UNREVIEWED: wings and tail — the coat's gold, under its own name
     disc: 0xfdfbf6,    // UNREVIEWED: the facial disc, the same white
     limb: 0xe6dcc8,    // UNREVIEWED: feathered legs
     bill: 0xe8e2d4,    // UNREVIEWED: pale ivory, which a barn owl's is
@@ -51,14 +56,14 @@ export const BARN_OWL_ASSEMBLY = defineCreature('animal-barn-owl', {
    * choice and an owl is its eyes. `animal-owlet.ts` established it. */
   eyes: { part: 'plate-14', paint: 'eye' },
   snout: { part: 'cone-06', paint: 'bill' },
-  tail: { part: 'box-18', paint: 'coat', spin: [{ axis: 'y' as const, deg: 180 }], at: REAR },
+  tail: { part: 'box-18', paint: 'flight', spin: [{ axis: 'y' as const, deg: 180 }], at: REAR },
 
   legs: false,
   extras: [
     { name: 'leg', part: 'box-01', paint: 'limb', kind: 'pair' as const, sink: LEG_ROW.sink, at: [0.25, LEG_ROW.y, 0] },
     { name: 'hook', part: 'blade-02', paint: 'hook', on: 'snout', spin: [{ axis: 'x' as const, deg: 70 }] },
     { name: 'talon', part: 'wedge-13', paint: 'limb', kind: 'pair' as const, at: [0.25, TALON_Y, TALON_Z], axis: 'z' as const, dir: 1 },
-    { name: 'wing', part: 'wedge-19', paint: 'coat', kind: 'pair' as const },
+    { name: 'wing', part: 'wedge-19', paint: 'flight', kind: 'pair' as const },
     /* THE FACIAL DISC — see the header for the measured landing. */
     { name: 'disc', part: 'plate-11', paint: 'disc', kind: 'pair' as const, at: [0.21, 0.93, FACE_Z], spin: [{ axis: 'y' as const, deg: -90 }] },
   ],

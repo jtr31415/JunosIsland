@@ -101,6 +101,29 @@
  * need one. What is still unsayable is a patch that is not a horizontal band: a
  * bare face, a nape, a hobby's red thighs.
  *
+ * **3a. AND A PATCHED SLOT IS UNSAFE TO SHARE — TWELVE OF THE SIXTEEN HAD THIS
+ * WRONG.** `belly` splits the CELL of the slot the HULL is painted from, and a
+ * split cell is read by every part painted from that slot, not only by the hull.
+ * `animal-stoat.ts` found it once — *"a `patch` is a property of a SLOT, not of
+ * the part that declared it, so a part sharing that slot inherits a boundary
+ * nobody wrote for it"* — and its header says the stoat was the only species in
+ * 81 that tripped it, because it was the only split above 8/16.
+ *
+ * **This collection has EIGHT splits above 8/16**, because the inverted patch is
+ * a high line by construction: 13/16 on the bald eagle, 12/16 on the kestrel and
+ * the barn owl, 11/16 on the osprey, 10/16 on the harpy, 9/16 on the
+ * sparrowhawk, the goshawk and the harrier. Every tail and wing that said `coat`
+ * under one of those was sampling the wrong half — the bald eagle's white tail
+ * rendered 0x3B2C1C, its own dark brown belly colour, and its header said white.
+ * `tests/tools/editor-own-colour.test.ts` caught it, which is the second time
+ * that test has found this exact fault and the reason it samples the real atlas
+ * at each mesh's own baked UV rather than trusting the definition.
+ *
+ * So twelve species here carry a `fan`, `flight` or `plume` slot holding the
+ * coat's own colour under a second name, and the hull is the only thing reading
+ * the split cell. **The general rule, now that it has happened twice: if a
+ * species sets `belly`, nothing but the hull may paint from the hull's slot.**
+ *
  * **4. A FLANK CARD SPUN FORWARD IS A FACE MARK — AND THE FACIAL DISC EXISTS.**
  * `plate-10` (0.244 x 0.253) and `plate-11` (0.400 x 0.433) attach `x +1`; spun
  * `{y, -90}` they turn forward, and placed at z = 0.630 they sit 0.005 in front

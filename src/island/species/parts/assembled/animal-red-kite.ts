@@ -32,6 +32,11 @@ export const RED_KITE_ASSEMBLY = defineCreature('animal-red-kite', {
   palette: {
     coat: 0x9a4a2c,    // UNREVIEWED: the rufous back and the forked tail
     belly: 0xd8cdbd,   // UNREVIEWED: the pale grey head and underside
+    /* The coat's own colour under a second name, and it exists because
+     * `belly` splits the CELL of the slot the HULL is painted from — so a
+     * part that also said `coat` was reading the wrong half of it. See
+     * `animal-stoat.ts`'s header and the note in `collections/raptors.ts`. */
+    fan: 0x9a4a2c,     // UNREVIEWED: the forked tail — the coat's rufous, under its own name
     flight: 0x53341f,  // UNREVIEWED: darker wings
     limb: 0xe0b83c,    // UNREVIEWED: yellow foot
     bill: 0xd8c48a,    // UNREVIEWED: horn base
@@ -49,7 +54,7 @@ export const RED_KITE_ASSEMBLY = defineCreature('animal-red-kite', {
   /* THE FORK. Two spins and a pair — see the header for the measured tips. */
   tail: {
     part: 'wedge-18',
-    paint: 'coat',
+    paint: 'fan',
     kind: 'pair' as const,
     spin: [{ axis: 'x' as const, deg: 90 }, { axis: 'y' as const, deg: -14 }],
     at: FORK_AT,
