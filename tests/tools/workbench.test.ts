@@ -13,7 +13,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { spawn, type ChildProcess } from 'node:child_process'
-import { mkdtempSync, rmSync, readFileSync, existsSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, rmSync, readFileSync, existsSync, writeFileSync, mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -906,6 +906,68 @@ describe('the primitives sign-off', () => {
     const r = await status({ what: 'primitives-audit', value: { schemaVersion: 1, rows: [] } })
     expect(r.body.error).toContain('not a writable file')
     expect(existsSync(join(root, 'joe/primitives-audit'))).toBe(false)
+  })
+})
+
+/*
+ * The reading-words bench. `joe/words-audit.json` has one author at a
+ * time (Joe, ruling by hand) so unlike `names` and `primitives` it is
+ * WRITABLE but not in `merge.mjs`'s MERGEABLE table — a save here is the
+ * whole file, never a patch. What actually matters is downstream of the save:
+ * `tools/words/emit.mjs` must still see exactly the verdicts just written, and
+ * a row Joe has never ruled on must stay out of the generated module — the
+ * one rule the whole ledger exists to keep.
+ */
+describe('the reading-words ledger', () => {
+  /* `root` is only assigned inside `beforeAll`, so this must be a function and
+   * not a `describe`-body constant — the body runs at collection time, before
+   * `beforeAll` has run, and `root` would still be `undefined`. */
+  const rungWordsPath = () => join(root, 'src/core/rung-words.ts')
+
+  it('serves the ledger unwrapped, exactly as names and primitives are', async () => {
+    const s = await api('/api/state')
+    expect(s.words).toEqual([])
+  })
+
+  it('round-trips a whole-file save through the file on disk', async () => {
+    const words = [
+      { word: 'sun', rung: 3, verdict: 'yes', replacement: '', note: '' },
+      { word: 'pig', rung: 3, verdict: '', replacement: '', note: '' },
+    ]
+    const saved = await post('/api/save', { what: 'words', value: { schemaVersion: 1, words } })
+    expect(saved.saved).toBe('joe/words-audit.json')
+    expect(JSON.parse(readFileSync(join(root, 'joe/words-audit.json'), 'utf8')).words).toEqual(words)
+    expect((await api('/api/state')).words).toEqual(words)
+  })
+
+  it('emits only the ruled row, and nothing an unruled row would have contributed', async () => {
+    /* `src/core/` exists in the real checkout this route always runs against;
+     * this throwaway root has no `src/` at all, so it is built here purely so
+     * the write has somewhere to land — the route itself does no mkdir. */
+    mkdirSync(dirname(rungWordsPath()), { recursive: true })
+
+    await post('/api/save', { what: 'words', value: { schemaVersion: 1, words: [
+      { word: 'sun', rung: 3, verdict: 'yes', replacement: '', note: '' },
+      { word: 'pig', rung: 3, verdict: '', replacement: '', note: '' },
+      { word: 'cog', rung: 3, verdict: 'replace', replacement: 'dog', note: '' },
+    ] } })
+
+    const r = await post('/api/words/emit', {})
+    expect(r.emitted).toBe(true)
+
+    const out = readFileSync(rungWordsPath(), 'utf8')
+    expect(out).toContain("'sun'")
+    expect(out).toContain("'dog'")
+    /* Unruled means invisible — neither the word nor a trace of the replaced
+     * one it never became may reach the file the game actually deals from. */
+    expect(out).not.toContain("'pig'")
+    expect(out).not.toContain("'cog'")
+  })
+
+  it('did not widen the allowlist while adding itself to it', async () => {
+    const r = await post('/api/save', { what: 'words-audit', value: { schemaVersion: 1, words: [] } })
+    expect(r.error).toContain('not a writable file')
+    expect(existsSync(join(root, 'joe/words-audit'))).toBe(false)
   })
 })
 

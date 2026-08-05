@@ -13,7 +13,7 @@
  * static and module handling still happens downstream.
  */
 import { readFileSync, existsSync, readdirSync } from 'node:fs'
-import { extname, resolve } from 'node:path'
+import { extname, resolve, join } from 'node:path'
 import { inside, readJson, writeJson, writeText, readText, readEnv, OutsideRepo } from './repo.mjs'
 import { allLessons, loadLesson, saveLesson, exportPlan, STATUSES } from './lessons.mjs'
 import { bakeOne, bakeState, loadManifest, BakeError } from './bake.mjs'
@@ -30,6 +30,7 @@ const WRITABLE = {
   voices: 'joe/voices.json',
   notes: 'joe/asset-notes.json',
   names: 'joe/names-audit.json',
+  words: 'joe/words-audit.json',
   primitives: 'joe/primitives-audit.json',
   /*
    * The visual editor's draft store: species DEFINITIONS Joe is making in the
@@ -101,6 +102,16 @@ function state(root) {
      * depends on a comparator this end.
      */
     names: readJson(root, 'joe/names-audit.json', { schemaVersion: 1, names: [] }).names ?? [],
+    /*
+     * The reading-words ledger — one row per generated candidate word for the
+     * reading ladder, in the ledger's own order. Unvetted means
+     * invisible: `tools/words/emit.mjs` only ever emits a row Joe has actually
+     * ruled on, so a word sitting here with no verdict never reaches
+     * `src/core/rung-words.ts` and never deals in the game. Never sorted here
+     * for the same reason `names` and `primitives` are not — the page groups
+     * by rung, in ladder order, as it renders.
+     */
+    words: readJson(root, 'joe/words-audit.json', { schemaVersion: 1, words: [] }).words ?? [],
     /*
      * The primitives bench, in the file's own order — which is the order he
      * reads them in and the order his place is kept in. Never sorted here, for
@@ -390,6 +401,19 @@ export function createApi(root) {
         if (body.AZURE_SPEECH_KEY) process.env.AZURE_SPEECH_KEY = body.AZURE_SPEECH_KEY.trim()
         if (body.AZURE_SPEECH_REGION) process.env.AZURE_SPEECH_REGION = body.AZURE_SPEECH_REGION.trim()
         return json(res, 200, { ok: true, hasKey: Boolean(secrets(root).AZURE_SPEECH_KEY) })
+      }
+
+      /*
+       * A word Joe has ruled on, written into the module the game actually
+       * deals from. Regenerates the WHOLE file from `joe/words-audit.json` as
+       * it stands on disk this instant, exactly as `npm run words:emit` does
+       * from a terminal — this is that same tool, reachable without one.
+       */
+      if (path === '/api/words/emit' && req.method === 'POST') {
+        const { emitToDisk } = await import('../words/emit.mjs')
+        emitToDisk(join(root, 'joe/words-audit.json'),
+                   join(root, 'src/core/rung-words.ts'))
+        return json(res, 200, { emitted: true })
       }
 
       if (path === '/api/voices/list') return json(res, 200, await voiceCatalogue(root))

@@ -5,6 +5,8 @@
  * only user is sitting at the machine; a diffing scheme here would be a
  * software project, which the spec forbids in as many words.
  */
+import { wordsBench, LABELS as WORD_LABELS } from './words.ts'
+
 const $ = s => document.querySelector(s)
 const el = (tag, props = {}, kids = []) => {
   const n = Object.assign(document.createElement(tag), props)
@@ -29,7 +31,7 @@ let picked = null
 
 async function refresh() {
   S = await api('/api/state')
-  drawTasks(); drawBacklog(); drawNames(); drawLessons(); drawBake(); drawVoices(); drawNotes()
+  drawTasks(); drawBacklog(); drawNames(); drawWords(); drawLessons(); drawBake(); drawVoices(); drawNotes()
 }
 
 const save = (what, value) => api('/api/save', { body: { what, value } }).then(r => { say(`saved ${r.saved}`); return refresh() })
@@ -308,6 +310,101 @@ function nameRow(n) {
  */
 const patchName = (id, fields) =>
   api('/api/save', { body: { what: 'names', patch: { id, ...fields } } })
+    .then(r => say(`saved ${r.saved}`))
+    .catch(() => { refresh().catch(() => {}) })
+
+/* ------------------------------------------------------------------ reading words */
+
+/**
+ * The reading-words bench. `wordsBench` (from `words.ts`) does the one
+ * thing that matters: it groups the ledger by RUNG, in ladder order, because a
+ * word is judged against its neighbours and never alone — `sat`/`sit` together
+ * is the near-twin mechanism working; `to`/`too`/`two` together is the
+ * confusable guard's whole reason to exist. This only draws what it returns.
+ *
+ * `joe/words-audit.json` has one author at a time — it is WRITABLE but not in
+ * `merge.mjs`'s MERGEABLE table, unlike `names` — so a verdict is saved as the
+ * WHOLE file rather than a patch, through the very `/api/save` route the names
+ * tab uses one field wider. A row carries no id (see `words.ts`'s `WordRow`);
+ * it is identified by being the same object `wordsBench` handed back, which is
+ * the same object sitting in `S.words`, so mutating it in place and resending
+ * the whole array is exact and never a guess at which row changed.
+ */
+function drawWords() {
+  const root = $('#words')
+  root.replaceChildren()
+
+  const all = S.words ?? []
+
+  const emit = el('button', {}, 'Regenerate src/core/rung-words.ts')
+  emit.onclick = async () => {
+    const r = await api('/api/words/emit')
+    say(r.emitted ? 'wrote src/core/rung-words.ts' : 'emit failed')
+  }
+  root.append(el('div', { className: 'row' }, [
+    emit,
+    el('span', { className: 'meta' }, 'Only approved and replaced words reach the game — an unruled word stays invisible.'),
+  ]))
+
+  if (!all.length) {
+    root.append(el('p', { className: 'hint' },
+      'joe/words-audit.json has no words in it yet — the rows land per rung, and this panel fills itself the moment they do.'))
+    return
+  }
+
+  for (const g of wordsBench(all, WORD_LABELS)) {
+    root.append(el('h2', { className: 'nameGroup' }, `${g.label} — ${g.done} of ${g.rows.length} ruled`))
+    for (const r of g.rows) root.append(wordRow(r))
+  }
+}
+
+/** Approved, whatever case or spacing it arrived in — `tools/words/emit.mjs`'s own rule. */
+const wordApproved = v => ['yes', 'replace'].includes(String(v ?? '').trim().toLowerCase())
+const wordRejected = v => v && !wordApproved(v)
+
+function wordRow(r) {
+  const card = el('div', { className: 'card name ' + (wordApproved(r.verdict) ? 'ok' : wordRejected(r.verdict) ? 'reject' : '') })
+
+  card.append(el('div', { className: 'row nameHead' }, [
+    el('span', { className: 'theName' }, r.word),
+  ]))
+
+  const approve = el('button', { className: 'verdict' + (wordApproved(r.verdict) ? ' on' : '') }, wordApproved(r.verdict) ? '✓ Approved' : 'Approve')
+  const reject = el('button', { className: 'verdict' + (wordRejected(r.verdict) ? ' on' : '') }, wordRejected(r.verdict) ? '✗ Rejected' : 'Reject')
+  const better = el('input', { className: 'replacement', value: r.replacement ?? '', placeholder: 'the word you want instead' })
+  const note = el('input', { value: r.note ?? '', placeholder: 'note — what is wrong with it' })
+
+  /* The row re-draws in place, the same idiom `nameRow` uses: the list never
+   * jumps under him, and the tick lands on disk the instant he makes it. */
+  const redraw = () => card.replaceWith(wordRow(r))
+
+  approve.onclick = () => { r.verdict = wordApproved(r.verdict) ? '' : 'yes'; redraw(); saveWords() }
+  reject.onclick = () => { r.verdict = wordRejected(r.verdict) ? '' : 'no'; redraw(); saveWords() }
+  /* Typing a replacement is his way of saying "approve it as this instead" —
+   * `emit.mjs` only honours a replacement under verdict `replace`, so the box
+   * sets both together rather than asking for a second click that does nothing
+   * without it. */
+  better.onchange = () => {
+    r.replacement = better.value
+    r.verdict = better.value.trim() ? 'replace' : (wordApproved(r.verdict) ? '' : r.verdict)
+    redraw(); saveWords()
+  }
+  note.onchange = () => { r.note = note.value; saveWords() }
+
+  card.append(el('div', { className: 'row' }, [approve, reject, better, note]))
+  return card
+}
+
+/**
+ * A whole-file save, without the whole-page refresh `patchName` also skips.
+ *
+ * `words` is WRITABLE but not MERGEABLE — see `tools/workbench/merge.mjs`,
+ * which only merges a file with a second author, and nothing else writes this
+ * one — so there is no patch route for it and the ledger goes out exactly as
+ * `S.words` stands, which already carries the edit the row just made in place.
+ */
+const saveWords = () =>
+  api('/api/save', { body: { what: 'words', value: { schemaVersion: 1, words: S.words } } })
     .then(r => say(`saved ${r.saved}`))
     .catch(() => { refresh().catch(() => {}) })
 
