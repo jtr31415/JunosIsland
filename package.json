@@ -29,7 +29,8 @@
     "pets:creature": "node --experimental-strip-types --import ./tools/pets/resolve-src.mjs tools/pets/creature.ts",
     "pets:reserve": "node tools/pets/reserve.mjs",
     "pets:reserve:check": "node tools/pets/reserve.mjs --check",
-    "signoffs": "node tools/species/signoffs.mjs"
+    "signoffs": "node tools/species/signoffs.mjs",
+    "words:emit": "node -e \"import('./tools/words/emit.mjs').then(m=>m.emitToDisk('joe/words-audit.json','src/core/rung-words.ts'))\""
   },
   "devDependencies": {
     "@fontsource/andika": "^5.3.0",
