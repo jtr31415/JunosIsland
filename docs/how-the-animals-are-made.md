@@ -365,11 +365,22 @@ reachable with room to spare.
 
 ## 14. What the pack simply does not have
 
-Four collections cannot be built from these parts at all, and no amount of
+Three collections cannot be built from these parts at all, and no amount of
 assembly changes that:
 
-- **Ocean (16)** — there is no fin, flipper or fluke in the pack. The fish's are
-  fused into its shell.
+- ~~**Ocean (16)** — there is no fin, flipper or fluke in the pack. The fish's are
+  fused into its shell.~~ **WRONG SINCE 4 AUGUST 2026, and struck through rather
+  than deleted because this sentence did real damage.** Baking the `wing` role for
+  the budgie brought `box-42`/`box-43` into the bank — provenance `fish:wing`, a
+  handed mirrored pair, the pack's own fish's fins, no longer fused into anything
+  — and `blade-06`, the penguin's wing, already is a flipper. Ocean was built out
+  on 5 August: twelve animals and four priced placeholders. Nobody carried the
+  correction back for a week because this line had already ruled the collection
+  out, so nobody looked. **A claim about what the bank does not hold expires the
+  moment a role is baked; date it, or it outlives its own truth.**
+  `animal-goldfish.ts` still repeats the old claim in its header and still reaches
+  for the lion's tail as a caudal fin on the strength of it — a live animal, so
+  that is Joe's to change in the editor, not a doc fix.
 - **Critters (16)** — no membranous insect wing, no segmented leg.
 - **Dinosaurs (16)** — no frill, no plate, no spine.
 - **Raptors (16)** — no hooked beak, no talon, no spread wing.
