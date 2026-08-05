@@ -601,6 +601,13 @@
       "detail": "The big dot is live: a counting box is floor(n/10) green tens plus the remainder as units, with a per-box key showing one green dot equals ten little ones (b9222ea, 5454a32). The LESSON is deliberately not built — lessons/intro-ten.opus, ~16s of Fred, with the SNAP beats runA.md:1006 specs, autoplaying once at the tens rung's debut and then joining the on-demand library behind save.ts's reserved onceFlags. Joe, 4 Aug: \"we are holding the lesson and just introduce the dot with a hint and key, but follow the lesson when we work on that\" — so the spec at runA.md:1006 is binding on whoever picks this up, and the clip has to be recorded before any of it can be wired.",
       "state": "open",
       "run": ""
+    },
+    {
+      "id": "PB-085",
+      "title": "The assembly trace fails on rotation angles that straddle its 1/1000 snap, so a faithful mesh reports as a broken one",
+      "detail": "assembly-assert.ts traces a mesh by un-spinning it and sorting both point sets on coordinates snapped to 1/1000. At some angles a point sits exactly on a snap boundary, the two sorts disagree, and a mesh that IS a copy of its bank part reports as not one. Measured on Africa's warthog: wedge-11 at 22, 25 and 28 degrees gives a max deviation of 0.1585 against a 0.002 tolerance, while 20 and 30 are clean — and Ocean's animal-octopus arms failed the same way. The cost is silent and lands on the animal: the warthog's tusk splay is 20 degrees rather than animal-goat.ts's 25 because 25 could not be traced, which is a number chosen by the harness and not by the animal. Wants a tie-break that does not depend on the snap (sort on the unsnapped value, or match by nearest neighbour), NOT a wider tolerance — the invariant is real and caught the cream-eared stoat the same day.",
+      "state": "open",
+      "run": ""
     }
   ]
 }
