@@ -30,7 +30,7 @@ import { loadIsland, saveIsland, wipeIsland } from './save'
 import { advance, albumsToShow } from './species/opened'
 import { COLLECTIONS } from './species/roster'
 import { builtIn } from './species/built'
-import { createHarness } from './harness'
+import { createHarness, STAGES } from './harness'
 import type { Path } from './harness'
 import { openingGate } from './opening'
 import { commit, ceremony } from './ceremony'
@@ -1196,7 +1196,10 @@ async function boot(): Promise<void> {
     const staged = stageFor('read', state)
     const card = dealReading(
       { read: readStore, build: buildStore },
-      { rng: defaultRng, drawGreen, drawRed, neigh, level: dealtRead.stage, drawRung },
+      {
+        rng: defaultRng, drawGreen, drawRed, neigh, level: dealtRead.stage, drawRung,
+        rungIndex: STAGES.reading.indexOf(dealtRead.stage),
+      },
       kind, state.readHeld,
     )
     if (card.kind === 'build') overlay.openBuild(card.item, staged)

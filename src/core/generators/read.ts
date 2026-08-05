@@ -15,6 +15,10 @@ import { ri, shuffle } from '../rng'
 import type { Rng } from '../rng'
 import { alienWord } from '../alien'
 
+/* The ladder's length, mirrored rather than imported: `core/` may not depend on
+   `island/`. `tests/island/reading-ladder.test.ts` pins the two together. */
+const STAGES_READING_LENGTH = 10
+
 export interface ReadPick { w: MarkedWord; cls: WordClass }
 export interface ReadState { history: ReadPick[][]; idx: number }
 export interface ReadDeps {
@@ -30,6 +34,39 @@ export interface ReadDeps {
    * goes with it. See `main.ts`, where it is created beside `drawGreen`.
    */
   drawRung?: (level: number) => (() => MarkedWord) | null
+  /** 0-based position on `STAGES.reading`. Defaults to the bottom, which is the
+   *  historical two-twin behaviour, so an old caller is unchanged. */
+  rungIndex?: number
+}
+
+/**
+ * How many near-twins to plant on a page of `n` words at ladder position
+ * `rungIndex` (0-based, the INDEX into `STAGES.reading`, not the generator id).
+ *
+ * Joe, 5 August: *"there is evidence of her searching for the first word only."*
+ * The near-twin mechanism (`neighbours.ts`, one edit apart, `sat`/`sit`) has
+ * always existed to make first-letter guessing lose — it was just set to two per
+ * page, so a twelve-word page left ten words winnable on the first letter.
+ *
+ * A DIAL AND NOT A RUNG. Rungs are exclusive: a child is dealt from one
+ * generator at a time, so a "whole word reading" rung is one she meets and then
+ * CLIMBS PAST, and the habit returns on the next rung, where the words are least
+ * familiar. A habit is not a stage.
+ *
+ * The floor is the historical formula (`min(2, max(1, floor(n / 4)))`), so the
+ * bottom rung behaves exactly as every page did before this — `golden.json`
+ * pins level 1's stream at every page length from 3 to 12 words, not just the
+ * full page, so the floor must match the old formula's output at EVERY n, not
+ * just settle on 2. The ceiling is half the page, because each twin REPLACES
+ * a word already picked — asking for more than half would spend the whole page
+ * on pairs and leave nothing for the twins to sit among.
+ */
+export function twinTarget(rungIndex: number, n: number): number {
+  const floor = Math.min(2, Math.max(1, Math.floor(n / 4)))
+  const ceiling = Math.floor(n / 2)
+  const span = Math.max(1, STAGES_READING_LENGTH - 1)
+  const t = Math.min(1, Math.max(0, rungIndex / span))
+  return Math.max(1, Math.min(ceiling, Math.round(floor + t * (ceiling - floor))))
 }
 
 export function generateRead(s: ReadState, d: ReadDeps): void {
@@ -103,7 +140,7 @@ export function generateRead(s: ReadState, d: ReadDeps): void {
   for (let i = 0; i < n - reds; i++) take(d.drawGreen, 'green')
 
   /* neighbour distractors: plant a near-twin (sat/sit) so first-letter guessing loses */
-  const pairTarget = Math.min(2, Math.max(1, Math.floor(n / 4)))
+  const pairTarget = twinTarget(d.rungIndex ?? 0, n)
   const locked = new Set<number>()
   let made = 0
   for (const i of shuffle(d.rng, picks.map((_, j) => j))) {

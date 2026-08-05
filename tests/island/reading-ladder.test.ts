@@ -27,4 +27,11 @@ describe('the reading ladder', () => {
       expect(stageLabel('reading', id)).not.toMatch(/^stage /)
     }
   })
+
+  it('matches the length read.ts mirrors for the twin dial', async () => {
+    const src = await import('node:fs').then(fs =>
+      fs.readFileSync('src/core/generators/read.ts', 'utf8'))
+    const m = src.match(/STAGES_READING_LENGTH = (\d+)/)
+    expect(Number(m?.[1])).toBe(STAGES.reading.length)
+  })
 })
