@@ -615,6 +615,41 @@
       "detail": "dealMaths draws uniformly over EVERY ticked stage (JT-010(1)), and reading is about to do the same. Nothing ever retires a rung, so the pool only grows: by the top of the seven-rung sums ladder one page in seven is still 'within five', and the ten-rung reading ladder will be worse. Joe, 5 Aug: \"we need to find a way to drop off early rungs after some time because it will cause clogging of a challenge eventually. maybe something like no more than 3-5 rungs active at a time. no point having her read easy words if she competently reads more complex ones. same with maths.\" So it is a sliding WINDOW over the ticked ladder rather than the whole of it, on every path. Wants the window size chosen against real attainment data, and a decision on what retires a rung — position alone, or sustained accuracy on the rungs above it. Note the harness already has the signal (StageStats.ewma) and that a rung dropping out must never strand the stage a held card was dealt at.",
       "state": "open",
       "run": ""
+    },
+    {
+      "id": "PB-087",
+      "title": "The near-twin dial never runs on any of the new reading rungs",
+      "detail": "twinTarget ramps whole-word-reading pressure up the ladder, but the rung branch in read.ts returns before the neighbour-planting loop, so rungs 5-11 plant ZERO twins — the opposite of the spec. Worse, it cannot simply be moved: d.neigh is built from buildPool() over GREEN and RED, so a rung page has no neighbour data to plant from at all. Wants neighbours computed over the rung's own approved words. Until then the dial reaches only rung 3 (id 1), where it is live and correct.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-088",
+      "title": "The build page ignores its rung, so the finger space and letters-only tray are unreachable",
+      "detail": "deal.ts passes generateBuild only { rng, drawGreen, level } — no drawRung, no granularity, no phrase. So she always spells a GREEN word whatever buildStageFor mapped to, and FINGER_SPACE and the letters-only tray exist as tested generator code with no caller. \"Build follows reading one rung behind\" is currently a computation with no observable effect. The generator half is done and covered; this is the wiring.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-089",
+      "title": "The grown-ups panel promises a reading probe the island never deals",
+      "detail": "Reading now has a rung above id 1, so nextStage('reading') is non-null for the first time and probeWanted goes true once her reading ewma passes 0.75. report.ts:257 then tells Joe the game is \"slipping in a harder question now and then\" for reading — but only dealMaths has a probe branch; dealReading has none, so it never happens. Either dealReading learns to probe or the panel stops claiming it. report.test.ts:375 passes only because its fixture leaves reading's ewma null.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-090",
+      "title": "The words bench shows no grapheme split, which is the thing that decides whether a word can be built",
+      "detail": "The spec asked each ledger row to carry the word, its rung, its grapheme split and the human fields; the rows ship without the split. So Joe rules on split digraphs at rung 9 and phrases at rung 6 without seeing how markDigraphs will segment them — and the segmentation is exactly what decides whether the build page can render a word as tiles. Cheap to add: the split is derivable from the word, so the bench can compute it for display rather than storing it.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-091",
+      "title": "A thin rung page grinds ~480 deck draws to deal three words",
+      "detail": "generateRead's rung branch draws until it has n distinct words or hits a guard of n*40, so three approved words at n=12 burns ~480 draws and ~160 reshuffles for a three-word page. The short page is correct; the grind is not. An attempted fix on 5 Aug tracked exhaustion per call and silently dropped an approved word on 61% of pages, because main.ts keeps ONE deck per rung for the session and an early break leaves it mid-pass — so any fix must track exhaustion over the DECK's lifetime, not the call's. Reverted, and a persistent-deck test now pins the property it broke.",
+      "state": "open",
+      "run": ""
     }
   ]
 }
