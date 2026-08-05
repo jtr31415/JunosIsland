@@ -35,6 +35,7 @@ import { JUNGLE_SPECIES } from './collections/jungle'
 import { OUTBACK_SPECIES } from './collections/outback'
 import { CRITTERS_SPECIES } from './collections/critters'
 import { ICE_SPECIES } from './collections/ice'
+import { RAPTORS_SPECIES } from './collections/raptors'
 import type { Species } from './types'
 
 /**
@@ -305,11 +306,44 @@ export const CRITTERS_COLLECTION: readonly Species[] = [...CRITTERS_SPECIES]
  */
 export const ICE_COLLECTION: readonly Species[] = [...ICE_SPECIES]
 
+/**
+ * RAPTORS — the collection `docs/how-the-animals-are-made.md` §14 declared
+ * impossible in three words, all three of which were measured before a line was
+ * written, because that paragraph has already been wrong once.
+ *
+ * *"No spread wing"* is flatly false and was false before this collection
+ * started: the `wing` role holds six shapes, `wedge-19` attaches `x +1` at a
+ * measured sink of 0.175 and therefore stands 0.4727 clear of a cube's flank,
+ * and `animal-vulture.ts` had already shipped a bird 2.1960 across on it. *"No
+ * talon"* is false in Ocean's exact way — §7 censuses ten distinct claw shapes
+ * with the crab, lion, tiger and polar as donors, and `claw` occurs ZERO times
+ * in the baked bank, so the shape is in a `.glb` in this repo and not in the
+ * module. That is one line in the generator and it is Joe's, because baking a
+ * role renumbers the bank. *"No hooked beak"* is the one that survives, and only
+ * halfway: there is no CURVE in any of the 100 shapes, but a hook is a tip that
+ * turns down, and `cone-06` plus a second `nose` shape anchored `on: 'snout'`
+ * and spun about x says that in two straight parts.
+ *
+ * FIFTEEN OF THE SIXTEEN ARE REAL ANIMALS. The one placeholder is
+ * `animal-harpy-eagle`, held up by a SPLIT crest — both ways of saying a crest
+ * here read as another animal — and by SIZE, which is a ruling rather than a
+ * commission: the hull is never scaled, so the whole size vocabulary is the ten
+ * real shells and their volume range is 1.37x.
+ *
+ * FOUR THINGS THIS COLLECTION ADDS TO THE VOCABULARY, all argued in `raptors.ts`:
+ * the two-part HOOK; the BELLY PATCH INVERTED, which turns a pale underside into
+ * a white head and which two existing files say is impossible; a FLANK CARD SPUN
+ * FORWARD as a brow, a moustache, an eye-stripe and a FACIAL DISC, which
+ * `animal-owlet.ts` also says cannot be built; and the first FORKED TAIL in the
+ * project, which is nothing more than `kind: 'pair'` on a tail.
+ */
+export const RAPTORS_COLLECTION: readonly Species[] = [...RAPTORS_SPECIES]
+
 /** Everything that has actually shipped: the frozen 24 plus the built collections. */
 export const SHIPPED_SPECIES: readonly Species[] = [
   ...BASE_SPECIES, ...PHASE2_SPECIES, ...PHASE3_SPECIES, ...NIGHT_TIME_COLLECTION,
   ...BIRDS_COLLECTION, ...OCEAN_COLLECTION, ...JUNGLE_COLLECTION, ...OUTBACK_COLLECTION,
-  ...CRITTERS_COLLECTION, ...ICE_COLLECTION,
+  ...CRITTERS_COLLECTION, ...ICE_COLLECTION, ...RAPTORS_COLLECTION,
 ]
 
 /** Every species that has actually shipped, by id. */

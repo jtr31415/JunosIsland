@@ -96,6 +96,18 @@
  * >>> ostrich's reading taken a fourth time: it flies in bursts and lives on the
  * >>> ground, and `air` means hovering at `TREE_HEIGHT`. The other nine say
  * >>> `land`, which is `DEFAULT_LOCOMOTION` and changes nothing either way.
+ * >>>
+ * >>> RAPTORS WENT IN ON 5 AUGUST AND IT IS THE FIRST COLLECTION WHERE EVERY
+ * >>> SINGLE MEMBER SAYS `air`. Sixteen of sixteen, and unlike every block above
+ * >>> this one there is no neutral majority underneath it — `air` is the only
+ * >>> word here with teeth, so this collection alone puts sixteen pets at
+ * >>> `TREE_HEIGHT` at once. It is the honest reading (all sixteen are strong
+ * >>> flyers, and none of them is an ostrich or a game bird flying in bursts),
+ * >>> but it is worth Joe's eye as a GROUP rather than one animal at a time: if
+ * >>> a canopy full of hovering birds of prey is wrong, it is wrong sixteen
+ * >>> times and the fix is sixteen lines. The kestrel is the one that would most
+ * >>> like a fifth word — it HOVERS, which is what a child knows about it — and
+ * >>> `air` is the nearest the union has.
  *
  * ## Why a lookup table and not a field on the collection record
  *
@@ -207,7 +219,9 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-arctic-hare': 'land',
   'animal-baboon': 'land',
   'animal-badger': 'land',
+  'animal-bald-eagle': 'air',
   'animal-bandicoot': 'land',
+  'animal-barn-owl': 'air',
   'animal-bear': 'land',
   'animal-bee': 'air',
   'animal-beetle': 'land',
@@ -218,6 +232,7 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-budgie': 'air',
   'animal-buffalo': 'land',
   'animal-butterfly': 'air',
+  'animal-buzzard': 'air',
   'animal-canary': 'air',
   'animal-capercaillie': 'land',
   'animal-capybara': 'amphibian',
@@ -240,6 +255,7 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-dormouse': 'land',
   'animal-dragonfly': 'air',
   'animal-duck': 'amphibian',
+  'animal-eagle-owl': 'air',
   'animal-echidna': 'land',
   'animal-eel': 'water',
   'animal-elk': 'land',
@@ -252,15 +268,20 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-gecko': 'land',
   'animal-gerbil': 'land',
   'animal-gibbon': 'land',
+  'animal-golden-eagle': 'air',
   'animal-goldfish': 'water',
   'animal-gorilla': 'land',
+  'animal-goshawk': 'air',
   'animal-grasshopper': 'land',
   'animal-guinea-pig': 'land',
   'animal-hamster': 'land',
   'animal-hare': 'land',
+  'animal-harpy-eagle': 'air',
+  'animal-harrier': 'air',
   'animal-hedgehog': 'land',
   'animal-heron': 'land',
   'animal-hippo': 'amphibian',
+  'animal-hobby': 'air',
   'animal-howler-monkey': 'land',
   'animal-hummingbird': 'air',
   'animal-husky': 'land',
@@ -269,6 +290,7 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-jaguar': 'land',
   'animal-jellyfish': 'water',
   'animal-kangaroo': 'land',
+  'animal-kestrel': 'air',
   'animal-kingfisher': 'air',
   'animal-kookaburra': 'air',
   'animal-ladybird': 'land',
@@ -281,6 +303,7 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-magpie': 'air',
   'animal-mantis': 'land',
   'animal-meerkat': 'land',
+  'animal-merlin': 'air',
   'animal-mink': 'amphibian',
   'animal-mole': 'land',
   'animal-mongoose': 'land',
@@ -293,12 +316,14 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-ocelot': 'land',
   'animal-octopus': 'water',
   'animal-orca': 'water',
+  'animal-osprey': 'air',
   'animal-ostrich': 'land',
   'animal-otter': 'amphibian',
   'animal-owlet': 'air',
   'animal-parrot': 'air',
   'animal-peacock': 'land',
   'animal-pelican': 'amphibian',
+  'animal-peregrine-falcon': 'air',
   'animal-pheasant': 'land',
   'animal-pine-marten': 'land',
   'animal-platypus': 'amphibian',
@@ -309,6 +334,7 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-puffin': 'air',
   'animal-quokka': 'land',
   'animal-ray': 'water',
+  'animal-red-kite': 'air',
   'animal-reindeer': 'land',
   'animal-robin': 'air',
   'animal-salamander': 'land',
@@ -326,6 +352,7 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-snake': 'land',
   'animal-snow-petrel': 'air',
   'animal-snowy-owl': 'air',
+  'animal-sparrowhawk': 'air',
   'animal-spider': 'land',
   'animal-squid': 'water',
   'animal-squirrel': 'land',
@@ -336,6 +363,7 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-swan': 'amphibian',
   'animal-tapir': 'amphibian',
   'animal-tarantula': 'land',
+  'animal-tawny-owl': 'air',
   'animal-tassie-devil': 'land',
   'animal-terrapin': 'land',
   'animal-thorny-devil': 'land',
