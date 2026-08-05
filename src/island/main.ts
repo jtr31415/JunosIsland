@@ -71,6 +71,7 @@ import { makeDeck } from '../core/decks'
 import { makeCollectionDeck } from './collection'
 import { dealPool } from './species/pool'
 import { GREEN, RED } from '../core/wordlists'
+import { RUNG_WORDS } from '../core/rung-words'
 import { buildPool, buildNeighbours } from '../core/neighbours'
 import type { ReadState } from '../core/generators/read'
 import type { BuildState } from '../core/generators/build'
@@ -179,6 +180,20 @@ async function boot(): Promise<void> {
   // The M0 learning engine, wired up exactly as the 2D game wires it.
   const drawGreen = makeDeck(defaultRng, GREEN)
   const drawRed = makeDeck(defaultRng, RED)
+  /*
+   * ONE DECK PER RUNG, created once and kept — a deck rebuilt per deal forgets
+   * what it dealt, and `makeDeck`'s whole promise is no repeat until exhausted.
+   * Lazy, like the two above it: creating a deck consumes no randomness, which
+   * is what keeps the golden stream shared and stable.
+   */
+  const rungDecks = new Map<number, () => string>()
+  const drawRung = (level: number): (() => string) | null => {
+    const words = RUNG_WORDS[level]
+    if (!words?.length) return null
+    let deck = rungDecks.get(level)
+    if (!deck) { deck = makeDeck(defaultRng, words); rungDecks.set(level, deck) }
+    return deck
+  }
   const neigh = buildNeighbours(buildPool())
   const readStore: ReadState = { history: [], idx: -1 }
   const buildStore: BuildState = { history: [], idx: -1 }
@@ -1181,7 +1196,7 @@ async function boot(): Promise<void> {
     const staged = stageFor('read', state)
     const card = dealReading(
       { read: readStore, build: buildStore },
-      { rng: defaultRng, drawGreen, drawRed, neigh, level: dealtRead.stage },
+      { rng: defaultRng, drawGreen, drawRed, neigh, level: dealtRead.stage, drawRung },
       kind, state.readHeld,
     )
     if (card.kind === 'build') overlay.openBuild(card.item, staged)

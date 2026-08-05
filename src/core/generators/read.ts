@@ -23,6 +23,13 @@ export interface ReadDeps {
   drawRed: () => MarkedWord
   neigh: NeighbourMap
   level: number
+  /**
+   * The deck for this level's approved rung words, or null when the level has
+   * none. Supplied by the caller because the DECK must outlive one deal — a
+   * deck rebuilt per page forgets what it has dealt and the no-repeat guarantee
+   * goes with it. See `main.ts`, where it is created beside `drawGreen`.
+   */
+  drawRung?: (level: number) => (() => MarkedWord) | null
 }
 
 export function generateRead(s: ReadState, d: ReadDeps): void {
@@ -37,6 +44,37 @@ export function generateRead(s: ReadState, d: ReadDeps): void {
       used.add(w)
       picks.push({ w, cls: 'green' })
     }
+    s.history.push(picks)
+    s.idx = s.history.length - 1
+    return
+  }
+
+  /*
+   * A RUNG PAGE. Its own words, its own early return, and NOTHING below this
+   * point runs for it — the same shape the alien branch uses above, and for the
+   * same reason: `golden.json` pins level 1's stream, so the level-1 body must
+   * consume randomness exactly as it always has. Level 1 is therefore walled
+   * off explicitly (not just left to `drawRung` returning null for it) — the
+   * pin holds even if a caller ever wires an approved list under id 1.
+   *
+   * A rung with no approved words FALLS THROUGH deliberately. Unvetted is
+   * invisible, and an empty rung that dealt an empty page would be a blank
+   * screen; falling back to the page every child already gets is the graceful
+   * half of that rule.
+   */
+  const rungDraw = d.level !== 1 ? (d.drawRung?.(d.level) ?? null) : null
+  if (rungDraw) {
+    const n = Math.min(MAX, MIN + s.history.length)
+    const used = new Set<string>()
+    const picks: ReadPick[] = []
+    let guard = 0
+    while (picks.length < n && guard++ < n * 40) {
+      const w = rungDraw()
+      if (used.has(w)) continue
+      used.add(w)
+      picks.push({ w, cls: 'green' })
+    }
+    shuffle(d.rng, picks)
     s.history.push(picks)
     s.idx = s.history.length - 1
     return
