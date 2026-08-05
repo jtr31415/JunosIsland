@@ -365,8 +365,17 @@ reachable with room to spare.
 
 ## 14. What the pack simply does not have
 
-Three collections cannot be built from these parts at all, and no amount of
-assembly changes that:
+> **THIS SECTION HAS NOW BEEN WRONG TWICE, BOTH TIMES THE SAME WAY, AND BOTH
+> TIMES IT COST A COLLECTION.** It is a claim about what the bank held on 29
+> July, written without a date, and the bank has been baked into since. Ocean and
+> Critters were each declared impossible here, each stayed unbuilt because the
+> line had closed the question, and each came out fifteen-plus animals the day
+> somebody measured instead of read. **Measure the bank before you believe any
+> sentence below.** The two collections still marked impossible — Dinosaurs and
+> Raptors — have not been re-measured since the `wing` role landed and should be
+> treated as unproven, not as settled.
+
+Two collections are recorded here as unbuildable. Both claims are now UNVERIFIED:
 
 - ~~**Ocean (16)** — there is no fin, flipper or fluke in the pack. The fish's are
   fused into its shell.~~ **WRONG SINCE 4 AUGUST 2026, and struck through rather
@@ -381,9 +390,25 @@ assembly changes that:
   `animal-goldfish.ts` still repeats the old claim in its header and still reaches
   for the lion's tail as a caudal fin on the strength of it — a live animal, so
   that is Joe's to change in the editor, not a doc fix.
-- **Critters (16)** — no membranous insect wing, no segmented leg.
-- **Dinosaurs (16)** — no frill, no plate, no spine.
-- **Raptors (16)** — no hooked beak, no talon, no spread wing.
+- ~~**Critters (16)** — no membranous insect wing, no segmented leg.~~ **HALF
+  WRONG, 5 AUGUST 2026, and wrong for exactly Ocean's reason.** `blade-06` and
+  `blade-07` sit in `PARTS_BANK` with `roles: ["wing"]` and **`bee:wing-left` as
+  their FIRST provenance entry** — the donor that gave the geometry. §3.1 of
+  `building-animals-from-parts.md` had already recorded on 29 July that the bee's
+  *"are true insect wings"*, censused but not baked; the budgie's `wing` role
+  baked them on 4 August and nobody carried it back. Seven Critters wear it as a
+  wing. Note the consequence, which is worth knowing on its own: **one shape is
+  both the pack's insect wing and the pack's flipper** — the bee and penguin
+  donors are bit-identical, which is why three sea animals call it "the penguin's
+  flipper". The **segmented leg half is TRUE** — one leg shape in 100 records,
+  `box-01`, taper 1.000, no joint anywhere — but it stopped nothing: Critters
+  shipped fourteen built and two priced placeholders.
+- **Dinosaurs (16)** — no frill, no plate, no spine. **UNVERIFIED since the
+  `wing` role was baked. Measure before believing.**
+- **Raptors (16)** — no hooked beak, no talon, no spread wing. **UNVERIFIED, and
+  already dented:** `animal-vulture.ts` (Africa, 5 Aug) makes a hooked beak's
+  nearest approximation from `cone-06`'s band 15 standing 0.041900 proud of band
+  13, painted dark.
 
 **Birds (18)** is partial: there are two beak designs in the whole pack, against a
 list that wants a swan, a heron, a flamingo, a pelican and a toucan. **Legendary
