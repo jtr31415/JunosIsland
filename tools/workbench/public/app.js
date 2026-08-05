@@ -4,9 +4,18 @@
  * Re-render everything on every change. The files are a few kilobytes and the
  * only user is sitting at the machine; a diffing scheme here would be a
  * software project, which the spec forbids in as many words.
+ *
+ * NO TOP-LEVEL IMPORT OF `./words.ts`, on purpose. `npm run workbench` (Vite)
+ * compiles it; `npm run workbench:plain` (`server.mjs`) does not — its
+ * `serveStatic` has no `.ts` MIME entry (`api.mjs`'s `serveStatic`), so a
+ * request for it 404s, and `words.ts` is real TypeScript a browser could not
+ * parse even if it arrived. A STATIC import is resolved before this module's
+ * own body runs at all, so that failure would take the whole of `app.js` down
+ * with it — the task queue and the backlog included — under exactly the host
+ * `server.mjs`'s own header exists to keep that from happening to. See
+ * `loadWords` below: the import is dynamic, deferred to the one place it is
+ * used, and its failure is caught rather than left to sink the page.
  */
-import { wordsBench, LABELS as WORD_LABELS } from './words.ts'
-
 const $ = s => document.querySelector(s)
 const el = (tag, props = {}, kids = []) => {
   const n = Object.assign(document.createElement(tag), props)
@@ -31,7 +40,9 @@ let picked = null
 
 async function refresh() {
   S = await api('/api/state')
-  drawTasks(); drawBacklog(); drawNames(); drawWords(); drawLessons(); drawBake(); drawVoices(); drawNotes()
+  drawTasks(); drawBacklog(); drawNames()
+  drawWords().catch(err => say(err.message, true))
+  drawLessons(); drawBake(); drawVoices(); drawNotes()
 }
 
 const save = (what, value) => api('/api/save', { body: { what, value } }).then(r => { say(`saved ${r.saved}`); return refresh() })
@@ -316,23 +327,46 @@ const patchName = (id, fields) =>
 /* ------------------------------------------------------------------ reading words */
 
 /**
+ * `words.ts` loaded lazily, once, the first time the tab actually needs it —
+ * see the header note at the top of this file for why it is not a top-level
+ * import. `null` means "this host cannot serve it" and is cached rather than
+ * retried: a failure here is a property of which server is running, not
+ * something a second attempt would fix.
+ */
+let wordsModule
+async function loadWords() {
+  if (wordsModule === undefined) {
+    try { wordsModule = await import('./words.ts') }
+    catch { wordsModule = null }
+  }
+  return wordsModule
+}
+
+/**
  * The reading-words bench. `wordsBench` (from `words.ts`) does the one
  * thing that matters: it groups the ledger by RUNG, in ladder order, because a
  * word is judged against its neighbours and never alone — `sat`/`sit` together
  * is the near-twin mechanism working; `to`/`too`/`two` together is the
  * confusable guard's whole reason to exist. This only draws what it returns.
  *
- * `joe/words-audit.json` has one author at a time — it is WRITABLE but not in
- * `merge.mjs`'s MERGEABLE table, unlike `names` — so a verdict is saved as the
- * WHOLE file rather than a patch, through the very `/api/save` route the names
- * tab uses one field wider. A row carries no id (see `words.ts`'s `WordRow`);
- * it is identified by being the same object `wordsBench` handed back, which is
- * the same object sitting in `S.words`, so mutating it in place and resending
- * the whole array is exact and never a guess at which row changed.
+ * `joe/words-audit.json` is registered in `merge.mjs`'s MERGEABLE table, same
+ * as `names` — a drafting tool appends batches to it and Joe rules on rows in
+ * this page at his own pace, so a verdict is saved as a PATCH naming one row's
+ * `id` (`${rung}/${word}`) and one field, through `patchWord` below, never a
+ * whole-file echo that could carry a stale copy of a row it never touched.
  */
-function drawWords() {
+async function drawWords() {
   const root = $('#words')
   root.replaceChildren()
+
+  const mod = await loadWords()
+  if (!mod) {
+    root.append(el('p', { className: 'warn' },
+      '⚠ this host cannot compile TypeScript, so the reading-words bench cannot render here — ' +
+      'run `npm run workbench` (the Vite host) to rule on words.'))
+    return
+  }
+  const { wordsBench, LABELS: WORD_LABELS } = mod
 
   const all = S.words ?? []
 
@@ -378,8 +412,8 @@ function wordRow(r) {
    * jumps under him, and the tick lands on disk the instant he makes it. */
   const redraw = () => card.replaceWith(wordRow(r))
 
-  approve.onclick = () => { r.verdict = wordApproved(r.verdict) ? '' : 'yes'; redraw(); saveWords() }
-  reject.onclick = () => { r.verdict = wordRejected(r.verdict) ? '' : 'no'; redraw(); saveWords() }
+  approve.onclick = () => { r.verdict = wordApproved(r.verdict) ? '' : 'yes'; redraw(); patchWord(r.id, { verdict: r.verdict }) }
+  reject.onclick = () => { r.verdict = wordRejected(r.verdict) ? '' : 'no'; redraw(); patchWord(r.id, { verdict: r.verdict }) }
   /* Typing a replacement is his way of saying "approve it as this instead" —
    * `emit.mjs` only honours a replacement under verdict `replace`, so the box
    * sets both together rather than asking for a second click that does nothing
@@ -387,24 +421,28 @@ function wordRow(r) {
   better.onchange = () => {
     r.replacement = better.value
     r.verdict = better.value.trim() ? 'replace' : (wordApproved(r.verdict) ? '' : r.verdict)
-    redraw(); saveWords()
+    redraw(); patchWord(r.id, { replacement: r.replacement, verdict: r.verdict })
   }
-  note.onchange = () => { r.note = note.value; saveWords() }
+  note.onchange = () => { r.note = note.value; patchWord(r.id, { note: r.note }) }
 
   card.append(el('div', { className: 'row' }, [approve, reject, better, note]))
   return card
 }
 
 /**
- * A whole-file save, without the whole-page refresh `patchName` also skips.
+ * A patch, without the whole-page refresh `patchName` also skips — same
+ * idiom, same reasoning: the row has already shown the change, and the
+ * server still merges onto the file as it stands this instant.
  *
- * `words` is WRITABLE but not MERGEABLE — see `tools/workbench/merge.mjs`,
- * which only merges a file with a second author, and nothing else writes this
- * one — so there is no patch route for it and the ledger goes out exactly as
- * `S.words` stands, which already carries the edit the row just made in place.
+ * `words` is registered in `merge.mjs`'s `MERGEABLE` table, keyed by `id`
+ * (`${rung}/${word}`, dealt by whoever drafts the row) — a drafting batch
+ * landing between load and save, or a second verdict Joe makes before this
+ * one reaches disk, is exactly the two-writer shape `names` already survives,
+ * and a patch naming one row and one field is what makes that safe: it can
+ * never carry a stale copy of a row it never touched.
  */
-const saveWords = () =>
-  api('/api/save', { body: { what: 'words', value: { schemaVersion: 1, words: S.words } } })
+const patchWord = (id, fields) =>
+  api('/api/save', { body: { what: 'words', patch: { id, ...fields } } })
     .then(r => say(`saved ${r.saved}`))
     .catch(() => { refresh().catch(() => {}) })
 

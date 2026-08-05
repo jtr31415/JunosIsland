@@ -909,54 +909,169 @@ describe('the primitives sign-off', () => {
   })
 })
 
-/*
- * The reading-words bench. `joe/words-audit.json` has one author at a
- * time (Joe, ruling by hand) so unlike `names` and `primitives` it is
- * WRITABLE but not in `merge.mjs`'s MERGEABLE table — a save here is the
- * whole file, never a patch. What actually matters is downstream of the save:
- * `tools/words/emit.mjs` must still see exactly the verdicts just written, and
- * a row Joe has never ruled on must stay out of the generated module — the
- * one rule the whole ledger exists to keep.
+/**
+ * The reading-words ledger, through the same merge `names` and `primitives`
+ * use — added after review found the first cut of this bench used a
+ * whole-file save with no `MERGEABLE` entry, which is exactly the JT-020/
+ * JT-016 shape at a much bigger scale: the next task has an agent appending
+ * 150-200 drafted rows to this same file while Joe rules on rows in the page
+ * at his own pace, and a whole-file save with no merge silently erases
+ * whichever side saved second.
+ *
+ * `id` is `${rung}/${word}` — the `names-audit.json` convention
+ * (`natural/<speciesId>`) applied to a ledger keyed by rung and spelling
+ * rather than a roster slot. No counter: an agent deals the id when it drafts
+ * the row, exactly as `primitives`' slugs are dealt by whoever measures the
+ * pack, so there is no id space here for two writers to race over.
  */
 describe('the reading-words ledger', () => {
-  /* `root` is only assigned inside `beforeAll`, so this must be a function and
-   * not a `describe`-body constant — the body runs at collection time, before
+  const REL = 'joe/words-audit.json'
+  /* `root` is only assigned inside `beforeAll`, so these must be functions and
+   * not `describe`-body constants — the body runs at collection time, before
    * `beforeAll` has run, and `root` would still be `undefined`. */
   const rungWordsPath = () => join(root, 'src/core/rung-words.ts')
+  const onDisk = () => JSON.parse(readFileSync(join(root, REL), 'utf8'))
+  const rowOf = (id: string) => onDisk().words.find((r: any) => r.id === id)
+
+  const status = async (body: unknown) => {
+    const res = await fetch(base + '/api/save', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+    })
+    return { code: res.status, body: (await res.json()) as any }
+  }
+
+  /** What a drafting batch produces: every field filled but Joe's three. */
+  const draft = (word: string, rung: number) =>
+    ({ id: `${rung}/${word}`, word, rung, verdict: '', replacement: '', note: '' })
+
+  /** An agent's drafting tool, appending straight to the file — no API, which
+   *  is how `PB-032`'s Run D batches are described landing. */
+  const agentAppends = (...rows: ReturnType<typeof draft>[]) => {
+    const f = existsSync(join(root, REL)) ? onDisk() : { schemaVersion: 1, words: [] }
+    f.words.push(...rows)
+    writeFileSync(join(root, REL), JSON.stringify(f, null, 2) + '\n')
+  }
+
+  /** A clean ledger, so one test's rows never leak into the next. */
+  const reset = () => writeFileSync(join(root, REL), JSON.stringify({ schemaVersion: 1, words: [] }, null, 2) + '\n')
 
   it('serves the ledger unwrapped, exactly as names and primitives are', async () => {
-    const s = await api('/api/state')
-    expect(s.words).toEqual([])
+    reset()
+    expect((await api('/api/state')).words).toEqual([])
   })
 
-  it('round-trips a whole-file save through the file on disk', async () => {
-    const words = [
-      { word: 'sun', rung: 3, verdict: 'yes', replacement: '', note: '' },
-      { word: 'pig', rung: 3, verdict: '', replacement: '', note: '' },
-    ]
-    const saved = await post('/api/save', { what: 'words', value: { schemaVersion: 1, words } })
-    expect(saved.saved).toBe('joe/words-audit.json')
-    expect(JSON.parse(readFileSync(join(root, 'joe/words-audit.json'), 'utf8')).words).toEqual(words)
-    expect((await api('/api/state')).words).toEqual(words)
+  it('takes a verdict, a replacement and a note through a patch, on the id an agent dealt it', async () => {
+    reset()
+    agentAppends(draft('sat', 3), draft('cog', 3))
+
+    expect((await status({ what: 'words', patch: { id: '3/sat', verdict: 'yes' } })).code).toBe(200)
+    expect((await status({
+      what: 'words', patch: { id: '3/cog', verdict: 'replace', replacement: 'dog', note: 'too close to sit/sat' },
+    })).code).toBe(200)
+
+    expect(rowOf('3/sat').verdict).toBe('yes')
+    expect(rowOf('3/cog')).toMatchObject({ verdict: 'replace', replacement: 'dog', note: 'too close to sit/sat' })
+    /* The drafted fields are untouched by his verdict. */
+    expect(rowOf('3/cog').word).toBe('cog')
+  })
+
+  /*
+   * THE DELIVERABLE: the concurrency case the ledger exists to survive, in
+   * both directions — the exact shape JT-020 and JT-016 were lost in, at the
+   * scale a 150-200 row drafting batch makes real. Both writers must keep
+   * their work, whichever order they land in.
+   */
+  it('an agent appending a fresh batch, and a stale save of an earlier verdict — both survive', async () => {
+    reset()
+    agentAppends(draft('sat', 3), draft('sit', 3))
+    const stale = await api('/api/state')                 // Joe's page loads: 'sat', 'sit' only
+
+    /* The agent's drafting tool appends a fresh batch while his page is still open. */
+    agentAppends(draft('fish', 5), draft('to', 5))
+
+    /* His page, unaware of the batch, saves the verdict he just made — as a
+     * whole-file echo, the shape any page that has not adopted patches sends,
+     * and the exact shape JT-020 was lost in. */
+    const staleWhole = {
+      schemaVersion: 1,
+      words: stale.words.map((w: any) => w.id === '3/sat' ? { ...w, verdict: 'yes' } : w),
+    }
+    expect((await status({ what: 'words', value: staleWhole })).code).toBe(200)
+
+    /* His verdict landed... */
+    expect(rowOf('3/sat').verdict).toBe('yes')
+    /* ...and the batch his page had never heard of is still here. */
+    expect(rowOf('5/fish')).toBeTruthy()
+    expect(rowOf('5/to')).toBeTruthy()
+  })
+
+  it('the reverse loss: a fresh batch can never untick a verdict he already made', async () => {
+    reset()
+    agentAppends(draft('sat', 3), draft('sit', 3))
+    await status({ what: 'words', patch: { id: '3/sat', verdict: 'yes' } })
+    await status({ what: 'words', patch: { id: '3/sit', verdict: 'no' } })
+
+    /* The drafting tool runs again later. It knows the rung's spelling, not
+     * his rulings, so its own view of `sat`/`sit` still carries a blank
+     * verdict — exactly what the tool produces for every row it drafts —
+     * alongside the new candidates it is adding. Sent as a WHOLE FILE, the
+     * shape a drafting batch actually lands in (through the API, the same way
+     * `names`' generator rerun is modelled): this is the payload that would
+     * silently blank his ten verdicts if `verdict`'s `idle` were wrong. */
+    expect((await status({
+      what: 'words',
+      value: { schemaVersion: 1, words: [draft('sat', 3), draft('sit', 3), draft('fish', 5), draft('to', 5)] },
+    })).code).toBe(200)
+
+    expect(rowOf('3/sat').verdict).toBe('yes')
+    expect(rowOf('3/sit').verdict).toBe('no')
+    expect(rowOf('5/fish').verdict).toBe('')
+  })
+
+  it('a stale blank verdict, sent as a whole file, never unticks the one on disk', async () => {
+    reset()
+    agentAppends(draft('sat', 3))
+    const stale = await api('/api/state')                 // verdict '' at load time
+    expect((await status({ what: 'words', patch: { id: '3/sat', verdict: 'yes' } })).code).toBe(200)
+
+    /* A stale page resending its own (blank) copy must not walk over a tick
+     * it never saw land. */
+    expect((await status({ what: 'words', value: { schemaVersion: 1, words: stale.words } })).code).toBe(200)
+    expect(rowOf('3/sat').verdict).toBe('yes')
+  })
+
+  it('two disagreeing replacements for one word is a 409 that writes nothing — his words, never guessed at', async () => {
+    reset()
+    agentAppends(draft('cog', 3))
+    await status({ what: 'words', patch: { id: '3/cog', verdict: 'replace', replacement: 'dog' } })
+    const stale = await api('/api/state')
+
+    const clashing = {
+      schemaVersion: 1,
+      words: stale.words.map((w: any) => w.id === '3/cog' ? { ...w, replacement: 'log' } : w),
+    }
+    const r = await status({ what: 'words', value: clashing })
+    expect(r.code).toBe(409)
+    expect(r.body.clashes[0]).toMatchObject({ id: '3/cog', field: 'replacement' })
+    expect(rowOf('3/cog').replacement).toBe('dog')
   })
 
   it('emits only the ruled row, and nothing an unruled row would have contributed', async () => {
+    reset()
     /* `src/core/` exists in the real checkout this route always runs against;
      * this throwaway root has no `src/` at all, so it is built here purely so
      * the write has somewhere to land — the route itself does no mkdir. */
     mkdirSync(dirname(rungWordsPath()), { recursive: true })
 
-    await post('/api/save', { what: 'words', value: { schemaVersion: 1, words: [
-      { word: 'sun', rung: 3, verdict: 'yes', replacement: '', note: '' },
-      { word: 'pig', rung: 3, verdict: '', replacement: '', note: '' },
-      { word: 'cog', rung: 3, verdict: 'replace', replacement: 'dog', note: '' },
-    ] } })
+    agentAppends(draft('sat', 3), draft('pig', 3), draft('cog', 3))
+    expect((await status({ what: 'words', patch: { id: '3/sat', verdict: 'yes' } })).code).toBe(200)
+    expect((await status({ what: 'words', patch: { id: '3/cog', verdict: 'replace', replacement: 'dog' } })).code).toBe(200)
 
     const r = await post('/api/words/emit', {})
     expect(r.emitted).toBe(true)
 
     const out = readFileSync(rungWordsPath(), 'utf8')
-    expect(out).toContain("'sun'")
+    expect(out).toContain("'sat'")
     expect(out).toContain("'dog'")
     /* Unruled means invisible — neither the word nor a trace of the replaced
      * one it never became may reach the file the game actually deals from. */

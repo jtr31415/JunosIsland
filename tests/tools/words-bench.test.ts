@@ -4,7 +4,7 @@ import { STAGES } from '../../src/island/harness'
 import { STAGE_LABELS } from '../../src/island/grownups'
 
 const row = (word: string, rung: number, verdict = '') =>
-  ({ word, rung, verdict, replacement: '', note: '' })
+  ({ id: `${rung}/${word}`, word, rung, verdict, replacement: '', note: '' })
 
 describe('the words bench', () => {
   it('groups a rung together, because a word is judged against its neighbours', () => {

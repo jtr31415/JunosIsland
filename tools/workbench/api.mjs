@@ -13,7 +13,7 @@
  * static and module handling still happens downstream.
  */
 import { readFileSync, existsSync, readdirSync } from 'node:fs'
-import { extname, resolve, join } from 'node:path'
+import { extname, resolve } from 'node:path'
 import { inside, readJson, writeJson, writeText, readText, readEnv, OutsideRepo } from './repo.mjs'
 import { allLessons, loadLesson, saveLesson, exportPlan, STATUSES } from './lessons.mjs'
 import { bakeOne, bakeState, loadManifest, BakeError } from './bake.mjs'
@@ -408,11 +408,18 @@ export function createApi(root) {
        * deals from. Regenerates the WHOLE file from `joe/words-audit.json` as
        * it stands on disk this instant, exactly as `npm run words:emit` does
        * from a terminal — this is that same tool, reachable without one.
+       *
+       * Both paths go through `inside()` first, the same jail every other read
+       * and write in this file passes through, rather than a raw `join` handed
+       * straight to `emit.mjs`'s unguarded `readFileSync`/`writeFileSync`.
+       * Harmless today — both `rel` arguments are hardcoded literals, not
+       * request input — but a caller reading this file for the pattern should
+       * find one door, not two.
        */
       if (path === '/api/words/emit' && req.method === 'POST') {
         const { emitToDisk } = await import('../words/emit.mjs')
-        emitToDisk(join(root, 'joe/words-audit.json'),
-                   join(root, 'src/core/rung-words.ts'))
+        emitToDisk(inside(root, 'joe/words-audit.json'),
+                   inside(root, 'src/core/rung-words.ts'))
         return json(res, 200, { emitted: true })
       }
 

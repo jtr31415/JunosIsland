@@ -176,6 +176,36 @@ const MERGEABLE = {
     },
   },
   /*
+   * `joe/words-audit.json` — the reading-words ledger, and the same
+   * two-writer shape as `names` immediately above it: a drafting tool appends
+   * candidate words in batches (a run of 150-200 at once, for the rungs the
+   * next task fills in), while `verdict`, `replacement` and `note` are Joe's
+   * own judgement, made by reading a rung's words together — sat/sit on one
+   * page together is the point; to/too/two on one page is the trap — and
+   * ruling on each.
+   *
+   * `verdict` is a flag: '' is the absence of a decision, which is what every
+   * drafted row is born with, so a fresh batch landing on top of an earlier
+   * one can never untick a ruling he already made. `replacement` and `note`
+   * are his own words — the word he wants instead, and why — so they are
+   * text and a genuine disagreement is refused rather than guessed at,
+   * exactly as `names` treats the same two fields.
+   *
+   * No counter. `id` is `${rung}/${word}` — the `names-audit.json` convention
+   * (`natural/<speciesId>`) applied to a ledger keyed by rung and spelling
+   * instead of a roster slot. The drafting tool deals the id when it writes
+   * the row, the same way `primitives`' slugs are dealt by whoever measures
+   * the pack, so there is no id space here for two writers to race over.
+   */
+  words: {
+    list: 'words', key: 'id',
+    owns: {
+      verdict: { kind: 'flag', idle: '' },
+      replacement: { kind: 'text' },
+      note: { kind: 'text' },
+    },
+  },
+  /*
    * `joe/primitives-audit.json` — PB-036 phase 4, and the same two-writer shape
    * as the names above, sharpened.
    *

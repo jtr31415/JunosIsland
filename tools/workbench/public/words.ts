@@ -7,8 +7,16 @@
  * guard exists to prevent. A bench that showed one word at a time would be
  * asking Joe the wrong question.
  */
+/**
+ * `id` is `${rung}/${word}` — `merge.mjs`'s merge key for this file, the
+ * `names-audit.json` convention (`natural/<speciesId>`) applied to a ledger
+ * keyed by rung and spelling. `wordsBench` itself never looks at it — the
+ * grouping is by `rung` alone — it exists so a save can PATCH one row rather
+ * than replace the whole file, which is what keeps a drafting batch and a
+ * verdict Joe just made from being able to erase one another.
+ */
 export interface WordRow {
-  word: string; rung: number
+  id: string; word: string; rung: number
   verdict: string; replacement: string; note: string
 }
 export interface WordGroup {
