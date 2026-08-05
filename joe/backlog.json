@@ -664,6 +664,20 @@
       "detail": "voice.ts:143 registers the autoplay unlock as { capture: true, once: true }, but the handler is `if (ctx && ctx.state === 'suspended') ctx.resume()` and `ctx` is null until the manifest load creates it. So a first tap that lands before the context exists — a slow connection, a cold cache — fires the listener against null, removes it forever, and Fred is silent for the rest of the session. The file's own comment says the unlock exists because \"the gesture cannot be assumed\"; this is the case it misses. Found while chasing PB-092, which turned out to be unrelated. Second half, and the reason that hunt took an hour: nothing warns when a sound is requested against a suspended context. One console line would have said it in ten seconds.",
       "state": "open",
       "run": ""
+    },
+    {
+      "id": "PB-094",
+      "title": "The slot-not-part paint fault is systemic, not a one-off — it has now hit four collections in a night",
+      "detail": "A `patch` such as `belly` splits the CELL OF THE SLOT, so every part painted from that slot reads the split, not just the hull that declared it. Tally from 5-6 Aug alone: animal-stoat shipped with cream ears and a cream tail; five of Near-threatened's twelve, including an emperor penguin whose flippers rendered white; TWELVE of Raptors' birds in one commit (8cf82a9, \"twelve birds were painting a tail or a wing out of the hull's split cell\"); and animal-snow-leopard. Every builder was warned in its brief and most were bitten anyway, which is the definition of a fault the tooling should catch rather than the prose. Wants a builder-side guard: refuse, or warn at build time, when a split slot paints a non-hull part. editor-own-colour.test.ts catches it only after the fact and only for species already on disk.",
+      "state": "open",
+      "run": ""
+    },
+    {
+      "id": "PB-095",
+      "title": "editor-own-colour aborts at the first offender, so N repaints cost N full-suite runs to find",
+      "detail": "The guard asserts inside a loop over every registered species, so it reports one name and stops. On 5-6 Aug it named animal-bald-eagle, then after that fix animal-snow-leopard, then presumably the next — each discovery costing a full suite run of roughly two minutes, serially, across four agents who each thought they were seeing their own bug and mostly were not. Collect every offender and fail once with the list. Same shape as PB-082's fix: the coverage does not change, only the packaging, and the report goes from one name to all of them.",
+      "state": "open",
+      "run": ""
     }
   ]
 }
