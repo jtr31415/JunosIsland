@@ -1071,12 +1071,12 @@ describe('the reading-words ledger', () => {
     expect(r.emitted).toBe(true)
 
     const out = readFileSync(rungWordsPath(), 'utf8')
-    expect(out).toContain("'sat'")
-    expect(out).toContain("'dog'")
+    expect(out).toContain('"sat"')
+    expect(out).toContain('"dog"')
     /* Unruled means invisible — neither the word nor a trace of the replaced
      * one it never became may reach the file the game actually deals from. */
-    expect(out).not.toContain("'pig'")
-    expect(out).not.toContain("'cog'")
+    expect(out).not.toContain('"pig"')
+    expect(out).not.toContain('"cog"')
   })
 
   it('did not widen the allowlist while adding itself to it', async () => {
@@ -1085,6 +1085,79 @@ describe('the reading-words ledger', () => {
     expect(existsSync(join(root, 'joe/words-audit'))).toBe(false)
   })
 })
+
+/*
+ * The emit button, and specifically the ONE THING the route test above cannot
+ * catch: it calls `/api/words/emit` with `post(...)`, a helper this suite
+ * wrote for itself, exercising a path the real page never takes. The button's
+ * own handler (`app.js`) called `api('/api/words/emit')` with no second
+ * argument; `api`'s own rule (`app.js:27-35`) is that no `opts` means a GET,
+ * and the route (`api.mjs:419`) matches `POST` only — so the button 404ed with
+ * a red toast and an unhandled rejection, and the only working path to emit
+ * approved words was a terminal command. This reads the exact call site the
+ * button uses and the exact method the route requires, so a regression back
+ * to a bare `api('/api/words/emit')` fails here even though the route itself
+ * still works fine in isolation.
+ *
+ * `app.js:523`'s `/api/export` button has the identical shape (`api(path)`
+ * with no opts, against a POST-only route) and is a real, pre-existing bug —
+ * but it is carded separately and NOT fixed here, so this check is scoped to
+ * the emit button on purpose rather than asserting generally over every
+ * `api()` call site in the file.
+ */
+describe('the emit button actually POSTs (it used to 404 silently)', () => {
+  const appJsPath = resolve(REPO, 'tools/workbench/public/app.js')
+  const apiMjsPath = resolve(REPO, 'tools/workbench/api.mjs')
+
+  it("the UI's call to /api/words/emit and the route's required method agree", () => {
+    const appJs = readFileSync(appJsPath, 'utf8')
+    const apiMjs = readFileSync(apiMjsPath, 'utf8')
+
+    const call = /\bapi\(\s*'\/api\/words\/emit'([^)]*)\)/.exec(appJs)
+    expect(call, "could not find the emit button's api() call in app.js").toBeTruthy()
+    /* The same rule `api()` applies to itself (app.js:27-35): nothing after
+     * the path is a GET; an object argument is a POST unless it names its own
+     * `method`. */
+    const argsAfterPath = call![1]!.trim()
+    const uiMethod = argsAfterPath === ''
+      ? 'GET'
+      : (/method:\s*'([A-Z]+)'/.exec(argsAfterPath)?.[1] ?? 'POST')
+
+    const route = /path === '\/api\/words\/emit'([^\n]*)/.exec(apiMjs)
+    expect(route, 'the /api/words/emit route moved or was renamed in api.mjs').toBeTruthy()
+    const requiredMethod = /req\.method === '([A-Z]+)'/.exec(route![1]!)?.[1]
+    expect(requiredMethod, 'the route no longer restricts by method').toBe('POST')
+
+    expect(uiMethod).toBe(requiredMethod)
+  })
+
+  it('actually works end to end, driven by the exact call the button makes', async () => {
+    /* Belt and braces: the assertion above is a source-level guarantee; this
+     * drives a real request through `api()`'s own logic (copied, not
+     * reimplemented — the point is to behave exactly as the button does) so a
+     * mismatch between the two would itself be caught by a red toast here. */
+    mkdirSync(dirname(rungWordsPathFor(root)), { recursive: true })
+    writeFileSync(join(root, 'joe/words-audit.json'),
+      JSON.stringify({ schemaVersion: 1, words: [{ id: '3/sun', word: 'sun', rung: 3, verdict: 'yes', replacement: '', note: '' }] }, null, 2) + '\n')
+
+    const uiApi = async (path: string, opts?: { method?: string; body?: unknown }) => {
+      const res = await fetch(base + path, opts && {
+        method: opts.method ?? 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(opts.body ?? {}),
+      })
+      return res.json() as Promise<any>
+    }
+
+    const r = await uiApi('/api/words/emit', {})
+    expect(r.emitted).toBe(true)
+    expect(readFileSync(rungWordsPathFor(root), 'utf8')).toContain('"sun"')
+  })
+})
+
+function rungWordsPathFor(r: string): string {
+  return join(r, 'src/core/rung-words.ts')
+}
 
 describe('the workbench cannot be talked out of the repo', () => {
   it('refuses a write to a file that is not on the list', async () => {

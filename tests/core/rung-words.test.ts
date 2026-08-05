@@ -20,25 +20,25 @@ describe('the words emitter', () => {
       row('pig', 3, ''),
       row('cog', 3, 'no'),
     ] })
-    expect(out).toContain("'sun'")
-    expect(out, 'an unvetted word must be invisible').not.toContain("'pig'")
-    expect(out, 'a rejected word must be invisible').not.toContain("'cog'")
+    expect(out).toContain('"sun"')
+    expect(out, 'an unvetted word must be invisible').not.toContain('"pig"')
+    expect(out, 'a rejected word must be invisible').not.toContain('"cog"')
   })
 
   it('uses the replacement when one is given', () => {
     const out = emitWords({ words: [
       { word: 'cog', rung: 3, verdict: 'replace', replacement: 'dog', note: '' },
     ] })
-    expect(out).toContain("'dog'")
-    expect(out).not.toContain("'cog'")
+    expect(out).toContain('"dog"')
+    expect(out).not.toContain('"cog"')
   })
 
   it('groups by rung id and keeps ledger order inside a rung', () => {
     const out = emitWords({ words: [
       row('sun', 3, 'yes'), row('fish', 4, 'yes'), row('cat', 3, 'yes'),
     ] })
-    expect(out).toMatch(/3: \['sun', 'cat'\]/)
-    expect(out).toMatch(/4: \['fish'\]/)
+    expect(out).toMatch(/3: \["sun", "cat"\]/)
+    expect(out).toMatch(/4: \["fish"\]/)
   })
 
   it('emits an empty rung rather than omitting it', () => {
@@ -49,5 +49,38 @@ describe('the words emitter', () => {
   it('ends every line with LF and never CRLF', () => {
     const out = emitWords({ words: [row('sun', 3, 'yes')] })
     expect(out).not.toContain('\r')
+  })
+
+  /*
+   * emit.mjs:32 used to build the array with a hand-rolled `'${w}'` template —
+   * fine for every word audited so far, and silently broken the moment a
+   * replacement carries an apostrophe ("don't", "can't", "I'm"), all entirely
+   * plausible at the higher rungs. The unescaped `'` closes the string early,
+   * so `src/core/rung-words.ts` — a file Joe is told never to edit — comes out
+   * syntactically invalid and the whole app stops building, from a legitimate
+   * approval in his own review box. `JSON.stringify` is the fix; this proves
+   * the OUTPUT actually parses as TypeScript, not just that the word survived
+   * as a substring.
+   */
+  it('escapes an apostrophe so the emitted module stays valid TypeScript', () => {
+    const out = emitWords({ words: [row("don't", 3, 'yes')] })
+    expect(out).toContain(JSON.stringify("don't"))
+
+    /*
+     * `typescript@7` here ships only the native `tsc` CLI (no programmatic
+     * `transpileModule`), so this isolates the one line that is TypeScript
+     * rather than plain JS — the type annotation on the export, which the
+     * apostrophe bug never touched — and parses the rest as a function body.
+     * An unescaped `'` inside the word breaks that parse exactly as it would
+     * break `tsc` on the real file: a SyntaxError building the function, not
+     * a value that happens to look wrong.
+     */
+    const asJs = out.replace(
+      'export const RUNG_WORDS: Record<number, readonly string[]> =',
+      'return',
+    )
+    let rungWords: Record<number, readonly string[]> = {}
+    expect(() => { rungWords = new Function(asJs)() }).not.toThrow()
+    expect(rungWords[3]).toContain("don't")
   })
 })

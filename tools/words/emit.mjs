@@ -28,8 +28,16 @@ export function emitWords(ledger) {
     const w = wordOf(r)
     if (w) rungs.get(rung).push(w)
   }
+  /*
+   * `JSON.stringify(w)`, not a hand-rolled `'${w}'` template — a replacement
+   * containing an apostrophe ("don't", "can't", "I'm") is entirely plausible
+   * at the higher rungs, and the old template closed the string early on it,
+   * producing a `src/core/rung-words.ts` that failed to even parse. This
+   * escapes whatever the word actually contains, the way any code emitting a
+   * string literal should.
+   */
   const body = [...rungs.keys()].sort((a, b) => a - b)
-    .map(k => `  ${k}: [${rungs.get(k).map(w => `'${w}'`).join(', ')}],`)
+    .map(k => `  ${k}: [${rungs.get(k).map(w => JSON.stringify(w)).join(', ')}],`)
     .join('\n')
   return [
     '/**',

@@ -195,4 +195,22 @@ describe('main.ts only draws a fresh reading stage on a fresh deal', () => {
     expect(code).toMatch(/harness\.dealt\(dealtRead\.path, dealtRead\.recordStage\)/)
     expect(code).not.toMatch(/harness\.dealt\(dealtRead\.path, dealtRead\.stage\)/)
   })
+
+  /*
+   * `drawRung` and `rungIndex` reaching the generator is unpinned otherwise.
+   * Delete either from the deps object passed to `dealReading` here and the
+   * whole suite still passes: `RUNG_WORDS` is empty (nothing is approved), so
+   * `read.ts`'s rung branch never fires in any test that goes through
+   * `main.ts`, and the golden test calls `generateRead` directly, bypassing
+   * this wiring entirely. Neither gap notices a caller that silently drops the
+   * rung words or the twin-density dial. Same style as the assertions above:
+   * read the source, pin the exact call.
+   */
+  it('passes drawRung through to the read generator, not just level', () => {
+    expect(code).toMatch(/level: dealtRead\.stage, drawRung,/)
+  })
+
+  it('passes rungIndex through to the read generator', () => {
+    expect(code).toMatch(/rungIndex: STAGES\.reading\.indexOf\(dealtRead\.stage\),/)
+  })
 })

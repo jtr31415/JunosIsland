@@ -372,7 +372,10 @@ async function drawWords() {
 
   const emit = el('button', {}, 'Regenerate src/core/rung-words.ts')
   emit.onclick = async () => {
-    const r = await api('/api/words/emit')
+    /* `{}` and not a bare call: `api()` (line 27-35 above) sends a GET when it
+     * gets no `opts`, and the route at `api.mjs:419` matches POST only — a
+     * bare call 404s with nothing to click but "try again from a terminal". */
+    const r = await api('/api/words/emit', {})
     say(r.emitted ? 'wrote src/core/rung-words.ts' : 'emit failed')
   }
   root.append(el('div', { className: 'row' }, [
