@@ -276,9 +276,21 @@ export const BIRDS_SPECIES: readonly Species[] = [
    * Kenney's own upper/lower cut gives it two tones instead. */
   defineSpecies('animal-kingfisher', 'bespoke'),
 
+  /* PLACEHOLDER. Buildable in mechanism — animal-goose.ts's neck idiom is
+   * exactly this bird — and it IS that goose, which is the open question. */
+  defineSpecies('animal-swan', 'bespoke'),
+
   /* The room animal-goose left it on purpose: the goose is big and long-necked
    * so that this bird can be small. The green head is unsayable and flagged. */
   defineSpecies('animal-duck', 'bespoke'),
+
+  /* PLACEHOLDER, and the cheapest of the seven to rule on: the bill is
+   * cone-06 stretched 3x, which is a ruling rather than a shape. */
+  defineSpecies('animal-toucan', 'bespoke'),
+
+  /* PLACEHOLDER, and the clearest commission: no curve exists in the bank at
+   * all, and rule 6 makes a leg pair one mirrored mesh. */
+  defineSpecies('animal-flamingo', 'bespoke'),
 
   /* The roundest and plainest — the forward band deliberately UNSPENT, which is
    * what a wren is — and the only cocked tail in the project. */
@@ -287,4 +299,20 @@ export const BIRDS_SPECIES: readonly Species[] = [
   /* One colour and one contrast: black everywhere, with the yellow bill and
    * eye-ring that are the whole of a blackbird. */
   defineSpecies('animal-blackbird', 'bespoke'),
+
+  /* PLACEHOLDER. Its bill is a tiger's TAIL stood on end — the goose's own
+   * move applied to a beak — and §3.2 says look before accepting it. */
+  defineSpecies('animal-heron', 'bespoke'),
+
+  /* PLACEHOLDER. Every one of the 129 shapes is solid and convex, so a pouch
+   * is a commission and not a search. */
+  defineSpecies('animal-pelican', 'bespoke'),
+
+  /* PLACEHOLDER, and the bird to judge the stood-on-end bill on: a stork's is
+   * blunt where a heron's is fine, and wedge-18 is thick for its length. */
+  defineSpecies('animal-stork', 'bespoke'),
+
+  /* PLACEHOLDER, and only the TRAIN is missing — a second box-38 is
+   * geometrically impossible, 0.625879 across against a 0.625000 plate. */
+  defineSpecies('animal-peacock', 'bespoke'),
 ]
