@@ -59,6 +59,35 @@ export default defineConfig({
     __BUILD_STAMP__: JSON.stringify('workbench'),
   },
   server: { port: 4173, host: '127.0.0.1', open: false, strictPort: true },
+  /*
+   * ALL THREE PAGES ARE SCANNED AT STARTUP, and the reason is a 504 Joe hit on
+   * 6 August: `504 (Outdated Optimize Dep)` on
+   * `three_examples_jsm_controls_TransformControls__js?v=…`.
+   *
+   * The workbench is a MULTI-PAGE app — `index.html`, `viewer.html` and
+   * `editor/index.html` — and Vite only pre-bundles what it has seen. Open the
+   * queue page first and it optimises that page's deps; open the editor after
+   * and it DISCOVERS `TransformControls`, re-optimises, and stamps a new `?v=`
+   * hash. Every module the open tab already fetched still holds the old hash,
+   * and those URLs are gone. The page 504s on a dependency that is present and
+   * fine, which is why it reads as a server fault rather than a cache one.
+   *
+   * `entries` makes Vite crawl all three at boot, so the optimise happens once
+   * before anything is served. `include` names the three example modules
+   * outright: they are the only deps reached from a single page each, so they
+   * are the only ones that can be discovered late. A reload clears the symptom;
+   * this stops it recurring every time the editor is opened in a fresh session.
+   *
+   * DEV ONLY, like the rest of this file — never built, never in CI.
+   */
+  optimizeDeps: {
+    entries: ['index.html', 'viewer.html', 'editor/index.html'],
+    include: [
+      'three/examples/jsm/controls/OrbitControls.js',
+      'three/examples/jsm/controls/TransformControls.js',
+      'three/examples/jsm/loaders/GLTFLoader.js',
+    ],
+  },
   plugins: [
     {
       name: 'joe-workbench-api',
