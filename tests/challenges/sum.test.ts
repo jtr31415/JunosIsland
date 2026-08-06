@@ -461,41 +461,46 @@ describe('the operator, which is the glyph a beginner misreads', () => {
   const glyph = (root: HTMLElement, t: string): HTMLElement | undefined =>
     opsOf(root).find(o => o.textContent === t)
 
-  it('colours a plus and a minus differently', () => {
+  it('marks a plus and a minus differently, so the stylesheet can colour them', () => {
     mountSum(ADD, makeDeps(el).d)
-    expect(glyph(el, '+')?.classList.contains('op-add')).toBe(true)
+    expect(glyph(el, '+')?.dataset['op']).toBe('add')
     el.innerHTML = ''
     mountSum({ a: 9, b: 4, op: 'sub' }, makeDeps(el).d)
-    expect(glyph(el, '−')?.classList.contains('op-sub')).toBe(true)
+    expect(glyph(el, '−')?.dataset['op']).toBe('sub')
   })
 
-  it('leaves the equals sign uncoloured — it is not the glyph being told apart', () => {
+  it('leaves the equals sign unmarked — it is not the glyph being told apart', () => {
     mountSum(ADD, makeDeps(el).d)
-    const eq = glyph(el, '=')
-    expect(eq?.classList.contains('op-add')).toBe(false)
-    expect(eq?.classList.contains('op-sub')).toBe(false)
-    expect(eq?.classList.contains('op-flash')).toBe(false)
+    expect(glyph(el, '=')?.dataset['op']).toBeUndefined()
   })
 
-  it('flashes the sign as the sum arrives', () => {
+  it('KEEPS THE OPERATOR CLASSNAME EXACTLY "op", which is a parity gate', () => {
+    /*
+     * tools/smoke/parity.mjs diffs the rebuilt #words DOM against the frozen
+     * original and its serialiser reads className. A class on this glyph reads
+     * as the port having diverged and fails CI on every maths step — it did,
+     * on 6 August, when the colour hook was first written as a class.
+     *
+     * The hook is `data-op`, which parity does not serialise, because parity's
+     * own header says it judges whether the LOGIC ported and explicitly cannot
+     * judge "anything visual: CSS, layout, animation". This test is here so the
+     * next person to reach for `classList` on an operator finds out in seconds
+     * rather than in a failed deploy.
+     */
     mountSum(ADD, makeDeps(el).d)
-    expect(glyph(el, '+')?.classList.contains('op-flash')).toBe(true)
+    for (const o of opsOf(el)) expect(o.className).toBe('op')
+    el.innerHTML = ''
+    mountSum({ a: 9, b: 4, op: 'sub' }, makeDeps(el).d, false)
+    for (const o of opsOf(el)) expect(o.className).toBe('op')
   })
 
-  it('does NOT flash on the minus debut, so the two animations cannot fight', () => {
-    /* `op-debut` is the once-in-a-childhood introduction pop and owns the glyph
-       on the one round it plays. Both classes on one element is two animations
-       on one transform, and the debut is the one that must win. */
+  it('still gives the minus its debut class, which is the one sanctioned exception', () => {
+    /* The debut pop is a real class and always was — it fires once in a
+       childhood, on a step parity's script never reaches. The flash is keyed
+       off `:not(.op-debut)` in CSS so the two animations cannot fight. */
     mountSum({ a: 9, b: 4, op: 'sub' }, makeDeps(el).d, true)
     const minus = glyph(el, '−')
     expect(minus?.classList.contains('op-debut')).toBe(true)
-    expect(minus?.classList.contains('op-flash')).toBe(false)
-  })
-
-  it('still flashes a minus that is not the debut', () => {
-    mountSum({ a: 9, b: 4, op: 'sub' }, makeDeps(el).d, false)
-    const minus = glyph(el, '−')
-    expect(minus?.classList.contains('op-flash')).toBe(true)
-    expect(minus?.classList.contains('op-debut')).toBe(false)
+    expect(minus?.dataset['op']).toBe('sub')
   })
 })

@@ -84,12 +84,12 @@
      told apart. */
   .op{color:#fff;font-weight:700;font-size:calc(var(--ws) * 1.05);
     text-shadow:0 2px 8px rgba(0,0,20,.55);pointer-events:none}
-  .op.op-add{color:#8ce063}
-  .op.op-sub{color:#ff9d8e}
-  .op.op-flash{animation:opflash .42s cubic-bezier(.34,1.6,.64,1) both}
+  .op[data-op="add"]{color:#8ce063}
+  .op[data-op="sub"]{color:#ff9d8e}
+  .op[data-op]:not(.op-debut){animation:opflash .42s cubic-bezier(.34,1.6,.64,1) both}
   @keyframes opflash{from{scale:1;filter:brightness(1)}
     40%{scale:1.28;filter:brightness(1.45)}to{scale:1;filter:brightness(1)}}
-  @media (prefers-reduced-motion: reduce){.op.op-flash{animation:none}}
+  @media (prefers-reduced-motion: reduce){.op[data-op]:not(.op-debut){animation:none}}
   .helper{pointer-events:auto;cursor:pointer}
   .qchip{width:9.5vmin;height:9.5vmin;min-width:36px;min-height:36px;border-radius:50%;
     background:rgba(255,255,255,.92);color:#7a3fb8;font-weight:700;

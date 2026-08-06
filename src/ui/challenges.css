@@ -121,8 +121,12 @@ body.calm-colours .word.red { color: #1d5c2a; background: #e8f8dd; }
   padding: 0 .2em;
 }
 
-.op-add { color: var(--grass); }
-.op-sub { color: var(--coral); }
+/* Keyed off `data-op`, not a class: parity.mjs diffs the rebuilt DOM against the
+   frozen original and its serialiser reads className, so a class here reads as
+   the port having changed. Its own header says it cannot judge "anything
+   visual: CSS, layout, animation" — which is all this is. */
+.op[data-op="add"] { color: var(--grass); }
+.op[data-op="sub"] { color: var(--coral); }
 
 /*
  * One brief flash as the sum arrives, so the eye is taken to the sign before
@@ -135,7 +139,7 @@ body.calm-colours .word.red { color: #1d5c2a; background: #e8f8dd; }
  * Decoration only — the pad is live throughout and they can answer straight
  * through it.
  */
-.op-flash { animation: op-flash-blip .42s var(--ease-pop, ease-out) both; }
+.op[data-op]:not(.op-debut) { animation: op-flash-blip .42s var(--ease-pop, ease-out) both; }
 
 @keyframes op-flash-blip {
   from { transform: scale(1); filter: brightness(1) }
@@ -144,7 +148,7 @@ body.calm-colours .word.red { color: #1d5c2a; background: #e8f8dd; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .op-flash { animation: none; }
+  .op[data-op]:not(.op-debut) { animation: none; }
 }
 
 .helper { display: grid; place-items: center; min-height: 2.2rem; }

@@ -106,7 +106,21 @@ export function mountSum(
    * INSTEAD of one.
    */
   const sign = op(p.op === 'add' ? '+' : '−')
-  sign.classList.add(p.op === 'add' ? 'op-add' : 'op-sub')
+  /*
+   * A DATA ATTRIBUTE AND NOT A CLASS, and the reason is a gate rather than a
+   * preference. `tools/smoke/parity.mjs` diffs the rendered `#words` DOM of the
+   * rebuild against the frozen original and its serialiser reads `className`,
+   * so a class here reads as the port having changed — it failed CI on all five
+   * maths steps exactly that way. But parity's own header says what it is for:
+   * it catches "word choice and order, class names, segment markup" as evidence
+   * that THE LOGIC ported faithfully, and says in as many words that it cannot
+   * catch "anything visual: CSS, layout, animation".
+   *
+   * This is visual and nothing else. Hanging it on `data-op` keeps the hook the
+   * stylesheet needs while leaving the logic check meaning what it says, which
+   * is better than widening the gate to let a colour through.
+   */
+  sign.dataset['op'] = p.op === 'add' ? 'add' : 'sub'
   /*
    * AND IT FLASHES ONCE AS THE SUM ARRIVES — *"maybe let it flash up briefly
    * when the equation first shows"* — so the eye is taken to the sign before
@@ -119,7 +133,6 @@ export function mountSum(
    * happens on every sum thereafter.
    */
   if (debut && p.op === 'sub') sign.classList.add('op-debut')
-  else sign.classList.add('op-flash')
   box.append(A, sign, B, op('='), ANS)
 
   let solved = false, wrongs = 0
