@@ -90,8 +90,31 @@ export function dealReading(
   s: ReadingStores, d: ReadDeps, kind: PageKind, held: boolean,
 ): ReadingCard {
   if (kind === 'build') {
-    const item = deal(s.build, held,
-      () => generateBuild(s.build, { rng: d.rng, drawGreen: d.drawGreen, level: d.level }))
+    /*
+     * THE BUILD PAGE FOLLOWS ITS RUNG (PB-088). Until 6 August this passed
+     * `{ rng, drawGreen, level }` and nothing else, so `buildStageFor` computed
+     * a stage no one consumed: she spelt a `GREEN` word whatever she had climbed
+     * to, and `FINGER_SPACE` and the letters-only tray had no caller at all.
+     *
+     * `d.level` is already the BUILD stage here — the harness maps it one rung
+     * down from reading before this is called, because spelling lags reading and
+     * a child asked to spell `bike` the day she first reads it stops playing.
+     *
+     * GRANULARITY IS THE LAST RUNG'S JOB. Joe: *"eventually drop buttons with
+     * digraphs in favour of just letters and she builds the digraphs herself,
+     * but not until we are a much higher rung."* Position 9 (0-based) is the top
+     * of the ladder, two-syllable words; the spec records that as a default
+     * chosen for want of a measurement, to be moved once he has watched a real
+     * page. Moving it is this one number and it moves no child.
+     */
+    const atTop = STAGES.reading.indexOf(d.level) >= STAGES.reading.length - 1
+    const item = deal(s.build, held, () => generateBuild(s.build, {
+      rng: d.rng,
+      drawGreen: d.drawGreen,
+      level: d.level,
+      drawRung: d.drawRung,
+      granularity: atTop ? 'letters' : 'graphemes',
+    }))
     return { kind: 'build', item }
   }
   /*
