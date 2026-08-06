@@ -219,6 +219,20 @@
  * >>> failure this table exists to prevent. All twelve are Joe's to overrule in
  * >>> the editor and none of them alters a frame until PB-069.
  *
+ * >>> NIGHT TIME FINALLY GOT ITS LAST THREE ON 6 AUGUST, and exactly ONE of them
+ * >>> is here. The BAT is `air` and is not a judgement at all — it is the only
+ * >>> mammal in the album that genuinely flies, and it joins the raptors, the
+ * >>> songbirds and the pterodactyl. The other two are `land`, which is
+ * >>> `DEFAULT_LOCOMOTION`, so neither has a row and neither changes a frame.
+ * >>> **The SUGAR GLIDER is the one worth arguing and it says `land` by
+ * >>> omission**: it lives in the canopy, which is what `air` puts a pet in — but
+ * >>> `air` means HOVERING at `TREE_HEIGHT`, and a glider does not hover, it
+ * >>> falls forward from one trunk and climbs the next. That is the ostrich's,
+ * >>> the kakapo's and the ptarmigan's reading taken an eighth time, on the same
+ * >>> ground each time: the failure this table exists to prevent is a thing that
+ * >>> cannot fly hanging in the air. The SCORPION is `land` and nobody will
+ * >>> argue. Both are Joe's to overrule in the editor, which costs one line each.
+ *
  * ## Why a lookup table and not a field on the collection record
  *
  * Exactly the reasoning `define.ts` gives for `assembly`: a value looked up by
@@ -338,6 +352,7 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-bald-eagle': 'air',
   'animal-bandicoot': 'land',
   'animal-barn-owl': 'air',
+  'animal-bat': 'air',
   'animal-bear': 'land',
   'animal-bee': 'air',
   'animal-beetle': 'land',

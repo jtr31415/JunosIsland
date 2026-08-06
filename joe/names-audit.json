@@ -378,6 +378,42 @@
       "note": ""
     },
     {
+      "id": "natural/animal-bat",
+      "setId": "natural",
+      "speciesId": "animal-bat",
+      "species": "Bat",
+      "collection": "night-time",
+      "band": "medium",
+      "name": "Nootoom",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
+    },
+    {
+      "id": "natural/animal-sugar-glider",
+      "setId": "natural",
+      "speciesId": "animal-sugar-glider",
+      "species": "Sugar Glider",
+      "collection": "night-time",
+      "band": "medium",
+      "name": "Nortcho",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
+    },
+    {
+      "id": "natural/animal-scorpion",
+      "setId": "natural",
+      "speciesId": "animal-scorpion",
+      "species": "Scorpion",
+      "collection": "night-time",
+      "band": "medium",
+      "name": "Mootim",
+      "verdict": "",
+      "replacement": "",
+      "note": ""
+    },
+    {
       "id": "natural/animal-hamster",
       "setId": "natural",
       "speciesId": "animal-hamster",

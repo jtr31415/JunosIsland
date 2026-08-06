@@ -124,20 +124,25 @@ describe('the species registry', () => {
     // twelve LEGENDARY species whose files are on the register. The same
     // shared-fixture caveat: it is what the tree ACTUALLY held when the
     // DINOSAURS builder ran the suite, with a sibling still landing.
-    expect(REGISTRY.size).toBe(317)
+    // 320 SINCE 6 AUG, and the +3 is NIGHT TIME's last three — the bat, the
+    // sugar glider and the scorpion. They were the last three unbuilt animals in
+    // the roster, so the registry and the roster are the same size for the first
+    // time and the shared-fixture caveat above no longer has anything to move
+    // it: there is no sibling still landing.
+    expect(REGISTRY.size).toBe(320)
     expect(shippedIn('base')).toHaveLength(24)
     expect(shippedIn('garden')).toHaveLength(14)      // COMPLETE — the slow worm is assembled
     expect(shippedIn('home-pets')).toHaveLength(16)   // COMPLETE — all 16 hand-assembled (PB-073)
     expect(shippedIn('woodland')).toHaveLength(16)    // COMPLETE — all 16 hand-assembled
     expect(shippedIn('africa')).toHaveLength(16)      // COMPLETE — not this agent's; see the note below
     expect(shippedIn('farm')).toHaveLength(16)        // COMPLETE — all 16 hand-assembled (PB-074)
-    expect(shippedIn('night-time')).toHaveLength(13)  // 16 rostered; bat, sugar glider, scorpion
+    expect(shippedIn('night-time')).toHaveLength(16)  // COMPLETE since 6 Aug — see the note below
     expect(shippedIn('birds')).toHaveLength(18)       // COMPLETE — eleven built, seven PLACEHOLDERS
     expect(shippedIn('ocean')).toHaveLength(16)       // COMPLETE — not this agent's; see the note below
     expect(shippedIn('jungle')).toHaveLength(16)      // COMPLETE — 15 built, animal-tarantula a PLACEHOLDER
   })
 
-  it('leaves 236 species rostered but unshipped, on purpose', () => {
+  it('leaves NOTHING rostered but unshipped, which is new since 6 Aug', () => {
     // The gap is the point. Nobody should "finish" the registry — a species
     // without a built kit renders as nothing, which is worse than absent.
     //
@@ -188,10 +193,23 @@ describe('the species registry', () => {
     // in the same tree. Three rostered species now have no record at all:
     // `animal-bat`, `animal-sugar-glider` and `animal-scorpion`, all Night
     // Time's, all held up by a membrane or a pincer the bank has never held.
-    expect(rostered.filter(id => !speciesRecord(id))).toHaveLength(3)
+    //
+    // >>> ZERO SINCE 6 AUG. Those three were built and they were the last three,
+    // >>> so this assertion is now the strongest form of itself: **every species
+    // >>> the roster declares has a record.** Two of the three were unblocked by
+    // >>> a bank that had moved under the ruling — `wing` was baked on 4 August
+    // >>> and nobody carried the correction back — and the third, the scorpion,
+    // >>> ships as a PLACEHOLDER on Joe's 5 August ruling that an entry he can
+    // >>> edit beats an absence he cannot. The `claw` role is still unbaked and
+    // >>> `species-night-time.test.ts` still measures that.
+    // >>>
+    // >>> WHAT MAKES THIS GO RED AGAIN is a species being added to `roster.ts`,
+    // >>> which is the only remaining way to open a gap. That is a real event
+    // >>> worth failing on, so the assertion is kept at zero rather than deleted.
+    expect(rostered.filter(id => !speciesRecord(id))).toHaveLength(0)
   })
 
-  it('has SEVEN complete collections, and birds is complete WITH PLACEHOLDERS in it', () => {
+  it('has EVERY collection complete, and several are complete WITH PLACEHOLDERS in them', () => {
     // This test used to assert ZERO, and said in its own comment: "if this test
     // ever goes red, a second kit landed and that question became live." That
     // is exactly what happened, so it is inverted rather than deleted — the
@@ -229,6 +247,15 @@ describe('the species registry', () => {
     // makes JT-030 (may a collection unlock with a hole in it?) live again in the
     // hardest form: for Home Pets the answer could be dodged by building the
     // last two animals, and here it cannot.
+    // >>> THAT PARAGRAPH WAS WRONG, AND IT WAS WRONG IN THE WAY §14 IS ALWAYS
+    // >>> WRONG. "The pack does not contain it" was true of the bank on 2 August
+    // >>> and stopped being true on 4 August, when `wing` was baked for the
+    // >>> budgie and six shapes appeared where there had been zero — and nobody
+    // >>> came back, because this sentence had already closed the question. Night
+    // >>> Time completed on 6 August. It is kept here rather than deleted because
+    // >>> the failure mode is the point: a claim about what the bank does not
+    // >>> hold expires the moment a role is baked, and this is the fourth
+    // >>> collection to prove it after Ocean, Critters and Dinosaurs.
     // AND THEN THERE WAS ONE. Later on 2 Aug Joe retired the kit route outright
     // and had the 59 kit-built species deleted, so farm and woodland lost all
     // sixteen each and home-pets lost fourteen. Everything above is kept rather
@@ -324,12 +351,26 @@ describe('the species registry', () => {
     // spine) are answered by one bank record, `blade-05`, and
     // `collections/dinosaurs.ts` carries the measurement. Shared fixture, so
     // this is what the tree actually held.
+    //
+    // AND NOW THERE ARE TWENTY, WHICH IS ALL OF THEM. NIGHT TIME closed on
+    // 6 August with its last three — `animal-bat`, `animal-sugar-glider` and
+    // `animal-scorpion` — and they were the last three unbuilt animals anywhere
+    // in the roster, so this list is now every collection except `base` and
+    // there is nothing left for it to grow by. Read it against the paragraph
+    // above about what "complete" means here: it has always meant every member
+    // has a RECORD, and Night Time is the collection that spent the longest
+    // being the counter-example. Two of its three were unblocked by a bank that
+    // had moved on 4 August without anybody carrying the correction back; the
+    // third is a PLACEHOLDER on the Birds terms above, because the `claw` role
+    // is still unbaked. **Nineteen of the twenty remain UNSIGNED**, which is the
+    // distinction this test has been careful about since Home Pets: a record
+    // exists, Joe has not looked at it, and he signs off in the editor.
     expect([...complete].sort())
       .toEqual([
         'africa', 'birds', 'critically-endangered', 'critters', 'dinosaurs',
         'endangered', 'farm', 'garden', 'home-pets', 'ice', 'jungle',
-        'legendary', 'near-threatened', 'ocean', 'outback', 'prehistoric',
-        'raptors', 'vulnerable', 'woodland',
+        'legendary', 'near-threatened', 'night-time', 'ocean', 'outback',
+        'prehistoric', 'raptors', 'vulnerable', 'woodland',
       ])
   })
 

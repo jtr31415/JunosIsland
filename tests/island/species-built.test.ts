@@ -67,21 +67,32 @@ describe('isBuilt: has anybody actually made this animal', () => {
     }
   })
 
-  it('says no to a species the roster lists and nobody has built', () => {
+  it('has no rostered species left without a record — and would still say no to one', () => {
     /*
-     * DERIVED, not asserted from memory: any rostered id with no registry record
-     * at all. Night Time's three are the live examples — `animal-bat` and
-     * `animal-sugar-glider` want a membrane, `animal-scorpion` a pincer, and the
-     * `wing`, `horn` and `claw` roles occur zero times in the parts bank — so
-     * they are named here as a check on the derivation rather than as its basis.
+     * THIS TEST IS INVERTED SINCE 6 AUGUST AND IT IS THE SAME TEST.
+     *
+     * It used to assert that at least one rostered id had no registry record,
+     * and named Night Time's three as the live examples: `animal-bat` and
+     * `animal-sugar-glider` wanting a membrane, `animal-scorpion` a pincer.
+     * Those three were built, and they were the last three anywhere in the
+     * roster, so the population this test was written over is now empty.
+     *
+     * An empty population makes the old `for` loop vacuous, so the assertion is
+     * moved rather than deleted: the derivation stays (nothing is hard-coded),
+     * the count is asserted at ZERO — which is a real claim that a roster
+     * addition reopens — and the three are named again from the other side, so
+     * the file still records which species this test was about. The `isBuilt`
+     * clause it was guarding is exercised by the test below it, which asks about
+     * a species the roster has never heard of.
      */
     const recordless = ROSTER.filter(id => speciesRecord(id) === undefined)
-    expect(recordless.length).toBeGreaterThan(0)
+    expect(recordless).toEqual([])
     for (const id of recordless) expect(isBuilt(id), id).toBe(false)
 
-    expect(recordless).toContain('animal-bat')
-    expect(recordless).toContain('animal-sugar-glider')
-    expect(recordless).toContain('animal-scorpion')
+    for (const id of ['animal-bat', 'animal-sugar-glider', 'animal-scorpion']) {
+      expect(speciesRecord(id), `${id} lost its record`).toBeDefined()
+      expect(isBuilt(id), id).toBe(true)
+    }
   })
 
   it('says no to a species that is not in the roster at all', () => {
@@ -238,8 +249,16 @@ describe('WHAT THE ALBUM SHOWS TODAY, collection by collection', () => {
     // >>> Set to what the tree ACTUALLY held when the DINOSAURS builder ran,
     // >>> with a sibling still landing, which is the only honest thing a shared
     // >>> count can be. Same reading as above: modelled is not released.
+    // >>> 320 SINCE 6 AUGUST, and the +3 is NIGHT TIME's last three — the bat,
+    // >>> the sugar glider and the scorpion, which were the last three unbuilt
+    // >>> animals in the whole roster. **Built and rostered are now the same
+    // >>> number**, which has never been true before and is worth noticing here
+    // >>> rather than in a handoff: this assertion and the one above it are the
+    // >>> same 320 for the first time, and the next thing that moves either is a
+    // >>> collection being added to the roster. Nothing is RELEASED by it — the
+    // >>> table above is unchanged, because modelled is still not pushed.
     expect(ROSTER).toHaveLength(320)
-    expect(ROSTER.filter(isBuilt)).toHaveLength(317)
+    expect(ROSTER.filter(isBuilt)).toHaveLength(320)
   })
 
   it('has exactly three collections with any frame at all', () => {
@@ -266,7 +285,7 @@ describe('the tripwire: isBuilt cannot drift from the ability to draw', () => {
      * declaring a kit without writing it fails here instead of shipping.
      */
     const built = ROSTER.filter(isBuilt)
-    expect(built).toHaveLength(317)   // moves with the parallel collections; see above
+    expect(built).toHaveLength(320)   // the whole roster is modelled now; see above
 
     for (const id of built) {
       const record = speciesRecord(id)

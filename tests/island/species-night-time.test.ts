@@ -1,12 +1,13 @@
 /**
- * Night Time — the collection, as opposed to its thirteen animals.
+ * Night Time — the collection, as opposed to its sixteen animals.
  *
  * Each species has its own `assembly-<id>.test.ts` carrying the numbers only it
  * can defend, plus the shared harness in `assembly-assert.ts`. **This file is
  * for the claims that are only true of the SET**, and there are four kinds:
  *
- *   1. the collection is exactly the roster minus the three it cannot build,
- *      and the three absences are a measurement rather than a to-do list;
+ *   1. the collection is exactly the roster, all sixteen of it since 6 August
+ *      2026 — and the shapes the last three were once blocked on are still
+ *      measured rather than remembered, in both directions;
  *   2. **nothing here goes through a kit** — Joe's 2 August ruling, asserted
  *      rather than assumed, because this is the first collection built that way
  *      and the thing most likely to be quietly undone is a `build` reappearing;
@@ -30,30 +31,40 @@ import { PARTS_BANK, type PartRole } from '../../src/island/species/parts/bank.g
 import { COLLECTIONS, SPECIES_NAMES } from '../../src/island/species/roster'
 import type { Species } from '../../src/island/species/types'
 
-/** The thirteen that ship, in the roster's own order for `night-time`. */
+/**
+ * All SIXTEEN, in the roster's own order for `night-time`.
+ *
+ * It was thirteen until 6 August 2026, when `animal-bat`, `animal-sugar-glider`
+ * and `animal-scorpion` were built — the last three unbuilt animals anywhere in
+ * the roster. The `NOT_BUILT` table that used to sit under this one is gone, and
+ * `LAST_THREE` below is what replaced it: the same three ids, still carrying the
+ * shape each one wanted, but asserted PRESENT rather than absent.
+ */
 const BUILT = [
-  'animal-raccoon', 'animal-wolf', 'animal-firefly', 'animal-opossum',
-  'animal-nightjar', 'animal-tarsier', 'animal-bushbaby', 'animal-fennec-fox',
-  'animal-civet', 'animal-aye-aye', 'animal-kiwi', 'animal-kinkajou',
-  'animal-glow-worm',
+  'animal-bat', 'animal-raccoon', 'animal-wolf', 'animal-firefly',
+  'animal-opossum', 'animal-sugar-glider', 'animal-nightjar', 'animal-tarsier',
+  'animal-bushbaby', 'animal-scorpion', 'animal-fennec-fox', 'animal-civet',
+  'animal-aye-aye', 'animal-kiwi', 'animal-kinkajou', 'animal-glow-worm',
 ]
 
 /**
- * The three the PACK cannot express, with the exact shape each one needed.
+ * The three that were held out, and what each of them actually wears now.
  *
- * Data rather than prose in a comment, so the test prints the reason at the
- * moment anybody reads it — which is the moment it fails.
+ * Data rather than prose in a comment, for the reason the old `NOT_BUILT` table
+ * gave: the test prints the reason at the moment anybody reads it, which is the
+ * moment it fails.
  *
- * Note what these three are NOT. They are not waiting on a kit; there is no kit
- * coming and the kit route is closed. They are waiting on a SHAPE that does not
- * exist in the pack, and the only two honest ways out are Joe commissioning
- * authored geometry under §2's escape clause (which he has done exactly once,
- * for the hedgehog's nose) or the species staying unbuilt.
+ * Two of the three were never blocked on effort — they were blocked on a
+ * sentence. `wing` was baked for the budgie on 4 August and went from zero
+ * shapes to six, and nobody carried the correction back to this file for two
+ * days. The third, the scorpion, ships on Joe's 5 August ruling — *"put
+ * something in for the unbuildable ones anyway so i can do it manually"* — and
+ * is labelled a placeholder in its own header and its own flag.
  */
-const NOT_BUILT: readonly [string, string][] = [
-  ['animal-bat', 'a membranous wing — the bank has no membrane and no wing at all'],
-  ['animal-sugar-glider', 'a patagium; without it, it is animal-opossum in the same collection'],
-  ['animal-scorpion', 'a pincer, and a segmented tail — the claw role is empty'],
+const LAST_THREE: readonly [string, string][] = [
+  ['animal-bat', 'blade-06, the bee-and-penguin wing, re-axised as one membrane on one spar'],
+  ['animal-sugar-glider', 'blade-05, the lion\'s flat muzzle plate laid horizontal — not a wing at all'],
+  ['animal-scorpion', 'two opposed wedge-11 tusks, and it says PLACEHOLDER because the claw role is empty'],
 ]
 
 const byId: ReadonlyMap<string, Species> = new Map(NIGHT_TIME_SPECIES.map(s => [s.id, s]))
@@ -85,7 +96,7 @@ const signature = (g: THREE.Object3D): string => {
   return `${verts}|${[...new Set(parts)].sort().join(',')}|${dims(g).map(v => v.toFixed(4)).join(',')}`
 }
 
-describe('the Night Time collection is exactly the roster, minus the three the PACK cannot make', () => {
+describe('the Night Time collection is exactly the roster, all sixteen of it', () => {
   const rostered = COLLECTIONS.find(c => c.id === 'night-time')
 
   it('is a collection the roster actually declares, at ship 8 and band medium', () => {
@@ -95,7 +106,7 @@ describe('the Night Time collection is exactly the roster, minus the three the P
     expect(rostered?.band).toBe('medium')
   })
 
-  it('ships thirteen members, in the roster order for night-time', () => {
+  it('ships all sixteen members, in the roster order for night-time', () => {
     expect(NIGHT_TIME_SPECIES.map(s => s.id)).toEqual(BUILT)
     const order = (rostered?.members ?? []).filter(id => BUILT.includes(id))
     expect(NIGHT_TIME_SPECIES.map(s => s.id)).toEqual(order)
@@ -111,43 +122,45 @@ describe('the Night Time collection is exactly the roster, minus the three the P
     }
   })
 
-  it('LEAVES OUT bat, sugar glider and scorpion — a measurement, not an oversight', () => {
+  it('INCLUDES bat, sugar glider and scorpion — the three it used to leave out', () => {
     /*
-     * Delete this test only by BANKING the shape each of these wants, or by Joe
-     * commissioning one under the escape clause. If it goes red because one of
-     * them appeared in `night-time.ts`, the question is not "why is the test
-     * failing" — it is "what shape did somebody improvise for a wing".
+     * The inverse of the test that stood here for four days, kept in the same
+     * place so the change is legible rather than silent. It said: "delete this
+     * test only by BANKING the shape each of these wants, or by Joe
+     * commissioning one under the escape clause." Neither happened, and the
+     * three are here anyway, which is worth being precise about:
+     *
+     *   - the WING was banked, on 4 August, for the budgie — so for two of the
+     *     three the old test's own exit condition was met and nobody noticed;
+     *   - the CLAW was not, and the scorpion is a PLACEHOLDER on Joe's 5 August
+     *     ruling instead, which is a different door out of the same room.
      */
-    for (const [id, why] of NOT_BUILT) {
-      expect(rostered?.members, `${id} should still be rostered`).toContain(id)
-      expect(byId.has(id), `${id} must stay unbuilt: it needs ${why}`).toBe(false)
+    for (const [id, wears] of LAST_THREE) {
+      expect(rostered?.members, `${id} should be rostered`).toContain(id)
+      expect(byId.has(id), `${id} is missing again: it wears ${wears}`).toBe(true)
     }
-    expect(NIGHT_TIME_SPECIES).toHaveLength(16 - NOT_BUILT.length)
+    expect(NIGHT_TIME_SPECIES).toHaveLength(16)
   })
 
-  it('THE WING ARRIVED — the bat and the sugar glider are unblocked, and unbuilt', () => {
+  it('THE WING IS STILL THERE AND THE CLAW IS STILL NOT — measured, not remembered', () => {
     /*
-     * THIS TEST DID ITS JOB ON 4 AUGUST. It said one banked wing shape reopens
-     * five species, not three, and that both this file and
-     * `species-africa.test.ts` should go red together the day it changed. Joe
-     * had the parrot's and the bee's wings baked into the bank that day, so
-     * `wing` is six shapes where it was zero.
+     * The half of the old test that still earns its place, and the reason is the
+     * one `species-africa.test.ts` gave first: a sentence saying "the bank has no
+     * claw" rots the day somebody bakes one, and a test that COUNTS goes red at
+     * exactly that moment.
      *
-     * WHAT THAT MEANS, AND WHAT IT DOES NOT. The bat and the sugar glider were
-     * held out of this collection for ONE reason — rule 1's "adapt before
-     * authoring" had nothing to work on, because there was no wing to adapt.
-     * That reason is gone. They are not built yet, and building them is Joe's
-     * call rather than a consequence of this commit: a bat's membrane is not a
-     * bird's wing, and whether `blade-06` can honestly stand in for one is a
-     * question about the animal, not about the bank.
-     *
-     * The SCORPION is untouched by any of it. It needs a `claw`, which is still
-     * declared-and-absent, so it stays out for exactly the reason it always did.
+     * BOTH DIRECTIONS MATTER NOW, which they did not before. The wing assertion
+     * guards two built animals — if `wing` went back to zero, `animal-bat` would
+     * stop being buildable and this is what would say so. The claw assertion
+     * guards a claim in `animal-scorpion.ts`'s own flag: it tells Joe the crab's
+     * pincer is not in the module and that baking it is his call (PB-096). The
+     * day somebody bakes `claw`, that flag becomes a lie and this test is what
+     * catches it — so read a red here as "go and rewrite the scorpion", not as a
+     * failure.
      */
     const wings = PARTS_BANK.filter(p => p.roles.includes('wing')).map(p => p.id)
-    expect(wings.length, 'the wing has gone again').toBeGreaterThan(0)
+    expect(wings.length, 'the wing has gone again — animal-bat depends on it').toBeGreaterThan(0)
 
-    // Still nothing to adapt for the scorpion.
     const stillMissing: readonly PartRole[] = ['horn', 'claw']
     for (const role of stillMissing) {
       const have = PARTS_BANK.filter(p => p.roles.includes(role)).map(p => p.id)
@@ -155,10 +168,9 @@ describe('the Night Time collection is exactly the roster, minus the three the P
         .toHaveLength(0)
     }
 
-    /* And the three are still OUT of the collection, which is the state this
-     * commit leaves them in deliberately. When Joe builds the bat and the sugar
-     * glider, `NOT_BUILT` shrinks and the test above is what says so. */
-    for (const [id] of NOT_BUILT) expect(byId.has(id), `${id} is built now`).toBe(false)
+    /* The scorpion says so where Joe reads it, and that has to stay true while
+     * the role is absent. */
+    expect(byId.get('animal-scorpion')?.assembly?.flag).toMatch(/PLACEHOLDER/)
   })
 })
 
@@ -174,7 +186,7 @@ describe('NOTHING in Night Time goes through a kit — Joe\'s ruling, asserted',
    * cheap to type and is exactly the thing he rejected. So it is asserted in
    * both directions: every member has an assembly, and no member has a build.
    */
-  it('gives every one of the thirteen an assembly and NONE of them a build', () => {
+  it('gives every one of the sixteen an assembly and NONE of them a build', () => {
     for (const s of NIGHT_TIME_SPECIES) {
       expect(s.kit, `${s.id} is not bespoke`).toBe('bespoke')
       expect(s.assembly, `${s.id} has no assembly`).toBeDefined()
@@ -193,7 +205,7 @@ describe('NOTHING in Night Time goes through a kit — Joe\'s ruling, asserted',
 })
 
 describe('every Night Time species actually constructs', () => {
-  it('builds a real, non-empty, finite group for all thirteen', () => {
+  it('builds a real, non-empty, finite group for all sixteen', () => {
     for (const s of NIGHT_TIME_SPECIES) {
       const g = buildAssembled(s.id)
       const box = new THREE.Box3().setFromObject(g)
@@ -228,13 +240,17 @@ describe('no two Night Time species are silhouette twins', () => {
    *
    *   - tarsier / bushbaby / aye-aye — three small nocturnal primates, all with
    *     enormous eyes, big ears and a long tail;
-   *   - opossum / civet / kinkajou — three long-tailed climbers on the same hull;
+   *   - opossum / civet / kinkajou / SUGAR GLIDER — four long-tailed climbers,
+   *     and the fourth is the sharpest pair in the file: `collections/
+   *     night-time.ts` held the sugar glider out for two months on the ground
+   *     that without a membrane it IS the opossum, so the membrane is not a
+   *     decoration on this animal, it is the separation;
    *   - firefly / glow-worm — the SAME BEETLE at two life stages.
    *
    * The pack itself reuses one leg 86 times, so shared parts are not the fault.
    * Producing the same measured silhouette is.
    */
-  it('produces thirteen distinguishable built signatures', () => {
+  it('produces sixteen distinguishable built signatures', () => {
     const sigs = new Map<string, string>()
     for (const s of NIGHT_TIME_SPECIES) {
       const sig = signature(buildAssembled(s.id))
@@ -242,7 +258,7 @@ describe('no two Night Time species are silhouette twins', () => {
       expect(had, `${s.id} builds the same silhouette as ${had}`).toBeUndefined()
       sigs.set(sig, s.id)
     }
-    expect(sigs.size).toBe(13)
+    expect(sigs.size).toBe(16)
   })
 
   it('separates each of the three confusable groups on the parts they wear', () => {
@@ -255,7 +271,7 @@ describe('no two Night Time species are silhouette twins', () => {
     }
     const groups: readonly (readonly string[])[] = [
       ['animal-tarsier', 'animal-bushbaby', 'animal-aye-aye'],
-      ['animal-opossum', 'animal-civet', 'animal-kinkajou'],
+      ['animal-opossum', 'animal-civet', 'animal-kinkajou', 'animal-sugar-glider'],
       ['animal-firefly', 'animal-glow-worm'],
     ]
     for (const group of groups) {

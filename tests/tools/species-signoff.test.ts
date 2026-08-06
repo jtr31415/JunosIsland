@@ -78,11 +78,35 @@ const covers = new Set(factDoc.coveredCollections)
  * priority order — see `naming.ts ROSTER_ORDER`. */
 const ROSTER_IDS: readonly string[] = COLLECTIONS.flatMap(c => c.members)
 
-/* A species the roster has ratified but nothing has built yet. This is the case
- * the panel is FOR — Joe is drawing it in the editor, so it cannot be in the
- * registry — and the point of using a real one is that its name, collection and
- * band are real answers rather than a fixture's. */
-const UNBUILT: string = ROSTER_IDS.find(id => !REGISTRY.has(id)) ?? ''
+/*
+ * A species the roster has ratified, PREFERRING one nothing has built yet.
+ *
+ * That preference is the case the panel is FOR — Joe is drawing a species in the
+ * editor, so it cannot be in the registry — and the point of using a real id is
+ * that its name, collection and band are real answers rather than a fixture's.
+ *
+ * >>> THE PREFERENCE RAN OUT ON 6 AUGUST, and this constant used to be called
+ * >>> `UNBUILT` and used to be exactly the `find` below with no fallback. Night
+ * >>> Time's last three — `animal-bat`, `animal-sugar-glider` and
+ * >>> `animal-scorpion` — were the last rostered species with no registry record
+ * >>> anywhere, so the `find` now returns nothing and the fixture became `''`,
+ * >>> which failed seven assertions in this file by making every view
+ * >>> out-of-roster.
+ * >>>
+ * >>> The fallback is the honest repair rather than inventing an unbuilt species,
+ * >>> and the reason is written three paragraphs down in this file already:
+ * >>> **roster membership and not registry membership is what makes a name and a
+ * >>> collection real.** Every assertion here is about the roster answering, and
+ * >>> not one of them needed the species to be unbuilt. `base` is skipped because
+ * >>> the frozen 24 are the one group whose records are authored GLBs.
+ * >>>
+ * >>> If a species is ever added to `roster.ts` before it is built, the `find`
+ * >>> starts winning again and this file goes back to testing the case it was
+ * >>> written for, with no edit.
+ */
+const ROSTERED: string = ROSTER_IDS.find(id => !REGISTRY.has(id))
+  ?? ROSTER_IDS.find(id => SPECIES_COLLECTION[id] !== 'base')
+  ?? ''
 
 /* A species that has shipped AND already carries a fact, so a row built for it
  * is a row `tests/island/species-facts.test.ts` would accept whole. */
@@ -176,21 +200,25 @@ describe('the panel is the roster answering, not a fixture', () => {
   /*
    * Everything except the fact is data that already exists, and asking Joe to
    * retype any of it would be asking him to get it subtly wrong. So each field
-   * is asserted against the module that owns it — and against an UNBUILT
+   * is asserted against the module that owns it — and against an ROSTERED
    * species, because roster membership and not registry membership is what makes
    * a name and a collection real.
    */
   it('takes the name, the collection, the band and the given name off the roster', () => {
-    expect(UNBUILT).not.toBe('')
-    expect(REGISTRY.has(UNBUILT), 'the case under test is a species nobody has built yet').toBe(false)
+    expect(ROSTERED).not.toBe('')
+    /* The roster is what makes these fields real, so that is what is asserted.
+     * This line used to demand `REGISTRY.has(...) === false`; see `ROSTERED` for
+     * why no rostered species answers that any more, and why it does not matter
+     * to anything below. */
+    expect(ROSTER_IDS, 'the case under test is a species the roster ratified').toContain(ROSTERED)
 
-    const v = view(UNBUILT)
+    const v = view(ROSTERED)
     expect(v.inRoster).toBe(true)
-    expect(v.species).toBe(SPECIES_NAMES[UNBUILT])
-    expect(v.collection).toBe(SPECIES_COLLECTION[UNBUILT])
-    expect(v.collectionName).toBe(collection(SPECIES_COLLECTION[UNBUILT]!)?.name)
-    expect(v.band).toBe(nameBandOf(UNBUILT))
-    expect(v.generated).toBe(givenName(UNBUILT))
+    expect(v.species).toBe(SPECIES_NAMES[ROSTERED])
+    expect(v.collection).toBe(SPECIES_COLLECTION[ROSTERED])
+    expect(v.collectionName).toBe(collection(SPECIES_COLLECTION[ROSTERED]!)?.name)
+    expect(v.band).toBe(nameBandOf(ROSTERED))
+    expect(v.generated).toBe(givenName(ROSTERED))
     expect(v.ready).toBe(true)
   })
 
@@ -219,9 +247,9 @@ describe('the panel is the roster answering, not a fixture', () => {
 
 describe('what a name he typed himself does, and does not, stop', () => {
   it('uses the generated name until he types over it', () => {
-    const v = view(UNBUILT, '')
+    const v = view(ROSTERED, '')
     expect(v.name).toBe(v.generated)
-    expect(v.name).toBe(givenName(UNBUILT))
+    expect(v.name).toBe(givenName(ROSTERED))
     expect(v.overridden).toBe(false)
   })
 
@@ -229,15 +257,15 @@ describe('what a name he typed himself does, and does not, stop', () => {
     /* The regenerate button clears the box, but he may equally have typed the
      * same word; either way nothing was overruled and the panel must not claim
      * it was. */
-    const v = view(UNBUILT, givenName(UNBUILT))
-    expect(v.name).toBe(givenName(UNBUILT))
+    const v = view(ROSTERED, givenName(ROSTERED))
+    expect(v.name).toBe(givenName(ROSTERED))
     expect(v.overridden).toBe(false)
   })
 
   it('takes his word over the generator when the two differ', () => {
-    const v = view(UNBUILT, 'Sprocket')
+    const v = view(ROSTERED, 'Sprocket')
     expect(v.name).toBe('Sprocket')
-    expect(v.generated).toBe(givenName(UNBUILT))
+    expect(v.generated).toBe(givenName(ROSTERED))
     expect(v.overridden).toBe(true)
   })
 
@@ -251,10 +279,10 @@ describe('what a name he typed himself does, and does not, stop', () => {
     const allocated = _allocate(NAME_PINS)
     const takenBy = BUILT
     const taken = allocated[takenBy]!
-    expect(takenBy).not.toBe(UNBUILT)
-    expect(taken).not.toBe(givenName(UNBUILT))
+    expect(takenBy).not.toBe(ROSTERED)
+    expect(taken).not.toBe(givenName(ROSTERED))
 
-    const v = view(UNBUILT, taken)
+    const v = view(ROSTERED, taken)
     expect(v.clashesWith).toBe(takenBy)
     const clash = v.problems.filter(p => p.field === 'name')
     expect(clash).toHaveLength(1)
@@ -266,7 +294,7 @@ describe('what a name he typed himself does, and does not, stop', () => {
   })
 
   it('never invents a clash out of the name the generator itself drew', () => {
-    expect(view(UNBUILT).clashesWith).toBe('')
+    expect(view(ROSTERED).clashesWith).toBe('')
     expect(view(BUILT).clashesWith).toBe('')
   })
 
@@ -275,14 +303,14 @@ describe('what a name he typed himself does, and does not, stop', () => {
      * ceiling; it is a THREE-SENTENCE fact now, which the gate still refuses.
      * The claim under test never was about length — it is that a fact problem
      * blocks the push however settled everything else is. */
-    const v = view(UNBUILT, '', 'A mole digs. It eats worms. It lives here.')
+    const v = view(ROSTERED, '', 'A mole digs. It eats worms. It lives here.')
     expect(v.problems.some(p => p.field === 'fact' && p.blocks)).toBe(true)
     expect(v.ready).toBe(false)
   })
 
   it('does NOT block a long fact, however settled everything else is', () => {
     // The other side of the same ruling, at the seam where it would bite him.
-    const v = view(UNBUILT, '', ofWords(25))
+    const v = view(ROSTERED, '', ofWords(25))
     expect(v.problems.filter(p => p.field === 'fact')).toEqual([])
   })
 })
@@ -313,7 +341,7 @@ describe('the two rows the push would append', () => {
      */
     const sample = auditDoc.names[0]
     expect(sample, 'joe/names-audit.json has no rows to compare against').toBeDefined()
-    const built = Object.keys(auditRowFor(view(UNBUILT)))
+    const built = Object.keys(auditRowFor(view(ROSTERED)))
     const onDisk = Object.keys(sample!)
     expect(built).toEqual(onDisk.filter(k => k !== 'signoff'))
     expect(onDisk.filter(k => !built.includes(k))).toEqual(
@@ -330,14 +358,14 @@ describe('the two rows the push would append', () => {
    * in as many words — which is also why nothing here may pre-fill it.
    */
   it('derives the audit row the way tests/island/naming.test.ts checks the file', () => {
-    const row = auditRowFor(view(UNBUILT))
+    const row = auditRowFor(view(ROSTERED))
     expect(row.setId).toBe('natural')
     expect(row.id).toBe(`${row.setId}/${row.speciesId}`)
-    expect(row.speciesId).toBe(UNBUILT)
-    expect(row.species).toBe(SPECIES_NAMES[UNBUILT])
-    expect(row.collection).toBe(collection(SPECIES_COLLECTION[UNBUILT]!)?.id)
-    expect(row.band).toBe(collection(SPECIES_COLLECTION[UNBUILT]!)?.band)
-    expect(row.name).toBe(givenName(UNBUILT))
+    expect(row.speciesId).toBe(ROSTERED)
+    expect(row.species).toBe(SPECIES_NAMES[ROSTERED])
+    expect(row.collection).toBe(collection(SPECIES_COLLECTION[ROSTERED]!)?.id)
+    expect(row.band).toBe(collection(SPECIES_COLLECTION[ROSTERED]!)?.band)
+    expect(row.name).toBe(givenName(ROSTERED))
   })
 
   /*
@@ -349,15 +377,15 @@ describe('the two rows the push would append', () => {
    * in `name` would go red today and vanish tomorrow.
    */
   it('keeps the drawn name and files his own word as the replacement', () => {
-    const row = auditRowFor(view(UNBUILT, 'Sprocket'))
-    expect(row.name).toBe(givenName(UNBUILT))
+    const row = auditRowFor(view(ROSTERED, 'Sprocket'))
+    expect(row.name).toBe(givenName(ROSTERED))
     expect(row.replacement).toBe('Sprocket')
   })
 
   /* `verdict` and `note` are judgements and are never pre-filled; and with no
    * override there is nothing to put in `replacement` either. */
   it('leaves the audit verdict and note his to fill, and replacement empty until he types one', () => {
-    const row = auditRowFor(view(UNBUILT))
+    const row = auditRowFor(view(ROSTERED))
     expect([row.verdict, row.replacement, row.note]).toEqual(['', '', ''])
   })
 

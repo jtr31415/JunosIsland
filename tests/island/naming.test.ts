@@ -579,7 +579,14 @@ describe('joe/names-audit.json', () => {
     // re-counted. It is what the file ACTUALLY held and not a target. If it is
     // red for you, count the file and set it to the count — the assertion above
     // this one is the one carrying the meaning.
-    expect(audit.names).toHaveLength(293)
+    // 296 SINCE 6 AUG, and the +3 is NIGHT TIME's last three — `animal-bat`,
+    // `animal-sugar-glider` and `animal-scorpion`. This is the first growth on
+    // this line with NO sibling still landing, so the caveat above finally does
+    // not apply: 296 is every built species and every built species is every
+    // rostered species, which has never been true before. All three rows are
+    // born with Joe's three fields empty, on the same terms as every growth
+    // above — the bench grew and the review did not happen.
+    expect(audit.names).toHaveLength(296)
   })
 
   it('gives every creature its own name, so the playground question works', () => {

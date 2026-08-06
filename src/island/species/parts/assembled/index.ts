@@ -341,6 +341,9 @@ export { JACKALOPE_ASSEMBLY } from './animal-jackalope'
 export { THUNDERBIRD_ASSEMBLY } from './animal-thunderbird'
 export { SPHINX_ASSEMBLY } from './animal-sphinx'
 export { MOON_RABBIT_ASSEMBLY } from './animal-moon-rabbit'
+export { BAT_ASSEMBLY } from './animal-bat'
+export { SUGAR_GLIDER_ASSEMBLY } from './animal-sugar-glider'
+export { SCORPION_ASSEMBLY } from './animal-scorpion'
 /* -- append the next species' line directly above this one -- */
 
 import { assembledBuilds } from './register'

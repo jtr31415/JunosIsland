@@ -2,8 +2,10 @@
  * Night Time — roster row 6, ship 8, name band `medium`.
  *
  * PB-036. `roster.ts` says which sixteen species this collection holds; this
- * file says what THIRTEEN of them are. The other three are not here and that is
- * a measurement, not an oversight — see NOT BUILT below.
+ * file says what all SIXTEEN of them are. It said thirteen until 6 August 2026 —
+ * see THE THREE THAT WERE MISSING below, which is the one section of this header
+ * that has been rewritten and the only thing about the original thirteen that
+ * changed.
  *
  * ## THIS COLLECTION IS ENTIRELY ASSEMBLED, AND THAT IS THE POINT
  *
@@ -22,35 +24,53 @@
  * number in every member lives in `parts/assembled/animal-<id>.ts` with the
  * measurement that produced it beside it, and this file carries no geometry.
  *
- * ## NOT BUILT — three species, each with the exact shape it needed
+ * ## THE THREE THAT WERE MISSING — built 6 August 2026, and here is what changed
  *
- * The `wing`, `horn` and `claw` roles are declared in `bank.generated.ts`'s
- * `PartRole` union and occur **zero times** across all 94 records. Measured, not
- * assumed, and `tests/island/species-night-time.test.ts` measures it again on
- * every run, so the day somebody banks one of those shapes the test says the
- * absence has changed.
+ * This section used to say that the bat, the sugar glider and the scorpion were
+ * held out because the `wing`, `horn` and `claw` roles occurred **zero times**
+ * across the baked records, and that *"none of the three is to be filled in by
+ * improvising a shape."* Two things overturned that, and neither was a decision
+ * this file was entitled to make on its own.
  *
- *   - `animal-bat` — wants a **membranous wing**. Everything else about a bat is
- *     in the bank: `box-06`/`box-07`, the bunny's 0.913-tall upright ears, are
- *     the biggest in the pack and are exactly a bat's. But a bat's wings are the
- *     animal, and the pack has no membrane, no spread wing and no folded one.
- *     Without them this is a mouse with big ears, which the collection already
- *     has three of.
- *   - `animal-sugar-glider` — wants a **patagium**, the gliding membrane between
- *     wrist and ankle. Same absence, and here it bites twice: without the
- *     membrane a sugar glider is indistinguishable from `animal-opossum`, which
- *     is in this same collection. Two records for one silhouette is worse than
- *     one honest gap.
- *   - `animal-scorpion` — wants a **pincer** and a segmented tail. The `claw`
- *     role is empty and the pack's one true claw, the crab's, was never banked;
- *     there is no segmented limb either. A sting could be found among the tusks,
- *     but a scorpion without pincers is not a scorpion, and brief §19's "bright,
- *     never scary" is a second reason not to improvise one.
+ * **1. The bank moved.** `wing` was baked on 4 August for the budgie and is six
+ * shapes where it was zero: `blade-06`/`blade-07` carry `bee:wing-left` as their
+ * FIRST provenance and are bit-identical to the penguin's flipper, and
+ * `wedge-19`/`wedge-20` are the pack's real spread wing. §14 of
+ * `docs/how-the-animals-are-made.md` has now been wrong four times in exactly
+ * this way, and its own lesson is the one that applies here: **a claim about what
+ * the bank does not hold expires the moment a role is baked.** `claw` is still
+ * unbaked, and that half of the old sentence is still true.
  *
- * **None of the three is to be filled in by improvising a shape.** That is the
- * exact failure roster §1's "kits before species" exists to stop, and it is the
- * same ruling `africa.ts` carries for the ostrich and the vulture. How these
- * three should read is a LOOK decision and it belongs to Joe.
+ * **2. Joe ruled, on 5 August**: *"put something in for the unbuildable ones
+ * anyway so i can do it manually. if there is no entry at all, i cant do that."*
+ * That is the whole reason the scorpion is here despite the claw still being
+ * absent. Ocean, Critters, Birds, Jungle and Raptors each shipped one to four
+ * entries on it.
+ *
+ *   - `animal-bat` — built, and **the wing is a declared stand-in**. `blade-06`
+ *     re-axised to run along its 0.693, stretched 1.5, is one membrane on one
+ *     spar, which is `animal-pterodactyl.ts`'s reading of the same shape. A bat's
+ *     wing is a HAND and nothing in the bank has fingers; the file says so in its
+ *     first line, names the measurement and names what to try instead.
+ *   - `animal-sugar-glider` — built, and **not on a wing at all**. The patagium is
+ *     `blade-05`, the lion's flat muzzle plate, 1.000 x 1.000 x 0.125 for 18
+ *     triangles, laid horizontal and joined to the flank. That shape was
+ *     invisible to three censuses because it is filed under the `nose` role; it
+ *     is the same slab Dinosaurs found as a frill, a plate row and a sail. The
+ *     old objection — that without a membrane this animal is `animal-opossum` —
+ *     is answered by the membrane and by four other measured separations.
+ *   - `animal-scorpion` — built as a **PLACEHOLDER**, and the old sentence about
+ *     it is preserved rather than overturned: the `claw` role is still empty,
+ *     the crab's own pincer is still only in a `.glb`, and two opposed
+ *     `wedge-11` tusks with 0.0345 of daylight between them are an improvisation
+ *     and are labelled one. What ships it anyway is the TAIL, which is not an
+ *     improvisation at all — three tusks chained `on` one another's built tips
+ *     arch the metasoma up and forward, and a scorpion is recognisable from that
+ *     alone. Baking `claw` is PB-096 and is Joe's, not a builder's: adding a role
+ *     renumbers the bank silently.
+ *
+ * How all three READ is still a look decision and still belongs to Joe. What
+ * changed is that he now has three entries to edit instead of three absences.
  *
  * ## Two birds and two insects that ARE here, and why that is not a contradiction
  *
@@ -68,13 +88,22 @@
  * nightjar is only ever seen perched with its wings folded flat, a firefly
  * signals at rest with its elytra closed, and a glow-worm is a larva.
  *
+ * >>> THAT TEST STILL DECIDES, AND ITS SECOND CLAUSE IS WHAT THE THREE ABOVE ARE
+ * >>> BUILT ON. Joe's 5 August ruling replaced "blocked" with "entered and
+ * >>> labelled", so the test now sorts a member into BUILT or PLACEHOLDER rather
+ * >>> than into present or absent — and the sorting is unchanged. A bat's wings
+ * >>> are still the animal, which is why `animal-bat.ts` opens by saying its wing
+ * >>> is a stand-in instead of quietly wearing one. A scorpion's pincers are
+ * >>> still the animal, which is why it is the one PLACEHOLDER here. The sugar
+ * >>> glider is the case that turned out not to be a gap at all.
+ *
  * ## EVERY PALETTE IN THIS COLLECTION IS UNREVIEWED, FLAG OR NO FLAG
  *
- * Said here once rather than thirteen times, because `flag` is not the right
+ * Said here once rather than sixteen times, because `flag` is not the right
  * channel for it and using it that way would break the channel. §9.3 is explicit
  * that a `flag` says which RULE a build strained, and that "an animal with a flag
- * is one he is being asked to rule on" — so if all thirteen carried one for a
- * reason all thirteen share, the field would stop telling Joe which animals are
+ * is one he is being asked to rule on" — so if all sixteen carried one for a
+ * reason all sixteen share, the field would stop telling Joe which animals are
  * the difficult ones.
  *
  * The fact still needs stating, because it is easy to read the other way round:
@@ -82,8 +111,8 @@
  * colour**, so every palette in `parts/assembled/animal-<id>.ts` is a first
  * proposal and every colour in every one of them is marked `UNREVIEWED:` at the
  * line. An unflagged member here has unreviewed colours exactly as much as a
- * flagged one does. Six of the thirteen also carry a flag, and those six strained
- * a rule as well.
+ * flagged one does. Nine of the sixteen also carry a flag — the original six, and
+ * all three of the arrivals above — and those nine strained a rule as well.
  *
  * ## NO `threat` IS RECORDED
  *
@@ -106,9 +135,11 @@ import type { Species } from '../types'
 
 export const NIGHT_TIME_SPECIES: readonly Species[] = [
   /*
-   * ROSTER order for `night-time`, with the three unbuilt members simply
-   * absent — `bat` would be first, `sugar-glider` sixth and `scorpion` tenth,
-   * and the header says what each of them needed.
+   * ROSTER order for `night-time`, all sixteen. The three that arrived on
+   * 6 August are INSERTED at their rostered places — `bat` first,
+   * `sugar-glider` sixth, `scorpion` tenth — never appended, because a
+   * collection whose file order disagrees with its roster order is a trap
+   * `species-garden.test.ts:149` already exists to catch.
    *
    * Every record is one line and carries no geometry, because `defineSpecies`
    * picks each species' assembly up by id off `parts/assembled/register.ts`.
@@ -117,13 +148,27 @@ export const NIGHT_TIME_SPECIES: readonly Species[] = [
    * numbers. The numbers, and the measurement behind every one of them, live in
    * `parts/assembled/animal-<id>.ts`.
    */
+  /* The wing is a declared STAND-IN: `blade-06` re-axised along its 0.693 is one
+   * membrane on one spar, where a bat's wing is a hand with fingers in it. */
+  defineSpecies('animal-bat', 'bespoke'),
+
   defineSpecies('animal-raccoon', 'bespoke'),
   defineSpecies('animal-wolf', 'bespoke'),
   defineSpecies('animal-firefly', 'bespoke'),
   defineSpecies('animal-opossum', 'bespoke'),
+
+  /* The patagium is `blade-05`, the lion's flat muzzle plate laid horizontal —
+   * not a wing at all, and the one shape in the bank that IS a flat sheet. */
+  defineSpecies('animal-sugar-glider', 'bespoke'),
+
   defineSpecies('animal-nightjar', 'bespoke'),
   defineSpecies('animal-tarsier', 'bespoke'),
   defineSpecies('animal-bushbaby', 'bespoke'),
+
+  /* PLACEHOLDER — the `claw` role is still unbaked, so the pincers are two
+   * opposed elephant tusks. The arched metasoma is what ships it anyway. */
+  defineSpecies('animal-scorpion', 'bespoke'),
+
   defineSpecies('animal-fennec-fox', 'bespoke'),
   defineSpecies('animal-civet', 'bespoke'),
   defineSpecies('animal-aye-aye', 'bespoke'),
