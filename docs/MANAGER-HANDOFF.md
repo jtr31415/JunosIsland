@@ -1,6 +1,76 @@
 # Manager handoff
 
-> ## ⚠⚠ NEXT SESSION'S JOB — DRAFT MORE ANIMALS. 4 Aug 2026
+> ## ⚠⚠ 6 AUGUST 2026 — THE ROSTER IS FULL, THE READING LADDER IS LIVE
+>
+> *Replaces the 4 August block below it, whose job — draft more animals — is
+> done to the last species.*
+>
+> ### Where things actually stand
+>
+> **296 rostered species, 0 missing a file, 0 missing a register line.** Twenty
+> collections, all complete. Twelve were built overnight (Ice, Jungle, Outback,
+> Critters, Raptors, Dinosaurs, Prehistoric, Legendary and the four threat-status
+> ones), plus the three that finished Night Time. **295 of 296 name rows are
+> unruled** — Joe's sign-off in the workbench is still the only thing that puts
+> an animal in front of Juno, and `pool.ts` enforces it.
+>
+> **The reading ladder is ten rungs and STOCKED.** Joe reviewed all 193 candidate
+> words on 6 August: 181 yes, 12 no. `src/core/rung-words.ts` is generated from
+> `joe/words-audit.json` by `npm run words:emit` and carries only approved rows.
+> Both dials now reach the new rungs — near-twins (PB-087) and the build page
+> following its rung one behind (PB-088) — and both were inert until that day.
+>
+> ### The four things a next session must not re-learn
+>
+> 1. **`npm run parity` boots `dist/`.** Run it after an edit but before
+>    `npm run build` and it compares the OLD bundle and reports green. That cost
+>    a failed deploy on 6 Aug. Order is always `tsc` → `build` → `parity`.
+> 2. **Parity's serialiser reads `className`.** A CSS hook added as a class to
+>    anything under `#words` fails parity even when behaviour is identical. Use a
+>    `data-` attribute; parity does not serialise attributes, and its own header
+>    says it cannot judge "anything visual".
+> 3. **Wiring is where the bugs are.** Three features shipped fully unit-tested
+>    and completely inert because the deps object connecting them was pinned by
+>    nothing — `main.ts` hardcoding `stage: 1`, `main.ts`'s `drawRung`/`rungIndex`,
+>    and `deal.ts` dropping everything but `{ rng, drawGreen, level }`. Test
+>    through the CALLER and mutation-check the wiring line.
+> 4. **§14 of `how-the-animals-are-made.md` has been wrong three times** and now
+>    carries a banner saying so. Ocean, Critters and Raptors were each declared
+>    impossible while the shape sat in the bank under a role label describing what
+>    Kenney drew it for. **Search the bank by dimensions, not by role name**
+>    (PB-098). Twenty-six animals were prevented by that one section.
+>
+> ### What Joe has open, in the order it is cheapest to answer
+>
+> - **PB-096, bake the `claw` role** — 20 species wear a tusk because ten real
+>   claws sit unbaked in this repo. One line, and his alone: baking renumbers
+>   the whole bank.
+> - **PB-097** may CANCEL a commission: Critters priced a hinged limb for three
+>   BUILT species, then Raptors showed `on:` already chains a part to another's
+>   built tip. Try it on the spider's knee before commissioning anything.
+> - **A LONG HIND LEG finishes ~18 species** across the register and is the
+>   highest-value single shape. A CURVE is asked for by six collections.
+> - **PB-090** — the words bench shows no grapheme split, so he approves split
+>   digraphs without seeing how they will segment into build tiles.
+> - **PB-086** — every ticked rung stays active forever, so the ladders clog. He
+>   wants a 3-5 rung window, on reading AND maths.
+> - **The sentence spec** is still owed. It is the second half of the reading
+>   work and it needs a new renderer, not new lists.
+> - **PB-092** is parked by his own instruction: no sound in Chrome on his
+>   laptop. The GAME IS EXONERATED — it works on his phone and in Edge on the
+>   same machine.
+>
+> ### Disagreements left for him, not settled by agents
+>
+> - **Jungle shipped `animal-tarantula` as a placeholder; Critters BUILT
+>   `animal-spider`** on grounds equally true of it. Two agents, opposite
+>   verdicts, same night, both defensible.
+> - **The bat's wing** is the one honest membrane-for-feather compromise, flagged
+>   in its own header with the alternative named.
+> - **`box-31`, the lion's shell, has no front face at all** — zero triangles in
+>   that plane — and `animal-hare` and `animal-stoat` wear it today.
+
+> ## ⚠⚠ SUPERSEDED — DRAFT MORE ANIMALS. 4 Aug 2026
 >
 > *Joe, at the end of a long day: **"get ready for context clear, then you draft
 > some more animals."** The build-optimisation job below this block is DONE and
