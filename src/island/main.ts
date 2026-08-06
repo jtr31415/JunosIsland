@@ -74,6 +74,7 @@ import { dealPool } from './species/pool'
 import { GREEN, RED } from '../core/wordlists'
 import { RUNG_WORDS } from '../core/rung-words'
 import { buildPool, buildNeighbours } from '../core/neighbours'
+import type { NeighbourMap } from '../core/neighbours'
 import type { ReadState } from '../core/generators/read'
 import type { BuildState } from '../core/generators/build'
 import type { SumState } from '../core/generators/sums'
@@ -194,6 +195,27 @@ async function boot(): Promise<void> {
     let deck = rungDecks.get(level)
     if (!deck) { deck = makeDeck(defaultRng, words); rungDecks.set(level, deck) }
     return deck
+  }
+  /*
+   * ONE NEIGHBOUR MAP PER RUNG, cached for the same reason the decks are: it is
+   * derived from the whole of a rung's word list, so it is worth building once
+   * a session rather than once a page.
+   *
+   * Built over the RUNG'S OWN WORDS. `neigh` below is built from `GREEN`/`RED`
+   * and has no entry for `frost` or `playground`, so a rung page planting from
+   * it would find no candidates and quietly plant nothing — which is the shape
+   * of the bug this fixes (PB-087), not a fix for it.
+   */
+  const rungNeighs = new Map<number, NeighbourMap>()
+  const rungNeigh = (level: number): NeighbourMap | null => {
+    const words = RUNG_WORDS[level]
+    if (!words?.length) return null
+    let map = rungNeighs.get(level)
+    if (!map) {
+      map = buildNeighbours(words.map(w => ({ raw: w, cls: 'green' as const })))
+      rungNeighs.set(level, map)
+    }
+    return map
   }
   const neigh = buildNeighbours(buildPool())
   const readStore: ReadState = { history: [], idx: -1 }
@@ -1221,7 +1243,7 @@ async function boot(): Promise<void> {
       { read: readStore, build: buildStore },
       {
         rng: defaultRng, drawGreen, drawRed, neigh, level: dealtRead.stage, drawRung,
-        rungIndex: STAGES.reading.indexOf(dealtRead.stage),
+        rungIndex: STAGES.reading.indexOf(dealtRead.stage), rungNeigh,
       },
       kind, state.readHeld,
     )

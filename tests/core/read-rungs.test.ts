@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { generateRead } from '../../src/core/generators/read'
 import type { ReadState } from '../../src/core/generators/read'
-import { buildNeighbours, buildPool } from '../../src/core/neighbours'
+import { buildNeighbours, buildPool, lev1 } from '../../src/core/neighbours'
 import { mulberry32 } from '../../src/core/rng'
 import { makeDeck } from '../../src/core/decks'
 
@@ -114,5 +114,58 @@ describe('a rung page', () => {
       const page = s.history[s.idx]!.map(p => p.w)
       expect([...page].sort(), `round ${round}`).toEqual(['frog', 'nest', 'sock'])
     }
+  })
+})
+
+describe('PB-087: a rung page plants near-twins, like every other page', () => {
+  /*
+   * ORDER IS THE WHOLE TEST. The deck deals in list order, so the first page
+   * takes `pig`, `bed`, `sun` — no two of which are one edit apart. Their twins
+   * (`pin`, `bad`, `sin`) sit further down the list, reachable ONLY through the
+   * neighbour map. So a pair on the page can only have been planted.
+   *
+   * The first draft of this test used ['cat','cot',…] and was VACUOUS: the deck
+   * dealt the pair adjacently, so it passed with the planting call deleted.
+   * Caught by mutation, which is the only reason this comment exists.
+   */
+  const WORDS = ['pig', 'bed', 'sun', 'pin', 'bad', 'sin', 'dog', 'hat']
+
+  const rungDeps = (withNeigh: boolean) => {
+    const rng = mulberry32(7)
+    let i = 0
+    const deck = () => WORDS[i++ % WORDS.length] as string
+    return {
+      rng,
+      drawGreen: () => 'cat',
+      drawRed: () => '[I]',
+      neigh: buildNeighbours(buildPool()),
+      level: 5,
+      rungIndex: 9,                       // top of the ladder: densest twins
+      drawRung: (l: number) => (l === 5 ? deck : null),
+      rungNeigh: withNeigh
+        ? (l: number) => (l === 5
+            ? buildNeighbours(WORDS.map(w => ({ raw: w, cls: 'green' as const })))
+            : null)
+        : undefined,
+    }
+  }
+
+  it('puts a one-edit twin on the page', () => {
+    /* `cat`/`cot` are one edit apart. With the map supplied, plantTwins swaps a
+       word for a neighbour of one already picked, so a pair must be present —
+       the whole point of the dial Joe asked for. */
+    const s: ReadState = { history: [], idx: -1 }
+    generateRead(s, rungDeps(true))
+    const page = s.history[0]!.map(p => p.w)
+    const paired = page.some((a, i) => page.some((b, j) => i !== j && lev1(a, b)))
+    expect(paired, `no near-twin on the page: ${page.join(' ')}`).toBe(true)
+  })
+
+  it('still deals a page when the caller supplies no rung neighbours', () => {
+    /* An older caller, or a rung whose words have no twins at all, must not
+       throw or deal nothing — it simply gets an unpaired page. */
+    const s: ReadState = { history: [], idx: -1 }
+    generateRead(s, rungDeps(false))
+    expect(s.history[0]!.length).toBeGreaterThan(0)
   })
 })

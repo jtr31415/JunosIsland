@@ -34,6 +34,15 @@ export interface ReadDeps {
    * goes with it. See `main.ts`, where it is created beside `drawGreen`.
    */
   drawRung?: (level: number) => (() => MarkedWord) | null
+  /**
+   * Near-twins for this level's rung words, or null when the level has none.
+   *
+   * Separate from `neigh` because that one is built over `GREEN`/`RED` and
+   * knows nothing about a rung's vocabulary. Supplied by the caller for the
+   * same reason as the deck: the map is derived from the whole word list and
+   * is worth building once per level rather than once per page.
+   */
+  rungNeigh?: (level: number) => NeighbourMap | null
   /** 0-based position on `STAGES.reading`. Defaults to the bottom, which is the
    *  historical two-twin behaviour, so an old caller is unchanged. */
   rungIndex?: number
@@ -67,6 +76,53 @@ export function twinTarget(rungIndex: number, n: number): number {
   const span = Math.max(1, STAGES_READING_LENGTH - 1)
   const t = Math.min(1, Math.max(0, rungIndex / span))
   return Math.max(1, Math.min(ceiling, Math.round(floor + t * (ceiling - floor))))
+}
+
+/**
+ * Swap `target` of the page's words for near-twins of the words already on it,
+ * so a child cannot win by reading only the first letter.
+ *
+ * LIFTED VERBATIM out of the level-1 body rather than rewritten, and that is
+ * load-bearing: `golden.json` pins level 1's stream, so every `shuffle` and
+ * `ri` here has to happen in exactly the order it did when this was inline.
+ * It is a move, not a reimplementation.
+ *
+ * It is shared because the rung pages need it too. Until 6 August they did not
+ * have it: the rung branch returned before this loop, so every new rung planted
+ * ZERO twins — the ladder switched off the counter-measure at exactly the point
+ * a child climbs past the words she knows, which is the opposite of what the
+ * dial was built for (PB-087).
+ *
+ * `used` and `usedGroups` are mutated in place: a twin that replaces a word has
+ * to free that word's confusable group, or the page can end up holding both
+ * `to` and `too` by the back door.
+ */
+function plantTwins(
+  picks: ReadPick[], neigh: NeighbourMap, rng: Rng,
+  used: Set<string>, usedGroups: Set<number>, target: number,
+): void {
+  const locked = new Set<number>()
+  let made = 0
+  for (const i of shuffle(rng, picks.map((_, j) => j))) {
+    if (made >= target) break
+    const pw = plainWord((picks[i] as ReadPick).w)
+    const cands = (neigh[pw] ?? []).filter(c => {
+      const cp = plainWord(c.raw)
+      return !used.has(cp) &&
+        !(groupOf[cp] !== undefined && usedGroups.has(groupOf[cp] as number))
+    })
+    if (!cands.length) continue
+    const victim = picks.findIndex((_p, j) => j !== i && !locked.has(j))
+    if (victim < 0) break
+    const vp = plainWord((picks[victim] as ReadPick).w)
+    used.delete(vp)
+    if (groupOf[vp] !== undefined) usedGroups.delete(groupOf[vp] as number)
+    const nb = cands[ri(rng, cands.length)] as { raw: MarkedWord; cls: WordClass }
+    picks[victim] = { w: nb.raw, cls: nb.cls }
+    used.add(plainWord(nb.raw))
+    if (groupOf[plainWord(nb.raw)] !== undefined) usedGroups.add(groupOf[plainWord(nb.raw)] as number)
+    locked.add(i); locked.add(victim); made++
+  }
 }
 
 export function generateRead(s: ReadState, d: ReadDeps): void {
@@ -118,6 +174,22 @@ export function generateRead(s: ReadState, d: ReadDeps): void {
       if (groupOf[pw] !== undefined) usedGroups.add(groupOf[pw] as number)
       picks.push({ w, cls: 'green' })
     }
+    /*
+     * AND THE RUNG GETS ITS TWINS TOO (PB-087). Before this it returned here,
+     * so every rung above the starting page planted none at all — the dial that
+     * exists because Joe watched his daughter hunt on first letters was switched
+     * off for precisely the pages she climbs to.
+     *
+     * The map comes from the caller and is built over THIS RUNG'S OWN WORDS.
+     * `d.neigh` is built from `GREEN`/`RED` (`buildPool`), so it holds no entry
+     * for `frost` or `playground` and planting from it would find nothing —
+     * a silent no-op that would have looked exactly like the bug being fixed.
+     */
+    const rungNeigh = d.rungNeigh?.(d.level) ?? null
+    if (rungNeigh) {
+      plantTwins(picks, rungNeigh, d.rng, used, usedGroups,
+        twinTarget(d.rungIndex ?? 0, picks.length))
+    }
     shuffle(d.rng, picks)
     s.history.push(picks)
     s.idx = s.history.length - 1
@@ -147,29 +219,7 @@ export function generateRead(s: ReadState, d: ReadDeps): void {
   for (let i = 0; i < n - reds; i++) take(d.drawGreen, 'green')
 
   /* neighbour distractors: plant a near-twin (sat/sit) so first-letter guessing loses */
-  const pairTarget = twinTarget(d.rungIndex ?? 0, n)
-  const locked = new Set<number>()
-  let made = 0
-  for (const i of shuffle(d.rng, picks.map((_, j) => j))) {
-    if (made >= pairTarget) break
-    const pw = plainWord((picks[i] as ReadPick).w)
-    const cands = (d.neigh[pw] ?? []).filter(c => {
-      const cp = plainWord(c.raw)
-      return !used.has(cp) &&
-        !(groupOf[cp] !== undefined && usedGroups.has(groupOf[cp] as number))
-    })
-    if (!cands.length) continue
-    const victim = picks.findIndex((_p, j) => j !== i && !locked.has(j))
-    if (victim < 0) break
-    const vp = plainWord((picks[victim] as ReadPick).w)
-    used.delete(vp)
-    if (groupOf[vp] !== undefined) usedGroups.delete(groupOf[vp] as number)
-    const nb = cands[ri(d.rng, cands.length)] as { raw: MarkedWord; cls: WordClass }
-    picks[victim] = { w: nb.raw, cls: nb.cls }
-    used.add(plainWord(nb.raw))
-    if (groupOf[plainWord(nb.raw)] !== undefined) usedGroups.add(groupOf[plainWord(nb.raw)] as number)
-    locked.add(i); locked.add(victim); made++
-  }
+  plantTwins(picks, d.neigh, d.rng, used, usedGroups, twinTarget(d.rungIndex ?? 0, n))
 
   shuffle(d.rng, picks)
   s.history.push(picks)
