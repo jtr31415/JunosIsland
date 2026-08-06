@@ -572,7 +572,14 @@ describe('joe/names-audit.json', () => {
     // shared count can be while siblings are still landing. Twelve of the rows
     // are that collection's. If it is red for you, count the file and set it to
     // the count — the assertion above this one is the one carrying the meaning.
-    expect(audit.names).toHaveLength(253)
+    // 293 SINCE 6 AUG, and the +40 is PREHISTORIC (12), DINOSAURS (16) and
+    // LEGENDARY (12). Same reading again, and this run demonstrated it: the
+    // number was set to 281 with two siblings still landing, a sibling's twelve
+    // rows arrived between one run of the suite and the next, and it had to be
+    // re-counted. It is what the file ACTUALLY held and not a target. If it is
+    // red for you, count the file and set it to the count — the assertion above
+    // this one is the one carrying the meaning.
+    expect(audit.names).toHaveLength(293)
   })
 
   it('gives every creature its own name, so the playground question works', () => {

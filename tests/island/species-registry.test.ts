@@ -120,7 +120,11 @@ describe('the species registry', () => {
     // number is a shared fixture that every concurrent collection moves, so it
     // is set to what the tree ACTUALLY held when the last of them ran the suite
     // rather than to any one agent's arithmetic.
-    expect(REGISTRY.size).toBe(277)
+    // 317 SINCE 6 AUG, and the +40 is PREHISTORIC (12), DINOSAURS (16) and the
+    // twelve LEGENDARY species whose files are on the register. The same
+    // shared-fixture caveat: it is what the tree ACTUALLY held when the
+    // DINOSAURS builder ran the suite, with a sibling still landing.
+    expect(REGISTRY.size).toBe(317)
     expect(shippedIn('base')).toHaveLength(24)
     expect(shippedIn('garden')).toHaveLength(14)      // COMPLETE — the slow worm is assembled
     expect(shippedIn('home-pets')).toHaveLength(16)   // COMPLETE — all 16 hand-assembled (PB-073)
@@ -180,7 +184,11 @@ describe('the species registry', () => {
     // landing together: near-threatened, raptors, vulnerable, critically
     // endangered and endangered. The same shared-fixture caveat as `REGISTRY.size`
     // above applies — this is 320 minus what the tree actually held.
-    expect(rostered.filter(id => !speciesRecord(id))).toHaveLength(43)
+    // 3 since 6 Aug, and the −40 is PREHISTORIC, DINOSAURS and LEGENDARY landing
+    // in the same tree. Three rostered species now have no record at all:
+    // `animal-bat`, `animal-sugar-glider` and `animal-scorpion`, all Night
+    // Time's, all held up by a membrane or a pincer the bank has never held.
+    expect(rostered.filter(id => !speciesRecord(id))).toHaveLength(3)
   })
 
   it('has SEVEN complete collections, and birds is complete WITH PLACEHOLDERS in it', () => {
@@ -308,11 +316,20 @@ describe('the species registry', () => {
     // reading has been taken, which is the line `registry.ts:67-88` holds for
     // the base 24's seven badges. This list is a shared fixture that every
     // concurrent collection moves, so it is what the tree actually held.
+    //
+    // AND NOW THERE ARE NINETEEN, 6 August: PREHISTORIC (12), DINOSAURS (16) and
+    // LEGENDARY (12) landed in the same tree. DINOSAURS is the first collection
+    // `how-the-animals-are-made.md` §14 had ruled impossible to arrive with NO
+    // placeholder in it at all — all three of that line's words (frill, plate,
+    // spine) are answered by one bank record, `blade-05`, and
+    // `collections/dinosaurs.ts` carries the measurement. Shared fixture, so
+    // this is what the tree actually held.
     expect([...complete].sort())
       .toEqual([
-        'africa', 'birds', 'critically-endangered', 'critters', 'endangered',
-        'farm', 'garden', 'home-pets', 'ice', 'jungle', 'near-threatened',
-        'ocean', 'outback', 'raptors', 'vulnerable', 'woodland',
+        'africa', 'birds', 'critically-endangered', 'critters', 'dinosaurs',
+        'endangered', 'farm', 'garden', 'home-pets', 'ice', 'jungle',
+        'legendary', 'near-threatened', 'ocean', 'outback', 'prehistoric',
+        'raptors', 'vulnerable', 'woodland',
       ])
   })
 

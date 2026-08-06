@@ -786,11 +786,21 @@ describe('the hold on unbuilt collections is derived live, and a record is not a
      * >>> a shared fixture that every concurrent collection moves, so it is what
      * >>> the tree actually held rather than any one agent's arithmetic.
      */
+    /*
+     * >>> AND THREE MORE ON 6 AUGUST — prehistoric, dinosaurs and legendary,
+     * >>> built in parallel in the same tree. Same reading a third time: records
+     * >>> and models, nothing pushed, so every one reads records > 0 and
+     * >>> released = 0 and `heldBack` refuses it. `unlock.ts` was not touched
+     * >>> for any of the three either, which is eighteen collections' worth of
+     * >>> evidence for one sentence. Shared fixture, so this is what the tree
+     * >>> actually held when the DINOSAURS builder ran it.
+     */
     expect(recordsWithoutModels.sort(), 'the set of records-with-nothing-released moved')
       .toEqual([
-        'africa', 'birds', 'critically-endangered', 'critters', 'endangered',
-        'farm', 'ice', 'jungle', 'near-threatened', 'night-time', 'ocean',
-        'outback', 'raptors', 'vulnerable', 'woodland',
+        'africa', 'birds', 'critically-endangered', 'critters', 'dinosaurs',
+        'endangered', 'farm', 'ice', 'jungle', 'legendary', 'near-threatened',
+        'night-time', 'ocean', 'outback', 'prehistoric', 'raptors',
+        'vulnerable', 'woodland',
       ])
     for (const id of recordsWithoutModels) {
       expect(heldBack(BUILT, id), `${id} is offered with nothing released in it`).toBe(true)

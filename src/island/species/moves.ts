@@ -172,6 +172,52 @@
  * >>> as `land` by default, which is Joe's to change and not this file's. The
  * >>> other ten say `land`, which is `DEFAULT_LOCOMOTION` and changes nothing
  * >>> either way.
+ * >>>
+ * >>> PREHISTORIC'S TWELVE WENT IN ON 6 AUGUST and only ONE is not the default.
+ * >>> The MEGALODON is `water`, which is not a judgement at all — it is a shark,
+ * >>> and it joins `animal-shark`, the rays and the cetaceans. The other eleven
+ * >>> say `land`, which is `DEFAULT_LOCOMOTION` and therefore changes nothing
+ * >>> whichever way it is read. Two of those eleven are worth naming because
+ * >>> they are the entries somebody would expect to differ and should not: the
+ * >>> DODO and the TERROR BIRD are `land` and NOT `air`, on the ostrich's, the
+ * >>> emu's, the lyrebird's and the game birds' reading — `air` hovers a pet at
+ * >>> `TREE_HEIGHT`, and a flightless bird hovering in a tree is the exact
+ * >>> failure this table was written to prevent. All twelve are Joe's to
+ * >>> overrule in the editor and none of them alters a frame until PB-069.
+ * >>>
+ * >>> DINOSAURS' SIXTEEN WENT IN ON 6 AUGUST and only ONE is not the default.
+ * >>> The PTERODACTYL is `air` and is the collection's only flyer — a pterosaur
+ * >>> is a real one, so it joins the sixteen raptors and the songbirds rather
+ * >>> than the ostrich's flightless-bird reading. The SPINOSAURUS is the entry
+ * >>> most likely to be argued and it says `land`: it fished and it is built on
+ * >>> `animal-crocodile.ts`'s own jaw ratio, so `amphibian` — the crocodile's,
+ * >>> the hippo's and the gharial's word — was genuinely available. It was
+ * >>> declined because the fact is contested among people who study it and
+ * >>> `amphibian` here would be this file guessing at a real dispute rather
+ * >>> than recording a judgement. That one is worth Joe's eye. The other
+ * >>> fourteen say `land`, which is `DEFAULT_LOCOMOTION` and changes nothing
+ * >>> whichever way it is read — including the two SAUROPODS, which an older
+ * >>> generation of books had wading in swamps and which nothing in this
+ * >>> project should repeat.
+ * >>>
+ * >>> LEGENDARY'S TWELVE WENT IN ON 6 AUGUST and it is the collection where
+ * >>> this table is doing something it has not done before: **every entry is a
+ * >>> judgement about a STORY rather than about an animal**, because none of
+ * >>> these creatures has a locomotion anybody can check. So the rule taken was
+ * >>> the narrowest honest one — what the telling itself says, and nothing
+ * >>> inferred from the shape. Five are `air` and every one of them flies IN
+ * >>> THE STORY: the DRAGON, the PHOENIX, the GRIFFIN, the HIPPOGRIFF (which is
+ * >>> ridden through the air in the poem that invented it) and the
+ * >>> THUNDERBIRD, whose wings are the thunder. Two are `water` and both are
+ * >>> sea or lake monsters that are never out of it: the KRAKEN and LOCH NESS.
+ * >>> The other five say `land`, which is `DEFAULT_LOCOMOTION` and therefore
+ * >>> changes nothing whichever way it is read — the UNICORN, the YETI, the
+ * >>> JACKALOPE, the SPHINX and the MOON RABBIT. **The MOON RABBIT is the one
+ * >>> to argue about**: it is on the moon in every telling, and there is no
+ * >>> word in this union for that and should not be one. `air` would hover it
+ * >>> at `TREE_HEIGHT`, which is a canopy and not a sky, and that is the exact
+ * >>> failure this table exists to prevent. All twelve are Joe's to overrule in
+ * >>> the editor and none of them alters a frame until PB-069.
  *
  * ## Why a lookup table and not a field on the collection record
  *
@@ -277,8 +323,10 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-aardvark': 'land',
   'animal-african-wild-dog': 'land',
   'animal-agouti': 'land',
+  'animal-allosaurus': 'land',
   'animal-amur-leopard': 'land',
   'animal-anglerfish': 'water',
+  'animal-ankylosaurus': 'land',
   'animal-ant': 'land',
   'animal-anteater': 'land',
   'animal-antelope': 'land',
@@ -300,6 +348,7 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-blue-tit': 'air',
   'animal-blue-whale': 'water',
   'animal-bonobo': 'land',
+  'animal-brachiosaurus': 'land',
   'animal-budgie': 'air',
   'animal-buffalo': 'land',
   'animal-butterfly': 'air',
@@ -307,7 +356,9 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-canary': 'air',
   'animal-capercaillie': 'land',
   'animal-capybara': 'amphibian',
+  'animal-carnotaurus': 'land',
   'animal-cassowary': 'land',
+  'animal-cave-bear': 'land',
   'animal-centipede': 'land',
   'animal-chameleon': 'land',
   'animal-cheetah': 'land',
@@ -323,9 +374,14 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-crocodile': 'amphibian',
   'animal-dall-sheep': 'land',
   'animal-degu': 'land',
+  'animal-dilophosaurus': 'land',
   'animal-dingo': 'land',
+  'animal-diplodocus': 'land',
+  'animal-dire-wolf': 'land',
+  'animal-dodo': 'land',
   'animal-dolphin': 'water',
   'animal-dormouse': 'land',
+  'animal-dragon': 'air',
   'animal-dragonfly': 'air',
   'animal-duck': 'amphibian',
   'animal-dugong': 'water',
@@ -343,17 +399,21 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-frilled-lizard': 'land',
   'animal-frog': 'amphibian',
   'animal-galapagos-penguin': 'amphibian',
+  'animal-gallimimus': 'land',
   'animal-gaur': 'land',
   'animal-gecko': 'land',
   'animal-gerbil': 'land',
   'animal-gharial': 'amphibian',
   'animal-giant-otter': 'amphibian',
+  'animal-giant-sloth': 'land',
   'animal-gibbon': 'land',
+  'animal-glyptodon': 'land',
   'animal-golden-eagle': 'air',
   'animal-goldfish': 'water',
   'animal-gorilla': 'land',
   'animal-goshawk': 'air',
   'animal-grasshopper': 'land',
+  'animal-griffin': 'air',
   'animal-guanaco': 'land',
   'animal-guinea-pig': 'land',
   'animal-hamster': 'land',
@@ -364,6 +424,7 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-hedgehog': 'land',
   'animal-heron': 'land',
   'animal-hippo': 'amphibian',
+  'animal-hippogriff': 'air',
   'animal-hobby': 'air',
   'animal-howler-monkey': 'land',
   'animal-hummingbird': 'air',
@@ -371,6 +432,9 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-hyacinth-macaw': 'air',
   'animal-hyena': 'land',
   'animal-iguana': 'land',
+  'animal-iguanodon': 'land',
+  'animal-irish-elk': 'land',
+  'animal-jackalope': 'land',
   'animal-jaguar': 'land',
   'animal-jaguarundi': 'land',
   'animal-jerboa': 'land',
@@ -381,25 +445,30 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-kingfisher': 'air',
   'animal-komodo-dragon': 'land',
   'animal-kookaburra': 'air',
+  'animal-kraken': 'water',
   'animal-ladybird': 'land',
   'animal-lemming': 'land',
   'animal-lemur': 'land',
   'animal-lobster': 'water',
+  'animal-loch-ness': 'water',
   'animal-lovebird': 'air',
   'animal-lyrebird': 'land',
   'animal-lynx': 'land',
   'animal-magpie': 'air',
+  'animal-mammoth': 'land',
   'animal-manatee': 'water',
   'animal-mandrill': 'land',
   'animal-maned-wolf': 'land',
   'animal-mantis': 'land',
   'animal-markhor': 'land',
   'animal-meerkat': 'land',
+  'animal-megalodon': 'water',
   'animal-merlin': 'air',
   'animal-mink': 'amphibian',
   'animal-mole': 'land',
   'animal-mongoose': 'land',
   'animal-moon-bear': 'land',
+  'animal-moon-rabbit': 'land',
   'animal-moth': 'air',
   'animal-mouse': 'land',
   'animal-musk-ox': 'land',
@@ -414,20 +483,25 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-ostrich': 'land',
   'animal-otter': 'amphibian',
   'animal-owlet': 'air',
+  'animal-pachycephalosaurus': 'land',
   'animal-pangolin': 'land',
+  'animal-parasaurolophus': 'land',
   'animal-parrot': 'air',
   'animal-peacock': 'land',
   'animal-pelican': 'amphibian',
   'animal-peregrine-falcon': 'air',
   'animal-pheasant': 'land',
   'animal-philippine-eagle': 'air',
+  'animal-phoenix': 'air',
   'animal-pine-marten': 'land',
   'animal-platypus': 'amphibian',
   'animal-pony': 'land',
   'animal-porcupine': 'land',
   'animal-ptarmigan': 'land',
+  'animal-pterodactyl': 'air',
   'animal-pufferfish': 'water',
   'animal-puffin': 'air',
+  'animal-quagga': 'land',
   'animal-quokka': 'land',
   'animal-ray': 'water',
   'animal-red-kite': 'air',
@@ -435,6 +509,7 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-red-wolf': 'land',
   'animal-reindeer': 'land',
   'animal-robin': 'air',
+  'animal-sabre-tooth': 'land',
   'animal-salamander': 'land',
   'animal-saola': 'land',
   'animal-sea-urchin': 'water',
@@ -454,11 +529,14 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-snow-petrel': 'air',
   'animal-snowy-owl': 'air',
   'animal-sparrowhawk': 'air',
+  'animal-sphinx': 'land',
   'animal-spider': 'land',
+  'animal-spinosaurus': 'land',
   'animal-spixs-macaw': 'air',
   'animal-squid': 'water',
   'animal-squirrel': 'land',
   'animal-starfish': 'water',
+  'animal-stegosaurus': 'land',
   'animal-stick-insect': 'land',
   'animal-stoat': 'land',
   'animal-stork': 'land',
@@ -467,20 +545,26 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-sumatran-orangutan': 'land',
   'animal-sumatran-rhino': 'land',
   'animal-swan': 'amphibian',
+  'animal-t-rex': 'land',
   'animal-takin': 'land',
   'animal-tapir': 'amphibian',
   'animal-tarantula': 'land',
   'animal-tawny-owl': 'air',
   'animal-tassie-devil': 'land',
   'animal-terrapin': 'land',
+  'animal-terror-bird': 'land',
   'animal-thorny-devil': 'land',
+  'animal-thunderbird': 'air',
   'animal-toad': 'amphibian',
   'animal-tortoise': 'land',
   'animal-toucan': 'air',
   'animal-tree-frog': 'amphibian',
   'animal-tree-kangaroo': 'land',
+  'animal-triceratops': 'land',
   'animal-turtle': 'water',
+  'animal-unicorn': 'land',
   'animal-vaquita': 'water',
+  'animal-velociraptor': 'land',
   'animal-vulture': 'air',
   'animal-walrus': 'amphibian',
   'animal-warthog': 'land',
@@ -494,9 +578,11 @@ export const MOVES: Readonly<Record<string, Locomotion>> = {
   'animal-wombat': 'land',
   'animal-woodlouse': 'land',
   'animal-woodpecker': 'air',
+  'animal-woolly-rhino': 'land',
   'animal-worm': 'land',
   'animal-wren': 'air',
   'animal-yak': 'land',
+  'animal-yeti': 'land',
   'animal-zebra': 'land',
 }
 /* <<< WORKBENCH-OWNED TABLE */

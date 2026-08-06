@@ -233,8 +233,13 @@ describe('WHAT THE ALBUM SHOWS TODAY, collection by collection', () => {
     // >>> critically endangered and endangered. Same reading as above — modelled
     // >>> is not released, so nothing on the table above moves until Joe pushes,
     // >>> and this number is whatever the tree held when the last sibling ran.
+    // >>> 317 SINCE 6 AUGUST, and the +40 is PREHISTORIC (12), DINOSAURS (16)
+    // >>> and the twelve species of LEGENDARY whose files are on the register.
+    // >>> Set to what the tree ACTUALLY held when the DINOSAURS builder ran,
+    // >>> with a sibling still landing, which is the only honest thing a shared
+    // >>> count can be. Same reading as above: modelled is not released.
     expect(ROSTER).toHaveLength(320)
-    expect(ROSTER.filter(isBuilt)).toHaveLength(277)
+    expect(ROSTER.filter(isBuilt)).toHaveLength(317)
   })
 
   it('has exactly three collections with any frame at all', () => {
@@ -261,7 +266,7 @@ describe('the tripwire: isBuilt cannot drift from the ability to draw', () => {
      * declaring a kit without writing it fails here instead of shipping.
      */
     const built = ROSTER.filter(isBuilt)
-    expect(built).toHaveLength(277)   // moves with the parallel collections; see above
+    expect(built).toHaveLength(317)   // moves with the parallel collections; see above
 
     for (const id of built) {
       const record = speciesRecord(id)

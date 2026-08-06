@@ -403,8 +403,25 @@ Two collections are recorded here as unbuildable. Both claims are now UNVERIFIED
   flipper". The **segmented leg half is TRUE** — one leg shape in 100 records,
   `box-01`, taper 1.000, no joint anywhere — but it stopped nothing: Critters
   shipped fourteen built and two priced placeholders.
-- **Dinosaurs (16)** — no frill, no plate, no spine. **UNVERIFIED since the
-  `wing` role was baked. Measure before believing.**
+- ~~**Dinosaurs (16)** — no frill, no plate, no spine.~~ **WRONG ON ALL THREE
+  WORDS, 6 August 2026, and all three are answered by ONE record.** `blade-05` —
+  the lion's muzzle plate, `roles: ["nose"]`, provenance `lion:muzzle/snout`,
+  measured **1.000 × 1.000 × 0.125, 18 triangles, 16 welded points, two atlas
+  bands, attachment `z +1` at a recorded burial of 0.000** — is the only large
+  flat slab the pack drew. It has been in the bank since the first bake and in
+  250 built species nothing had ever stood it on its edge. Upright and leaned 45
+  degrees it is `animal-triceratops`'s **frill**; turned a quarter about y,
+  narrowed to 0.300 and repeated four times it is `animal-stegosaurus`'s four
+  dorsal **plates** for 72 triangles between them; given the same turn and left
+  whole it is `animal-spinosaurus`'s entire **sail**, 0.125 thick by 1.000 tall
+  by 1.000 long over a 1.250 back, for eighteen triangles. `animal-dilophosaurus`
+  mirrors it into a pair of head crests as a fourth job. **Dinosaurs shipped
+  sixteen of sixteen with no placeholder — the first collection this section had
+  ruled impossible to manage that.** And note the pattern, because it is now
+  three for three: Ocean's fins were filed under `wing`, Critters' insect wing
+  under `wing`, and these three under `nose`. **In every case the shape was
+  present and the ROLE LABEL hid it**, which is precisely what §3.1 of
+  `building-animals-from-parts.md` warned about on 29 July.
 - ~~**Raptors (16)** — no hooked beak, no talon, no spread wing.~~ **TESTED AND
   MOSTLY FALSE, 6 August 2026 — the third time this section has been wrong.**
   *No spread wing* is FALSE and was false before anyone asked: `wedge-19` attaches

@@ -40,6 +40,9 @@ import { RAPTORS_SPECIES } from './collections/raptors'
 import { VULNERABLE_SPECIES } from './collections/vulnerable'
 import { CRITICALLY_ENDANGERED_SPECIES } from './collections/critically-endangered'
 import { ENDANGERED_SPECIES } from './collections/endangered'
+import { PREHISTORIC_SPECIES } from './collections/prehistoric'
+import { DINOSAURS_SPECIES } from './collections/dinosaurs'
+import { LEGENDARY_SPECIES } from './collections/legendary'
 import type { Species } from './types'
 
 /**
@@ -498,13 +501,127 @@ export const CRITICALLY_ENDANGERED_COLLECTION: readonly Species[] =
  */
 export const ENDANGERED_COLLECTION: readonly Species[] = [...ENDANGERED_SPECIES]
 
+/**
+ * PREHISTORIC — roster row 20, and the first collection in this project where
+ * the whole of every member is EXTINCT.
+ *
+ * That settles the `threat` question harder than any of the four IUCN-named rows
+ * did. Those collections leave `threat` absent because no dated Red List reading
+ * was taken; this one leaves it absent because **a conservation category on an
+ * extinct animal is nonsense before it is unchecked** — the categories describe
+ * living populations and there is no reading to take. Not one of the twelve
+ * carries a `Threat`, and here "absent" means "not applicable" as well as "not
+ * recorded".
+ *
+ * TWELVE OF TWELVE ARE REAL ANIMALS AND NONE IS A PLACEHOLDER, which is the
+ * first collection since Vulnerable able to say so and is a claim
+ * `collections/prehistoric.ts` defends rather than asserts. The reason it is
+ * true is structural: **eight of the twelve are a living animal at different
+ * proportions with a coat on, and the living animal is already built.** A
+ * mammoth is an elephant, a sabre-tooth a cat, a dire wolf a wolf, a cave bear a
+ * bear, a woolly rhino a rhino, a quagga a zebra, an Irish elk an elk, a
+ * megalodon a shark — so the design question is uniform and sharp, and every
+ * separation is one measured swap argued at the species.
+ *
+ * WHAT IT ADDS TO THE VOCABULARY, all argued in the collection file: `blade-05`
+ * — the lion's flat muzzle plate, worn three times before and always as a FACE —
+ * laid horizontal as the project's first PALMATE ANTLER; a marking said by NOT
+ * placing a card, which is the quagga and is the only pattern this project has
+ * ever been able to express; the first THREE-DEEP `on` chain, neck to head to
+ * bill to hook on the terror bird; and the two eye cards `plate-04` and
+ * `plate-09`, which no one of the 200-odd built species had ever spent.
+ *
+ * WHAT IT PRICES: the CURVE twice more (a mammoth's tusk, a terror bird's bill),
+ * the DOME twice more (a cave bear's brow, a glyptodon's carapace — the fifth
+ * and sixth askings), the LONG HIND LEG twice more, and the `claw` role, which
+ * §7 censuses as ten shapes and which has still never been baked. It also hits
+ * the ELONGATED-HULL wall twice, which is a RULING and not a commission: the
+ * hull is never scaled, the ten shells span 1.21x by volume, and a megalodon is
+ * therefore a fifth bigger than a great white rather than three times.
+ */
+export const PREHISTORIC_COLLECTION: readonly Species[] = [...PREHISTORIC_SPECIES]
+
+/**
+ * DINOSAURS — roster row 14, and the THIRD collection to retire a sentence in
+ * `docs/how-the-animals-are-made.md` §14 by measuring instead of reading.
+ *
+ * That line said *"no frill, no plate, no spine"* and it prevented this
+ * collection for eight days, exactly as it prevented Ocean and Critters. **All
+ * three of its words are answered by ONE record.** `blade-05` — the lion's
+ * muzzle plate, `roles: ["nose"]`, measured 1.000 x 1.000 x 0.125 at eighteen
+ * triangles — is the only large flat slab the pack drew, has been in the bank
+ * since the first bake, and had never been stood on its edge in 250 species. It
+ * is the triceratops's leaned frill, the stegosaur's four dorsal plates, the
+ * spinosaur's whole sail and the dilophosaur's paired crests.
+ *
+ * **The pattern is now three for three: in every case the shape was present and
+ * the ROLE LABEL hid it** — Ocean's fins under `wing`, Critters' insect wing
+ * under `wing`, these three under `nose`. §3.1 named that failure on 29 July.
+ * The one entry left on §14's list is RAPTORS and it should be measured.
+ *
+ * SIXTEEN OF SIXTEEN ARE REAL ANIMALS AND NONE IS A PLACEHOLDER, which no
+ * collection §14 had ruled impossible has managed before — Ocean shipped twelve
+ * and four, Critters fourteen and two.
+ *
+ * WHAT IT ADDS TO THE COMMISSION BOARD is mostly the LONG HIND LEG: ten of its
+ * sixteen are bipedal theropods standing on `animal-chicken.ts`'s biped station,
+ * which takes the register from nine species behind that one part to eighteen.
+ * It also puts a FOURTH species behind the DOME (`animal-pachycephalosaurus`,
+ * after Ocean's jellyfish and turtle and Garden's tortoise) and a SECOND behind
+ * the never-baked CLAW (`animal-velociraptor`, after Ocean's lobster). It wants
+ * no CURVE at all, which makes it the second collection after Endangered to
+ * check every member against that one and add none.
+ */
+export const DINOSAURS_COLLECTION: readonly Species[] = [...DINOSAURS_SPECIES]
+
+/**
+ * LEGENDARY — roster row 16, and the third collection to retire a sentence in
+ * `docs/how-the-animals-are-made.md` §14 by measuring it instead of reading it.
+ *
+ * That section has said since 29 July that *"Legendary (12) and Outback (16) are
+ * near-total failures"*. Outback came out thirteen of sixteen; this comes out
+ * **ELEVEN BUILT AND ONE PRICED PLACEHOLDER**, and not one of the eleven needed
+ * a shape the bank has not got. `collections/legendary.ts` lists every part it
+ * reached for beside the animal Kenney drew it on: a unicorn's horn is the BEE'S
+ * ANTENNA stretched, a dragon's back ridge is the HOG'S EAR (§3.1's own worked
+ * example, specified by Joe on 29 July and never built until now), a griffin's
+ * tail is the LION'S TAIL, Nessie's neck is the ELEPHANT'S TRUNK stood on end
+ * and her humps are the KOALA'S EAR sunk 0.53 of itself. **`cone-01` and
+ * `box-18` between them carry six of the twelve.**
+ *
+ * THE ONE PLACEHOLDER IS `animal-sphinx`, and what stops it is a HUMAN FACE:
+ * Kenney drew twenty-four animals and no people, and of the bank's 100 records
+ * the `nose` role holds 28 distinct shapes of which every one is an animal's
+ * muzzle, beak, nose-tip or nostril card. It is also exactly where §3.2 says the
+ * repurposing multiplier stops paying, because a face carries a read that
+ * survives being moved. It ships as the lion body with the Great Sphinx's nemes
+ * headdress and a deliberately blank front, and the cheapest thing that would
+ * finish it — one authored flat FACE CARD — is priced in its own file.
+ *
+ * WHAT IT ADDS TO THE COMMISSION BOARD: two more species behind the never-baked
+ * CLAW (the griffin, whose talons were cut for rule 9 at 918 of 951, and the
+ * thunderbird, which wears the elephant's tusk as `animal-golden-eagle.ts` does)
+ * and one more behind the CURVE (the kraken's arms, which should curl). It adds
+ * NO new line. It also REFINES the dome: Loch Ness wanted three humps and got
+ * them out of a sunk `box-25`, so that commission is for a hollow BELL and a
+ * CARAPACE and not for a mound.
+ *
+ * AND IT IS THE ONE COLLECTION WHERE A `threat` RECORD WOULD BE NONSENSE RATHER
+ * THAN MERELY UNCHECKED — a conservation status for a creature that does not
+ * exist. For the same reason every fact row it adds is written about the LEGEND
+ * rather than about the animal, so that nothing in `joe/species-facts.json`
+ * states a falsehood to a child; all twelve are `flagged` and none is `verified`.
+ */
+export const LEGENDARY_COLLECTION: readonly Species[] = [...LEGENDARY_SPECIES]
+
 /** Everything that has actually shipped: the frozen 24 plus the built collections. */
 export const SHIPPED_SPECIES: readonly Species[] = [
   ...BASE_SPECIES, ...PHASE2_SPECIES, ...PHASE3_SPECIES, ...NIGHT_TIME_COLLECTION,
   ...BIRDS_COLLECTION, ...OCEAN_COLLECTION, ...JUNGLE_COLLECTION, ...OUTBACK_COLLECTION,
   ...CRITTERS_COLLECTION, ...ICE_COLLECTION, ...NEAR_THREATENED_COLLECTION,
   ...RAPTORS_COLLECTION, ...VULNERABLE_COLLECTION, ...CRITICALLY_ENDANGERED_COLLECTION,
-  ...ENDANGERED_COLLECTION,
+  ...ENDANGERED_COLLECTION, ...PREHISTORIC_COLLECTION, ...DINOSAURS_COLLECTION,
+  ...LEGENDARY_COLLECTION,
 ]
 
 /** Every species that has actually shipped, by id. */
