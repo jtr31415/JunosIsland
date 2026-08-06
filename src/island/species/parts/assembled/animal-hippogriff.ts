@@ -151,6 +151,7 @@ export const HIPPOGRIFF_ASSEMBLY = defineCreature('animal-hippogriff', {
     + 'A PATCH IS A PROPERTY OF THE SLOT, not of the part that declared it, so `belly` '
     + 'splits the coat CELL and every part painted from `coat` reads the split. At 12/16 '
     + 'the ears rendered cream. They have a slot of their own now, `fur`, seeded with the '
-    + 'coat's own dun. NEW PALETTE, UNREVIEWED — a cool dun over a pale front, chosen away from '
-    + 'the griffin\'s lion tawny so the two are not one colour at two sizes either.',
+    + 'coat\'s own dun. NEW PALETTE, UNREVIEWED — a cool dun over a pale front, chosen '
+    + 'away from the griffin\'s lion tawny so the two are not one colour at two sizes '
+    + 'either.',
 })
