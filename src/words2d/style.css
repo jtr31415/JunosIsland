@@ -77,8 +77,19 @@
     column-gap:2.6vmin;row-gap:3vmin}
   .word.blue{color:#2456c4}
   .word.mystery{color:#97a0ac}
-  .op{color:#fff;font-weight:700;font-size:calc(var(--ws) * .85);
+  /* Signs a fifth larger and the operator coloured (Joe, 6 Aug). The 2D shell
+     puts these on a photographic backdrop, so the text-shadow stays — it is what
+     keeps grass and coral legible over whatever is behind them, and white was
+     only ever readable because of it. `=` stays white: it is not the glyph being
+     told apart. */
+  .op{color:#fff;font-weight:700;font-size:calc(var(--ws) * 1.05);
     text-shadow:0 2px 8px rgba(0,0,20,.55);pointer-events:none}
+  .op.op-add{color:#8ce063}
+  .op.op-sub{color:#ff9d8e}
+  .op.op-flash{animation:opflash .42s cubic-bezier(.34,1.6,.64,1) both}
+  @keyframes opflash{from{scale:1;filter:brightness(1)}
+    40%{scale:1.28;filter:brightness(1.45)}to{scale:1;filter:brightness(1)}}
+  @media (prefers-reduced-motion: reduce){.op.op-flash{animation:none}}
   .helper{pointer-events:auto;cursor:pointer}
   .qchip{width:9.5vmin;height:9.5vmin;min-width:36px;min-height:36px;border-radius:50%;
     background:rgba(255,255,255,.92);color:#7a3fb8;font-weight:700;

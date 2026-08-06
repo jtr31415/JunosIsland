@@ -454,3 +454,48 @@ describe('mountSum: the ten-dot', () => {
     expect(openBoxes(el).every(b => b.querySelectorAll('.tenkey').length === 0)).toBe(true)
   })
 })
+
+describe('the operator, which is the glyph a beginner misreads', () => {
+  const opsOf = (root: HTMLElement): HTMLElement[] =>
+    [...root.querySelectorAll<HTMLElement>('.op')]
+  const glyph = (root: HTMLElement, t: string): HTMLElement | undefined =>
+    opsOf(root).find(o => o.textContent === t)
+
+  it('colours a plus and a minus differently', () => {
+    mountSum(ADD, makeDeps(el).d)
+    expect(glyph(el, '+')?.classList.contains('op-add')).toBe(true)
+    el.innerHTML = ''
+    mountSum({ a: 9, b: 4, op: 'sub' }, makeDeps(el).d)
+    expect(glyph(el, '−')?.classList.contains('op-sub')).toBe(true)
+  })
+
+  it('leaves the equals sign uncoloured — it is not the glyph being told apart', () => {
+    mountSum(ADD, makeDeps(el).d)
+    const eq = glyph(el, '=')
+    expect(eq?.classList.contains('op-add')).toBe(false)
+    expect(eq?.classList.contains('op-sub')).toBe(false)
+    expect(eq?.classList.contains('op-flash')).toBe(false)
+  })
+
+  it('flashes the sign as the sum arrives', () => {
+    mountSum(ADD, makeDeps(el).d)
+    expect(glyph(el, '+')?.classList.contains('op-flash')).toBe(true)
+  })
+
+  it('does NOT flash on the minus debut, so the two animations cannot fight', () => {
+    /* `op-debut` is the once-in-a-childhood introduction pop and owns the glyph
+       on the one round it plays. Both classes on one element is two animations
+       on one transform, and the debut is the one that must win. */
+    mountSum({ a: 9, b: 4, op: 'sub' }, makeDeps(el).d, true)
+    const minus = glyph(el, '−')
+    expect(minus?.classList.contains('op-debut')).toBe(true)
+    expect(minus?.classList.contains('op-flash')).toBe(false)
+  })
+
+  it('still flashes a minus that is not the debut', () => {
+    mountSum({ a: 9, b: 4, op: 'sub' }, makeDeps(el).d, false)
+    const minus = glyph(el, '−')
+    expect(minus?.classList.contains('op-flash')).toBe(true)
+    expect(minus?.classList.contains('op-debut')).toBe(false)
+  })
+})

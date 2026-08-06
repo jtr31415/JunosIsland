@@ -106,11 +106,45 @@ body.calm-colours .word.red { color: #1d5c2a; background: #e8f8dd; }
   align-items: center;
 }
 
+/*
+ * The signs are deliberately larger than the numbers they sit between, and the
+ * OPERATOR carries a colour. Joe, 6 Aug: "kids dont always pick up the
+ * difference in the beginning." Roughly a fifth bigger than it was.
+ *
+ * `=` keeps `--ink`: it is not the glyph being told apart, and three coloured
+ * symbols would spend the contrast that makes the two that matter stand out.
+ */
 .op {
-  font-size: clamp(1.4rem, 7vmin, 3rem);
+  font-size: clamp(1.7rem, 8.5vmin, 3.6rem);
   font-weight: 900;
   color: var(--ink);
   padding: 0 .2em;
+}
+
+.op-add { color: var(--grass); }
+.op-sub { color: var(--coral); }
+
+/*
+ * One brief flash as the sum arrives, so the eye is taken to the sign before
+ * the numbers. Shorter and smaller than `op-debut`'s introduction pop (.55s,
+ * scale 1.45) on purpose — that one happens once in a childhood and this one
+ * happens every round, so it has to be a blink rather than an event.
+ *
+ * `both` and one shot: the round is mounted fresh every time, so the class
+ * arrives with the element and leaves with it, and there is nothing to clear.
+ * Decoration only — the pad is live throughout and they can answer straight
+ * through it.
+ */
+.op-flash { animation: op-flash-blip .42s var(--ease-pop, ease-out) both; }
+
+@keyframes op-flash-blip {
+  from { transform: scale(1); filter: brightness(1) }
+  40% { transform: scale(1.28); filter: brightness(1.45) }
+  to { transform: scale(1); filter: brightness(1) }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .op-flash { animation: none; }
 }
 
 .helper { display: grid; place-items: center; min-height: 2.2rem; }

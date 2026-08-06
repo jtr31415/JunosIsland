@@ -91,8 +91,35 @@ export function mountSum(
    * moves once is how a five-year-old is told "this one is new" without a
    * sentence. The `=` never pops — they have seen it on every sum ever done.
    */
+  /*
+   * THE OPERATOR IS COLOURED AND THE SIGNS ARE BIGGER, both on Joe's word of
+   * 6 August: *"make the signs a bit larger and colour the operator, kids dont
+   * always pick up the difference in the beginning."*
+   *
+   * `+` takes grass and `−` takes coral. The `=` is deliberately left in ink:
+   * it is not the thing being told apart, and giving three glyphs three colours
+   * would spend the distinction that makes the two that matter stand out.
+   *
+   * COLOUR IS THE SECOND CUE, NEVER THE ONLY ONE. The glyphs already differ in
+   * shape, so a child who cannot separate green from coral has lost nothing —
+   * which is the whole reason this is a colour ON a symbol rather than a colour
+   * INSTEAD of one.
+   */
   const sign = op(p.op === 'add' ? '+' : '−')
+  sign.classList.add(p.op === 'add' ? 'op-add' : 'op-sub')
+  /*
+   * AND IT FLASHES ONCE AS THE SUM ARRIVES — *"maybe let it flash up briefly
+   * when the equation first shows"* — so the eye is taken to the sign before
+   * the child starts on the numbers.
+   *
+   * ON EVERY ROUND EXCEPT THE MINUS DEBUT, where `op-debut`'s bigger one-shot
+   * pop already owns the glyph. Two animations on one element fight and the
+   * debut is the one that must win: it is the sentence-free introduction
+   * runA.md:236 asks for, it happens once in a child's life, and this flash
+   * happens on every sum thereafter.
+   */
   if (debut && p.op === 'sub') sign.classList.add('op-debut')
+  else sign.classList.add('op-flash')
   box.append(A, sign, B, op('='), ANS)
 
   let solved = false, wrongs = 0
