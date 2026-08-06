@@ -699,6 +699,13 @@
       "detail": "Three collections were declared unbuildable and all three were wrong the same way. Ocean's fins: present, filed under `wing` (box-42/box-43, provenance fish:wing). Critters' membranous insect wing: present, filed under `wing` (blade-06/blade-07, provenance bee:wing-left). Dinosaurs' frill, plate AND spine: all three are ONE record, blade-05 — the lion's muzzle plate, filed under `nose`, 1.000 x 1.000 x 0.125, 18 triangles, in the bank since the first bake and never stood on its edge in 250 species. Upright and leaned back it is a frill; quarter-turned and narrowed it is a plate row (72 triangles for four); left whole it is an entire sail for 18. §3.1 of building-animals-from-parts.md warned of exactly this on 29 July. THE LESSON IS A METHOD: a role label records what Kenney drew the shape FOR, not what it can say, so a census that filters by role will always under-report. Search the bank by dimensions and vertex count. One immediate payoff already identified: animal-frilled-lizard (Outback) is a placeholder because its census looked only at zero-thickness parts and never saw blade-05, which at 1.000 across is 2.5x the biggest card it did find — it would finish that animal today.",
       "state": "open",
       "run": ""
+    },
+    {
+      "id": "PB-099",
+      "title": "The island bundle carries every unsigned animal, so it grew 29% for species nobody can see",
+      "detail": "A species is CODE, not a data file, so all 296 ship in the initial chunk whether or not signed-off.json lets them appear. Measured across the 6 Aug deploy: 1361 KB before the twelve collections, 1761 KB after — about +400 KB, and the PWA precaches it, so it lands on first load on Juno's tablet. Not a problem at this size and NOT worth fixing yet; carded because it scales with every collection and the roster is not finished growing. The fix when it matters is to code-split unsigned species out of the initial chunk — built.ts:isReleased and pool.ts already know which are live, so the split has a predicate waiting for it. Vite already warns that chunks exceed 500 kB.",
+      "state": "open",
+      "run": ""
     }
   ]
 }
