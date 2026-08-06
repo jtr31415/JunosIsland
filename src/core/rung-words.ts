@@ -5,13 +5,13 @@
  * rung whose list is half-approved deals only the approved half.
  */
 export const RUNG_WORDS: Record<number, readonly string[]> = {
-  3: [],
-  4: [],
-  5: [],
-  6: [],
-  7: [],
-  8: [],
-  9: [],
-  10: [],
-  11: [],
+  3: ["sun", "cat", "pig", "bed", "dog", "hat", "pen", "cup", "bus", "fox", "hen", "log", "mat", "net", "pot", "rat", "rug", "tap", "top", "van", "wig", "zip"],
+  4: ["fish", "chip", "shop", "sock", "bell", "ring", "moth", "duck", "chin", "shed", "thin", "kick", "doll", "king", "wing", "rock", "lock", "sack", "pack", "hill", "bill", "fill"],
+  5: ["frog", "nest", "milk", "bird", "hand", "lamp", "crab", "ship", "drum", "flag", "desk", "tent", "bath", "wolf", "pond", "fork", "wasp", "swan", "crib", "gift", "bat", "egg", "jar", "cap", "box", "web"],
+  6: ["I go", "I went", "I see", "I sit", "I run", "I jump", "I help", "I like", "I have", "I am", "I did", "he has", "he ran", "he sat", "she can", "she has", "we sit", "we ran", "you sit", "they can", "dad has"],
+  7: ["stand", "crisp", "plant", "blink", "frost", "trust", "shelf", "stomp", "drink", "swing", "blank", "thick", "still", "print"],
+  8: ["chest", "clock", "truck", "brush", "torch", "witch", "bench", "swamp", "chick", "storm", "brick", "stamp", "plank", "flask", "a chest", "the clock", "my truck", "his torch", "a witch", "the storm", "a chick", "my stamp"],
+  9: ["cake", "bike", "home", "cube", "name", "ride", "tape", "size", "rope", "tune", "hope", "kite", "wave", "gate", "cave", "dive", "five", "hole", "mile", "nose"],
+  10: ["rain", "play", "boat", "night", "green", "tree", "seed", "feet", "road", "coat", "soap", "snow", "slow", "high", "light", "sea", "leaf", "day"],
+  11: ["sunset", "rabbit", "playground", "napkin", "magnet", "picnic", "rocket", "basket", "pumpkin", "insect", "helmet", "muffin", "tennis", "kitten", "mitten", "chicken"],
 }
